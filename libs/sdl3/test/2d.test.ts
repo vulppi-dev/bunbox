@@ -1,0 +1,78 @@
+import { SDL_EventType, SDL_InitFlags, SDL_Scancode } from '$enum'
+import { SDL_WindowFlags } from '$enum'
+import { SDL, cstr, ptr } from '$libs'
+import { SDL_Event, SDL_FRect } from '$structs'
+
+// --- init ---
+if (!SDL.SDL_Init(SDL_InitFlags.SDL_INIT_VIDEO))
+  throw new Error('SDL_Init falhou')
+
+const win = SDL.SDL_CreateWindow(
+  cstr('SDL3 2D Square'),
+  800,
+  600,
+  SDL_WindowFlags.SDL_WINDOW_RESIZABLE, // 2D; não precisamos do VULKAN aqui
+)
+if (!win) throw new Error('SDL_CreateWindow falhou')
+
+// NULL (auto) escolhe o melhor renderer disponível (d3d, metal, opengl, etc)
+const renderer = SDL.SDL_CreateRenderer(win, null)
+if (!renderer) throw new Error(SDL.SDL_GetError().toString())
+
+// --- main loop ---
+let running = true
+while (running) {
+  // handle events
+  const e = new SDL_Event()
+  while (SDL.SDL_PollEvent(e.pointer)) {
+    try {
+      e.read()
+    } catch (err) {
+      console.error('Error reading event:', err)
+    }
+    const type = e.get('type')
+    if (type === SDL_EventType.SDL_EVENT_QUIT) running = false
+    else if (type === SDL_EventType.SDL_EVENT_KEY_DOWN) {
+      if (e.get('key').get('scancode') === SDL_Scancode.SDL_SCANCODE_ESCAPE)
+        running = false
+    }
+  }
+
+  // query render output size in *pixels* (handles HiDPI)
+  const outW = new Int32Array(1)
+  const outH = new Int32Array(1)
+  SDL.SDL_GetRenderOutputSize(renderer, ptr(outW.buffer), ptr(outH.buffer))
+  const W = outW[0] || 800
+  const H = outH[0] || 600
+
+  // compute centered square
+  const size = Math.floor(Math.min(W, H) * 0.25) // 25% of min dimension
+  const x = (W - size) * 0.5
+  const y = (H - size) * 0.5
+
+  const rect = new SDL_FRect()
+  rect.set('x', x)
+  rect.set('y', y)
+  rect.set('w', size)
+  rect.set('h', size)
+  rect.flush()
+
+  // clear background
+  // Note: you must set the draw color before Clear and before drawing each primitive
+  SDL.SDL_SetRenderDrawColor(renderer, 15, 15, 24, 255) // bg: dark blue-ish
+  SDL.SDL_RenderClear(renderer)
+
+  // draw filled square
+  SDL.SDL_SetRenderDrawColor(renderer, 64, 180, 255, 255) // fg: cyan-ish
+  SDL.SDL_RenderFillRect(renderer, rect.pointer)
+
+  // present
+  SDL.SDL_RenderPresent(renderer)
+
+  await Bun.sleep(0) // yield
+}
+
+// --- cleanup ---
+SDL.SDL_DestroyRenderer(renderer)
+SDL.SDL_DestroyWindow(win)
+SDL.SDL_Quit()

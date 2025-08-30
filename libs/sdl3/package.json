@@ -29,8 +29,8 @@
     "pub": "npm publish --access=public --tag=latest"
   },
   "dependencies": {
-    "@bunbox/naga": "^0.0.1",
-    "@bunbox/struct": "^0.0.5",
+    "@bunbox/naga": "^0.0.4",
+    "@bunbox/struct": "^0.0.6",
     "koffi": "^2.14.0"
   },
   "devDependencies": {

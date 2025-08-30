@@ -13,7 +13,9 @@ import SDL3Win32X64 from "./SDL3/win32/x64/SDL3.dll" with { type: 'file' };
 import { dlopen } from 'bun:ffi'
 import * as functions from '../libs/functions'
 
+export { ptr, JSCallback } from 'bun:ffi'
 export { cstr } from '@bunbox/struct'
+export * from '@bunbox/naga'
 
 const SDL_LIBS: Record<string, any> = {
   darwin: SDL3Darwin,
@@ -40,7 +42,7 @@ const { symbols: SDL, close } = dlopen(SDL_PATH, {
   ...functions.EVENTS_BINDINGS,
   ...functions.INIT_BINDINGS,
   ...functions.IO_STREAM_BINDINGS,
-  ...functions.RENDERER_BINDINGS,
+  ...functions.RENDER_BINDINGS,
   ...functions.STD_BINDINGS,
   ...functions.TIMER_BINDINGS,
   ...functions.VIDEO_BINDINGS,

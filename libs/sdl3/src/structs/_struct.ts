@@ -6,6 +6,8 @@ import {
 } from '@bunbox/struct'
 import { CString, ptr, read } from 'bun:ffi'
 
+export type { Pointer, PrimitiveLabel, StructSchema } from '@bunbox/struct'
+
 export class BunStruct<
   TSchema extends StructSchema,
 > extends AbstractStruct<TSchema> {
@@ -45,13 +47,9 @@ export class BunStruct<
         return read.f64(pointer, index)
       case 'void':
       case 'string':
-        return read.ptr(pointer, index)
+        return read.intptr(pointer, index)
       default:
         throw new Error(`Unsupported type: ${type}`)
     }
-  }
-
-  protected override _ptrToCstr(pointer: Pointer, length?: number): string {
-    return new CString(pointer, length).toString()
   }
 }

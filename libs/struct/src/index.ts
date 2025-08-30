@@ -76,7 +76,7 @@ type ValueOfSpec<S, SS extends StructSchema> = S extends {
   : S extends { type: 'array'; to: infer P }
   ? P extends PrimitiveLabel
     ? P extends 'string'
-      ? string[]
+      ? Pointer[]
       : P extends
           | 'i64'
           | 'u64'
@@ -98,16 +98,14 @@ type ValueOfSpec<S, SS extends StructSchema> = S extends {
     ? (P & JSCallback) | null
     : never
   : S extends { type: infer T }
-  ? T extends 'string'
-    ? string
+  ? T extends 'string' | 'void'
+    ? Pointer
     : T extends 'i64' | 'u64'
     ? bigint
     : T extends 'i8' | 'i16' | 'i32' | 'u8' | 'u16' | 'u32' | 'f32' | 'f64'
     ? number
     : T extends 'boolean'
     ? boolean
-    : T extends 'void'
-    ? Pointer | bigint
     : never
   : never
 
@@ -182,15 +180,15 @@ function populateValues(schema: StructSchema, values: Record<string, any>) {
     if (spec.type === 'array') {
       const isInline = spec.length != null && spec.length >= 1
       if (spec.to === 'string') {
-        values[key] = isInline ? new Array(spec.length).fill('') : 0n
+        values[key] = isInline ? new Array(spec.length).fill(0) : 0
         continue
       }
       if (spec.to === 'boolean') {
-        values[key] = isInline ? new Array(spec.length).fill(false) : 0n
+        values[key] = isInline ? new Array(spec.length).fill(false) : 0
         continue
       }
       const C = ArrayTypes[spec.to] as any
-      values[key] = isInline ? new C(spec.length!) : 0n // dynamic -> pointer
+      values[key] = isInline ? new C(spec.length!) : 0 // dynamic -> pointer
       continue
     }
 
@@ -587,7 +585,7 @@ export abstract class AbstractStruct<TSchema extends StructSchema> {
               const arr: string[] = new Array(spec.length)
               for (let i = 0; i < spec.length; i++) {
                 const ap = Number(view[i]) as Pointer
-                arr[i] = ap ? this._ptrToCstr(ap) : ''
+                arr[i] = (ap ?? 0) as any
               }
               this.#values[key as keyof TSchema] = arr as any
             } else if (spec.to === 'boolean') {
@@ -618,14 +616,14 @@ export abstract class AbstractStruct<TSchema extends StructSchema> {
 
           switch (spec.to) {
             case 'string': {
-              const arr: string[] = []
+              const arr: Pointer[] = []
               for (let i = 0; i < len; i++) {
                 const cptr = this._read(
                   basePtr,
                   i * PTR_SIZE,
                   'string',
                 ) as Pointer
-                arr.push(cptr ? this._ptrToCstr(cptr) : '')
+                arr.push(cptr ?? 0)
               }
               this.#values[key as keyof TSchema] = arr as any
               break
@@ -657,9 +655,7 @@ export abstract class AbstractStruct<TSchema extends StructSchema> {
         }
         case 'string': {
           const addr = getDataViewValue(this.#buffer, offset, spec.type)
-          this.#values[key as keyof TSchema] = addr
-            ? (this._ptrToCstr(Number(addr) as Pointer) as any)
-            : undefined
+          this.#values[key as keyof TSchema] = addr ? (Number(addr) as any) : 0
           break
         }
         case 'void':
@@ -877,5 +873,4 @@ export abstract class AbstractStruct<TSchema extends StructSchema> {
     index: number,
     type: PrimitiveLabel,
   ): any
-  protected abstract _ptrToCstr(pointer: Pointer, length?: number): string
 }

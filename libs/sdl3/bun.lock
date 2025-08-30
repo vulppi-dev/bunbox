@@ -4,8 +4,8 @@
     "": {
       "name": "@bunbox/sdl",
       "dependencies": {
-        "@bunbox/naga": "^0.0.1",
-        "@bunbox/struct": "^0.0.5",
+        "@bunbox/naga": "^0.0.4",
+        "@bunbox/struct": "^0.0.6",
         "koffi": "^2.14.0",
       },
       "devDependencies": {
@@ -16,9 +16,9 @@
     },
   },
   "packages": {
-    "@bunbox/naga": ["@bunbox/naga@0.0.1", "", {}, "sha512-UllROkzrddJ2texKPZPCLUMfb1TJW6Tumrr3fhR2J61Uig9W6qN9kSP7wUs6dFPOzW0YRObH672z3nm7CNyO1w=="],
+    "@bunbox/naga": ["@bunbox/naga@0.0.4", "", {}, "sha512-uuj+gD2XcRxclNgxXqE++Kxnh+nqMomJ3Tlq2FPIIie/OT3n6WzVezJIxsNkpNvMT3L7s6NoIAdXDfFoUmfSjg=="],
 
-    "@bunbox/struct": ["@bunbox/struct@0.0.5", "", { "dependencies": { "@bunbox/struct": "0.0.3", "buffer": "^6.0.3" } }, "sha512-W0jrUphvXRIMVl+vRcj83mylC3gjoDGbHuu1nfhGzgtNfqvAs2ErUrwo0rLwzmjqMn2haCkZGLZROCd9Fz2Mrw=="],
+    "@bunbox/struct": ["@bunbox/struct@0.0.6", "", { "dependencies": { "@bunbox/struct": "0.0.3", "buffer": "^6.0.3" } }, "sha512-nSNUn0yhEgIb0TG0xjqsOzzbaqtDdKp+Z1VTsS8mEszegih9j/slxLhUZUYwPIbxkygJpBbP+/6GbLCMXmb6Aw=="],
 
     "@types/bun": ["@types/bun@1.2.21", "", { "dependencies": { "bun-types": "1.2.21" } }, "sha512-NiDnvEqmbfQ6dmZ3EeUO577s4P5bf4HCTXtI6trMc6f6RzirY5IrF3aIookuSpyslFzrnvv2lmEWv5HyC1X79A=="],
 

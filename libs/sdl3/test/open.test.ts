@@ -1,5 +1,4 @@
-import { SDL_InitFlags } from '$enum'
-import { SDL_WindowFlags } from '$enum'
+import { SDL_InitFlags, SDL_WindowFlags } from '$enum'
 import { cstr, SDL } from '$libs'
 
 if (!SDL.SDL_Init(SDL_InitFlags.SDL_INIT_VIDEO)) {
