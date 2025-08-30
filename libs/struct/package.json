@@ -1,0 +1,41 @@
+{
+  "name": "@bunbox/struct",
+  "version": "0.0.0",
+  "description": "",
+  "author": {
+    "name": "Renato Rodrigues",
+    "email": "renato@vulppi.dev"
+  },
+  "license": "MIT",
+  "private": false,
+  "repository": {
+    "type": "git",
+    "directory": "sdl"
+  },
+  "keywords": [],
+  "type": "module",
+  "module": "./dist/index.mjs",
+  "main": "./dist/index.cjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "dev": "tsc --watch --noEmit true --emitDeclarationOnly false",
+    "build": "vpp build index",
+    "pub": "npm publish --access=public --tag=latest"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^24.0.1",
+    "typescript": "^5.8.3",
+    "vulppi": "^0.2.11"
+  },
+  "engines": {
+    "node": ">=22.0.0"
+  }
+}
