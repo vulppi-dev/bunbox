@@ -1,7 +1,6 @@
 import { SDL_InitFlags } from '$enum'
 import { SDL_WindowFlags } from '$enum'
-import { cstr } from '$internal'
-import { SDL } from '../src/bun-ffi'
+import { cstr, SDL } from '$libs'
 
 if (!SDL.SDL_Init(SDL_InitFlags.SDL_INIT_VIDEO)) {
   throw new Error('SDL_Init falhou')

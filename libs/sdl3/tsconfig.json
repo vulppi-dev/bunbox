@@ -28,8 +28,8 @@
       "$enum": [
         "./src/enum/index.ts"
       ],
-      "$internal": [
-        "./src/internal/index.ts"
+      "$libs": [
+        "./src/libs/index.ts"
       ],
       "$utils": [
         "./src/utils/index.ts"

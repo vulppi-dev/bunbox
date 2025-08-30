@@ -30,7 +30,8 @@
   },
   "dependencies": {
     "@bunbox/naga": "^0.0.1",
-    "@bunbox/struct": "^0.0.5"
+    "@bunbox/struct": "^0.0.5",
+    "koffi": "^2.14.0"
   },
   "devDependencies": {
     "@types/bun": "^1.2.21",
