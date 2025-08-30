@@ -1,12 +1,16 @@
 {
   "folders": [
     {
+      "name": "sdl3",
+      "path": "./libs/sdl3"
+    },
+    {
       "name": "struct",
       "path": "./libs/struct"
     },
-    {
-      "name": "sdl3",
-      "path": "./libs/sdl3"
+      {
+      "name": "naga",
+      "path": "./libs/naga"
     },
     {
       "name": "root",

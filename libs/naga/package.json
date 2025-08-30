@@ -1,0 +1,36 @@
+{
+  "name": "@bunbox/naga",
+  "version": "0.0.1",
+  "description": "Simple WGSL parser for TypeScript",
+  "author": {
+    "name": "Renato Rodrigues",
+    "email": "renato@vulppi.dev"
+  },
+  "license": "MIT",
+  "private": false,
+  "repository": {
+    "type": "git",
+    "directory": "sdl"
+  },
+  "keywords": [
+    "naga",
+    "wgsl",
+    "spir-v",
+    "msl"
+  ],
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "dev": "tsc --watch --noEmit true --emitDeclarationOnly false",
+    "pub": "npm publish --access=public --tag=latest"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^24.3.0",
+    "typescript": "^5.9.2"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "bun": ">=1.2.0"
+  }
+}
