@@ -1,7 +1,7 @@
 {
   "name": "@bunbox/sdl",
-  "version": "0.0.0",
-  "description": "",
+  "version": "0.0.0-reserved",
+  "description": "Implement SDL (Simple DirectMedia Layer) bindings",
   "author": {
     "name": "Renato Rodrigues",
     "email": "renato@vulppi.dev"
@@ -14,28 +14,21 @@
   },
   "keywords": [],
   "type": "module",
-  "module": "./dist/index.mjs",
-  "main": "./dist/index.cjs",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.cjs"
-    }
-  },
+  "main": "./src/index.ts",
   "scripts": {
     "dev": "tsc --watch --noEmit true --emitDeclarationOnly false",
-    "build": "vpp build index",
     "pub": "npm publish --access=public --tag=latest"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@bunbox/naga": "^0.0.1",
+    "@bunbox/struct": "^0.0.3"
+  },
   "devDependencies": {
-    "@types/node": "^24.0.1",
-    "typescript": "^5.8.3",
-    "vulppi": "^0.2.11"
+    "@types/node": "^24.3.0",
+    "typescript": "^5.9.2"
   },
   "engines": {
-    "node": ">=22.0.0"
+    "node": ">=22.0.0",
+    "bun": ">=1.2.0"
   }
 }
