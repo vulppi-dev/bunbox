@@ -1,0 +1,159 @@
+name: build-sdl3-dylib-macos
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+env:
+  WORKDIR: ${{ github.workspace }}/sdl3-multiarch
+  # Ajuste os pacotes que quer extrair do env:
+  CONDA_PACKAGES: 'sdl3 libiconv'
+
+jobs:
+  build-matrix:
+    name: Build dylib (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        # macos-13 => Intel (osx-64) | macos-14 => Apple Silicon (osx-arm64)
+        os: [macos-13, macos-14]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Miniforge (conda-forge)
+        run: |
+          curl -fsSL https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-MacOSX-$(uname -m).sh -o /tmp/miniforge.sh
+          bash /tmp/miniforge.sh -b -p "$HOME/miniforge3"
+          echo "$HOME/miniforge3/bin" >> $GITHUB_PATH
+
+      - name: Init conda
+        shell: bash -l {0}
+        run: |
+          conda config --set always_yes yes --set changeps1 no
+          conda config --add channels conda-forge
+          conda config --set channel_priority strict
+          conda info -a
+
+      - name: Decide CONDA_SUBDIR for this runner
+        id: arch
+        shell: bash -l {0}
+        run: |
+          # map runners -> conda subdir
+          if [[ "${{ matrix.os }}" == "macos-13" ]]; then
+            echo "subdir=osx-64" >> $GITHUB_OUTPUT
+          else
+            echo "subdir=osx-arm64" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create per-arch env and install SDL3
+        shell: bash -l {0}
+        env:
+          CONDA_SUBDIR: ${{ steps.arch.outputs.subdir }}
+        run: |
+          mkdir -p "$WORKDIR"
+          ENV_PATH="$WORKDIR/env-${CONDA_SUBDIR}"
+          echo "Creating env for ${CONDA_SUBDIR} at ${ENV_PATH}"
+          conda create -p "$ENV_PATH" ${CONDA_PACKAGES}
+          conda list -p "$ENV_PATH" | grep -E "^(sdl3|libiconv)\s"
+
+      - name: Collect dylibs
+        shell: bash -l {0}
+        env:
+          CONDA_SUBDIR: ${{ steps.arch.outputs.subdir }}
+        run: |
+          OUT="$WORKDIR/out/${CONDA_SUBDIR}"
+          mkdir -p "$OUT"
+          ENV_PATH="$WORKDIR/env-${CONDA_SUBDIR}"
+
+          shopt -s nullglob
+          # SDL3
+          cp -av "$ENV_PATH/lib"/libSDL3*.dylib "$OUT/" || true
+          # libiconv (útil para evitar 'image not found' em runtime)
+          cp -av "$ENV_PATH/lib"/libiconv*.dylib "$OUT/" || true
+          shopt -u nullglob
+
+          echo "== Copiados =="
+          ls -al "$OUT"
+
+      - name: Fix install_name and rpath (for redistribution)
+        shell: bash -l {0}
+        env:
+          CONDA_SUBDIR: ${{ steps.arch.outputs.subdir }}
+        run: |
+          OUT="$WORKDIR/out/${CONDA_SUBDIR}"
+
+          fix_one() {
+            local f="$1"
+            echo ">> Fixing $(basename "$f")"
+            # Define o 'id' do dylib para @rpath/NAME (bom para FFI e app bundles)
+            install_name_tool -id "@rpath/$(basename "$f")" "$f" || true
+
+            # Remove rpaths absolutos herdados do env conda e adiciona @loader_path
+            # (para que dependências ao lado do .dylib sejam achadas)
+            # Lista rpaths atuais:
+            for r in $(otool -l "$f" | awk '/LC_RPATH/{flag=1} flag && /path/{print $2} /cmd/{flag=0}'); do
+              echo "  deleting rpath: $r"
+              install_name_tool -delete_rpath "$r" "$f" || true
+            done
+
+            # Adiciona um rpath relativo ao próprio dylib (útil para deploy lado a lado)
+            install_name_tool -add_rpath "@loader_path/." "$f" || true
+
+            echo "  -> otool -L:"
+            otool -L "$f"
+          }
+
+          shopt -s nullglob
+          for f in "$OUT"/libSDL3*.dylib "$OUT"/libiconv*.dylib; do
+            [[ -f "$f" ]] && fix_one "$f"
+          done
+          shopt -u nullglob
+
+      - name: Upload per-arch artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dylib-${{ steps.arch.outputs.subdir }}
+          path: ${{ env.WORKDIR }}/out/${{ steps.arch.outputs.subdir }}/*
+
+  make-universal:
+    name: Create Universal (arm64+x86_64)
+    needs: [build-matrix]
+    runs-on: macos-14
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dylib-osx-64
+          path: osx-64
+      - uses: actions/download-artifact@v4
+        with:
+          name: dylib-osx-arm64
+          path: osx-arm64
+
+      - name: Build Universal dylib(s)
+        run: |
+          mkdir -p dist
+          make_universal() {
+            local base="$1"
+            local out="dist/${base}"
+            echo ">> lipo -create ${out}"
+            lipo -create -output "$out" "osx-arm64/${base}" "osx-64/${base}"
+            otool -L "$out"
+            file "$out"
+          }
+
+          # Combine os que existirem
+          for name in libSDL3.dylib libiconv.dylib; do
+            if [[ -f "osx-arm64/$name" && -f "osx-64/$name" ]]; then
+              make_universal "$name"
+            fi
+          done
+
+      - name: Upload Universal artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: libSDL3-universal
+          path: dist/*
