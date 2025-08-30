@@ -18,7 +18,6 @@ export type PrimitiveLabel =
   | 'u16'
   | 'u32'
   | 'u64'
-  | 'f16'
   | 'f32'
   | 'f64'
   | 'boolean'
@@ -87,7 +86,6 @@ type ValueOfSpec<S, SS extends StructSchema> = S extends {
           | 'u8'
           | 'u16'
           | 'u32'
-          | 'f16'
           | 'f32'
           | 'f64'
       ? InstanceType<(typeof ArrayTypes)[P]>
@@ -104,16 +102,7 @@ type ValueOfSpec<S, SS extends StructSchema> = S extends {
     ? string
     : T extends 'i64' | 'u64'
     ? bigint
-    : T extends
-        | 'i8'
-        | 'i16'
-        | 'i32'
-        | 'u8'
-        | 'u16'
-        | 'u32'
-        | 'f16'
-        | 'f32'
-        | 'f64'
+    : T extends 'i8' | 'i16' | 'i32' | 'u8' | 'u16' | 'u32' | 'f32' | 'f64'
     ? number
     : T extends 'boolean'
     ? boolean
@@ -140,7 +129,6 @@ const ArrayTypes = {
   u16: Uint16Array<ArrayBufferLike>,
   u32: Uint32Array<ArrayBufferLike>,
   u64: BigUint64Array<ArrayBufferLike>,
-  f16: Float16Array<ArrayBufferLike>,
   f32: Float32Array<ArrayBufferLike>,
   f64: Float64Array<ArrayBufferLike>,
   boolean: Uint8Array<ArrayBufferLike>,
@@ -164,7 +152,6 @@ const TYPE_BYTES: Record<MetaLabel, Bytes> = {
   u16: 2,
   u32: 4,
   u64: 8,
-  f16: 2,
   f32: 4,
   f64: 8,
   enum: 4, // typical; make configurable per field if needed
@@ -319,8 +306,6 @@ function getDataViewValue(
       return view.getUint16(offset, true)
     case 'i16':
       return view.getInt16(offset, true)
-    case 'f16':
-      return view.getFloat16(offset, true)
     case 'u8':
       return view.getUint8(offset)
     case 'i8':
@@ -366,9 +351,6 @@ function setDataViewValue(
       break
     case 'i16':
       view.setInt16(offset, value, true)
-      break
-    case 'f16':
-      view.setFloat16(offset, value, true)
       break
     case 'u8':
       view.setUint8(offset, value)
@@ -689,7 +671,6 @@ export abstract class AbstractStruct<TSchema extends StructSchema> {
         case 'f32':
         case 'u16':
         case 'i16':
-        case 'f16':
         case 'u8':
         case 'i8':
         case 'boolean': {
@@ -866,7 +847,6 @@ export abstract class AbstractStruct<TSchema extends StructSchema> {
 
         case 'f64':
         case 'f32':
-        case 'f16':
         case 'i32':
         case 'i16':
         case 'i8':
