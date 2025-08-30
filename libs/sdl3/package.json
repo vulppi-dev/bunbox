@@ -1,6 +1,6 @@
 {
-  "name": "@bunbox/sdl",
-  "version": "0.0.0-reserved",
+  "name": "@bunbox/sdl3",
+  "version": "0.0.1-reserved",
   "description": "Implement SDL (Simple DirectMedia Layer) bindings",
   "author": {
     "name": "Renato Rodrigues",
@@ -12,7 +12,16 @@
     "type": "git",
     "directory": "sdl"
   },
-  "keywords": [],
+  "keywords": [
+    "sdl",
+    "sdl3",
+    "ffi",
+    "wasm",
+    "graphics",
+    "audio",
+    "input",
+    "typescript"
+  ],
   "type": "module",
   "main": "./src/index.ts",
   "scripts": {
@@ -21,9 +30,10 @@
   },
   "dependencies": {
     "@bunbox/naga": "^0.0.1",
-    "@bunbox/struct": "^0.0.3"
+    "@bunbox/struct": "^0.0.5"
   },
   "devDependencies": {
+    "@types/bun": "^1.2.21",
     "@types/node": "^24.3.0",
     "typescript": "^5.9.2"
   },

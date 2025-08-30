@@ -368,8 +368,8 @@ function setDataViewValue(
 
 /* ===================== CString ===================== */
 
-export function cstr(str: string): ArrayBufferLike {
-  return Buffer.from(str + '\0').buffer
+export function cstr(str: string): NodeJS.TypedArray<ArrayBufferLike> {
+  return Buffer.from(str + '\0')
 }
 
 /* ===================== Core Class ===================== */
@@ -760,7 +760,7 @@ export abstract class AbstractStruct<TSchema extends StructSchema> {
                 pointers = buffer.buffer
                 for (let i = 0; i < s.length; i++) {
                   const bytes = cstr(s[i] ?? '')
-                  const hold = new Uint8Array(bytes)
+                  const hold = new Uint8Array(bytes.buffer)
                   this.#retained.push(hold)
                   buffer[i] = BigInt(this._ptr(hold.buffer))
                 }
@@ -822,7 +822,7 @@ export abstract class AbstractStruct<TSchema extends StructSchema> {
             break
           }
           const bytes = cstr(s)
-          const hold = new Uint8Array(bytes)
+          const hold = new Uint8Array(bytes.buffer)
           this.#retained.push(hold)
           setDataViewValue(
             this.#buffer,
@@ -869,7 +869,9 @@ export abstract class AbstractStruct<TSchema extends StructSchema> {
     }
   }
 
-  protected abstract _ptr(buffer: ArrayBufferLike): Pointer
+  protected abstract _ptr(
+    buffer: ArrayBufferLike | NodeJS.TypedArray<ArrayBufferLike>,
+  ): Pointer
   protected abstract _read(
     pointer: Pointer,
     index: number,

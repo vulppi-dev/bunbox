@@ -25,9 +25,15 @@
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false,
     "paths": {
-      "$libs/*": [
-        "./src/libs/*"
-      ]
+      "$enum": [
+        "./src/enum/index.ts"
+      ],
+      "$internal": [
+        "./src/internal/index.ts"
+      ],
+      "$utils": [
+        "./src/utils/index.ts"
+      ],
     }
   }
 }
