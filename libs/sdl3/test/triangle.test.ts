@@ -9,9 +9,9 @@ import {
   SDL_GPUStoreOp,
   SDL_InitFlags,
   SDL_Scancode,
+  SDL_WindowFlags,
 } from '$enum'
-import { SDL_WindowFlags } from '$enum'
-import { cstr, ptr, SDL, wgsl_to_spirv_bin } from '$libs'
+import { SDL, cstr, ptr, wgsl_to_spirv_bin } from '$libs'
 import {
   SDL_Event,
   SDL_FColor,
@@ -68,7 +68,7 @@ function makeShader(code: Uint8Array, stage: SDL_GPUShaderStage) {
   const sci = new SDL_GPUShaderCreateInfo()
   sci.set('code', code)
   sci.set('code_size', BigInt(code.byteLength))
-  sci.set('entrypoint', 'main')
+  sci.set('entrypoint', ptr(cstr('main')))
   sci.set('format', SDL_GPUShaderFormat.SDL_GPU_SHADERFORMAT_SPIRV)
   sci.set('stage', stage)
   sci.flush()

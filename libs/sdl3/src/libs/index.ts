@@ -13,7 +13,7 @@ import SDL3Win32X64 from "./SDL3/win32/x64/SDL3.dll" with { type: 'file' };
 import { dlopen } from 'bun:ffi'
 import * as functions from '../libs/functions'
 
-export { ptr, JSCallback } from 'bun:ffi'
+export { ptr, JSCallback, CString } from 'bun:ffi'
 export { cstr } from '@bunbox/struct'
 export * from '@bunbox/naga'
 
@@ -40,6 +40,7 @@ if(!SDL_PATH) {
 const { symbols: SDL, close } = dlopen(SDL_PATH, {
   ...functions.ERROR_BINDINGS,
   ...functions.EVENTS_BINDINGS,
+  ...functions.GPU_BINDINGS,
   ...functions.INIT_BINDINGS,
   ...functions.IO_STREAM_BINDINGS,
   ...functions.RENDER_BINDINGS,

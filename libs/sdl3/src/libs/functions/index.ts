@@ -1,5 +1,6 @@
 export * from './error'
 export * from './events'
+export * from './gpu'
 export * from './init'
 export * from './io-stream'
 export * from './render'
