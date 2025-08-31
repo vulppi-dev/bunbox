@@ -202,7 +202,7 @@ export const GPU_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_GetGPUDeviceDriver
    */
-  // SDL_GetGPUDeviceDriver: {},
+  SDL_GetGPUDeviceDriver: { args: ['ptr'], returns: 'cstring' },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_GetGPUDeviceProperties
    */
