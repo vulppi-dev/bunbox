@@ -391,7 +391,7 @@ export abstract class AbstractStruct<TSchema extends StructSchema> {
    * @param isOverlay When true, behaves like a C union (all fields at offset 0, size = max(field))
    * @param pack Optional pack(N) like #pragma pack; limits field alignment to min(natural, N)
    */
-  constructor(schema: TSchema, isOverlay = false, pack: 1 | 2 | 4 | 8 = 4) {
+  constructor(schema: TSchema, isOverlay = false) {
     if (!schema || Object.keys(schema).length === 0) {
       throw new Error('Invalid struct schema')
     }
@@ -421,7 +421,7 @@ export abstract class AbstractStruct<TSchema extends StructSchema> {
       this.#offsets,
       this.#values,
       this.#isOverlay,
-      pack,
+      this._pack(),
     )
 
     this.#size = size
@@ -873,4 +873,5 @@ export abstract class AbstractStruct<TSchema extends StructSchema> {
     index: number,
     type: PrimitiveLabel,
   ): any
+  protected abstract _pack(): Bytes
 }
