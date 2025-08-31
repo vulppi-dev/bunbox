@@ -587,7 +587,7 @@ export abstract class AbstractStruct<TSchema extends StructSchema> {
             if (spec.to === 'string') {
               // inline: array of pointers to c-strings
               const view = new BigUint64Array(this.view, offset, spec.length)
-              const arr: string[] = new Array(spec.length)
+              const arr: Pointer[] = new Array(spec.length)
               for (let i = 0; i < spec.length; i++) {
                 const ap = Number(view[i]) as Pointer
                 arr[i] = (ap ?? 0) as any
@@ -626,7 +626,7 @@ export abstract class AbstractStruct<TSchema extends StructSchema> {
                 const cptr = this._read(
                   basePtr,
                   i * PTR_SIZE,
-                  'string',
+                  spec.to,
                 ) as Pointer
                 arr.push(cptr ?? 0)
               }
@@ -636,7 +636,7 @@ export abstract class AbstractStruct<TSchema extends StructSchema> {
             case 'boolean': {
               const arr: boolean[] = []
               for (let i = 0; i < len; i++) {
-                arr.push(this._read(basePtr, i, 'boolean'))
+                arr.push(this._read(basePtr, i, spec.to))
               }
               this.#values[key as keyof TSchema] = arr as any
               break
@@ -646,7 +646,7 @@ export abstract class AbstractStruct<TSchema extends StructSchema> {
               const elemSize = TYPE_BYTES[spec.to]
               const raw = new Uint8Array(len * elemSize)
               for (let i = 0; i < raw.length; i++)
-                raw[i] = this._read(basePtr, i, 'u8')
+                raw[i] = this._read(basePtr, i, spec.to)
 
               const T: any = (ArrayTypes as any)[spec.to]
               this.#values[key as keyof TSchema] = new T(raw.buffer) as any
@@ -817,20 +817,12 @@ export abstract class AbstractStruct<TSchema extends StructSchema> {
         }
 
         case 'string': {
-          const s = val as string | undefined
+          const s = val as Pointer | undefined
           if (!s) {
             setDataViewValue(this.#buffer, offset, spec.type, 0n)
-            break
+          } else {
+            setDataViewValue(this.#buffer, offset, spec.type, BigInt(s))
           }
-          const bytes = cstr(s)
-          const hold = new Uint8Array(bytes.buffer)
-          this.#retained.push(hold)
-          setDataViewValue(
-            this.#buffer,
-            offset,
-            spec.type,
-            BigInt(this._ptr(hold.buffer)),
-          )
           break
         }
 
