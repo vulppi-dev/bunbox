@@ -228,52 +228,57 @@ function calcSchemaLayout(
   pack?: Bytes,
 ): { size: number; alignment: number } {
   const entries = Object.entries(schema).sort((a, b) => a[1].order - b[1].order)
-  let overlaySize = 0
-  let alignment = 1
-  let fieldSize = 0
-  let fieldAlign = 1
-  let offset = 0
+
+  let curOff = 0
+  let maxAlign = 1
+  let overlayMaxSize = 0
 
   for (const [key, spec] of entries) {
-    fieldSize = 0
-    fieldAlign = 1
+    // --- compute field size & alignment ---
+    let fSize = 0
+    let fAlign = 1
 
     if (spec.type === 'struct' && spec.isInline) {
       const base = values[key] as AbstractStruct<any>
-      fieldSize = base.size
-      fieldAlign = base.alignment ?? TYPE_BYTES.struct
+      fSize = base.size
+      fAlign = base.alignment ?? TYPE_BYTES.struct
     } else if (spec.type === 'array') {
       if (spec.length != null && spec.length >= 1) {
-        // Array is inline
-        fieldSize = Math.max(
-          spec.length * TYPE_BYTES[spec.to],
-          TYPE_BYTES.array,
-        )
-        fieldAlign = TYPE_BYTES[spec.to] ?? TYPE_BYTES.void
+        // inline array (contiguous payload)
+        const elemSize = TYPE_BYTES[spec.to] ?? TYPE_BYTES.void
+        fSize = Math.max(spec.length * elemSize, TYPE_BYTES.array)
+        fAlign = elemSize
       } else {
-        fieldSize = TYPE_BYTES.array
-        fieldAlign = TYPE_BYTES.array
+        // dynamic array (pointer-like header)
+        fSize = TYPE_BYTES.array
+        fAlign = TYPE_BYTES.array
       }
     } else {
       const t = spec.type as MetaLabel
-      fieldSize = TYPE_BYTES[t] ?? TYPE_BYTES.void
-      fieldAlign = TYPE_BYTES[t] ?? TYPE_BYTES.void
+      fSize = TYPE_BYTES[t] ?? TYPE_BYTES.void
+      fAlign = TYPE_BYTES[t] ?? TYPE_BYTES.void
     }
 
-    if (pack) fieldAlign = Math.min(fieldAlign, pack)
-    alignment = isOverlay ? Math.max(alignment, fieldAlign) : fieldAlign
-    overlaySize = Math.max(overlaySize, fieldSize)
+    if (pack) fAlign = Math.min(fAlign, pack)
+    maxAlign = Math.max(maxAlign, fAlign)
 
-    const fieldOffset = alignTo(offset, fieldAlign)
-    sizes[key] = fieldSize
-    offsets[key] = isOverlay ? 0 : fieldOffset
-    offset = fieldOffset + fieldSize
+    // --- place field ---
+    if (isOverlay) {
+      sizes[key] = fSize
+      offsets[key] = 0
+      overlayMaxSize = Math.max(overlayMaxSize, fSize)
+    } else {
+      const aligned = alignTo(curOff, fAlign)
+      sizes[key] = fSize
+      offsets[key] = aligned
+      curOff = aligned + fSize
+    }
   }
 
-  return {
-    size: alignTo(isOverlay ? overlaySize : offset, alignment),
-    alignment,
-  }
+  const rawSize = isOverlay ? overlayMaxSize : curOff
+  const size = alignTo(rawSize, maxAlign)
+
+  return { size, alignment: maxAlign }
 }
 
 /* ===================== Get/Set DataView ===================== */
