@@ -1,7 +1,7 @@
+import "./SDL3/darwin/libiconv.dylib" with { type: 'file' };
 import "./SDL3/linux/arm64/libiconv.so.2" with { type: 'file' };
 import "./SDL3/linux/ppc64/libiconv.so.2" with { type: 'file' };
 import "./SDL3/linux/x64/libiconv.so.2" with { type: 'file' };
-import "./SDL3/darwin/libiconv.dylib" with { type: 'file' };
 
 import SDL3Darwin from "./SDL3/darwin/libSDL3.dylib" with { type: 'file' };
 import SDL3LinuxArm64 from "./SDL3/linux/arm64/libSDL3.so" with { type: 'file' };
@@ -10,12 +10,13 @@ import SDL3LinuxX64 from "./SDL3/linux/x64/libSDL3.so" with { type: 'file' };
 import SDL3Win32Arm64 from "./SDL3/win32/arm64/SDL3.dll" with { type: 'file' };
 import SDL3Win32X64 from "./SDL3/win32/x64/SDL3.dll" with { type: 'file' };
 
-import { dlopen } from 'bun:ffi'
-import * as functions from '../libs/functions'
+import { dlopen } from 'bun:ffi';
+import * as functions from '../libs/functions';
 
-export { ptr, JSCallback, CString } from 'bun:ffi'
-export { cstr } from '@bunbox/struct'
-export * from '@bunbox/naga'
+export * from '@bunbox/naga';
+export { cstr } from '@bunbox/struct';
+export { CString, JSCallback, ptr } from 'bun:ffi';
+
 
 const SDL_LIBS: Record<string, any> = {
   darwin: SDL3Darwin,
@@ -55,4 +56,5 @@ process.on('exit', () => {
   close()
 })
 
-export { SDL }
+export { SDL };
+
