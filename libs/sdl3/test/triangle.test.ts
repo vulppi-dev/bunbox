@@ -7,6 +7,7 @@ import {
   SDL_GPUCompareOp,
   SDL_GPULoadOp,
   SDL_GPUPrimitiveType,
+  SDL_GPUSampleCount,
   SDL_GPUShaderFormat,
   SDL_GPUShaderStage,
   SDL_GPUStencilOp,
@@ -33,6 +34,7 @@ import {
 
 // Toggle: only enable if your struct layouts match (Viewport=24 bytes, Rect=16 bytes)
 const USE_VIEWPORT_AND_SCISSOR = true
+const INVERSE_VIEWPORT = process.platform === 'darwin' ? 1 : -1 // flip Y on Vulkan
 
 // ---------- stable C-strings ----------
 const STR = {
@@ -80,17 +82,9 @@ const FS_WGSL = `
   return vec4(1.0, 0.55, 0.2, 1.0);
 }`
 
-// Ensure SPIR-V is passed as Uint32Array and size in BYTES
-function toSpvU32(u8: Uint8Array): Uint32Array {
-  if ((u8.byteLength & 3) !== 0) {
-    throw new Error('SPIR-V length must be multiple of 4 bytes')
-  }
-  return new Uint32Array(u8.buffer, u8.byteOffset, u8.byteLength >>> 2)
-}
-
-function makeShader(spvU32: Uint32Array, stage: SDL_GPUShaderStage) {
+function makeShader(spvU32: Uint8Array, stage: SDL_GPUShaderStage) {
   const sci = new SDL_GPUShaderCreateInfo()
-  sci.set('code', new Uint8Array(spvU32.buffer)) // u32 aligned
+  sci.set('code', spvU32) // u32 aligned
   sci.set('code_size', BigInt(spvU32.byteLength)) // BYTES, not words
   sci.set('entrypoint', ptr(STR.main)) // stable "main"
   sci.set('format', SDL_GPUShaderFormat.SDL_GPU_SHADERFORMAT_SPIRV)
@@ -106,11 +100,11 @@ function makeShader(spvU32: Uint32Array, stage: SDL_GPUShaderStage) {
 }
 
 const vs = makeShader(
-  toSpvU32(wgsl_to_spirv_bin(VS_WGSL, 'vertex', 'main')),
+  wgsl_to_spirv_bin(VS_WGSL, 'vertex', 'main'),
   SDL_GPUShaderStage.SDL_GPU_SHADERSTAGE_VERTEX,
 )
 const fs = makeShader(
-  toSpvU32(wgsl_to_spirv_bin(FS_WGSL, 'fragment', 'main')),
+  wgsl_to_spirv_bin(FS_WGSL, 'fragment', 'main'),
   SDL_GPUShaderStage.SDL_GPU_SHADERSTAGE_FRAGMENT,
 )
 
@@ -160,7 +154,7 @@ depthstencil.set('enable_stencil_test', false)
 depthstencil.flush()
 
 const multisample = new SDL_GPUMultisampleState()
-multisample.set('sample_count', 1)
+multisample.set('sample_count', SDL_GPUSampleCount.SDL_GPU_SAMPLECOUNT_1)
 multisample.set('sample_mask', 0) // reserved → 0
 multisample.set('enable_mask', false) // reserved → false
 multisample.set('enable_alpha_to_coverage', false)
@@ -245,11 +239,14 @@ while (running) {
 
   if (USE_VIEWPORT_AND_SCISSOR) {
     // Ensure your struct layouts are correct before enabling:
+    const H = Number(pH[0])
+    const W = Number(pW[0])
+
     const vp = new SDL_GPUViewport()
     vp.set('x', 0)
-    vp.set('y', 0)
-    vp.set('w', Number(pW[0]))
-    vp.set('h', Number(pH[0]))
+    vp.set('y', INVERSE_VIEWPORT < 0 ? H : 0)
+    vp.set('w', W)
+    vp.set('h', H * INVERSE_VIEWPORT)
     vp.set('min_depth', 0.0)
     vp.set('max_depth', 1.0)
     vp.flush()
