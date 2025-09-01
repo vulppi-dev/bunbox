@@ -8,7 +8,10 @@ export const GPU_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_AcquireGPUSwapchainTexture
    */
-  // SDL_AcquireGPUSwapchainTexture: {},
+  SDL_AcquireGPUSwapchainTexture: {
+    args: ['ptr', 'ptr', 'ptr', 'ptr', 'ptr'],
+    returns: 'bool',
+  },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_BeginGPUComputePass
    */
@@ -326,7 +329,7 @@ export const GPU_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_SetGPUScissor
    */
-  // SDL_SetGPUScissor: {},
+  SDL_SetGPUScissor: { args: ['ptr', 'ptr'], returns: 'void' },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_SetGPUStencilReference
    */
@@ -342,7 +345,7 @@ export const GPU_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_SetGPUViewport
    */
-  // SDL_SetGPUViewport: {},
+  SDL_SetGPUViewport: { args: ['ptr', 'ptr'], returns: 'void' },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_SubmitGPUCommandBuffer
    */

@@ -1,10 +1,11 @@
 import {
   AbstractStruct,
+  type Bytes,
   type Pointer,
   type PrimitiveLabel,
   type StructSchema,
 } from '@bunbox/struct'
-import { CString, ptr, read } from 'bun:ffi'
+import { ptr, read } from 'bun:ffi'
 
 export type { Pointer, PrimitiveLabel, StructSchema } from '@bunbox/struct'
 
@@ -51,5 +52,9 @@ export class BunStruct<
       default:
         throw new Error(`Unsupported type: ${type}`)
     }
+  }
+
+  protected override _pack(): Bytes {
+    return 8 // x64
   }
 }

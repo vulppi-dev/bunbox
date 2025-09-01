@@ -1,11 +1,27 @@
-import { SDL_EventType, SDL_InitFlags, SDL_Scancode } from '$enum'
+import {
+  SDL_EventType,
+  SDL_InitFlags,
+  SDL_LogPriority,
+  SDL_Scancode,
+} from '$enum'
 import { SDL_WindowFlags } from '$enum'
 import { SDL, cstr, ptr } from '$libs'
 import { SDL_Event, SDL_FRect } from '$structs'
 
+// ---------- stable C-strings ----------
+const STR = {
+  title: cstr('SDL3 GPU Vulkan — Stable Triangle'),
+  backend: cstr('vulkan'),
+  logKey: cstr('SDL_LOGGING'),
+  logVal: cstr('gpu=debug,assert=debug,*=info'),
+  main: cstr('main'),
+}
+
 // --- init ---
 if (!SDL.SDL_Init(SDL_InitFlags.SDL_INIT_VIDEO))
-  throw new Error('SDL_Init falhou')
+  throw new Error('SDL_Init failed')
+SDL.SDL_SetLogPriorities(SDL_LogPriority.SDL_LOG_PRIORITY_DEBUG)
+SDL.SDL_SetHint(STR.logKey, STR.logVal)
 
 const win = SDL.SDL_CreateWindow(
   cstr('SDL3 2D Square'),
@@ -16,7 +32,7 @@ const win = SDL.SDL_CreateWindow(
 if (!win) throw new Error('SDL_CreateWindow falhou')
 
 // NULL (auto) escolhe o melhor renderer disponível (d3d, metal, opengl, etc)
-const renderer = SDL.SDL_CreateRenderer(win, null)
+const renderer = SDL.SDL_CreateRenderer(win, STR.backend)
 if (!renderer) throw new Error(SDL.SDL_GetError().toString())
 
 // --- main loop ---

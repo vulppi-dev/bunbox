@@ -1,3 +1,7 @@
+// sdl3_gpu_vulkan_triangle_stable.ts
+// SDL3 GPU (Vulkan backend) — triangle with u32 SPIR-V and safe state
+// EN comments; PT-BR explanations in chat.
+
 import {
   SDL_EventType,
   SDL_GPUCompareOp,
@@ -8,6 +12,7 @@ import {
   SDL_GPUStencilOp,
   SDL_GPUStoreOp,
   SDL_InitFlags,
+  SDL_LogPriority,
   SDL_Scancode,
   SDL_WindowFlags,
 } from '$enum'
@@ -22,69 +27,94 @@ import {
   SDL_GPUGraphicsPipelineTargetInfo,
   SDL_GPUMultisampleState,
   SDL_GPUShaderCreateInfo,
+  SDL_GPUViewport,
+  SDL_Rect,
 } from '$structs'
+
+// Toggle: only enable if your struct layouts match (Viewport=24 bytes, Rect=16 bytes)
+const USE_VIEWPORT_AND_SCISSOR = true
+
+// ---------- stable C-strings ----------
+const STR = {
+  title: cstr('SDL3 GPU Vulkan — Stable Triangle'),
+  backend: cstr('vulkan'),
+  logKey: cstr('SDL_LOGGING'),
+  logVal: cstr('gpu=debug,assert=debug,*=info'),
+  main: cstr('main'),
+}
 
 // --- init ---
 if (!SDL.SDL_Init(SDL_InitFlags.SDL_INIT_VIDEO))
-  throw new Error('SDL_Init falhou')
+  throw new Error('SDL_Init failed')
+SDL.SDL_SetLogPriorities(SDL_LogPriority.SDL_LOG_PRIORITY_DEBUG)
+SDL.SDL_SetHint(STR.logKey, STR.logVal)
 
 const win = SDL.SDL_CreateWindow(
-  cstr('Triangle'),
+  STR.title,
   800,
   600,
   SDL_WindowFlags.SDL_WINDOW_RESIZABLE | SDL_WindowFlags.SDL_WINDOW_VULKAN,
 )
-if (!win) throw new Error('SDL_CreateWindow falhou')
+if (!win) throw new Error('SDL_CreateWindow failed')
 
 const device = SDL.SDL_CreateGPUDevice(
   SDL_GPUShaderFormat.SDL_GPU_SHADERFORMAT_SPIRV,
   true,
-  null,
+  STR.backend, // force Vulkan (temporarily remove to sanity-check with D3D12)
 )
-if (!device) throw new Error('SDL_CreateGPUDevice falhou')
+if (!device) throw new Error('SDL_CreateGPUDevice failed')
 if (!SDL.SDL_ClaimWindowForGPUDevice(device, win))
   throw new Error(SDL.SDL_GetError().toString())
 
+console.log('SDL_GPU Driver:', SDL.SDL_GetGPUDeviceDriver(device)?.toString())
 const swapFormat = SDL.SDL_GetGPUSwapchainTextureFormat(device, win)
 
-// --- shaders ---
+// --- shaders (minimal; const color) ---
 const VS_WGSL = `
-struct Out { @builtin(position) pos: vec4<f32>, @location(0) color: vec3<f32> };
-@vertex fn main(@builtin(vertex_index) i:u32) -> Out {
-  var pos = array<vec2<f32>,3>(
-    vec2(-0.6,-0.6), vec2(0.6,-0.6), vec2(0.0,0.6)
-  );
-  var col = array<vec3<f32>,3>(
-    vec3(1,0,0), vec3(0,1,0), vec3(0,0.6,1)
-  );
-  var o:Out; o.pos = vec4(pos[i],0,1); o.color=col[i]; return o;
+@vertex fn main(@builtin(vertex_index) i:u32) -> @builtin(position) vec4<f32> {
+  var p = array<vec2<f32>,3>( vec2(-0.6,-0.6), vec2(0.6,-0.6), vec2(0.0,0.6) );
+  return vec4(p[i], 0.0, 1.0);
 }`
 const FS_WGSL = `
-@fragment fn main(@location(0) c:vec3<f32>) -> @location(0) vec4<f32> {
-  return vec4(c,1);
+@fragment fn main() -> @location(0) vec4<f32> {
+  return vec4(1.0, 0.55, 0.2, 1.0);
 }`
 
-function makeShader(code: Uint8Array, stage: SDL_GPUShaderStage) {
+// Ensure SPIR-V is passed as Uint32Array and size in BYTES
+function toSpvU32(u8: Uint8Array): Uint32Array {
+  if ((u8.byteLength & 3) !== 0) {
+    throw new Error('SPIR-V length must be multiple of 4 bytes')
+  }
+  return new Uint32Array(u8.buffer, u8.byteOffset, u8.byteLength >>> 2)
+}
+
+function makeShader(spvU32: Uint32Array, stage: SDL_GPUShaderStage) {
   const sci = new SDL_GPUShaderCreateInfo()
-  sci.set('code', code)
-  sci.set('code_size', BigInt(code.byteLength))
-  sci.set('entrypoint', ptr(cstr('main')))
+  sci.set('code', new Uint8Array(spvU32.buffer)) // u32 aligned
+  sci.set('code_size', BigInt(spvU32.byteLength)) // BYTES, not words
+  sci.set('entrypoint', ptr(STR.main)) // stable "main"
   sci.set('format', SDL_GPUShaderFormat.SDL_GPU_SHADERFORMAT_SPIRV)
   sci.set('stage', stage)
+  sci.set('num_samplers', 0)
+  sci.set('num_storage_textures', 0)
+  sci.set('num_storage_buffers', 0)
+  sci.set('num_uniform_buffers', 0)
   sci.flush()
-  return SDL.SDL_CreateGPUShader(device, sci.pointer)!
+  const sh = SDL.SDL_CreateGPUShader(device, sci.pointer)
+  if (!sh) throw new Error('SDL_CreateGPUShader failed')
+  return sh
 }
 
 const vs = makeShader(
-  wgsl_to_spirv_bin(VS_WGSL, 'vertex', 'main'),
+  toSpvU32(wgsl_to_spirv_bin(VS_WGSL, 'vertex', 'main')),
   SDL_GPUShaderStage.SDL_GPU_SHADERSTAGE_VERTEX,
 )
 const fs = makeShader(
-  wgsl_to_spirv_bin(FS_WGSL, 'fragment', 'main'),
+  toSpvU32(wgsl_to_spirv_bin(FS_WGSL, 'fragment', 'main')),
   SDL_GPUShaderStage.SDL_GPU_SHADERSTAGE_FRAGMENT,
 )
 
-// --- pipeline ---
+// --- pipeline/targets ---
 const colorDesc = new SDL_GPUColorTargetDescription()
 colorDesc.set('format', swapFormat)
 colorDesc.flush()
@@ -92,12 +122,12 @@ colorDesc.flush()
 const targetInfo = new SDL_GPUGraphicsPipelineTargetInfo()
 targetInfo.set('color_target_descriptions', colorDesc)
 targetInfo.set('num_color_targets', 1)
+targetInfo.set('depth_stencil_format', 0)
+targetInfo.set('has_depth_stencil_target', false)
 targetInfo.flush()
 
 const depthstencil = new SDL_GPUDepthStencilState()
 depthstencil.set('compare_op', SDL_GPUCompareOp.SDL_GPU_COMPAREOP_ALWAYS)
-
-// Front face
 depthstencil
   .get('front_stencil_state')
   .set('fail_op', SDL_GPUStencilOp.SDL_GPU_STENCILOP_KEEP)
@@ -110,8 +140,6 @@ depthstencil
 depthstencil
   .get('front_stencil_state')
   .set('compare_op', SDL_GPUCompareOp.SDL_GPU_COMPAREOP_ALWAYS)
-
-// Back face
 depthstencil
   .get('back_stencil_state')
   .set('fail_op', SDL_GPUStencilOp.SDL_GPU_STENCILOP_KEEP)
@@ -124,22 +152,21 @@ depthstencil
 depthstencil
   .get('back_stencil_state')
   .set('compare_op', SDL_GPUCompareOp.SDL_GPU_COMPAREOP_ALWAYS)
-
-// Masks (qualquer valor válido != lixo)
 depthstencil.set('compare_mask', 0xff)
-depthstencil.set('write_mask', 0x00) // 0 para não escrever (opcional)
+depthstencil.set('write_mask', 0x00)
+depthstencil.set('enable_depth_test', false)
+depthstencil.set('enable_depth_write', false)
+depthstencil.set('enable_stencil_test', false)
 depthstencil.flush()
 
-// (Opcional, mas recomendado p/ evitar asserts de MSAA)
 const multisample = new SDL_GPUMultisampleState()
 multisample.set('sample_count', 1)
-multisample.set('sample_mask', 0)
-multisample.set('enable_mask', false)
+multisample.set('sample_mask', 0) // reserved → 0
+multisample.set('enable_mask', false) // reserved → false
 multisample.set('enable_alpha_to_coverage', false)
 multisample.flush()
 
 const gpci = new SDL_GPUGraphicsPipelineCreateInfo()
-// --- pipeline ---
 gpci.set('vertex_shader', vs)
 gpci.set('fragment_shader', fs)
 gpci.set(
@@ -147,14 +174,23 @@ gpci.set(
   SDL_GPUPrimitiveType.SDL_GPU_PRIMITIVETYPE_TRIANGLELIST,
 )
 gpci.set('target_info', targetInfo)
-gpci.set('depth_stencil_state', depthstencil) // <-- importante
-gpci.set('multisample_state', multisample) // <-- opcional, mas seguro
+gpci.set('depth_stencil_state', depthstencil)
+gpci.set('multisample_state', multisample)
+// rasterizer explicit
+gpci.get('rasterizer_state').set('fill_mode', 1) // FILL
+gpci.get('rasterizer_state').set('cull_mode', 0) // NONE
+gpci.get('rasterizer_state').set('front_face', 1) // CCW
+gpci.get('rasterizer_state').set('depth_bias_constant_factor', 0)
+gpci.get('rasterizer_state').set('depth_bias_clamp', 0)
+gpci.get('rasterizer_state').set('depth_bias_slope_factor', 0)
+gpci.get('rasterizer_state').set('enable_depth_bias', false)
+gpci.get('rasterizer_state').set('enable_depth_clip', false)
 gpci.flush()
 
-const pipeline = SDL.SDL_CreateGPUGraphicsPipeline(device, gpci.buffer)
-if (!pipeline) throw new Error('pipeline falhou')
+const pipeline = SDL.SDL_CreateGPUGraphicsPipeline(device, ptr(gpci.buffer))
+if (!pipeline) throw new Error('SDL_CreateGPUGraphicsPipeline failed')
 
-// --- loop ---
+// --- frame loop ---
 const CLEAR = new SDL_FColor()
 CLEAR.set('r', 0.06)
 CLEAR.set('g', 0.06)
@@ -163,9 +199,10 @@ CLEAR.set('a', 1)
 CLEAR.flush()
 
 const colorTarget = new SDL_GPUColorTargetInfo()
-
 let running = true
+
 while (running) {
+  // Events
   const e = new SDL_Event()
   while (SDL.SDL_PollEvent(e.pointer)) {
     e.read()
@@ -179,18 +216,21 @@ while (running) {
   const cmdbuf = SDL.SDL_AcquireGPUCommandBuffer(device)
   if (!cmdbuf) continue
 
-  const pTex = new BigUint64Array(1),
-    pW = new Uint32Array(1),
-    pH = new Uint32Array(1)
-  const ok = SDL.SDL_WaitAndAcquireGPUSwapchainTexture(
+  const pTex = new BigUint64Array(1)
+  const pW = new Uint32Array(1)
+  const pH = new Uint32Array(1)
+
+  // Non-blocking; skip frame if none or zero-sized
+  const got = SDL.SDL_AcquireGPUSwapchainTexture(
     cmdbuf,
     win,
     ptr(pTex.buffer),
     ptr(pW.buffer),
     ptr(pH.buffer),
   )
-  if (!ok || !pTex[0]) {
+  if (!got || !pTex[0] || pW[0] === 0 || pH[0] === 0) {
     SDL.SDL_SubmitGPUCommandBuffer(cmdbuf)
+    await Bun.sleep(8)
     continue
   }
 
@@ -202,10 +242,36 @@ while (running) {
 
   const pass = SDL.SDL_BeginGPURenderPass(cmdbuf, colorTarget.pointer, 1, null)
   SDL.SDL_BindGPUGraphicsPipeline(pass, pipeline)
+
+  if (USE_VIEWPORT_AND_SCISSOR) {
+    // Ensure your struct layouts are correct before enabling:
+    const vp = new SDL_GPUViewport()
+    vp.set('x', 0)
+    vp.set('y', 0)
+    vp.set('w', Number(pW[0]))
+    vp.set('h', Number(pH[0]))
+    vp.set('min_depth', 0.0)
+    vp.set('max_depth', 1.0)
+    vp.flush()
+    SDL.SDL_SetGPUViewport(pass, vp.pointer)
+
+    const sc = new SDL_Rect()
+    sc.set('x', 0)
+    sc.set('y', 0)
+    sc.set('w', pW[0]!)
+    sc.set('h', pH[0]!)
+    sc.flush()
+    SDL.SDL_SetGPUScissor(pass, sc.pointer)
+  }
+
   SDL.SDL_DrawGPUPrimitives(pass, 3, 1, 0, 0)
   SDL.SDL_EndGPURenderPass(pass)
 
   SDL.SDL_SubmitGPUCommandBuffer(cmdbuf)
+
+  const err = SDL.SDL_GetError().toString()
+  if (err) console.log('[SDL ERROR]', err)
+
   await Bun.sleep(0)
 }
 

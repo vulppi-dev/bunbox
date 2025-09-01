@@ -1,9 +1,20 @@
-import { SDL_InitFlags, SDL_WindowFlags } from '$enum'
+import { SDL_InitFlags, SDL_LogPriority, SDL_WindowFlags } from '$enum'
 import { cstr, SDL } from '$libs'
 
-if (!SDL.SDL_Init(SDL_InitFlags.SDL_INIT_VIDEO)) {
-  throw new Error('SDL_Init falhou')
+// ---------- stable C-strings ----------
+const STR = {
+  title: cstr('SDL3 GPU Vulkan — Stable Triangle'),
+  backend: cstr('vulkan'),
+  logKey: cstr('SDL_LOGGING'),
+  logVal: cstr('gpu=debug,assert=debug,*=info'),
+  main: cstr('main'),
 }
+
+// --- init ---
+if (!SDL.SDL_Init(SDL_InitFlags.SDL_INIT_VIDEO))
+  throw new Error('SDL_Init failed')
+SDL.SDL_SetLogPriorities(SDL_LogPriority.SDL_LOG_PRIORITY_DEBUG)
+SDL.SDL_SetHint(STR.logKey, STR.logVal)
 
 const win = SDL.SDL_CreateWindow(
   cstr('Bun + SDL3 🚀'),
