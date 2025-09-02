@@ -1,5 +1,5 @@
 import type { SDL_AssertState, SDL_HitTestResult } from '$enum'
-import type { Pointer } from '@bunbox/struct'
+import { type Pointer } from 'bun:ffi'
 
 // MARK: Assert
 
@@ -78,6 +78,18 @@ export type SDL_AudioStreamDataCompleteCallback = (
   buffer: Pointer,
   bufferLength: number,
 ) => void
+
+// MARK: Camera
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_Camera
+ */
+export type SDL_Camera = Record<string, unknown> & { __camera: undefined }
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_CameraID
+ */
+export type SDL_CameraID = number & { __camera_id: undefined }
 
 // MARK: Timer
 
