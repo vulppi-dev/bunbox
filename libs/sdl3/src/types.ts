@@ -29,6 +29,56 @@ export type SDL_AsyncIOQueue = Record<string, unknown> & {
  */
 export type SDL_SpinLock = number & { __spin_lock: undefined }
 
+// MARK: Audio
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_AudioDeviceID
+ */
+export type SDL_AudioDeviceID = number & { __audio_device_id: undefined }
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_AudioIterationCallback
+ */
+export type SDL_AudioIterationCallback = (
+  userdata: Pointer,
+  devId: SDL_AudioDeviceID,
+  start: boolean,
+) => void
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_AudioPostmixCallback
+ */
+export type SDL_AudioPostmixCallback = (
+  userdata: Pointer,
+  spec: Pointer,
+  buffer: Pointer,
+  bufferLength: number,
+) => void
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_AudioStream
+ */
+export type SDL_AudioStream = Pointer & { __audio_stream: undefined }
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_AudioStreamCallback
+ */
+export type SDL_AudioStreamCallback = (
+  userdata: Pointer,
+  stream: Pointer,
+  additionalAmount: number,
+  totalAmount: number,
+) => void
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_AudioStreamDataCompleteCallback
+ */
+export type SDL_AudioStreamDataCompleteCallback = (
+  userdata: Pointer,
+  buffer: Pointer,
+  bufferLength: number,
+) => void
+
 // MARK: Timer
 
 /**
