@@ -91,6 +91,22 @@ export type SDL_Camera = Record<string, unknown> & { __camera: undefined }
  */
 export type SDL_CameraID = number & { __camera_id: undefined }
 
+// MARK: Clipboard
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_ClipboardDataCallback
+ */
+export type SDL_ClipboardDataCallback = (
+  userdata: Pointer,
+  mime_type: Pointer,
+  size: Pointer,
+) => Pointer
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_ClipboardCleanupCallback
+ */
+export type SDL_ClipboardCleanupCallback = (userdata: Pointer) => void
+
 // MARK: Timer
 
 /**
