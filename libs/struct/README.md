@@ -1,24 +1,21 @@
 # @bunbox/struct
 
-A TypeScript library for **defining, serializing, and manipulating C-like structs in memory**.
-Perfect for **WebAssembly interop, FFI bindings, and low-level binary data handling**.
+A TypeScript library for **defining, serializing, and manipulating C‑like structs in memory**. Perfect for **WebAssembly interop, FFI bindings, and low‑level binary data handling**.
 
 ---
 
-## Features
+## Highlights (what’s new)
 
-- Typed schema definitions for structs
-- Automatic alignment & padding (C-style layout)
-- Supports:
+- **Property Proxy API**: interact with fields via `struct.properties.<field>`; reads pull from the backing buffer, writes persist immediately.
+- **Inline vs pointer-to-struct**: `isInline` embeds child bytes; otherwise a pointer is stored (safe-by-copy on read).
+- **Arrays reworked**:
 
-  - **Primitives** (`i8`, `u32`, `f64`, `boolean`, `string`, etc.)
-  - **Nested structs** (inline or pointer-to-struct)
-  - **Enums** with configurable storage size
-  - **Inline and dynamic arrays**
-  - **Function pointers / callbacks**
+  - Inline arrays (`length`) store contiguous payload.
+  - Dynamic arrays store a **pointer**; inline `string[]`/`boolean[]` are supported.
 
-- Serialization & deserialization via **`ArrayBuffer` / `DataView`**
-- **Union-like behavior** (`isOverlay`) and `pack(N)` alignment
+- **Enum width per field** via `bytes: 'u8' | 'u16' | 'u32' | 'u64'`.
+- **Union-like overlay**: `new Struct(schema, /*isOverlay=*/true)` places all fields at offset 0; size = max(field).
+- **C-style layout** with optional `pack(N)` (override `_pack()` in your runtime subclass).
 
 ---
 
@@ -30,23 +27,23 @@ bun add @bunbox/struct
 
 Requirements:
 
-- **Node.js >= 22** or **Bun >= 1.2**
+- **Node.js ≥ 22** or **Bun ≥ 1.2**
 
 ---
 
-## Example in Bun
+## Quick start (Bun FFI)
 
 ```ts
-import { AbstractStruct, Pointer, StructSchema, cstr } from '@bunbox/struct'
-import { ptr, read } from 'bun:ffi'
+import { AbstractStruct, type StructSchema, cstr } from '@bunbox/struct'
+import { ptr, read, CString, type Pointer } from 'bun:ffi'
 
-/* Create a struct for bun ffi */
 class BunStruct<TSchema extends StructSchema> extends AbstractStruct<TSchema> {
-  protected _ptr(buffer: ArrayBufferLike): Pointer {
+  protected _ptr(
+    buffer: ArrayBufferLike | NodeJS.TypedArray<ArrayBufferLike>,
+  ): bigint {
     return ptr(buffer)
   }
-
-  protected _read(pointer: Pointer, index: number, type: any): any {
+  protected _read(pointer: bigint, index: number, type: any): any {
     switch (type) {
       case 'i8':
         return read.i8(pointer, index)
@@ -77,69 +74,186 @@ class BunStruct<TSchema extends StructSchema> extends AbstractStruct<TSchema> {
         throw new Error(`Unsupported type: ${type}`)
     }
   }
-
-  protected override _pack(): Bytes {
-    return 8 // x64
+  protected _pack() {
+    return 8 as const
+  } // LP64
+  protected _toString(p: bigint): string {
+    return new CString(Number(p) as Pointer)
   }
 }
 
-/* Define a schema */
 const UserSchema = {
   id: { order: 1, type: 'u32' },
   age: { order: 2, type: 'u8' },
   name: { order: 3, type: 'string' },
 } as const satisfies StructSchema
 
-/* Create a struct class */
 class UserStruct extends BunStruct<typeof UserSchema> {
   constructor() {
     super(UserSchema)
   }
 }
 
-/* Usage */
 const user = new UserStruct()
-user.set('id', 123)
-user.set('age', 42)
-user.set('name', 'Alice')
+user.properties.id = 123
+user.properties.age = 42
+user.properties.name = 'Alice'
 
-user.flush() // write values into internal buffer
-console.log(user.buffer) // Uint8Array ready for FFI/WASM
+// Backing memory ready for FFI/WASM
+const ptrToUser = user.pointer
+const bytes = user.buffer // Uint8Array
+```
+
+> **Why a Proxy?** Property access remains ergonomic while guaranteeing that values are always synced with the underlying `DataView`.
+
+---
+
+## Defining schemas
+
+```ts
+const Person = {
+  id: { order: 1, type: 'u32' },
+  height: { order: 2, type: 'f32' },
+  alive: { order: 3, type: 'boolean' },
+  name: { order: 4, type: 'string' }, // stores a pointer to C-string
+} as const
+```
+
+**Ordering is required** (`order: number`) and defines layout order.
+
+Supported **primitive labels**: `i8, i16, i32, i64, u8, u16, u32, u64, f32, f64, boolean, string, void`.
+
+---
+
+## Inline vs pointer-to-struct
+
+```ts
+const Vec2 = {
+  x: { order: 1, type: 'f32' },
+  y: { order: 2, type: 'f32' },
+} as const
+
+const Transform = {
+  position: {
+    order: 1,
+    type: 'struct',
+    schema: class V extends BunStruct<typeof Vec2> {
+      constructor() {
+        super(Vec2)
+      }
+    },
+    isInline: true,
+  },
+  target: {
+    order: 2,
+    type: 'struct',
+    schema: class V2 extends BunStruct<typeof Vec2> {
+      constructor() {
+        super(Vec2)
+      }
+    },
+  }, // pointer
+} as const
+```
+
+- `isInline: true` embeds child bytes directly into the parent.
+- Without `isInline`, the field stores a **pointer**. On **read**, the library **copies** from pointed memory into a fresh instance (safe-by-copy).
+- Self‑referencing inline (`schema: 'self'` + `isInline`) is **not allowed**.
+
+---
+
+## Arrays (inline & dynamic)
+
+```ts
+const Buffers = {
+  // Inline numeric array (contiguous payload)
+  samples: { order: 1, type: 'array', to: 'f32', length: 256 },
+
+  // Inline pointers to C-strings
+  args: { order: 2, type: 'array', to: 'string', length: 3 },
+
+  // Dynamic array: a single pointer stored in the struct
+  blob: { order: 3, type: 'array', to: 'u8' },
+} as const
+```
+
+- **Inline arrays** require `length` and store contiguous bytes; for `string[]` they store an inline table of pointers; for `boolean[]` they pack as `u8` per element.
+- **Dynamic arrays** store only a pointer (you pass a TypedArray or `string[]`/`boolean[]`; the library writes the pointer and retains the backing bytes where applicable).
+
+Usage examples:
+
+```ts
+s.properties.samples = new Float32Array(256)
+s.properties.args = ['hello', 'world', 'SDL']
+s.properties.blob = new Uint8Array([1, 2, 3, 4])
 ```
 
 ---
 
-## API Overview
+## Enums
 
-### `AbstractStruct<TSchema>`
+```ts
+enum Mode {
+  Off = 0,
+  On = 1,
+}
+const WithEnum = {
+  mode: { order: 1, type: 'enum', enum: Mode, bytes: 'u8' }, // default is u32
+} as const
+```
 
-Base class for defining typed structs.
-
-- `set(key, value)` → set a field value
-- `get(key)` → get a field value
-- `copyTo(buffer, start, length)` → Copy struct data to external buffer
-- `copyFrom(buffer, start, length)` → Copy data from external buffer to struct
-- `flush()` → write values into buffer
-- `read()` → read values from buffer
-- `buffer` → `Uint8Array` with serialized data
-- `view` → `ArrayBufferLike` for creating views
-- `pointer` → pointer to the struct (runtime-specific)
-
-### Utility functions
-
-- `cstr(str: string): NodeJS.TypedArray<ArrayBufferLike>`
-  Converts a JS string into a null-terminated **C string** (`\0`).
+- `bytes` controls storage width per field.
 
 ---
 
-## Pointer Implementation
+## Unions & `pack(N)`
 
-`AbstractStruct` is **abstract** because pointer handling depends on your runtime (Node FFI, Bun, WebAssembly, etc.).
-You must implement:
+- **Union-like overlay**: `new MyStruct(schema, true)` places all fields at offset `0`; the struct size becomes the **max field size**.
+- **Packing**: override `_pack()` to limit field alignment to `min(natural, N)`, emulating `#pragma pack(N)`. This affects placement, not the natural size of each type.
 
-- `_ptr(buffer)` → return a pointer for a given buffer
-- `_read(ptr, index, type)` → read external memory
-- `_ptrToCstr(ptr)` → convert pointer to a JS string
+---
+
+## Memory model & alignment
+
+- Layout is **C-style**, with natural alignments, then rounded by an optional `pack(N)` cap.
+- Pointer-sized fields (`string`, `void`, function pointers, non-inline structs, dynamic arrays) use **LP64** defaults (8 bytes on x86_64).
+- `boolean` occupies **1 byte**; when placed in inline arrays, each element is `u8`.
+
+---
+
+## Runtime integration (abstract methods)
+
+`AbstractStruct` is runtime-agnostic. Implement these in your subclass:
+
+- `_ptr(buffer)` → return a pointer (`bigint`) to the given buffer.
+- `_read(pointer, index, type)` → read a value from **external memory** (used for safe-by-copy when dereferencing pointers).
+- `_pack()` → return the desired packing (`1 | 2 | 4 | 8`).
+- `_toString(pointer)` → convert a C-string pointer to a JS string.
+
+---
+
+## Public API (instance)
+
+- `properties` → Proxy of typed fields (get/set syncs with the backing buffer).
+- `size` / `alignment` → computed layout info.
+- `pointer` → pointer to the struct memory.
+- `view` → `ArrayBufferLike` backing store.
+- `buffer` → `Uint8Array` view of the bytes.
+- `copy(input)` → copy raw bytes into this struct.
+- `copyTo(dst, start, length)` / `copyFrom(src, start, length)` → bounded byte copies.
+
+---
+
+## Utilities
+
+- `cstr(str: string): Uint8Array` → create a **null‑terminated C string** buffer.
+
+---
+
+## Limitations & notes
+
+- Function pointers: you can **write** a JS callback with a `ptr` (e.g., produced by your FFI layer). Reading back as a JS function is **not** supported.
+- Pointer reads for non-inline structs perform a **copy** into a fresh instance to avoid unsafe live aliasing.
 
 ---
 

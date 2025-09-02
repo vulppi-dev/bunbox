@@ -1,11 +1,12 @@
 import { Buffer } from 'buffer'
 
-/* ===================== Types & Schemas ===================== */
+/*
+ * MARK: Types & Schemas
+ */
 
-export type Pointer = number & { __pointer__: null }
 export interface JSCallback {
   new (...args: any[]): any
-  readonly ptr: Pointer | null
+  readonly ptr: bigint | null
 }
 
 export type PrimitiveLabel =
@@ -29,7 +30,6 @@ export type PtrToPrimitive = {
   type: 'array'
   to: PrimitiveLabel
   length?: number // inline array length (if provided)
-  currentLength?: number // runtime length for dynamic arrays
 }
 
 export type PtrToStruct<S extends AbstractStruct<any>> = {
@@ -57,49 +57,48 @@ export type PropertySpec =
   | ({ order: number } & PtrToEnum<any>)
   | ({ order: number } & PtrToCallback<any>)
 
+type TAView = ArrayBufferView
+
+type TACtor<T extends TAView = TAView> = {
+  new (buffer: ArrayBufferLike, byteOffset?: number, length?: number): T
+  readonly BYTES_PER_ELEMENT: number
+}
+
+type ArrayValue<T extends PrimitiveLabel> = T extends 'string'
+  ? string[] | bigint
+  : T extends 'boolean'
+  ? boolean[] | bigint
+  : InstanceType<(typeof ArrayTypes)[T]> | bigint
+
 type ValueOfSpec<S, SS extends StructSchema> = S extends {
   type: 'struct'
   schema: infer ST
   isInline?: infer InLine
 }
   ? ST extends 'self'
-    ? AbstractStruct<SS> | Pointer | bigint
+    ? AbstractStruct<SS> | bigint
     : ST extends new (...args: any[]) => any
     ? InLine extends true
       ? InstanceType<ST>
-      : InstanceType<ST> | Pointer | bigint
-    : Pointer | bigint
+      : InstanceType<ST> | bigint
+    : bigint
   : S extends { type: 'enum'; enum: infer P }
   ? P extends {}
     ? P[keyof P] | number
     : never
   : S extends { type: 'array'; to: infer P }
   ? P extends PrimitiveLabel
-    ? P extends 'string'
-      ? Pointer[]
-      : P extends
-          | 'i64'
-          | 'u64'
-          | 'i8'
-          | 'i16'
-          | 'i32'
-          | 'u8'
-          | 'u16'
-          | 'u32'
-          | 'f32'
-          | 'f64'
-      ? InstanceType<(typeof ArrayTypes)[P]>
-      : P extends 'boolean'
-      ? boolean[]
-      : never
+    ? ArrayValue<P>
     : never
   : S extends { type: 'fn'; fn: infer P }
   ? P extends (...args: any[]) => any
     ? (P & JSCallback) | null
     : never
   : S extends { type: infer T }
-  ? T extends 'string' | 'void'
-    ? Pointer
+  ? T extends 'void'
+    ? bigint
+    : T extends 'string'
+    ? string
     : T extends 'i64' | 'u64'
     ? bigint
     : T extends 'i8' | 'i16' | 'i32' | 'u8' | 'u16' | 'u32' | 'f32' | 'f64'
@@ -115,25 +114,29 @@ export type PrimitiveBuffers = InstanceType<
   (typeof ArrayTypes)[keyof typeof ArrayTypes]
 >
 
-/* ===================== Typed Arrays Map ===================== */
+/*
+ * MARK: Typed Arrays Map
+ */
 
 const ArrayTypes = {
-  string: BigUint64Array<ArrayBufferLike>, // holds pointers (inline string[] uses pointers too)
-  i8: Int8Array<ArrayBufferLike>,
-  i16: Int16Array<ArrayBufferLike>,
-  i32: Int32Array<ArrayBufferLike>,
-  i64: BigInt64Array<ArrayBufferLike>,
-  u8: Uint8Array<ArrayBufferLike>,
-  u16: Uint16Array<ArrayBufferLike>,
-  u32: Uint32Array<ArrayBufferLike>,
-  u64: BigUint64Array<ArrayBufferLike>,
-  f32: Float32Array<ArrayBufferLike>,
-  f64: Float64Array<ArrayBufferLike>,
-  boolean: Uint8Array<ArrayBufferLike>,
-  void: BigUint64Array<ArrayBufferLike>, // generic pointer storage
-} as const
+  string: BigUint64Array,
+  i8: Int8Array,
+  i16: Int16Array,
+  i32: Int32Array,
+  i64: BigInt64Array,
+  u8: Uint8Array,
+  u16: Uint16Array,
+  u32: Uint32Array,
+  u64: BigUint64Array,
+  f32: Float32Array,
+  f64: Float64Array,
+  boolean: Uint8Array,
+  void: BigUint64Array,
+} as const satisfies Record<PrimitiveLabel, TACtor>
 
-/* ===================== Sizes, Alignments & Helpers ===================== */
+/*
+ * MARK: Sizes, Alignments & Helpers
+ */
 
 // Pointer size/alignment (LP64 on x86_64)
 const PTR_SIZE = 8 as const
@@ -165,7 +168,9 @@ function alignTo(offset: number, align: number): number {
   return (offset + mask) & ~mask
 }
 
-/* ===================== Defaults ===================== */
+/*
+ * MARK: Defaults
+ */
 
 function populateValues(schema: StructSchema, values: Record<string, any>) {
   for (const [key, spec] of Object.entries(schema)) {
@@ -180,11 +185,11 @@ function populateValues(schema: StructSchema, values: Record<string, any>) {
     if (spec.type === 'array') {
       const isInline = spec.length != null && spec.length >= 1
       if (spec.to === 'string') {
-        values[key] = isInline ? new Array(spec.length).fill(0) : 0
+        values[key] = isInline ? new Array(spec.length).fill('') : ''
         continue
       }
       if (spec.to === 'boolean') {
-        values[key] = isInline ? new Array(spec.length).fill(false) : 0
+        values[key] = isInline ? new Array(spec.length).fill(false) : false
         continue
       }
       const C = ArrayTypes[spec.to] as any
@@ -199,6 +204,11 @@ function populateValues(schema: StructSchema, values: Record<string, any>) {
       spec.type === 'void'
     ) {
       values[key] = 0n
+      continue
+    }
+
+    if (spec.type === 'string') {
+      values[key] = ''
       continue
     }
 
@@ -217,7 +227,9 @@ function populateValues(schema: StructSchema, values: Record<string, any>) {
   }
 }
 
-/* ===================== Layout (Aligned Offsets) ===================== */
+/*
+ * MARK: Layout (Aligned Offsets)
+ */
 
 function calcSchemaLayout(
   schema: StructSchema,
@@ -281,7 +293,9 @@ function calcSchemaLayout(
   return { size, alignment: maxAlign }
 }
 
-/* ===================== Get/Set DataView ===================== */
+/*
+ * MARK: Get/Set DataView
+ */
 
 function getDataViewValue(
   view: DataView,
@@ -369,27 +383,29 @@ function setDataViewValue(
   }
 }
 
-/* ===================== CString ===================== */
-
-export function cstr(str: string): NodeJS.TypedArray<ArrayBufferLike> {
-  return Buffer.from(str + '\0')
+export function cstr(str: string): Uint8Array {
+  return new Uint8Array(Buffer.from(str + '\0').buffer)
 }
 
-/* ===================== Core Class ===================== */
+/*
+ * MARK: Core Class
+ */
 
 export abstract class AbstractStruct<TSchema extends StructSchema> {
-  readonly #schema: TSchema
-  #values: { [K in keyof TSchema]?: ValueOfSpec<TSchema[K], TSchema> }
-  #sizes: { [K in keyof TSchema]: number }
-  #offsets: { [K in keyof TSchema]: number }
-  #isOverlay: boolean
+  private readonly _schema: TSchema
+  private _values: { [K in keyof TSchema]?: ValueOfSpec<TSchema[K], TSchema> }
+  private _sizes: { [K in keyof TSchema]: number }
+  private _offsets: { [K in keyof TSchema]: number }
+  private _retained: { [K in keyof TSchema]: Uint8Array | Uint8Array[] }
+  private _isOverlay: boolean
 
-  #buffer: DataView
-  #u8: Uint8Array
-  #size: number
-  #alignment: number
-
-  #retained: Uint8Array[] = []
+  private _buffer: DataView
+  private _u8: Uint8Array
+  private _size: number
+  private _alignment: number
+  private _proxy: {
+    [K in keyof TSchema]: ValueOfSpec<TSchema[K], TSchema>
+  }
 
   /**
    * @param schema Struct schema
@@ -412,73 +428,68 @@ export abstract class AbstractStruct<TSchema extends StructSchema> {
       }
     }
 
-    this.#isOverlay = isOverlay
-    this.#values = Object.create(null)
-    this.#sizes = Object.create(null)
-    this.#offsets = Object.create(null)
-    this.#schema = schema
+    this._isOverlay = isOverlay
+    this._values = Object.create(null)
+    this._sizes = Object.create(null)
+    this._offsets = Object.create(null)
+    this._retained = Object.create(null)
+    this._schema = schema
 
-    populateValues(this.#schema, this.#values)
+    populateValues(this._schema, this._values)
 
     const { size, alignment } = calcSchemaLayout(
-      this.#schema,
-      this.#sizes,
-      this.#offsets,
-      this.#values,
-      this.#isOverlay,
+      this._schema,
+      this._sizes,
+      this._offsets,
+      this._values,
+      this._isOverlay,
       this._pack(),
     )
 
-    this.#size = size
-    this.#alignment = alignment
+    this._size = size
+    this._alignment = alignment
 
-    const ab = new ArrayBuffer(this.#size)
-    this.#buffer = new DataView(ab)
-    this.#u8 = new Uint8Array(ab)
-  }
+    const ab = new ArrayBuffer(this._size)
+    this._buffer = new DataView(ab)
+    this._u8 = new Uint8Array(ab)
 
-  /* ============ Public API ============ */
-
-  set<K extends keyof TSchema>(
-    key: K,
-    value: ValueOfSpec<TSchema[K], TSchema>,
-  ): this {
-    if (!(key in this.#schema)) {
-      throw new Error(`Unknown field: ${String(key)}`)
+    this._proxy = new Proxy(this._values, this.#handler()) as {
+      [K in keyof TSchema]-?: ValueOfSpec<TSchema[K], TSchema>
     }
-    this.#values[key] = value
-    return this
   }
 
-  get<K extends keyof TSchema>(key: K): ValueOfSpec<TSchema[K], TSchema> {
-    if (!(key in this.#schema)) {
-      throw new Error(`Unknown field: ${String(key)}`)
-    }
-    return this.#values[key] as ValueOfSpec<TSchema[K], TSchema>
-  }
+  /*
+   * MARK: Public API
+   */
 
   get size() {
-    return this.#size
+    return this._size
   }
   get alignment() {
-    return this.#alignment
+    return this._alignment
   }
 
-  get pointer(): Pointer {
-    return this._ptr(this.#buffer.buffer)
+  get pointer(): bigint {
+    return this._ptr(this._buffer.buffer)
   }
   get view(): ArrayBufferLike {
-    return this.#buffer.buffer
+    return this._buffer.buffer
   }
   get buffer(): Uint8Array {
-    return this.#u8
+    return this._u8
+  }
+
+  get properties(): {
+    -readonly [K in keyof TSchema]: ValueOfSpec<TSchema[K], TSchema>
+  } {
+    return this._proxy
   }
 
   copy(input: ArrayBufferLike | Uint8Array) {
     if (input instanceof Uint8Array) {
-      this.#u8.set(input)
+      this._u8.set(input)
     } else {
-      this.#u8.set(new Uint8Array(input))
+      this._u8.set(new Uint8Array(input))
     }
   }
 
@@ -487,7 +498,7 @@ export abstract class AbstractStruct<TSchema extends StructSchema> {
       buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer)
     const l = Math.min(length, bufferView.length)
     for (let i = 0; i < l; i++) {
-      bufferView[i] = this.#u8[i + start] ?? 0
+      bufferView[i] = this._u8[i + start] ?? 0
     }
   }
 
@@ -498,377 +509,380 @@ export abstract class AbstractStruct<TSchema extends StructSchema> {
   ) {
     const bufferView =
       buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer)
-    const l = Math.min(length, this.#u8.length)
+    const l = Math.min(length, this._u8.length)
     for (let i = 0; i < l; i++) {
-      this.#u8[i + start] = bufferView[i] ?? 0
+      this._u8[i + start] = bufferView[i] ?? 0
     }
   }
 
-  /* ============ Internal helpers ============ */
+  /*
+   * MARK: Internal helpers
+   */
 
-  #clearRetained(): void {
-    this.#retained = []
+  #handler(): ProxyHandler<{
+    [K in keyof TSchema]?: ValueOfSpec<TSchema[K], TSchema>
+  }> {
+    return {
+      get: (_target, prop) => {
+        if (!(prop in this._schema)) {
+          throw new Error(`Unknown struct field: ${String(prop)}`)
+        }
+
+        if (prop in this._values) {
+          this.#read(prop as keyof TSchema)
+          return this._values[prop as keyof TSchema]
+        }
+
+        throw new Error(`Unknown struct field: ${String(prop)}`)
+      },
+
+      set: (_target, prop, value) => {
+        if (!(prop in this._schema)) {
+          throw new Error(`Unknown struct field: ${String(prop)}`)
+        }
+
+        this._values[prop as keyof TSchema] = value
+        this.#write(prop as keyof TSchema)
+
+        return true
+      },
+
+      deleteProperty: () => {
+        throw new Error('Struct fields cannot be deleted')
+      },
+
+      has: (_target, prop) => prop in this._schema,
+
+      ownKeys: () => Object.keys(this._schema),
+      getOwnPropertyDescriptor: () => {
+        return { enumerable: true, configurable: true }
+      },
+    }
   }
 
-  /* ============ Read struct fields from this buffer ============ */
+  /*
+   * MARK: Read struct fields from this buffer
+   */
 
-  read() {
-    const entries = Object.entries(this.#schema).sort(
-      (a, b) => a[1].order - b[1].order,
-    )
+  #read(key: keyof TSchema) {
+    const spec = this._schema[key]!
+    const offset = this._offsets[key as keyof TSchema]
 
-    for (const [key, spec] of entries) {
-      const offset = this.#offsets[key as keyof TSchema]
+    switch (spec.type) {
+      case 'struct': {
+        const s = this._values[key] as AbstractStruct<any> | bigint
 
-      switch (spec.type) {
-        case 'struct': {
-          const s = this.#values[key] as AbstractStruct<any> | Pointer | bigint
+        if (spec.isInline && s && typeof s !== 'object') {
+          throw new Error(
+            `Invalid value for inline struct property: ${String(key)}`,
+          )
+        }
 
-          if (spec.isInline && s && typeof s !== 'object') {
+        if (spec.isInline && s) {
+          const str = s as AbstractStruct<any>
+          this.copyTo(str.view, offset, str.size)
+          break
+        }
+
+        if (
+          !spec.isInline &&
+          typeof s === 'object' &&
+          s instanceof AbstractStruct
+        ) {
+          break
+        }
+
+        const addr = getDataViewValue(this._buffer, offset, spec.type)
+        if (!addr) {
+          this._values[key as keyof TSchema] = 0n as any
+        } else {
+          // Deserialize by copying pointed memory into a new instance (safe-by-copy)
+          if (spec.schema !== 'self' && typeof spec.schema === 'function') {
+            const Ctor = spec.schema as new (
+              ...args: any[]
+            ) => AbstractStruct<any>
+            const instance = new Ctor()
+            const temp = new Uint8Array(instance.size)
+            for (let i = 0; i < temp.length; i++)
+              temp[i] = this._read(BigInt(addr), i, 'u8')
+            instance.copy(temp)
+            this._values[key as keyof TSchema] = instance as any
+          } else {
+            this._values[key as keyof TSchema] = 0n as any
+          }
+        }
+        break
+      }
+      case 'enum': {
+        // If you need different enum widths, add per-field control
+        const raw = getDataViewValue(this._buffer, offset, spec.bytes ?? 'u32')
+        this._values[key as keyof TSchema] = raw as any
+        break
+      }
+      case 'array': {
+        // Inline arrays (fixed length)
+        if (spec.length != null && spec.length >= 1) {
+          const size = this._sizes[key]!
+          if (spec.to === 'string') {
+            // inline: array of pointers to c-strings
+            const view = new BigUint64Array(this.view, offset, spec.length)
+            const arr: string[] = new Array(spec.length)
+            for (let i = 0; i < spec.length; i++) {
+              const ap = view[i] ?? 0n
+              arr[i] = ap ? this._toString(ap) : ''
+            }
+            this._values[key as keyof TSchema] = arr as any
+          } else if (spec.to === 'boolean') {
+            const view = new Uint8Array(this.view, offset, spec.length)
+            const arr: boolean[] = new Array(spec.length)
+            for (let i = 0; i < spec.length; i++) arr[i] = view[i] !== 0
+            this._values[key as keyof TSchema] = arr as any
+          } else {
+            // numeric inline array
+            const C: any = ArrayTypes[spec.to]
+            const per = (C as any).BYTES_PER_ELEMENT
+            const count = size / per
+            const view = new C(this.view, offset, count)
+            this._values[key as keyof TSchema] = new C(view) as any
+          }
+          break
+        }
+
+        // Dynamic arrays (pointer + currentLength)
+        const addr = getDataViewValue(this._buffer, offset, spec.type)
+        const basePtr = BigInt(addr)
+
+        switch (spec.to) {
+          case 'string':
+          case 'boolean': {
+            this._values[key as keyof TSchema] = addr as any
+            break
+          }
+          default: {
+            if (this._values[key as keyof TSchema]) {
+              break
+            }
+            this._values[key as keyof TSchema] = addr as any
+          }
+        }
+        break
+      }
+      case 'fn': {
+        // Function pointers are not read back as JS callbacks.
+        break
+      }
+      case 'string': {
+        const addr = getDataViewValue(this._buffer, offset, spec.type)
+        this._values[key as keyof TSchema] = (
+          addr ? this._toString(Number(addr) as any) : ''
+        ) as any
+        break
+      }
+      case 'void':
+      case 'u64':
+      case 'i64':
+      case 'f64':
+      case 'u32':
+      case 'i32':
+      case 'f32':
+      case 'u16':
+      case 'i16':
+      case 'u8':
+      case 'i8':
+      case 'boolean': {
+        const v = getDataViewValue(this._buffer, offset, spec.type)
+        this._values[key as keyof TSchema] = v as any
+        break
+      }
+
+      default:
+        throw new Error('Invalid struct property')
+    }
+  }
+
+  /*
+   * MARK: Write struct fields into this buffer
+   */
+
+  #write(key: keyof TSchema) {
+    const spec = this._schema[key]!
+    const offset = this._offsets[key as keyof TSchema]
+    const val = this._values[key as keyof TSchema]
+
+    switch (spec.type) {
+      case 'struct': {
+        if (spec.isInline) {
+          if (typeof val !== 'object') {
             throw new Error(
               `Invalid value for inline struct property: ${String(key)}`,
             )
           }
-
-          if (spec.isInline && s) {
-            const str = s as AbstractStruct<any>
-            this.copyTo(str.view, offset, str.size)
-            str.read()
-            break
-          }
-
-          if (
-            !spec.isInline &&
-            typeof s === 'object' &&
-            s instanceof AbstractStruct
-          ) {
-            s.read()
-            break
-          }
-
-          const addr = getDataViewValue(this.#buffer, offset, spec.type)
-          if (!addr) {
-            this.#values[key as keyof TSchema] = 0n as any
-          } else {
-            // Deserialize by copying pointed memory into a new instance (safe-by-copy)
-            if (spec.schema !== 'self' && typeof spec.schema === 'function') {
-              const Ctor = spec.schema as new (
-                ...args: any[]
-              ) => AbstractStruct<any>
-              const instance = new Ctor()
-              const basePtr = Number(addr) as Pointer
-              const temp = new Uint8Array(instance.size)
-              for (let i = 0; i < temp.length; i++)
-                // temp[i] = read.u8(basePtr, i)
-                temp[i] = this._read(basePtr, i, 'u8')
-              instance.copy(temp)
-              instance.read()
-              this.#values[key as keyof TSchema] = instance as any
-            } else {
-              this.#values[key as keyof TSchema] = 0n as any
-            }
-          }
+          const s = val as AbstractStruct<any>
+          this.copyFrom(s.view, offset, s.size)
           break
         }
-        case 'enum': {
-          // If you need different enum widths, add per-field control
-          const raw = getDataViewValue(
-            this.#buffer,
-            offset,
-            spec.bytes ?? 'u32',
+
+        let address: bigint = 0n
+        if (typeof val === 'object' && 'flush' in (val as any)) {
+          const s = val as AbstractStruct<any>
+          address = s.pointer
+        } else if (typeof val === 'number' || typeof val === 'bigint') {
+          address = BigInt(val as any)
+        } else {
+          throw new Error(`Invalid value for pointer-to-struct: ${String(key)}`)
+        }
+        setDataViewValue(this._buffer, offset, spec.type, address)
+        break
+      }
+
+      case 'enum': {
+        const s = val as bigint | number
+        setDataViewValue(this._buffer, offset, spec.bytes ?? 'u32', s)
+        break
+      }
+
+      case 'array': {
+        const s = val as any[] | PrimitiveBuffers
+        const isInline = spec.length != null && spec.length >= 1
+        if (!s) break
+
+        if (isInline && (s as any[]).length !== spec.length) {
+          throw new Error(
+            `Invalid array length: ${(s as any[]).length}; expected: ${
+              spec.length
+            }`,
           )
-          this.#values[key as keyof TSchema] = raw as any
-          break
         }
-        case 'array': {
-          // Inline arrays (fixed length)
-          if (spec.length != null && spec.length >= 1) {
-            const size = this.#sizes[key]!
-            if (spec.to === 'string') {
-              // inline: array of pointers to c-strings
-              const view = new BigUint64Array(this.view, offset, spec.length)
-              const arr: Pointer[] = new Array(spec.length)
-              for (let i = 0; i < spec.length; i++) {
-                const ap = Number(view[i]) as Pointer
-                arr[i] = (ap ?? 0) as any
-              }
-              this.#values[key as keyof TSchema] = arr as any
-            } else if (spec.to === 'boolean') {
-              const view = new Uint8Array(this.view, offset, spec.length)
-              const arr: boolean[] = new Array(spec.length)
-              for (let i = 0; i < spec.length; i++) arr[i] = view[i] !== 0
-              this.#values[key as keyof TSchema] = arr as any
-            } else {
-              // numeric inline array
-              const C: any = ArrayTypes[spec.to]
-              const per = (C as any).BYTES_PER_ELEMENT
-              const count = size / per
-              const view = new C(this.view, offset, count)
-              this.#values[key as keyof TSchema] = new C(view) as any
-            }
-            break
-          }
 
-          // Dynamic arrays (pointer + currentLength)
-          const addr = getDataViewValue(this.#buffer, offset, spec.type)
-          if (!addr || !spec.currentLength) {
-            this.#values[key as keyof TSchema] = undefined
-            break
-          }
-
-          const basePtr = Number(addr) as Pointer
-          const len = spec.currentLength
-
+        if (Array.isArray(s)) {
+          // Only 'string'[] and 'boolean'[] are allowed here
+          let pointers: ArrayBufferLike
           switch (spec.to) {
             case 'string': {
-              const arr: Pointer[] = []
-              for (let i = 0; i < len; i++) {
-                const cptr = this._read(
-                  basePtr,
-                  i * PTR_SIZE,
-                  spec.to,
-                ) as Pointer
-                arr.push(cptr ?? 0)
+              const buffer = new BigInt64Array(s.length)
+              pointers = buffer.buffer
+              const retained: Uint8Array[] = []
+              for (let i = 0; i < s.length; i++) {
+                if (typeof s[i] !== 'string') {
+                  throw new RangeError(
+                    `Invalid array element type for string[]: ${typeof s[i]}`,
+                  )
+                }
+                const bytes = cstr(s[i] ?? '')
+                retained.push(bytes)
+                buffer[i] = BigInt(this._ptr(bytes))
               }
-              this.#values[key as keyof TSchema] = arr as any
+              this._retained[key] = retained
               break
             }
             case 'boolean': {
-              const arr: boolean[] = []
-              for (let i = 0; i < len; i++) {
-                arr.push(this._read(basePtr, i, spec.to))
-              }
-              this.#values[key as keyof TSchema] = arr as any
+              const buffer = new Uint8Array(s.length)
+              pointers = buffer.buffer
+              this._retained[key] = buffer
+              for (let i = 0; i < s.length; i++) buffer[i] = s[i] ? 1 : 0
               break
             }
-            default: {
-              // numeric dynamic arrays
-              const elemSize = TYPE_BYTES[spec.to]
-              const raw = new Uint8Array(len * elemSize)
-              for (let i = 0; i < raw.length; i++)
-                raw[i] = this._read(basePtr, i, spec.to)
-
-              const T: any = (ArrayTypes as any)[spec.to]
-              this.#values[key as keyof TSchema] = new T(raw.buffer) as any
-            }
-          }
-          break
-        }
-        case 'fn': {
-          // Function pointers are not read back as JS callbacks.
-          break
-        }
-        case 'string': {
-          const addr = getDataViewValue(this.#buffer, offset, spec.type)
-          this.#values[key as keyof TSchema] = addr ? (Number(addr) as any) : 0
-          break
-        }
-        case 'void':
-        case 'u64':
-        case 'i64':
-        case 'f64':
-        case 'u32':
-        case 'i32':
-        case 'f32':
-        case 'u16':
-        case 'i16':
-        case 'u8':
-        case 'i8':
-        case 'boolean': {
-          const v = getDataViewValue(this.#buffer, offset, spec.type)
-          this.#values[key as keyof TSchema] = v as any
-          break
-        }
-
-        default:
-          throw new Error('Invalid struct property')
-      }
-    }
-  }
-
-  /* ============ Write struct fields into this buffer ============ */
-
-  flush() {
-    this.#u8.fill(0)
-    this.#clearRetained()
-
-    const entries = Object.entries(this.#schema).sort(
-      (a, b) => a[1].order - b[1].order,
-    )
-
-    for (const [key, spec] of entries) {
-      const offset = this.#offsets[key as keyof TSchema]
-      const val = this.#values[key as keyof TSchema]
-
-      if (val == null) continue
-
-      switch (spec.type) {
-        case 'struct': {
-          if (spec.isInline) {
-            if (typeof val !== 'object') {
-              throw new Error(
-                `Invalid value for inline struct property: ${String(key)}`,
-              )
-            }
-            const s = val as AbstractStruct<any>
-            s.flush()
-            this.copyFrom(s.view, offset, s.size)
-            break
+            default:
+              throw new Error(`Invalid array type for JS array: ${spec.to}`)
           }
 
-          let address: bigint = 0n
-          if (typeof val === 'object' && 'flush' in (val as any)) {
-            const s = val as AbstractStruct<any>
-            s.flush()
-            address = BigInt(s.pointer)
-          } else if (typeof val === 'number' || typeof val === 'bigint') {
-            address = BigInt(val as any)
+          if (isInline) {
+            this.copyFrom(new Uint8Array(pointers), offset, this._sizes[key]!)
           } else {
-            throw new Error(
-              `Invalid value for pointer-to-struct: ${String(key)}`,
+            setDataViewValue(
+              this._buffer,
+              offset,
+              spec.type,
+              BigInt(this._ptr(pointers)),
             )
           }
-          setDataViewValue(this.#buffer, offset, spec.type, address)
-          break
-        }
-
-        case 'enum': {
-          const s = val as bigint | number
-          setDataViewValue(this.#buffer, offset, spec.bytes ?? 'u32', s)
-          break
-        }
-
-        case 'array': {
-          const s = val as any[] | PrimitiveBuffers
-          const isInline = spec.length != null && spec.length >= 1
-          if (!s) break
-
-          if (isInline && (s as any[]).length !== spec.length) {
-            throw new Error(
-              `Invalid array length: ${(s as any[]).length}; expected: ${
-                spec.length
-              }`,
+        } else if (typeof s === 'object' && 'buffer' in s) {
+          // TypedArray case
+          if (isInline) {
+            this.copyFrom(
+              new Uint8Array((s as any).buffer),
+              offset,
+              this._sizes[key]!,
+            )
+          } else {
+            setDataViewValue(
+              this._buffer,
+              offset,
+              spec.type,
+              BigInt(this._ptr((s as any).buffer)),
             )
           }
-
-          if (Array.isArray(s)) {
-            // Only 'string'[] and 'boolean'[] are allowed here
-            let pointers: ArrayBufferLike
-            switch (spec.to) {
-              case 'string': {
-                const buffer = new BigInt64Array(s.length)
-                spec.currentLength = s.length
-                pointers = buffer.buffer
-                for (let i = 0; i < s.length; i++) {
-                  const bytes = cstr(s[i] ?? '')
-                  const hold = new Uint8Array(bytes.buffer)
-                  this.#retained.push(hold)
-                  buffer[i] = BigInt(this._ptr(hold.buffer))
-                }
-                break
-              }
-              case 'boolean': {
-                const buffer = new Uint8Array(s.length)
-                spec.currentLength = s.length
-                pointers = buffer.buffer
-                for (let i = 0; i < s.length; i++) buffer[i] = s[i] ? 1 : 0
-                break
-              }
-              default:
-                throw new Error(`Invalid array type for JS array: ${spec.to}`)
-            }
-
-            if (isInline) {
-              this.copyFrom(new Uint8Array(pointers), offset, this.#sizes[key]!)
-            } else {
-              setDataViewValue(
-                this.#buffer,
-                offset,
-                spec.type,
-                BigInt(this._ptr(pointers)),
-              )
-            }
-          } else if (typeof s === 'object' && 'buffer' in s) {
-            // TypedArray case
-            if (isInline) {
-              this.copyFrom(
-                new Uint8Array((s as any).buffer),
-                offset,
-                this.#sizes[key]!,
-              )
-            } else {
-              spec.currentLength = (s as any).length
-              setDataViewValue(
-                this.#buffer,
-                offset,
-                spec.type,
-                BigInt(this._ptr((s as any).buffer)),
-              )
-            }
-          }
-          break
         }
-
-        case 'fn': {
-          const cb = val as JSCallback | undefined
-          const addr = cb?.ptr ? BigInt(cb.ptr) : 0n
-          setDataViewValue(this.#buffer, offset, spec.type, addr)
-          break
-        }
-
-        case 'string': {
-          const s = val as Pointer | undefined
-          if (!s) {
-            setDataViewValue(this.#buffer, offset, spec.type, 0n)
-          } else {
-            setDataViewValue(this.#buffer, offset, spec.type, BigInt(s))
-          }
-          break
-        }
-
-        case 'void':
-        case 'u64':
-        case 'i64': {
-          setDataViewValue(
-            this.#buffer,
-            offset,
-            spec.type,
-            BigInt((val as any) ?? 0),
-          )
-          break
-        }
-
-        case 'f64':
-        case 'f32':
-        case 'i32':
-        case 'i16':
-        case 'i8':
-        case 'u32':
-        case 'u16':
-        case 'u8':
-        case 'boolean': {
-          setDataViewValue(
-            this.#buffer,
-            offset,
-            spec.type,
-            Number((val as any) ?? 0),
-          )
-          break
-        }
-
-        default:
-          throw new Error('Invalid struct property')
+        break
       }
+
+      case 'fn': {
+        const cb = val as JSCallback | undefined
+        const addr = cb?.ptr ? BigInt(cb.ptr) : 0n
+        setDataViewValue(this._buffer, offset, spec.type, addr)
+        break
+      }
+
+      case 'string': {
+        const s = val as string | undefined
+        if (!s) {
+          setDataViewValue(this._buffer, offset, spec.type, 0n)
+        } else {
+          const bytes = cstr(s)
+          this._retained[key] = new Uint8Array(bytes.buffer)
+          setDataViewValue(
+            this._buffer,
+            offset,
+            spec.type,
+            BigInt(this._ptr(bytes)),
+          )
+        }
+        break
+      }
+
+      case 'void':
+      case 'u64':
+      case 'i64': {
+        setDataViewValue(
+          this._buffer,
+          offset,
+          spec.type,
+          BigInt((val as any) ?? 0),
+        )
+        break
+      }
+
+      case 'f64':
+      case 'f32':
+      case 'i32':
+      case 'i16':
+      case 'i8':
+      case 'u32':
+      case 'u16':
+      case 'u8':
+      case 'boolean': {
+        setDataViewValue(
+          this._buffer,
+          offset,
+          spec.type,
+          Number((val as any) ?? 0),
+        )
+        break
+      }
+
+      default:
+        throw new Error('Invalid struct property')
     }
   }
 
   protected abstract _ptr(
     buffer: ArrayBufferLike | NodeJS.TypedArray<ArrayBufferLike>,
-  ): Pointer
+  ): bigint
   protected abstract _read(
-    pointer: Pointer,
+    pointer: bigint,
     index: number,
     type: PrimitiveLabel,
   ): any
   protected abstract _pack(): Bytes
+  protected abstract _toString(pointer: bigint): string
 }
