@@ -181,17 +181,17 @@ export const AUDIO_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_PutAudioStreamDataNoCopy
    */
-  SDL_PutAudioStreamDataNoCopy: {
-    args: ['ptr', 'ptr', 'i32', 'ptr', 'ptr'],
-    returns: 'bool',
-  },
+  // SDL_PutAudioStreamDataNoCopy: {
+  //   args: ['ptr', 'ptr', 'i32', 'ptr', 'ptr'],
+  //   returns: 'bool',
+  // }, --- NOT EXISTS ---
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_PutAudioStreamPlanarData
    */
-  SDL_PutAudioStreamPlanarData: {
-    args: ['ptr', 'ptr', 'i32', 'i32'],
-    returns: 'bool',
-  },
+  // SDL_PutAudioStreamPlanarData: {
+  //   args: ['ptr', 'ptr', 'i32', 'i32'],
+  //   returns: 'bool',
+  // }, --- NOT EXISTS ---
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_ResumeAudioDevice
    */
@@ -207,10 +207,10 @@ export const AUDIO_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_SetAudioIterationCallbacks
    */
-  SDL_SetAudioIterationCallbacks: {
-    args: ['u32', 'ptr', 'ptr', 'ptr'],
-    returns: 'bool',
-  },
+  // SDL_SetAudioIterationCallbacks: {
+  //   args: ['u32', 'ptr', 'ptr', 'ptr'],
+  //   returns: 'bool',
+  // }, --- NOT EXISTS ---
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_SetAudioPostmixCallback
    */

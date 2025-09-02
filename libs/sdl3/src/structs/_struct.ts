@@ -1,54 +1,55 @@
 import {
   AbstractStruct,
   type Bytes,
-  type Pointer,
   type PrimitiveLabel,
   type StructSchema,
 } from '@bunbox/struct'
-import { ptr, read } from 'bun:ffi'
+import { CString, ptr, read, type Pointer } from 'bun:ffi'
 
-export type { Pointer, PrimitiveLabel, StructSchema } from '@bunbox/struct'
+export type { PrimitiveLabel, StructSchema } from '@bunbox/struct'
 
-export class BunStruct<
+export abstract class BunStruct<
   TSchema extends StructSchema,
 > extends AbstractStruct<TSchema> {
   protected override _ptr(
     buffer: ArrayBufferLike | NodeJS.TypedArray<ArrayBufferLike>,
-  ): Pointer {
-    return ptr(buffer)
+  ): bigint {
+    return BigInt(ptr(buffer))
   }
 
   protected override _read(
-    pointer: Pointer,
+    pointer: bigint,
     index: number,
     type: PrimitiveLabel,
   ) {
+    const p = Number(pointer) as Pointer
+
     switch (type) {
       case 'i8':
-        return read.i8(pointer, index)
+        return read.i8(p, index)
       case 'u8':
-        return read.u8(pointer, index)
+        return read.u8(p, index)
       case 'boolean':
-        return !!read.u8(pointer, index)
+        return !!read.u8(p, index)
       case 'i16':
-        return read.i16(pointer, index)
+        return read.i16(p, index)
       case 'u16':
-        return read.u16(pointer, index)
+        return read.u16(p, index)
       case 'i32':
-        return read.i32(pointer, index)
+        return read.i32(p, index)
       case 'u32':
-        return read.u32(pointer, index)
+        return read.u32(p, index)
       case 'f32':
-        return read.f32(pointer, index)
+        return read.f32(p, index)
       case 'i64':
-        return read.i64(pointer, index)
+        return read.i64(p, index)
       case 'u64':
-        return read.u64(pointer, index)
+        return read.u64(p, index)
       case 'f64':
-        return read.f64(pointer, index)
+        return read.f64(p, index)
       case 'void':
       case 'string':
-        return read.intptr(pointer, index)
+        return read.intptr(p, index)
       default:
         throw new Error(`Unsupported type: ${type}`)
     }
@@ -56,5 +57,13 @@ export class BunStruct<
 
   protected override _pack(): Bytes {
     return 8 // x64
+  }
+
+  protected override _toString(pointer: bigint): string {
+    return new CString(Number(pointer) as Pointer).toString()
+  }
+
+  get bunPointer() {
+    return Number(this.pointer) as Pointer
   }
 }

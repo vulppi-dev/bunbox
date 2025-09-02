@@ -40,16 +40,14 @@ let running = true
 while (running) {
   // handle events
   const e = new SDL_Event()
-  while (SDL.SDL_PollEvent(e.pointer)) {
-    try {
-      e.read()
-    } catch (err) {
-      console.error('Error reading event:', err)
-    }
-    const type = e.get('type')
+  while (SDL.SDL_PollEvent(e.bunPointer)) {
+    const type = e.properties.type
     if (type === SDL_EventType.SDL_EVENT_QUIT) running = false
     else if (type === SDL_EventType.SDL_EVENT_KEY_DOWN) {
-      if (e.get('key').get('scancode') === SDL_Scancode.SDL_SCANCODE_ESCAPE)
+      if (
+        e.properties.key.properties.scancode ===
+        SDL_Scancode.SDL_SCANCODE_ESCAPE
+      )
         running = false
     }
   }
@@ -67,11 +65,10 @@ while (running) {
   const y = (H - size) * 0.5
 
   const rect = new SDL_FRect()
-  rect.set('x', x)
-  rect.set('y', y)
-  rect.set('w', size)
-  rect.set('h', size)
-  rect.flush()
+  rect.properties.x = x
+  rect.properties.y = y
+  rect.properties.w = size
+  rect.properties.h = size
 
   // clear background
   // Note: you must set the draw color before Clear and before drawing each primitive
@@ -80,7 +77,7 @@ while (running) {
 
   // draw filled square
   SDL.SDL_SetRenderDrawColor(renderer, 64, 180, 255, 255) // fg: cyan-ish
-  SDL.SDL_RenderFillRect(renderer, rect.pointer)
+  SDL.SDL_RenderFillRect(renderer, rect.bunPointer)
 
   // present
   SDL.SDL_RenderPresent(renderer)

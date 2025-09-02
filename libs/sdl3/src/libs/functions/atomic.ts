@@ -8,7 +8,7 @@ export const ATOMIC_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_AddAtomicU32
    */
-  SDL_AddAtomicU32: { args: ['ptr', 'i32'], returns: 'u32' },
+  // SDL_AddAtomicU32: { args: ['ptr', 'i32'], returns: 'u32' }, --- NOT EXISTS ---
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_CompareAndSwapAtomicInt
    */
