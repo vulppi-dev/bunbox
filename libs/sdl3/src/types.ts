@@ -118,6 +118,10 @@ export type SDL_DialogFileCallback = (
   filter: number,
 ) => void
 
+// MARK: Event
+
+export type SDL_EventFilter = (userdata: Pointer, event: Pointer) => boolean
+
 // MARK: Timer
 
 /**
