@@ -107,6 +107,17 @@ export type SDL_ClipboardDataCallback = (
  */
 export type SDL_ClipboardCleanupCallback = (userdata: Pointer) => void
 
+// MARK: Dialog
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_DialogFileCallback
+ */
+export type SDL_DialogFileCallback = (
+  userdata: Pointer,
+  filelist: Pointer,
+  filter: number,
+) => void
+
 // MARK: Timer
 
 /**
