@@ -1,5 +1,12 @@
-import type { SDL_HitTestResult } from '$enum'
+import type { SDL_AssertState, SDL_HitTestResult } from '$enum'
 import type { Pointer } from '@bunbox/struct'
+
+// MARK: Assert
+
+export type SDL_AssertionHandler = (
+  data: Pointer,
+  userdata: Pointer,
+) => SDL_AssertState
 
 // MARK: Timer
 
@@ -7,7 +14,7 @@ import type { Pointer } from '@bunbox/struct'
  * @description https://wiki.libsdl.org/SDL3/SDL_TimerCallback
  */
 export type SDL_TimerCallback = (
-  userdata: any,
+  userdata: Pointer,
   timerId: SDL_TimerID,
   interval: number,
 ) => number
@@ -39,7 +46,7 @@ export type SDL_EGLAttrib = Pointer & { __egl_attrib: undefined }
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_EGLAttribArrayCallback
  */
-export type SDL_EGLAttribArrayCallback = (userdata: any) => SDL_EGLAttrib
+export type SDL_EGLAttribArrayCallback = (userdata: Pointer) => SDL_EGLAttrib
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_EGLConfig
@@ -60,7 +67,7 @@ export type SDL_EGLint = number & { __egl_int: undefined }
  * @description https://wiki.libsdl.org/SDL3/SDL_EGLIntArrayCallback
  */
 export type SDL_EGLIntArrayCallback = (
-  userdata: any,
+  userdata: Pointer,
   display: SDL_EGLDisplay,
   config: SDL_EGLConfig,
 ) => SDL_EGLint
