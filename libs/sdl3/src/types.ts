@@ -8,6 +8,20 @@ export type SDL_AssertionHandler = (
   userdata: Pointer,
 ) => SDL_AssertState
 
+// MARK: SDL_AsyncIO
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_AsyncIO
+ */
+export type SDL_AsyncIO = Record<string, unknown> & { __async_io: undefined }
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_AsyncIOQueue
+ */
+export type SDL_AsyncIOQueue = Record<string, unknown> & {
+  __async_io_queue: undefined
+}
+
 // MARK: Timer
 
 /**
