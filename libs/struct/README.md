@@ -1,11 +1,11 @@
 # @bunbox/struct
 
 A TypeScript library for **defining, serializing, and manipulating C-like structs in memory**.
-Perfect for **WebAssembly interop, FFI bindings, and low-level binary data handling** in Node.js or Bun.
+Perfect for **WebAssembly interop, FFI bindings, and low-level binary data handling**.
 
 ---
 
-## ✨ Features
+## Features
 
 - Typed schema definitions for structs
 - Automatic alignment & padding (C-style layout)
@@ -22,11 +22,9 @@ Perfect for **WebAssembly interop, FFI bindings, and low-level binary data handl
 
 ---
 
-## 📦 Installation
+## Installation
 
 ```bash
-npm install @bunbox/struct
-# or
 bun add @bunbox/struct
 ```
 
@@ -36,34 +34,66 @@ Requirements:
 
 ---
 
-## 🚀 Example
+## Example in Bun
 
 ```ts
-import { AbstractStruct, Pointer, cstr } from '@bunbox/struct'
+import { AbstractStruct, Pointer, StructSchema, cstr } from '@bunbox/struct'
+import { ptr, read } from 'bun:ffi'
+
+/* Create a struct for bun ffi */
+class BunStruct<TSchema extends StructSchema> extends AbstractStruct<TSchema> {
+  protected _ptr(buffer: ArrayBufferLike): Pointer {
+    return ptr(buffer)
+  }
+
+  protected _read(pointer: Pointer, index: number, type: any): any {
+    switch (type) {
+      case 'i8':
+        return read.i8(pointer, index)
+      case 'u8':
+        return read.u8(pointer, index)
+      case 'boolean':
+        return !!read.u8(pointer, index)
+      case 'i16':
+        return read.i16(pointer, index)
+      case 'u16':
+        return read.u16(pointer, index)
+      case 'i32':
+        return read.i32(pointer, index)
+      case 'u32':
+        return read.u32(pointer, index)
+      case 'f32':
+        return read.f32(pointer, index)
+      case 'i64':
+        return read.i64(pointer, index)
+      case 'u64':
+        return read.u64(pointer, index)
+      case 'f64':
+        return read.f64(pointer, index)
+      case 'void':
+      case 'string':
+        return read.intptr(pointer, index)
+      default:
+        throw new Error(`Unsupported type: ${type}`)
+    }
+  }
+
+  protected override _pack(): Bytes {
+    return 8 // x64
+  }
+}
 
 /* Define a schema */
 const UserSchema = {
   id: { order: 1, type: 'u32' },
   age: { order: 2, type: 'u8' },
   name: { order: 3, type: 'string' },
-} as const
+} as const satisfies StructSchema
 
-/* Create a struct from the schema */
-class UserStruct extends AbstractStruct<typeof UserSchema> {
+/* Create a struct class */
+class UserStruct extends BunStruct<typeof UserSchema> {
   constructor() {
     super(UserSchema)
-  }
-
-  protected _ptr(buffer: ArrayBufferLike): Pointer {
-    return buffer as any as Pointer // runtime-specific
-  }
-
-  protected _read(ptr: Pointer, index: number, type: any): any {
-    throw new Error('Not implemented') // connect to external memory
-  }
-
-  protected _ptrToCstr(ptr: Pointer): string {
-    return 'mock' // connect to external memory
   }
 }
 
@@ -79,7 +109,7 @@ console.log(user.buffer) // Uint8Array ready for FFI/WASM
 
 ---
 
-## 📖 API Overview
+## API Overview
 
 ### `AbstractStruct<TSchema>`
 
@@ -92,16 +122,17 @@ Base class for defining typed structs.
 - `flush()` → write values into buffer
 - `read()` → read values from buffer
 - `buffer` → `Uint8Array` with serialized data
+- `view` → `ArrayBufferLike` for creating views
 - `pointer` → pointer to the struct (runtime-specific)
 
 ### Utility functions
 
-- `cstr(str: string): ArrayBufferLike`
+- `cstr(str: string): NodeJS.TypedArray<ArrayBufferLike>`
   Converts a JS string into a null-terminated **C string** (`\0`).
 
 ---
 
-## 🛠️ Pointer Implementation
+## Pointer Implementation
 
 `AbstractStruct` is **abstract** because pointer handling depends on your runtime (Node FFI, Bun, WebAssembly, etc.).
 You must implement:
@@ -112,6 +143,6 @@ You must implement:
 
 ---
 
-## 📜 License
+## License
 
-[MIT](./LICENSE) © Renato Rodrigues
+[MIT](./LICENSE) © Vulppi
