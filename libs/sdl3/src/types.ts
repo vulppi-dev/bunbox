@@ -264,6 +264,37 @@ export type SDL_LogOutputFunction = (
   message: Pointer,
 ) => void;
 
+// MARK: Metal
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_MetalView
+ */
+export type SDL_MetalView = Pointer & { __metal_view: undefined };
+
+// MARK: Mouse
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_Cursor
+ */
+export type SDL_Cursor = Pointer & { __cursor: undefined };
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_MouseID
+ */
+export type SDL_MouseID = number & { __mouse_id: undefined };
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_MouseMotionTransformCallback
+ */
+export type SDL_MouseMotionTransformCallback = (
+  userdata: Pointer,
+  timestamp: bigint,
+  window: Pointer,
+  mouseId: SDL_MouseID,
+  x: Pointer,
+  y: Pointer,
+) => void;
+
 // MARK: Timer
 
 /**
