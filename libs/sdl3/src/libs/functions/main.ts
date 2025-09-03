@@ -4,19 +4,19 @@ export const MAIN_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_AppEvent
    */
-  SDL_AppEvent: { args: ['ptr', 'ptr'], returns: 'u32' },
+  // SDL_AppEvent: { args: ['ptr', 'ptr'], returns: 'u32' }, --- NOT FOUND ---
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_AppInit
    */
-  SDL_AppInit: { args: ['ptr', 'i32', 'ptr'], returns: 'u32' },
+  // SDL_AppInit: { args: ['ptr', 'i32', 'ptr'], returns: 'u32' }, --- NOT FOUND ---
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_AppIterate
    */
-  SDL_AppIterate: { args: ['ptr'], returns: 'u32' },
+  // SDL_AppIterate: { args: ['ptr'], returns: 'u32' }, --- NOT FOUND ---
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_AppQuit
    */
-  SDL_AppQuit: { args: ['ptr', 'u32'], returns: 'void' },
+  // SDL_AppQuit: { args: ['ptr', 'u32'], returns: 'void' }, --- NOT FOUND ---
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_EnterAppMainCallbacks
    */
@@ -31,7 +31,7 @@ export const MAIN_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_main
    */
-  SDL_main: { args: ['i32', 'ptr'], returns: 'i32' },
+  // SDL_main: { args: ['i32', 'ptr'], returns: 'i32' }, --- NOT FOUND ---
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_RegisterApp
    */
