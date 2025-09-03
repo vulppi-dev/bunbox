@@ -15,11 +15,14 @@ export const GPU_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_BeginGPUComputePass
    */
-  // SDL_BeginGPUComputePass: {},
+  SDL_BeginGPUComputePass: {
+    args: ['ptr', 'ptr', 'u32', 'ptr', 'u32'],
+    returns: 'ptr',
+  },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_BeginGPUCopyPass
    */
-  // SDL_BeginGPUCopyPass: {},
+  SDL_BeginGPUCopyPass: { args: ['ptr'], returns: 'ptr' },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_BeginGPURenderPass
    */
@@ -30,31 +33,49 @@ export const GPU_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_BindGPUComputePipeline
    */
-  // SDL_BindGPUComputePipeline: {},
+  SDL_BindGPUComputePipeline: { args: ['ptr', 'ptr'], returns: 'void' },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_BindGPUComputeSamplers
    */
-  // SDL_BindGPUComputeSamplers: {},
+  SDL_BindGPUComputeSamplers: {
+    args: ['ptr', 'u32', 'ptr', 'u32'],
+    returns: 'void',
+  },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_BindGPUComputeStorageBuffers
    */
-  // SDL_BindGPUComputeStorageBuffers: {},
+  SDL_BindGPUComputeStorageBuffers: {
+    args: ['ptr', 'u32', 'ptr', 'u32'],
+    returns: 'void',
+  },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_BindGPUComputeStorageTextures
    */
-  // SDL_BindGPUComputeStorageTextures: {},
+  SDL_BindGPUComputeStorageTextures: {
+    args: ['ptr', 'u32', 'ptr', 'u32'],
+    returns: 'void',
+  },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_BindGPUFragmentSamplers
    */
-  // SDL_BindGPUFragmentSamplers: {},
+  SDL_BindGPUFragmentSamplers: {
+    args: ['ptr', 'u32', 'ptr', 'u32'],
+    returns: 'void',
+  },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_BindGPUFragmentStorageBuffers
    */
-  // SDL_BindGPUFragmentStorageBuffers: {},
+  SDL_BindGPUFragmentStorageBuffers: {
+    args: ['ptr', 'u32', 'ptr', 'u32'],
+    returns: 'void',
+  },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_BindGPUFragmentStorageTextures
    */
-  // SDL_BindGPUFragmentStorageTextures: {},
+  SDL_BindGPUFragmentStorageTextures: {
+    args: ['ptr', 'u32', 'ptr', 'u32'],
+    returns: 'void',
+  },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_BindGPUGraphicsPipeline
    */
@@ -62,35 +83,50 @@ export const GPU_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_BindGPUIndexBuffer
    */
-  // SDL_BindGPUIndexBuffer: {},
+  SDL_BindGPUIndexBuffer: { args: ['ptr', 'ptr', 'u32'], returns: 'void' },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_BindGPUVertexBuffers
    */
-  // SDL_BindGPUVertexBuffers: {},
+  SDL_BindGPUVertexBuffers: {
+    args: ['ptr', 'u32', 'ptr', 'u32'],
+    returns: 'void',
+  },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_BindGPUVertexSamplers
    */
-  // SDL_BindGPUVertexSamplers: {},
+  SDL_BindGPUVertexSamplers: {
+    args: ['ptr', 'u32', 'ptr', 'u32'],
+    returns: 'void',
+  },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_BindGPUVertexStorageBuffers
    */
-  // SDL_BindGPUVertexStorageBuffers: {},
+  SDL_BindGPUVertexStorageBuffers: {
+    args: ['ptr', 'u32', 'ptr', 'u32'],
+    returns: 'void',
+  },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_BindGPUVertexStorageTextures
    */
-  // SDL_BindGPUVertexStorageTextures: {},
+  SDL_BindGPUVertexStorageTextures: {
+    args: ['ptr', 'u32', 'ptr', 'u32'],
+    returns: 'void',
+  },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_BlitGPUTexture
    */
-  // SDL_BlitGPUTexture: {},
+  SDL_BlitGPUTexture: { args: ['ptr', 'ptr'], returns: 'void' },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_CalculateGPUTextureFormatSize
    */
-  // SDL_CalculateGPUTextureFormatSize: {},
+  SDL_CalculateGPUTextureFormatSize: {
+    args: ['u32', 'u32', 'u32', 'u32'],
+    returns: 'u32',
+  },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_CancelGPUCommandBuffer
    */
-  // SDL_CancelGPUCommandBuffer: {},
+  SDL_CancelGPUCommandBuffer: { args: ['ptr'], returns: 'bool' },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_ClaimWindowForGPUDevice
    */
@@ -98,19 +134,25 @@ export const GPU_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_CopyGPUBufferToBuffer
    */
-  // SDL_CopyGPUBufferToBuffer: {},
+  SDL_CopyGPUBufferToBuffer: {
+    args: ['ptr', 'ptr', 'ptr', 'u32', 'bool'],
+    returns: 'void',
+  },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_CopyGPUTextureToTexture
    */
-  // SDL_CopyGPUTextureToTexture: {},
+  SDL_CopyGPUTextureToTexture: {
+    args: ['ptr', 'ptr', 'ptr', 'u32', 'u32', 'u32', 'bool'],
+    returns: 'void',
+  },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_CreateGPUBuffer
    */
-  // SDL_CreateGPUBuffer: {},
+  SDL_CreateGPUBuffer: { args: ['ptr', 'ptr'], returns: 'ptr' },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_CreateGPUComputePipeline
    */
-  // SDL_CreateGPUComputePipeline: {},
+  SDL_CreateGPUComputePipeline: { args: ['ptr', 'ptr'], returns: 'ptr' },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_CreateGPUDevice
    */
@@ -118,7 +160,7 @@ export const GPU_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_CreateGPUDeviceWithProperties
    */
-  // SDL_CreateGPUDeviceWithProperties: {},
+  SDL_CreateGPUDeviceWithProperties: { args: ['u32'], returns: 'ptr' },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_CreateGPUGraphicsPipeline
    */
@@ -126,7 +168,7 @@ export const GPU_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_CreateGPUSampler
    */
-  // SDL_CreateGPUSampler: {},
+  SDL_CreateGPUSampler: { args: ['ptr', 'ptr'], returns: 'ptr' },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_CreateGPUShader
    */
@@ -134,11 +176,11 @@ export const GPU_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_CreateGPUTexture
    */
-  // SDL_CreateGPUTexture: {},
+  SDL_CreateGPUTexture: { args: ['ptr', 'ptr'], returns: 'ptr' },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_CreateGPUTransferBuffer
    */
-  // SDL_CreateGPUTransferBuffer: {},
+  SDL_CreateGPUTransferBuffer: { args: ['ptr', 'ptr'], returns: 'ptr' },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_DestroyGPUDevice
    */
@@ -146,27 +188,33 @@ export const GPU_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_DispatchGPUCompute
    */
-  // SDL_DispatchGPUCompute: {},
+  SDL_DispatchGPUCompute: {
+    args: ['ptr', 'u32', 'u32', 'u32'],
+    returns: 'void',
+  },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_DispatchGPUComputeIndirect
    */
-  // SDL_DispatchGPUComputeIndirect: {},
+  SDL_DispatchGPUComputeIndirect: {
+    args: ['ptr', 'u32', 'u32', 'u32'],
+    returns: 'void',
+  },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_DownloadFromGPUBuffer
    */
-  // SDL_DownloadFromGPUBuffer: {},
+  SDL_DownloadFromGPUBuffer: { args: ['ptr', 'ptr', 'ptr'], returns: 'void' },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_DownloadFromGPUTexture
    */
-  // SDL_DownloadFromGPUTexture: {},
+  SDL_DownloadFromGPUTexture: { args: ['ptr', 'ptr', 'ptr'], returns: 'void' },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_DrawGPUIndexedPrimitives
    */
-  // SDL_DrawGPUIndexedPrimitives: {},
+  SDL_DrawGPUIndexedPrimitives: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_DrawGPUIndexedPrimitivesIndirect
    */
-  // SDL_DrawGPUIndexedPrimitivesIndirect: {},
+  SDL_DrawGPUIndexedPrimitivesIndirect: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_DrawGPUPrimitives
    */
@@ -177,15 +225,15 @@ export const GPU_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_DrawGPUPrimitivesIndirect
    */
-  // SDL_DrawGPUPrimitivesIndirect: {},
+  SDL_DrawGPUPrimitivesIndirect: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_EndGPUComputePass
    */
-  // SDL_EndGPUComputePass: {},
+  SDL_EndGPUComputePass: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_EndGPUCopyPass
    */
-  // SDL_EndGPUCopyPass: {},
+  SDL_EndGPUCopyPass: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_EndGPURenderPass
    */
@@ -193,15 +241,15 @@ export const GPU_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_GDKResumeGPU
    */
-  // SDL_GDKResumeGPU: {},
+  SDL_GDKResumeGPU: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_GDKSuspendGPU
    */
-  // SDL_GDKSuspendGPU: {},
+  SDL_GDKSuspendGPU: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_GenerateMipmapsForGPUTexture
    */
-  // SDL_GenerateMipmapsForGPUTexture: {},
+  SDL_GenerateMipmapsForGPUTexture: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_GetGPUDeviceDriver
    */
@@ -209,15 +257,15 @@ export const GPU_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_GetGPUDeviceProperties
    */
-  // SDL_GetGPUDeviceProperties: {},
+  SDL_GetGPUDeviceProperties: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_GetGPUDriver
    */
-  // SDL_GetGPUDriver: {},
+  SDL_GetGPUDriver: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_GetGPUShaderFormats
    */
-  // SDL_GetGPUShaderFormats: {},
+  SDL_GetGPUShaderFormats: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_GetGPUSwapchainTextureFormat
    */
@@ -225,71 +273,71 @@ export const GPU_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_GetNumGPUDrivers
    */
-  // SDL_GetNumGPUDrivers: {},
+  SDL_GetNumGPUDrivers: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_GPUSupportsProperties
    */
-  // SDL_GPUSupportsProperties: {},
+  SDL_GPUSupportsProperties: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_GPUSupportsShaderFormats
    */
-  // SDL_GPUSupportsShaderFormats: {},
+  SDL_GPUSupportsShaderFormats: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_GPUTextureFormatTexelBlockSize
    */
-  // SDL_GPUTextureFormatTexelBlockSize: {},
+  SDL_GPUTextureFormatTexelBlockSize: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_GPUTextureSupportsFormat
    */
-  // SDL_GPUTextureSupportsFormat: {},
+  SDL_GPUTextureSupportsFormat: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_GPUTextureSupportsSampleCount
    */
-  // SDL_GPUTextureSupportsSampleCount: {},
+  SDL_GPUTextureSupportsSampleCount: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_InsertGPUDebugLabel
    */
-  // SDL_InsertGPUDebugLabel: {},
+  SDL_InsertGPUDebugLabel: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_MapGPUTransferBuffer
    */
-  // SDL_MapGPUTransferBuffer: {},
+  SDL_MapGPUTransferBuffer: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_PopGPUDebugGroup
    */
-  // SDL_PopGPUDebugGroup: {},
+  SDL_PopGPUDebugGroup: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_PushGPUComputeUniformData
    */
-  // SDL_PushGPUComputeUniformData: {},
+  SDL_PushGPUComputeUniformData: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_PushGPUDebugGroup
    */
-  // SDL_PushGPUDebugGroup: {},
+  SDL_PushGPUDebugGroup: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_PushGPUFragmentUniformData
    */
-  // SDL_PushGPUFragmentUniformData: {},
+  SDL_PushGPUFragmentUniformData: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_PushGPUVertexUniformData
    */
-  // SDL_PushGPUVertexUniformData: {},
+  SDL_PushGPUVertexUniformData: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_QueryGPUFence
    */
-  // SDL_QueryGPUFence: {},
+  SDL_QueryGPUFence: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_ReleaseGPUBuffer
    */
-  // SDL_ReleaseGPUBuffer: {},
+  SDL_ReleaseGPUBuffer: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_ReleaseGPUComputePipeline
    */
-  // SDL_ReleaseGPUComputePipeline: {},
+  SDL_ReleaseGPUComputePipeline: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_ReleaseGPUFence
    */
-  // SDL_ReleaseGPUFence: {},
+  SDL_ReleaseGPUFence: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_ReleaseGPUGraphicsPipeline
    */
@@ -297,7 +345,7 @@ export const GPU_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_ReleaseGPUSampler
    */
-  // SDL_ReleaseGPUSampler: {},
+  SDL_ReleaseGPUSampler: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_ReleaseGPUShader
    */
@@ -305,11 +353,11 @@ export const GPU_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_ReleaseGPUTexture
    */
-  // SDL_ReleaseGPUTexture: {},
+  SDL_ReleaseGPUTexture: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_ReleaseGPUTransferBuffer
    */
-  // SDL_ReleaseGPUTransferBuffer: {},
+  SDL_ReleaseGPUTransferBuffer: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_ReleaseWindowFromGPUDevice
    */
@@ -317,15 +365,15 @@ export const GPU_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_SetGPUAllowedFramesInFlight
    */
-  // SDL_SetGPUAllowedFramesInFlight: {},
+  SDL_SetGPUAllowedFramesInFlight: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_SetGPUBlendConstants
    */
-  // SDL_SetGPUBlendConstants: {},
+  SDL_SetGPUBlendConstants: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_SetGPUBufferName
    */
-  // SDL_SetGPUBufferName: {},
+  SDL_SetGPUBufferName: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_SetGPUScissor
    */
@@ -333,15 +381,15 @@ export const GPU_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_SetGPUStencilReference
    */
-  // SDL_SetGPUStencilReference: {},
+  SDL_SetGPUStencilReference: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_SetGPUSwapchainParameters
    */
-  // SDL_SetGPUSwapchainParameters: {},
+  SDL_SetGPUSwapchainParameters: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_SetGPUTextureName
    */
-  // SDL_SetGPUTextureName: {},
+  SDL_SetGPUTextureName: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_SetGPUViewport
    */
@@ -353,19 +401,19 @@ export const GPU_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_SubmitGPUCommandBufferAndAcquireFence
    */
-  // SDL_SubmitGPUCommandBufferAndAcquireFence: {},
+  SDL_SubmitGPUCommandBufferAndAcquireFence: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_UnmapGPUTransferBuffer
    */
-  // SDL_UnmapGPUTransferBuffer: {},
+  SDL_UnmapGPUTransferBuffer: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_UploadToGPUBuffer
    */
-  // SDL_UploadToGPUBuffer: {},
+  SDL_UploadToGPUBuffer: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_UploadToGPUTexture
    */
-  // SDL_UploadToGPUTexture: {},
+  SDL_UploadToGPUTexture: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_WaitAndAcquireGPUSwapchainTexture
    */
@@ -376,21 +424,21 @@ export const GPU_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_WaitForGPUFences
    */
-  // SDL_WaitForGPUFences: {},
+  SDL_WaitForGPUFences: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_WaitForGPUIdle
    */
-  // SDL_WaitForGPUIdle: {},
+  SDL_WaitForGPUIdle: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_WaitForGPUSwapchain
    */
-  // SDL_WaitForGPUSwapchain: {},
+  SDL_WaitForGPUSwapchain: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_WindowSupportsGPUPresentMode
    */
-  // SDL_WindowSupportsGPUPresentMode: {},
+  SDL_WindowSupportsGPUPresentMode: {},
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_WindowSupportsGPUSwapchainComposition
    */
-  // SDL_WindowSupportsGPUSwapchainComposition: {},
+  SDL_WindowSupportsGPUSwapchainComposition: {},
 } as const satisfies Record<string, FFIFunction>
