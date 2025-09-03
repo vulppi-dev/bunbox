@@ -225,6 +225,13 @@ export type SDL_AppQuit_func = (appstate: Pointer, result: number) => void
  */
 export type SDL_MainThreadCallback = (userdata: Pointer) => void
 
+// MARK: IOStream
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_IOStream
+ */
+export type SDL_IOStream = Record<string, unknown> & { __io_stream: undefined }
+
 // MARK: Timer
 
 /**

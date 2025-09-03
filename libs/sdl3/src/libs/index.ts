@@ -60,7 +60,6 @@ const { symbols: SDL, close } = dlopen(SDL_PATH, {
   ...functions.HIDAPI_BINDINGS,
   ...functions.HINT_BINDINGS,
   ...functions.INIT_BINDINGS,
-  ...functions.INTRINSICS_BINDINGS,
   ...functions.IO_STREAM_BINDINGS,
   ...functions.JOYSTICK_BINDINGS,
   ...functions.KEYBOARD_BINDINGS,
