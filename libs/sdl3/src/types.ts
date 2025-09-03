@@ -1,4 +1,8 @@
-import type { SDL_AssertState, SDL_HitTestResult } from '$enum'
+import type {
+  SDL_AssertState,
+  SDL_EnumerationResult,
+  SDL_HitTestResult,
+} from '$enum'
 import { type Pointer } from 'bun:ffi'
 
 // MARK: Assert
@@ -121,6 +125,24 @@ export type SDL_DialogFileCallback = (
 // MARK: Event
 
 export type SDL_EventFilter = (userdata: Pointer, event: Pointer) => boolean
+
+// MARK: Filesystem
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_EnumerateDirectoryCallback
+ */
+export type SDL_EnumerateDirectoryCallback = (
+  userdata: Pointer,
+  dirname: Pointer,
+  fname: Pointer,
+) => SDL_EnumerationResult
+
+// MARK: Gamepad
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_Gamepad
+ */
+export type SDL_Gamepad = Record<string, unknown> & { __gamepad: undefined }
 
 // MARK: Timer
 
