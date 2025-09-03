@@ -1,4 +1,3 @@
-import { Buffer } from 'buffer'
 import type { AbstractStruct, Bytes } from '.'
 import {
   ArrayTypes,
