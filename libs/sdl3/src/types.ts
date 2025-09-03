@@ -194,6 +194,37 @@ export type SDL_HintCallback = (
   newValue: Pointer,
 ) => void
 
+// MARK: Init
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_AppEvent_func
+ */
+export type SDL_AppEvent_func = (appstate: Pointer, event: Pointer) => number
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_AppInit_func
+ */
+export type SDL_AppInit_func = (
+  appstate: Pointer,
+  argc: number,
+  argv: Pointer,
+) => number
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_AppIterate_func
+ */
+export type SDL_AppIterate_func = (appstate: Pointer) => number
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_AppQuit_func
+ */
+export type SDL_AppQuit_func = (appstate: Pointer, result: number) => void
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_MainThreadCallback
+ */
+export type SDL_MainThreadCallback = (userdata: Pointer) => void
+
 // MARK: Timer
 
 /**
