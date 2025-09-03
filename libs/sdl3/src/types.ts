@@ -173,6 +173,15 @@ export type SDL_HapticEffectType = number & { __haptic_effect_type: undefined }
  */
 export type SDL_HapticID = number & { __haptic_id: undefined }
 
+// MARK: HIDAPI
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_hid_device
+ */
+export type SDL_hid_device = Record<string, unknown> & {
+  __hid_device: undefined
+}
+
 // MARK: Timer
 
 /**
