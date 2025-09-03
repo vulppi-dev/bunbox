@@ -20,7 +20,7 @@ export const IO_STREAM_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_GetIOStatus
    */
-  SDL_GetIOStatus: { args: ['ptr'], returns: 'i32' },
+  SDL_GetIOStatus: { args: ['ptr'], returns: 'u32' },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_IOFromConstMem
    */
@@ -128,7 +128,7 @@ export const IO_STREAM_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_SeekIO
    */
-  SDL_SeekIO: { args: ['ptr', 'i64', 'i32'], returns: 'i64' },
+  SDL_SeekIO: { args: ['ptr', 'i64', 'u32'], returns: 'i64' },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_TellIO
    */

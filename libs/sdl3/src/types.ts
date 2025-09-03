@@ -244,6 +244,13 @@ export type SDL_Joystick = Record<string, unknown> & { __joystick: undefined }
  */
 export type SDL_JoystickID = number & { __joystick_id: undefined }
 
+// MARK: Keyboard
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_KeyboardID
+ */
+export type SDL_KeyboardID = number & { __keyboard_id: undefined }
+
 // MARK: Timer
 
 /**

@@ -35,7 +35,7 @@ export const JOYSTICK_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_GetJoystickConnectionState
    */
-  SDL_GetJoystickConnectionState: { args: ['ptr'], returns: 'i32' },
+  SDL_GetJoystickConnectionState: { args: ['ptr'], returns: 'u32' },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_GetJoystickFirmwareVersion
    */
@@ -66,7 +66,7 @@ export const JOYSTICK_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_GetJoystickHat
    */
-  SDL_GetJoystickHat: { args: ['ptr', 'i32'], returns: 'u8' },
+  SDL_GetJoystickHat: { args: ['ptr', 'u32'], returns: 'u8' },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_GetJoystickID
    */
@@ -98,7 +98,7 @@ export const JOYSTICK_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_GetJoystickPowerInfo
    */
-  SDL_GetJoystickPowerInfo: { args: ['ptr', 'ptr'], returns: 'i32' },
+  SDL_GetJoystickPowerInfo: { args: ['ptr', 'ptr'], returns: 'u32' },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_GetJoystickProduct
    */
@@ -130,11 +130,11 @@ export const JOYSTICK_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_GetJoystickType
    */
-  SDL_GetJoystickType: { args: ['ptr'], returns: 'i32' },
+  SDL_GetJoystickType: { args: ['ptr'], returns: 'u32' },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_GetJoystickTypeForID
    */
-  SDL_GetJoystickTypeForID: { args: ['u32'], returns: 'i32' },
+  SDL_GetJoystickTypeForID: { args: ['u32'], returns: 'u32' },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_GetJoystickVendor
    */
@@ -202,7 +202,7 @@ export const JOYSTICK_BINDINGS = {
    * @description https://wiki.libsdl.org/SDL3/SDL_SendJoystickVirtualSensorData
    */
   SDL_SendJoystickVirtualSensorData: {
-    args: ['ptr', 'i32', 'u64', 'ptr', 'i32'],
+    args: ['ptr', 'u32', 'u64', 'ptr', 'i32'],
     returns: 'bool',
   },
   /**
@@ -238,7 +238,7 @@ export const JOYSTICK_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_SetJoystickVirtualHat
    */
-  SDL_SetJoystickVirtualHat: { args: ['ptr', 'i32', 'u8'], returns: 'bool' },
+  SDL_SetJoystickVirtualHat: { args: ['ptr', 'u32', 'u8'], returns: 'bool' },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_SetJoystickVirtualTouchpad
    */

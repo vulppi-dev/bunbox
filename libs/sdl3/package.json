@@ -36,12 +36,12 @@
   },
   "dependencies": {
     "@bunbox/naga": "^0.0.4",
-    "@bunbox/struct": "^1.0.2",
-    "koffi": "^2.14.0"
+    "@bunbox/struct": "^1.0.2"
   },
   "devDependencies": {
     "@types/bun": "^1.2.21",
     "@types/node": "^24.3.0",
+    "prettier": "^3.6.2",
     "typescript": "^5.9.2"
   },
   "engines": {
