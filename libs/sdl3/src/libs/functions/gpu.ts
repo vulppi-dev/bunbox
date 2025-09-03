@@ -210,11 +210,17 @@ export const GPU_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_DrawGPUIndexedPrimitives
    */
-  SDL_DrawGPUIndexedPrimitives: {},
+  SDL_DrawGPUIndexedPrimitives: {
+    args: ['ptr', 'u32', 'u32', 'u32', 'u32', 'u32'],
+    returns: 'void',
+  },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_DrawGPUIndexedPrimitivesIndirect
    */
-  SDL_DrawGPUIndexedPrimitivesIndirect: {},
+  SDL_DrawGPUIndexedPrimitivesIndirect: {
+    args: ['ptr', 'ptr', 'u32', 'u32'],
+    returns: 'void',
+  },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_DrawGPUPrimitives
    */
@@ -225,15 +231,18 @@ export const GPU_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_DrawGPUPrimitivesIndirect
    */
-  SDL_DrawGPUPrimitivesIndirect: {},
+  SDL_DrawGPUPrimitivesIndirect: {
+    args: ['ptr', 'ptr', 'u32', 'u32'],
+    returns: 'void',
+  },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_EndGPUComputePass
    */
-  SDL_EndGPUComputePass: {},
+  SDL_EndGPUComputePass: { args: ['ptr'], returns: 'void' },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_EndGPUCopyPass
    */
-  SDL_EndGPUCopyPass: {},
+  SDL_EndGPUCopyPass: { args: ['ptr'], returns: 'void' },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_EndGPURenderPass
    */
@@ -241,15 +250,15 @@ export const GPU_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_GDKResumeGPU
    */
-  SDL_GDKResumeGPU: {},
+  SDL_GDKResumeGPU: { args: ['ptr'], returns: 'void' },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_GDKSuspendGPU
    */
-  SDL_GDKSuspendGPU: {},
+  SDL_GDKSuspendGPU: { args: ['ptr'], returns: 'void' },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_GenerateMipmapsForGPUTexture
    */
-  SDL_GenerateMipmapsForGPUTexture: {},
+  SDL_GenerateMipmapsForGPUTexture: { args: ['ptr', 'ptr'], returns: 'void' },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_GetGPUDeviceDriver
    */
@@ -257,15 +266,15 @@ export const GPU_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_GetGPUDeviceProperties
    */
-  SDL_GetGPUDeviceProperties: {},
+  SDL_GetGPUDeviceProperties: { args: ['ptr'], returns: 'u32' },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_GetGPUDriver
    */
-  SDL_GetGPUDriver: {},
+  SDL_GetGPUDriver: { args: ['i32'], returns: 'cstring' },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_GetGPUShaderFormats
    */
-  SDL_GetGPUShaderFormats: {},
+  SDL_GetGPUShaderFormats: { args: ['ptr'], returns: 'u32' },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_GetGPUSwapchainTextureFormat
    */
@@ -273,35 +282,41 @@ export const GPU_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_GetNumGPUDrivers
    */
-  SDL_GetNumGPUDrivers: {},
+  SDL_GetNumGPUDrivers: { args: [], returns: 'i32' },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_GPUSupportsProperties
    */
-  SDL_GPUSupportsProperties: {},
+  SDL_GPUSupportsProperties: { args: ['u32'], returns: 'bool' },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_GPUSupportsShaderFormats
    */
-  SDL_GPUSupportsShaderFormats: {},
+  SDL_GPUSupportsShaderFormats: { args: ['u32', 'cstring'], returns: 'bool' },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_GPUTextureFormatTexelBlockSize
    */
-  SDL_GPUTextureFormatTexelBlockSize: {},
+  SDL_GPUTextureFormatTexelBlockSize: { args: ['u32'], returns: 'u32' },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_GPUTextureSupportsFormat
    */
-  SDL_GPUTextureSupportsFormat: {},
+  SDL_GPUTextureSupportsFormat: {
+    args: ['ptr', 'u32', 'u32', 'u32'],
+    returns: 'bool',
+  },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_GPUTextureSupportsSampleCount
    */
-  SDL_GPUTextureSupportsSampleCount: {},
+  SDL_GPUTextureSupportsSampleCount: {
+    args: ['ptr', 'u32', 'u32'],
+    returns: 'bool',
+  },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_InsertGPUDebugLabel
    */
-  SDL_InsertGPUDebugLabel: {},
+  SDL_InsertGPUDebugLabel: { args: ['ptr', 'cstring'], returns: 'void' },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_MapGPUTransferBuffer
    */
-  SDL_MapGPUTransferBuffer: {},
+  SDL_MapGPUTransferBuffer: { args: ['ptr', 'ptr', 'bool'], returns: 'ptr' },
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_PopGPUDebugGroup
    */
