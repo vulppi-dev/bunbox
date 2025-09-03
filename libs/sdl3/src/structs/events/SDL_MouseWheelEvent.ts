@@ -1,6 +1,6 @@
-import { SDL_EventType } from '../../enum/events'
-import { SDL_MouseWheelDirection } from '../../enum/mouse'
-import { BunStruct, type StructSchema } from '../_struct'
+import { SDL_EventType } from '../../enum/events';
+import { SDL_MouseWheelDirection } from '../../enum/mouse';
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_MouseWheelEventSchema = {
   type: {
@@ -41,7 +41,7 @@ const SDL_MouseWheelEventSchema = {
     order: 11,
     type: 'i32',
   } /**< The amount scrolled vertically, accumulated to whole scroll "ticks" (added in 3.2.12) */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_MouseWheelEvent
@@ -50,6 +50,6 @@ export class SDL_MouseWheelEvent extends BunStruct<
   typeof SDL_MouseWheelEventSchema
 > {
   constructor() {
-    super(SDL_MouseWheelEventSchema)
+    super(SDL_MouseWheelEventSchema);
   }
 }

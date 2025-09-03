@@ -1,6 +1,6 @@
-import { SDL_EventType } from '../../enum/events'
-import { SDL_PenAxis } from '../../enum/pen'
-import { BunStruct, type StructSchema } from '../_struct'
+import { SDL_EventType } from '../../enum/events';
+import { SDL_PenAxis } from '../../enum/pen';
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_PenAxisEventSchema = {
   type: {
@@ -30,13 +30,13 @@ const SDL_PenAxisEventSchema = {
     enum: SDL_PenAxis,
   } /**< Axis that has changed */,
   value: { order: 9, type: 'f32' } /**< New value of axis */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_PenAxisEvent
  */
 export class SDL_PenAxisEvent extends BunStruct<typeof SDL_PenAxisEventSchema> {
   constructor() {
-    super(SDL_PenAxisEventSchema)
+    super(SDL_PenAxisEventSchema);
   }
 }

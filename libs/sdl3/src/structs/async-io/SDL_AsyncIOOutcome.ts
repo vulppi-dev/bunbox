@@ -1,4 +1,4 @@
-import { BunStruct, type StructSchema } from '../_struct'
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_AsyncIOOutcomeSchema = {
   asyncio: { order: 0, type: 'void' },
@@ -9,7 +9,7 @@ const SDL_AsyncIOOutcomeSchema = {
   bytes_requested: { order: 5, type: 'u64' },
   bytes_transferred: { order: 6, type: 'u64' },
   userdata: { order: 7, type: 'void' },
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_AsyncIOOutcome
@@ -18,6 +18,6 @@ export class SDL_AsyncIOOutcome extends BunStruct<
   typeof SDL_AsyncIOOutcomeSchema
 > {
   constructor() {
-    super(SDL_AsyncIOOutcomeSchema)
+    super(SDL_AsyncIOOutcomeSchema);
   }
 }

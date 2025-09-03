@@ -1,4 +1,4 @@
-import type { FFIFunction } from 'bun:ffi'
+import type { FFIFunction } from 'bun:ffi';
 
 export const HIDAPI_BINDINGS = {
   /**
@@ -111,4 +111,4 @@ export const HIDAPI_BINDINGS = {
    * @description https://wiki.libsdl.org/SDL3/SDL_hid_write
    */
   SDL_hid_write: { args: ['ptr', 'ptr', 'u64'], returns: 'i32' },
-} as const satisfies Record<string, FFIFunction>
+} as const satisfies Record<string, FFIFunction>;

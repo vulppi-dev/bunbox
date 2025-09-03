@@ -1,5 +1,5 @@
-import { SDL_EventType } from '../../enum/events'
-import { BunStruct, type StructSchema } from '../_struct'
+import { SDL_EventType } from '../../enum/events';
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_GamepadTouchpadEventSchema = {
   type: {
@@ -27,7 +27,7 @@ const SDL_GamepadTouchpadEventSchema = {
     type: 'f32',
   } /**< Normalized in the range 0...1 with 0 being at the top */,
   pressure: { order: 8, type: 'f32' } /**< Normalized in the range 0...1 */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_GamepadTouchpadEvent
@@ -36,6 +36,6 @@ export class SDL_GamepadTouchpadEvent extends BunStruct<
   typeof SDL_GamepadTouchpadEventSchema
 > {
   constructor() {
-    super(SDL_GamepadTouchpadEventSchema)
+    super(SDL_GamepadTouchpadEventSchema);
   }
 }

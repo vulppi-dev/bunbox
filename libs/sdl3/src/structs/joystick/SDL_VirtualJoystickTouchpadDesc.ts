@@ -1,4 +1,4 @@
-import { BunStruct, type StructSchema } from '../_struct'
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_VirtualJoystickTouchpadDescSchema = {
   nfingers: {
@@ -6,7 +6,7 @@ const SDL_VirtualJoystickTouchpadDescSchema = {
     type: 'u16',
   } /**< the number of simultaneous fingers on this touchpad */,
   padding: { order: 1, type: 'array', to: 'u16', length: 3 },
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_VirtualJoystickTouchpadDesc
@@ -15,6 +15,6 @@ export class SDL_VirtualJoystickTouchpadDesc extends BunStruct<
   typeof SDL_VirtualJoystickTouchpadDescSchema
 > {
   constructor() {
-    super(SDL_VirtualJoystickTouchpadDescSchema)
+    super(SDL_VirtualJoystickTouchpadDescSchema);
   }
 }

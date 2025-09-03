@@ -1,5 +1,5 @@
-import { SDL_GPUSampleCount } from '../../enum/gpu'
-import { BunStruct, type StructSchema } from '../_struct'
+import { SDL_GPUSampleCount } from '../../enum/gpu';
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_GPUMultisampleStateSchema = {
   sample_count: {
@@ -27,7 +27,7 @@ const SDL_GPUMultisampleStateSchema = {
     order: 5,
     type: 'u8',
   },
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_GPUMultisampleState
@@ -36,6 +36,6 @@ export class SDL_GPUMultisampleState extends BunStruct<
   typeof SDL_GPUMultisampleStateSchema
 > {
   constructor() {
-    super(SDL_GPUMultisampleStateSchema)
+    super(SDL_GPUMultisampleStateSchema);
   }
 }

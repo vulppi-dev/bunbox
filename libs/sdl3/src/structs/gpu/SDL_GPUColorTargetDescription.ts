@@ -1,6 +1,6 @@
-import { SDL_GPUTextureFormat } from '../../enum/gpu'
-import { BunStruct, type StructSchema } from '../_struct'
-import { SDL_GPUColorTargetBlendState } from './SDL_GPUColorTargetBlendState'
+import { SDL_GPUTextureFormat } from '../../enum/gpu';
+import { BunStruct, type StructSchema } from '../_struct';
+import { SDL_GPUColorTargetBlendState } from './SDL_GPUColorTargetBlendState';
 
 const SDL_GPUColorTargetDescriptionSchema = {
   format: {
@@ -14,7 +14,7 @@ const SDL_GPUColorTargetDescriptionSchema = {
     schema: SDL_GPUColorTargetBlendState,
     isInline: true,
   } /**< The blend state to be used for the color target. */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_GPUColorTargetDescription
@@ -23,6 +23,6 @@ export class SDL_GPUColorTargetDescription extends BunStruct<
   typeof SDL_GPUColorTargetDescriptionSchema
 > {
   constructor() {
-    super(SDL_GPUColorTargetDescriptionSchema)
+    super(SDL_GPUColorTargetDescriptionSchema);
   }
 }

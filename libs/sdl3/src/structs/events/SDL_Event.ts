@@ -1,41 +1,41 @@
-import { BunStruct, type StructSchema } from '../_struct'
-import { SDL_AudioDeviceEvent } from './SDL_AudioDeviceEvent'
-import { SDL_CameraDeviceEvent } from './SDL_CameraDeviceEvent'
-import { SDL_ClipboardEvent } from './SDL_ClipboardEvent'
-import { SDL_CommonEvent } from './SDL_CommonEvent'
-import { SDL_DisplayEvent } from './SDL_DisplayEvent'
-import { SDL_DropEvent } from './SDL_DropEvent'
-import { SDL_GamepadAxisEvent } from './SDL_GamepadAxisEvent'
-import { SDL_GamepadButtonEvent } from './SDL_GamepadButtonEvent'
-import { SDL_GamepadDeviceEvent } from './SDL_GamepadDeviceEvent'
-import { SDL_GamepadSensorEvent } from './SDL_GamepadSensorEvent'
-import { SDL_GamepadTouchpadEvent } from './SDL_GamepadTouchpadEvent'
-import { SDL_JoyAxisEvent } from './SDL_JoyAxisEvent'
-import { SDL_JoyBallEvent } from './SDL_JoyBallEvent'
-import { SDL_JoyBatteryEvent } from './SDL_JoyBatteryEvent'
-import { SDL_JoyButtonEvent } from './SDL_JoyButtonEvent'
-import { SDL_JoyDeviceEvent } from './SDL_JoyDeviceEvent'
-import { SDL_JoyHatEvent } from './SDL_JoyHatEvent'
-import { SDL_KeyboardDeviceEvent } from './SDL_KeyboardDeviceEvent'
-import { SDL_KeyboardEvent } from './SDL_KeyboardEvent'
-import { SDL_MouseButtonEvent } from './SDL_MouseButtonEvent'
-import { SDL_MouseDeviceEvent } from './SDL_MouseDeviceEvent'
-import { SDL_MouseMotionEvent } from './SDL_MouseMotionEvent'
-import { SDL_MouseWheelEvent } from './SDL_MouseWheelEvent'
-import { SDL_PenAxisEvent } from './SDL_PenAxisEvent'
-import { SDL_PenButtonEvent } from './SDL_PenButtonEvent'
-import { SDL_PenMotionEvent } from './SDL_PenMotionEvent'
-import { SDL_PenProximityEvent } from './SDL_PenProximityEvent'
-import { SDL_PenTouchEvent } from './SDL_PenTouchEvent'
-import { SDL_QuitEvent } from './SDL_QuitEvent'
-import { SDL_RenderEvent } from './SDL_RenderEvent'
-import { SDL_SensorEvent } from './SDL_SensorEvent'
-import { SDL_TextEditingCandidatesEvent } from './SDL_TextEditingCandidatesEvent'
-import { SDL_TextEditingEvent } from './SDL_TextEditingEvent'
-import { SDL_TextInputEvent } from './SDL_TextInputEvent'
-import { SDL_TouchFingerEvent } from './SDL_TouchFingerEvent'
-import { SDL_UserEvent } from './SDL_UserEvent'
-import { SDL_WindowEvent } from './SDL_WindowEvent'
+import { BunStruct, type StructSchema } from '../_struct';
+import { SDL_AudioDeviceEvent } from './SDL_AudioDeviceEvent';
+import { SDL_CameraDeviceEvent } from './SDL_CameraDeviceEvent';
+import { SDL_ClipboardEvent } from './SDL_ClipboardEvent';
+import { SDL_CommonEvent } from './SDL_CommonEvent';
+import { SDL_DisplayEvent } from './SDL_DisplayEvent';
+import { SDL_DropEvent } from './SDL_DropEvent';
+import { SDL_GamepadAxisEvent } from './SDL_GamepadAxisEvent';
+import { SDL_GamepadButtonEvent } from './SDL_GamepadButtonEvent';
+import { SDL_GamepadDeviceEvent } from './SDL_GamepadDeviceEvent';
+import { SDL_GamepadSensorEvent } from './SDL_GamepadSensorEvent';
+import { SDL_GamepadTouchpadEvent } from './SDL_GamepadTouchpadEvent';
+import { SDL_JoyAxisEvent } from './SDL_JoyAxisEvent';
+import { SDL_JoyBallEvent } from './SDL_JoyBallEvent';
+import { SDL_JoyBatteryEvent } from './SDL_JoyBatteryEvent';
+import { SDL_JoyButtonEvent } from './SDL_JoyButtonEvent';
+import { SDL_JoyDeviceEvent } from './SDL_JoyDeviceEvent';
+import { SDL_JoyHatEvent } from './SDL_JoyHatEvent';
+import { SDL_KeyboardDeviceEvent } from './SDL_KeyboardDeviceEvent';
+import { SDL_KeyboardEvent } from './SDL_KeyboardEvent';
+import { SDL_MouseButtonEvent } from './SDL_MouseButtonEvent';
+import { SDL_MouseDeviceEvent } from './SDL_MouseDeviceEvent';
+import { SDL_MouseMotionEvent } from './SDL_MouseMotionEvent';
+import { SDL_MouseWheelEvent } from './SDL_MouseWheelEvent';
+import { SDL_PenAxisEvent } from './SDL_PenAxisEvent';
+import { SDL_PenButtonEvent } from './SDL_PenButtonEvent';
+import { SDL_PenMotionEvent } from './SDL_PenMotionEvent';
+import { SDL_PenProximityEvent } from './SDL_PenProximityEvent';
+import { SDL_PenTouchEvent } from './SDL_PenTouchEvent';
+import { SDL_QuitEvent } from './SDL_QuitEvent';
+import { SDL_RenderEvent } from './SDL_RenderEvent';
+import { SDL_SensorEvent } from './SDL_SensorEvent';
+import { SDL_TextEditingCandidatesEvent } from './SDL_TextEditingCandidatesEvent';
+import { SDL_TextEditingEvent } from './SDL_TextEditingEvent';
+import { SDL_TextInputEvent } from './SDL_TextInputEvent';
+import { SDL_TouchFingerEvent } from './SDL_TouchFingerEvent';
+import { SDL_UserEvent } from './SDL_UserEvent';
+import { SDL_WindowEvent } from './SDL_WindowEvent';
 
 const SDL_EventSchema = {
   type: {
@@ -279,13 +279,13 @@ const SDL_EventSchema = {
        even larger the size of SDL_UserEvent will dominate as being 3 pointers.
     */
   padding: { order: 38, type: 'array', to: 'u8', length: 128 },
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_Event
  */
 export class SDL_Event extends BunStruct<typeof SDL_EventSchema> {
   constructor() {
-    super(SDL_EventSchema, true)
+    super(SDL_EventSchema, true);
   }
 }

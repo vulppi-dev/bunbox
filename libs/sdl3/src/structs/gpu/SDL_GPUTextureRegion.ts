@@ -1,4 +1,4 @@
-import { BunStruct, type StructSchema } from '../_struct'
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_GPUTextureRegionSchema = {
   texture: {
@@ -16,7 +16,7 @@ const SDL_GPUTextureRegionSchema = {
   w: { order: 6, type: 'u32' } /**< The width of the region. */,
   h: { order: 7, type: 'u32' } /**< The height of the region. */,
   d: { order: 8, type: 'u32' } /**< The depth of the region. */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_GPUTextureRegion
@@ -25,6 +25,6 @@ export class SDL_GPUTextureRegion extends BunStruct<
   typeof SDL_GPUTextureRegionSchema
 > {
   constructor() {
-    super(SDL_GPUTextureRegionSchema)
+    super(SDL_GPUTextureRegionSchema);
   }
 }

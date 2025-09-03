@@ -9,7 +9,6 @@ A TypeScript library for **defining, serializing, and manipulating C‑like stru
 - **Property Proxy API**: interact with fields via `struct.properties.<field>`; reads pull from the backing buffer, writes persist immediately.
 - **Inline vs pointer-to-struct**: `isInline` embeds child bytes; otherwise a pointer is stored (safe-by-copy on read).
 - **Arrays reworked**:
-
   - Inline arrays (`length`) store contiguous payload.
   - Dynamic arrays store a **pointer**; inline `string[]`/`boolean[]` are supported.
 
@@ -34,51 +33,51 @@ Requirements:
 ## Quick start (Bun FFI)
 
 ```ts
-import { AbstractStruct, type StructSchema, cstr } from '@bunbox/struct'
-import { ptr, read, CString, type Pointer } from 'bun:ffi'
+import { AbstractStruct, type StructSchema, cstr } from '@bunbox/struct';
+import { ptr, read, CString, type Pointer } from 'bun:ffi';
 
 class BunStruct<TSchema extends StructSchema> extends AbstractStruct<TSchema> {
   protected _ptr(
     buffer: ArrayBufferLike | NodeJS.TypedArray<ArrayBufferLike>,
   ): bigint {
-    return ptr(buffer)
+    return ptr(buffer);
   }
   protected _read(pointer: bigint, index: number, type: any): any {
     switch (type) {
       case 'i8':
-        return read.i8(pointer, index)
+        return read.i8(pointer, index);
       case 'u8':
-        return read.u8(pointer, index)
+        return read.u8(pointer, index);
       case 'boolean':
-        return !!read.u8(pointer, index)
+        return !!read.u8(pointer, index);
       case 'i16':
-        return read.i16(pointer, index)
+        return read.i16(pointer, index);
       case 'u16':
-        return read.u16(pointer, index)
+        return read.u16(pointer, index);
       case 'i32':
-        return read.i32(pointer, index)
+        return read.i32(pointer, index);
       case 'u32':
-        return read.u32(pointer, index)
+        return read.u32(pointer, index);
       case 'f32':
-        return read.f32(pointer, index)
+        return read.f32(pointer, index);
       case 'i64':
-        return read.i64(pointer, index)
+        return read.i64(pointer, index);
       case 'u64':
-        return read.u64(pointer, index)
+        return read.u64(pointer, index);
       case 'f64':
-        return read.f64(pointer, index)
+        return read.f64(pointer, index);
       case 'void':
       case 'string':
-        return read.intptr(pointer, index)
+        return read.intptr(pointer, index);
       default:
-        throw new Error(`Unsupported type: ${type}`)
+        throw new Error(`Unsupported type: ${type}`);
     }
   }
   protected _pack() {
-    return 8 as const
+    return 8 as const;
   } // LP64
   protected _toString(p: bigint): string {
-    return new CString(Number(p) as Pointer)
+    return new CString(Number(p) as Pointer);
   }
 }
 
@@ -86,22 +85,22 @@ const UserSchema = {
   id: { order: 1, type: 'u32' },
   age: { order: 2, type: 'u8' },
   name: { order: 3, type: 'string' },
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 class UserStruct extends BunStruct<typeof UserSchema> {
   constructor() {
-    super(UserSchema)
+    super(UserSchema);
   }
 }
 
-const user = new UserStruct()
-user.properties.id = 123
-user.properties.age = 42
-user.properties.name = 'Alice'
+const user = new UserStruct();
+user.properties.id = 123;
+user.properties.age = 42;
+user.properties.name = 'Alice';
 
 // Backing memory ready for FFI/WASM
-const ptrToUser = user.pointer
-const bytes = user.buffer // Uint8Array
+const ptrToUser = user.pointer;
+const bytes = user.buffer; // Uint8Array
 ```
 
 > **Why a Proxy?** Property access remains ergonomic while guaranteeing that values are always synced with the underlying `DataView`.
@@ -116,7 +115,7 @@ const Person = {
   height: { order: 2, type: 'f32' },
   alive: { order: 3, type: 'boolean' },
   name: { order: 4, type: 'string' }, // stores a pointer to C-string
-} as const
+} as const;
 ```
 
 **Ordering is required** (`order: number`) and defines layout order.
@@ -131,7 +130,7 @@ Supported **primitive labels**: `i8, i16, i32, i64, u8, u16, u32, u64, f32, f64,
 const Vec2 = {
   x: { order: 1, type: 'f32' },
   y: { order: 2, type: 'f32' },
-} as const
+} as const;
 
 const Transform = {
   position: {
@@ -139,7 +138,7 @@ const Transform = {
     type: 'struct',
     schema: class V extends BunStruct<typeof Vec2> {
       constructor() {
-        super(Vec2)
+        super(Vec2);
       }
     },
     isInline: true,
@@ -149,11 +148,11 @@ const Transform = {
     type: 'struct',
     schema: class V2 extends BunStruct<typeof Vec2> {
       constructor() {
-        super(Vec2)
+        super(Vec2);
       }
     },
   }, // pointer
-} as const
+} as const;
 ```
 
 - `isInline: true` embeds child bytes directly into the parent.
@@ -174,7 +173,7 @@ const Buffers = {
 
   // Dynamic array: a single pointer stored in the struct
   blob: { order: 3, type: 'array', to: 'u8' },
-} as const
+} as const;
 ```
 
 - **Inline arrays** require `length` and store contiguous bytes; for `string[]` they store an inline table of pointers; for `boolean[]` they pack as `u8` per element.
@@ -183,9 +182,9 @@ const Buffers = {
 Usage examples:
 
 ```ts
-s.properties.samples = new Float32Array(256)
-s.properties.args = ['hello', 'world', 'SDL']
-s.properties.blob = new Uint8Array([1, 2, 3, 4])
+s.properties.samples = new Float32Array(256);
+s.properties.args = ['hello', 'world', 'SDL'];
+s.properties.blob = new Uint8Array([1, 2, 3, 4]);
 ```
 
 ---
@@ -199,7 +198,7 @@ enum Mode {
 }
 const WithEnum = {
   mode: { order: 1, type: 'enum', enum: Mode, bytes: 'u8' }, // default is u32
-} as const
+} as const;
 ```
 
 - `bytes` controls storage width per field.

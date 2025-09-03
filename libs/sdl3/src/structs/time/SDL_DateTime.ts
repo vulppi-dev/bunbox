@@ -1,4 +1,4 @@
-import { BunStruct, type StructSchema } from '../_struct'
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_DateTimeSchema = {
   year: { order: 0, type: 'i32' },
@@ -10,13 +10,13 @@ const SDL_DateTimeSchema = {
   nanosecond: { order: 6, type: 'i32' },
   day_of_week: { order: 7, type: 'i32' },
   utc_offset: { order: 8, type: 'i32' },
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_DateTime
  */
 export class SDL_DateTime extends BunStruct<typeof SDL_DateTimeSchema> {
   constructor() {
-    super(SDL_DateTimeSchema)
+    super(SDL_DateTimeSchema);
   }
 }

@@ -1,5 +1,5 @@
-import { SDL_GPUVertexElementFormat } from '../../enum/gpu'
-import { BunStruct, type StructSchema } from '../_struct'
+import { SDL_GPUVertexElementFormat } from '../../enum/gpu';
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_GPUVertexAttributeSchema = {
   location: {
@@ -19,7 +19,7 @@ const SDL_GPUVertexAttributeSchema = {
     order: 3,
     type: 'u32',
   } /**< The byte offset of this attribute relative to the start of the vertex element. */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_GPUVertexAttribute
@@ -28,6 +28,6 @@ export class SDL_GPUVertexAttribute extends BunStruct<
   typeof SDL_GPUVertexAttributeSchema
 > {
   constructor() {
-    super(SDL_GPUVertexAttributeSchema)
+    super(SDL_GPUVertexAttributeSchema);
   }
 }

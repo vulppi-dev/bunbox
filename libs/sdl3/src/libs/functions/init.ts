@@ -1,4 +1,4 @@
-import type { FFIFunction } from 'bun:ffi'
+import type { FFIFunction } from 'bun:ffi';
 
 export const INIT_BINDINGS = {
   /**
@@ -44,4 +44,4 @@ export const INIT_BINDINGS = {
    * @description https://wiki.libsdl.org/SDL3/SDL_WasInit
    */
   SDL_WasInit: { args: ['u32'], returns: 'u32' },
-} as const satisfies Record<string, FFIFunction>
+} as const satisfies Record<string, FFIFunction>;

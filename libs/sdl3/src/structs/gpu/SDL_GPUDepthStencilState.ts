@@ -1,6 +1,6 @@
-import { SDL_GPUCompareOp } from '../../enum/gpu'
-import { BunStruct, type StructSchema } from '../_struct'
-import { SDL_GPUStencilOpState } from './SDL_GPUStencilOpState'
+import { SDL_GPUCompareOp } from '../../enum/gpu';
+import { BunStruct, type StructSchema } from '../_struct';
+import { SDL_GPUStencilOpState } from './SDL_GPUStencilOpState';
 
 const SDL_GPUDepthStencilStateSchema = {
   compare_op: {
@@ -43,7 +43,7 @@ const SDL_GPUDepthStencilStateSchema = {
   padding1: { order: 8, type: 'u8' },
   padding2: { order: 9, type: 'u8' },
   padding3: { order: 10, type: 'u8' },
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_GPUDepthStencilState
@@ -52,6 +52,6 @@ export class SDL_GPUDepthStencilState extends BunStruct<
   typeof SDL_GPUDepthStencilStateSchema
 > {
   constructor() {
-    super(SDL_GPUDepthStencilStateSchema)
+    super(SDL_GPUDepthStencilStateSchema);
   }
 }

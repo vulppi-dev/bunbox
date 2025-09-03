@@ -1,4 +1,4 @@
-import type { FFIFunction } from 'bun:ffi'
+import type { FFIFunction } from 'bun:ffi';
 
 export const VIDEO_BINDINGS = {
   /**
@@ -456,4 +456,4 @@ export const VIDEO_BINDINGS = {
    * @description https://wiki.libsdl.org/SDL3/SDL_WindowHasSurface
    */
   // SDL_WindowHasSurface: {},
-} as const satisfies Record<string, FFIFunction>
+} as const satisfies Record<string, FFIFunction>;

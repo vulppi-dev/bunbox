@@ -1,5 +1,5 @@
-import { SDL_SensorType } from '../../enum/sensor'
-import { BunStruct, type StructSchema } from '../_struct'
+import { SDL_SensorType } from '../../enum/sensor';
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_VirtualJoystickSensorDescSchema = {
   type: {
@@ -11,7 +11,7 @@ const SDL_VirtualJoystickSensorDescSchema = {
     order: 1,
     type: 'f32',
   } /**< the update frequency of this sensor, may be 0.0f */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_VirtualJoystickSensorDesc
@@ -20,6 +20,6 @@ export class SDL_VirtualJoystickSensorDesc extends BunStruct<
   typeof SDL_VirtualJoystickSensorDescSchema
 > {
   constructor() {
-    super(SDL_VirtualJoystickSensorDescSchema)
+    super(SDL_VirtualJoystickSensorDescSchema);
   }
 }

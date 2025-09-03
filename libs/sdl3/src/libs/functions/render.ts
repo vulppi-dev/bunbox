@@ -1,4 +1,4 @@
-import type { FFIFunction } from 'bun:ffi'
+import type { FFIFunction } from 'bun:ffi';
 
 export const RENDER_BINDINGS = {
   /**
@@ -400,4 +400,4 @@ export const RENDER_BINDINGS = {
    * @description https://wiki.libsdl.org/SDL3/SDL_UpdateYUVTexture
    */
   // SDL_UpdateYUVTexture: { args: [], returns: 'void' },
-} as const satisfies Record<string, FFIFunction>
+} as const satisfies Record<string, FFIFunction>;

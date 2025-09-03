@@ -1,4 +1,4 @@
-import type { FFIFunction } from 'bun:ffi'
+import type { FFIFunction } from 'bun:ffi';
 
 export const HINT_BINDINGS = {
   /**
@@ -36,4 +36,4 @@ export const HINT_BINDINGS = {
     args: ['cstring', 'cstring', 'u32'],
     returns: 'bool',
   },
-} as const satisfies Record<string, FFIFunction>
+} as const satisfies Record<string, FFIFunction>;

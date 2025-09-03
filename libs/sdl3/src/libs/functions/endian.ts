@@ -1,4 +1,4 @@
-import type { FFIFunction } from 'bun:ffi'
+import type { FFIFunction } from 'bun:ffi';
 
 export const ENDIAN_BINDINGS = {
   /**
@@ -17,4 +17,4 @@ export const ENDIAN_BINDINGS = {
    * @description https://wiki.libsdl.org/SDL3/SDL_SwapFloat
    */
   // SDL_SwapFloat: { args: ['f32'], returns: 'f32' }, --- NOT FOUND ---
-} as const satisfies Record<string, FFIFunction>
+} as const satisfies Record<string, FFIFunction>;

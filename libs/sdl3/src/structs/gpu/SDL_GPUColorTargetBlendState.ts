@@ -1,5 +1,5 @@
-import { SDL_GPUBlendFactor, SDL_GPUBlendOp } from '../../enum/gpu'
-import { BunStruct, type StructSchema } from '../_struct'
+import { SDL_GPUBlendFactor, SDL_GPUBlendOp } from '../../enum/gpu';
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_GPUColorTargetBlendStateSchema = {
   src_color_blendfactor: {
@@ -46,7 +46,7 @@ const SDL_GPUColorTargetBlendStateSchema = {
   } /**< Whether the color write mask is enabled. */,
   padding1: { order: 9, type: 'u8' },
   padding2: { order: 10, type: 'u8' },
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_GPUColorTargetBlendState
@@ -55,6 +55,6 @@ export class SDL_GPUColorTargetBlendState extends BunStruct<
   typeof SDL_GPUColorTargetBlendStateSchema
 > {
   constructor() {
-    super(SDL_GPUColorTargetBlendStateSchema)
+    super(SDL_GPUColorTargetBlendStateSchema);
   }
 }

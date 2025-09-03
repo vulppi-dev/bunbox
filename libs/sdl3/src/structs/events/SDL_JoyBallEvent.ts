@@ -1,5 +1,5 @@
-import { SDL_EventType } from '../../enum/events'
-import { BunStruct, type StructSchema } from '../_struct'
+import { SDL_EventType } from '../../enum/events';
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_JoyBallEventSchema = {
   type: {
@@ -25,13 +25,13 @@ const SDL_JoyBallEventSchema = {
     order: 9,
     type: 'i16',
   } /**< The relative motion in the Y direction */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_JoyBallEvent
  */
 export class SDL_JoyBallEvent extends BunStruct<typeof SDL_JoyBallEventSchema> {
   constructor() {
-    super(SDL_JoyBallEventSchema)
+    super(SDL_JoyBallEventSchema);
   }
 }

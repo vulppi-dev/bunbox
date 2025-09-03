@@ -1,4 +1,4 @@
-import { BunStruct, type StructSchema } from '../_struct'
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_GPUTransferBufferLocationSchema = {
   transfer_buffer: {
@@ -9,7 +9,7 @@ const SDL_GPUTransferBufferLocationSchema = {
     order: 1,
     type: 'u32',
   } /**< The starting byte of the buffer data in the transfer buffer. */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_GPUTransferBufferLocation
@@ -18,6 +18,6 @@ export class SDL_GPUTransferBufferLocation extends BunStruct<
   typeof SDL_GPUTransferBufferLocationSchema
 > {
   constructor() {
-    super(SDL_GPUTransferBufferLocationSchema)
+    super(SDL_GPUTransferBufferLocationSchema);
   }
 }

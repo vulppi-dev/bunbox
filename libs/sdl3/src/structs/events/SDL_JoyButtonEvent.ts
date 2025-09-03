@@ -1,5 +1,5 @@
-import { SDL_EventType } from '../../enum/events'
-import { BunStruct, type StructSchema } from '../_struct'
+import { SDL_EventType } from '../../enum/events';
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_JoyButtonEventSchema = {
   type: {
@@ -17,7 +17,7 @@ const SDL_JoyButtonEventSchema = {
   down: { order: 5, type: 'boolean' } /**< true if the button is pressed */,
   padding1: { order: 6, type: 'u8' },
   padding2: { order: 7, type: 'u8' },
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_JoyButtonEvent
@@ -26,6 +26,6 @@ export class SDL_JoyButtonEvent extends BunStruct<
   typeof SDL_JoyButtonEventSchema
 > {
   constructor() {
-    super(SDL_JoyButtonEventSchema)
+    super(SDL_JoyButtonEventSchema);
   }
 }

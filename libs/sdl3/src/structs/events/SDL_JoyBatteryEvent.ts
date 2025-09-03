@@ -1,6 +1,6 @@
-import { SDL_EventType } from '../../enum/events'
-import { SDL_PowerState } from '../../enum/power'
-import { BunStruct, type StructSchema } from '../_struct'
+import { SDL_EventType } from '../../enum/events';
+import { SDL_PowerState } from '../../enum/power';
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_JoyBatteryEventSchema = {
   type: {
@@ -23,7 +23,7 @@ const SDL_JoyBatteryEventSchema = {
     order: 5,
     type: 'u8',
   } /**< The joystick battery percent charge remaining */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_JoyBatteryEvent
@@ -32,6 +32,6 @@ export class SDL_JoyBatteryEvent extends BunStruct<
   typeof SDL_JoyBatteryEventSchema
 > {
   constructor() {
-    super(SDL_JoyBatteryEventSchema)
+    super(SDL_JoyBatteryEventSchema);
   }
 }

@@ -1,5 +1,5 @@
-import { SDL_EventType } from '../../enum/events'
-import { BunStruct, type StructSchema } from '../_struct'
+import { SDL_EventType } from '../../enum/events';
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_TextEditingEventSchema = {
   type: {
@@ -28,7 +28,7 @@ const SDL_TextEditingEventSchema = {
     order: 6,
     type: 'i32',
   } /**< The length of selected editing text, or -1 if not set */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_TextEditingEvent
@@ -37,6 +37,6 @@ export class SDL_TextEditingEvent extends BunStruct<
   typeof SDL_TextEditingEventSchema
 > {
   constructor() {
-    super(SDL_TextEditingEventSchema)
+    super(SDL_TextEditingEventSchema);
   }
 }

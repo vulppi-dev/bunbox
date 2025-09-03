@@ -1,5 +1,5 @@
-import { BunStruct, type StructSchema } from '../_struct'
-import { SDL_AtomicInt } from '../atomic/SDL_AtomicInt'
+import { BunStruct, type StructSchema } from '../_struct';
+import { SDL_AtomicInt } from '../atomic/SDL_AtomicInt';
 
 const SDL_InitStateSchema = {
   status: {
@@ -15,13 +15,13 @@ const SDL_InitStateSchema = {
     order: 2,
     type: 'void',
   },
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_InitState
  */
 export class SDL_InitState extends BunStruct<typeof SDL_InitStateSchema> {
   constructor() {
-    super(SDL_InitStateSchema)
+    super(SDL_InitStateSchema);
   }
 }

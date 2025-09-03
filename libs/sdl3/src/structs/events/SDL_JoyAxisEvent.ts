@@ -1,5 +1,5 @@
-import { SDL_EventType } from '../../enum/events'
-import { BunStruct, type StructSchema } from '../_struct'
+import { SDL_EventType } from '../../enum/events';
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_JoyAxisEventSchema = {
   type: {
@@ -22,13 +22,13 @@ const SDL_JoyAxisEventSchema = {
     type: 'i16',
   } /**< The axis value (range: -32768 to 32767) */,
   padding4: { order: 9, type: 'u16' },
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_JoyAxisEvent
  */
 export class SDL_JoyAxisEvent extends BunStruct<typeof SDL_JoyAxisEventSchema> {
   constructor() {
-    super(SDL_JoyAxisEventSchema)
+    super(SDL_JoyAxisEventSchema);
   }
 }

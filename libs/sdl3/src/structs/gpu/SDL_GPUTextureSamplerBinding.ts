@@ -1,4 +1,4 @@
-import { BunStruct, type StructSchema } from '../_struct'
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_GPUTextureSamplerBindingSchema = {
   texture: {
@@ -9,7 +9,7 @@ const SDL_GPUTextureSamplerBindingSchema = {
     order: 1,
     type: 'void',
   } /**< The sampler to bind. */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_GPUTextureSamplerBinding
@@ -18,6 +18,6 @@ export class SDL_GPUTextureSamplerBinding extends BunStruct<
   typeof SDL_GPUTextureSamplerBindingSchema
 > {
   constructor() {
-    super(SDL_GPUTextureSamplerBindingSchema)
+    super(SDL_GPUTextureSamplerBindingSchema);
   }
 }

@@ -1,5 +1,5 @@
-import { BunStruct, type StructSchema } from '../_struct'
-import { SDL_HapticDirection } from './SDL_HapticDirection'
+import { BunStruct, type StructSchema } from '../_struct';
+import { SDL_HapticDirection } from './SDL_HapticDirection';
 
 const SDL_HapticConstantSchema = {
   /* Header */
@@ -29,7 +29,7 @@ const SDL_HapticConstantSchema = {
   } /**< Level at the start of the attack. */,
   fade_length: { order: 9, type: 'u16' } /**< Duration of the fade. */,
   fade_level: { order: 10, type: 'u16' } /**< Level at the end of the fade. */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_HapticConstant
@@ -38,6 +38,6 @@ export class SDL_HapticConstant extends BunStruct<
   typeof SDL_HapticConstantSchema
 > {
   constructor() {
-    super(SDL_HapticConstantSchema)
+    super(SDL_HapticConstantSchema);
   }
 }

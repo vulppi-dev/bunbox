@@ -1,4 +1,4 @@
-import type { FFIFunction } from 'bun:ffi'
+import type { FFIFunction } from 'bun:ffi';
 
 export const ERROR_BINDINGS = {
   /**
@@ -21,4 +21,4 @@ export const ERROR_BINDINGS = {
    * @description https://wiki.libsdl.org/SDL3/SDL_SetErrorV
    */
   SDL_SetErrorV: { args: ['cstring', 'ptr'], returns: 'bool' },
-} as const satisfies Record<string, FFIFunction>
+} as const satisfies Record<string, FFIFunction>;

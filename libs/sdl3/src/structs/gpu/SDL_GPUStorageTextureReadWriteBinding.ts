@@ -1,4 +1,4 @@
-import { BunStruct, type StructSchema } from '../_struct'
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_GPUStorageTextureReadWriteBindingSchema = {
   texture: {
@@ -14,7 +14,7 @@ const SDL_GPUStorageTextureReadWriteBindingSchema = {
   padding1: { order: 4, type: 'u8' },
   padding2: { order: 5, type: 'u8' },
   padding3: { order: 6, type: 'u8' },
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_GPUStorageTextureReadWriteBinding
@@ -23,6 +23,6 @@ export class SDL_GPUStorageTextureReadWriteBinding extends BunStruct<
   typeof SDL_GPUStorageTextureReadWriteBindingSchema
 > {
   constructor() {
-    super(SDL_GPUStorageTextureReadWriteBindingSchema)
+    super(SDL_GPUStorageTextureReadWriteBindingSchema);
   }
 }

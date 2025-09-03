@@ -1,4 +1,4 @@
-import { BunStruct, type StructSchema } from '../_struct'
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_GPUIndirectDrawCommandSchema = {
   num_vertices: {
@@ -17,7 +17,7 @@ const SDL_GPUIndirectDrawCommandSchema = {
     order: 3,
     type: 'u32',
   } /**< The ID of the first instance to draw. */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_GPUIndirectDrawCommand
@@ -26,6 +26,6 @@ export class SDL_GPUIndirectDrawCommand extends BunStruct<
   typeof SDL_GPUIndirectDrawCommandSchema
 > {
   constructor() {
-    super(SDL_GPUIndirectDrawCommandSchema)
+    super(SDL_GPUIndirectDrawCommandSchema);
   }
 }

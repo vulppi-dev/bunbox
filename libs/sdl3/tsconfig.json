@@ -1,9 +1,7 @@
 {
   "compilerOptions": {
     // Environment setup & latest features
-    "lib": [
-      "ESNext"
-    ],
+    "lib": ["ESNext"],
     "target": "ESNext",
     "module": "Preserve",
     "moduleDetection": "force",
@@ -25,18 +23,10 @@
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false,
     "paths": {
-      "$enum": [
-        "./src/enum/index.ts"
-      ],
-      "$libs": [
-        "./src/libs/index.ts"
-      ],
-      "$utils": [
-        "./src/utils/index.ts"
-      ],
-      "$structs": [
-        "./src/structs/index.ts"
-      ],
+      "$enum": ["./src/enum/index.ts"],
+      "$libs": ["./src/libs/index.ts"],
+      "$utils": ["./src/utils/index.ts"],
+      "$structs": ["./src/structs/index.ts"]
     }
   }
 }

@@ -1,4 +1,4 @@
-import { BunStruct, type StructSchema } from '../_struct'
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_HapticLeftRightSchema = {
   /* Header */
@@ -17,7 +17,7 @@ const SDL_HapticLeftRightSchema = {
     order: 3,
     type: 'u16',
   } /**< Control of the small controller motor. */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_HapticLeftRight
@@ -26,6 +26,6 @@ export class SDL_HapticLeftRight extends BunStruct<
   typeof SDL_HapticLeftRightSchema
 > {
   constructor() {
-    super(SDL_HapticLeftRightSchema)
+    super(SDL_HapticLeftRightSchema);
   }
 }

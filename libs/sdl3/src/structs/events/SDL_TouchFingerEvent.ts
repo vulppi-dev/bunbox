@@ -1,4 +1,4 @@
-import { BunStruct, type StructSchema } from '../_struct'
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_TouchFingerEventSchema = {
   type: {
@@ -33,7 +33,7 @@ const SDL_TouchFingerEventSchema = {
     order: 10,
     type: 'u32',
   } /**< The window with touch focus, if any */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_TouchFingerEvent
@@ -42,6 +42,6 @@ export class SDL_TouchFingerEvent extends BunStruct<
   typeof SDL_TouchFingerEventSchema
 > {
   constructor() {
-    super(SDL_TouchFingerEventSchema)
+    super(SDL_TouchFingerEventSchema);
   }
 }

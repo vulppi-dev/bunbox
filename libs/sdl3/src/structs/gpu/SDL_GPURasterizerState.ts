@@ -2,8 +2,8 @@ import {
   SDL_GPUCullMode,
   SDL_GPUFillMode,
   SDL_GPUFrontFace,
-} from '../../enum/gpu'
-import { BunStruct, type StructSchema } from '../_struct'
+} from '../../enum/gpu';
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_GPURasterizerStateSchema = {
   fill_mode: {
@@ -43,7 +43,7 @@ const SDL_GPURasterizerStateSchema = {
   } /**< true to enable depth clip, false to enable depth clamp. */,
   padding1: { order: 8, type: 'u8' },
   padding2: { order: 9, type: 'u8' },
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_GPURasterizerState
@@ -52,6 +52,6 @@ export class SDL_GPURasterizerState extends BunStruct<
   typeof SDL_GPURasterizerStateSchema
 > {
   constructor() {
-    super(SDL_GPURasterizerStateSchema)
+    super(SDL_GPURasterizerStateSchema);
   }
 }

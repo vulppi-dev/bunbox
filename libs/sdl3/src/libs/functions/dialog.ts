@@ -1,4 +1,4 @@
-import type { FFIFunction } from 'bun:ffi'
+import type { FFIFunction } from 'bun:ffi';
 
 export const DIALOG_BINDINGS = {
   /**
@@ -29,4 +29,4 @@ export const DIALOG_BINDINGS = {
     args: ['ptr', 'ptr', 'ptr', 'ptr', 'i32', 'cstring'],
     returns: 'void',
   },
-} as const satisfies Record<string, FFIFunction>
+} as const satisfies Record<string, FFIFunction>;

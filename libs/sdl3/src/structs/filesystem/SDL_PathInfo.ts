@@ -1,5 +1,5 @@
-import { SDL_PathType } from '../../enum/filesystem'
-import { BunStruct, type StructSchema } from '../_struct'
+import { SDL_PathType } from '../../enum/filesystem';
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_PathInfoSchema = {
   type: { order: 0, type: 'enum', enum: SDL_PathType } /**< the path type */,
@@ -16,13 +16,13 @@ const SDL_PathInfoSchema = {
     order: 4,
     type: 'i64',
   } /**< the last time the path was read */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_PathInfo
  */
 export class SDL_PathInfo extends BunStruct<typeof SDL_PathInfoSchema> {
   constructor() {
-    super(SDL_PathInfoSchema)
+    super(SDL_PathInfoSchema);
   }
 }

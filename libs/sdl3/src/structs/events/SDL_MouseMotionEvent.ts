@@ -1,5 +1,5 @@
-import { SDL_EventType } from '../../enum/events'
-import { BunStruct, type StructSchema } from '../_struct'
+import { SDL_EventType } from '../../enum/events';
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_MouseMotionEventSchema = {
   type: {
@@ -22,7 +22,7 @@ const SDL_MouseMotionEventSchema = {
   y: { order: 7, type: 'f32' } /**< Y coordinate, relative to window */,
   xrel: { order: 8, type: 'f32' } /**< Relative motion in the X direction */,
   yrel: { order: 9, type: 'f32' } /**< Relative motion in the Y direction */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_MouseMotionEvent
@@ -31,6 +31,6 @@ export class SDL_MouseMotionEvent extends BunStruct<
   typeof SDL_MouseMotionEventSchema
 > {
   constructor() {
-    super(SDL_MouseMotionEventSchema)
+    super(SDL_MouseMotionEventSchema);
   }
 }

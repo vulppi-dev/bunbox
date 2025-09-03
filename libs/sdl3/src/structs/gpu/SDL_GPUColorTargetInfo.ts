@@ -1,7 +1,7 @@
-import { SDL_GPULoadOp, SDL_GPUStoreOp } from '../../enum/gpu'
-import { BunStruct, type StructSchema } from '../_struct'
-import { SDL_FColor } from '../pixels/SDL_FColor'
-import { SDL_GPUTextureCreateInfo } from './SDL_GPUTextureCreateInfo'
+import { SDL_GPULoadOp, SDL_GPUStoreOp } from '../../enum/gpu';
+import { BunStruct, type StructSchema } from '../_struct';
+import { SDL_FColor } from '../pixels/SDL_FColor';
+import { SDL_GPUTextureCreateInfo } from './SDL_GPUTextureCreateInfo';
 
 const SDL_GPUColorTargetInfoSchema = {
   texture: {
@@ -56,7 +56,7 @@ const SDL_GPUColorTargetInfoSchema = {
   } /**< true cycles the resolve texture if the resolve texture is bound. Ignored if a RESOLVE* store_op is not used. */,
   padding1: { order: 11, type: 'u8' },
   padding2: { order: 12, type: 'u8' },
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_GPUColorTargetInfo
@@ -65,6 +65,6 @@ export class SDL_GPUColorTargetInfo extends BunStruct<
   typeof SDL_GPUColorTargetInfoSchema
 > {
   constructor() {
-    super(SDL_GPUColorTargetInfoSchema)
+    super(SDL_GPUColorTargetInfoSchema);
   }
 }

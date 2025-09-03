@@ -1,5 +1,5 @@
-import { SDL_GPUCompareOp, SDL_GPUStencilOp } from '../../enum/gpu'
-import { BunStruct, type StructSchema } from '../_struct'
+import { SDL_GPUCompareOp, SDL_GPUStencilOp } from '../../enum/gpu';
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_GPUStencilOpStateSchema = {
   fail_op: {
@@ -22,7 +22,7 @@ const SDL_GPUStencilOpStateSchema = {
     type: 'enum',
     enum: SDL_GPUCompareOp,
   } /**< The comparison operator used in the stencil test. */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_GPUStencilOpState
@@ -31,6 +31,6 @@ export class SDL_GPUStencilOpState extends BunStruct<
   typeof SDL_GPUStencilOpStateSchema
 > {
   constructor() {
-    super(SDL_GPUStencilOpStateSchema)
+    super(SDL_GPUStencilOpStateSchema);
   }
 }

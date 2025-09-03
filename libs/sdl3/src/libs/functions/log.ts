@@ -1,4 +1,4 @@
-import type { FFIFunction } from 'bun:ffi'
+import type { FFIFunction } from 'bun:ffi';
 
 export const LOG_BINDINGS = {
   /**
@@ -73,4 +73,4 @@ export const LOG_BINDINGS = {
    * @description https://wiki.libsdl.org/SDL3/SDL_SetLogPriorityPrefix
    */
   // SDL_SetLogPriorityPrefix: {},
-} as const satisfies Record<string, FFIFunction>
+} as const satisfies Record<string, FFIFunction>;

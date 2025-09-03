@@ -1,4 +1,4 @@
-import type { FFIFunction } from 'bun:ffi'
+import type { FFIFunction } from 'bun:ffi';
 
 export const BLENDMODE_BINDINGS = {
   /**
@@ -8,4 +8,4 @@ export const BLENDMODE_BINDINGS = {
     args: ['u32', 'u32', 'u32', 'u32', 'u32', 'u32'],
     returns: 'u32',
   },
-} as const satisfies Record<string, FFIFunction>
+} as const satisfies Record<string, FFIFunction>;

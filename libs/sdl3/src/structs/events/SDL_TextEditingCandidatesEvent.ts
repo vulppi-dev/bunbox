@@ -1,5 +1,5 @@
-import { SDL_EventType } from '../../enum/events'
-import { BunStruct, type StructSchema } from '../_struct'
+import { SDL_EventType } from '../../enum/events';
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_TextEditingCandidatesEventSchema = {
   type: {
@@ -36,7 +36,7 @@ const SDL_TextEditingCandidatesEventSchema = {
   padding1: { order: 8, type: 'u8' },
   padding2: { order: 9, type: 'u8' },
   padding3: { order: 10, type: 'u8' },
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_TextEditingCandidatesEvent
@@ -45,6 +45,6 @@ export class SDL_TextEditingCandidatesEvent extends BunStruct<
   typeof SDL_TextEditingCandidatesEventSchema
 > {
   constructor() {
-    super(SDL_TextEditingCandidatesEventSchema)
+    super(SDL_TextEditingCandidatesEventSchema);
   }
 }

@@ -1,5 +1,5 @@
-import { SDL_EventType } from '../../enum/events'
-import { BunStruct, type StructSchema } from '../_struct'
+import { SDL_EventType } from '../../enum/events';
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_SensorEventSchema = {
   type: {
@@ -23,13 +23,13 @@ const SDL_SensorEventSchema = {
     order: 5,
     type: 'u64',
   } /**< The timestamp of the sensor reading in nanoseconds, not necessarily synchronized with the system clock */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_SensorEvent
  */
 export class SDL_SensorEvent extends BunStruct<typeof SDL_SensorEventSchema> {
   constructor() {
-    super(SDL_SensorEventSchema)
+    super(SDL_SensorEventSchema);
   }
 }

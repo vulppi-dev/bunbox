@@ -1,4 +1,4 @@
-import type { FFIFunction } from 'bun:ffi'
+import type { FFIFunction } from 'bun:ffi';
 
 export const EVENTS_BINDINGS = {
   /**
@@ -81,4 +81,4 @@ export const EVENTS_BINDINGS = {
    * @description https://wiki.libsdl.org/SDL3/SDL_WaitEventTimeout
    */
   SDL_WaitEventTimeout: { args: ['ptr', 'i32'], returns: 'bool' },
-} as const satisfies Record<string, FFIFunction>
+} as const satisfies Record<string, FFIFunction>;

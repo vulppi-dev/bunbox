@@ -1,5 +1,5 @@
-import { BunStruct, type StructSchema } from '../_struct'
-import { SDL_MessageBoxColor } from './SDL_MessageBoxColor'
+import { BunStruct, type StructSchema } from '../_struct';
+import { SDL_MessageBoxColor } from './SDL_MessageBoxColor';
 
 const SDL_MessageBoxColorSchemeSchema = {
   colors0: {
@@ -32,7 +32,7 @@ const SDL_MessageBoxColorSchemeSchema = {
     schema: SDL_MessageBoxColor,
     isInline: true,
   },
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_MessageBoxColorScheme
@@ -41,6 +41,6 @@ export class SDL_MessageBoxColorScheme extends BunStruct<
   typeof SDL_MessageBoxColorSchemeSchema
 > {
   constructor() {
-    super(SDL_MessageBoxColorSchemeSchema)
+    super(SDL_MessageBoxColorSchemeSchema);
   }
 }

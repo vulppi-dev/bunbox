@@ -1,5 +1,5 @@
-import { SDL_EventType } from '../../enum/events'
-import { BunStruct, type StructSchema } from '../_struct'
+import { SDL_EventType } from '../../enum/events';
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_GamepadAxisEventSchema = {
   type: {
@@ -22,7 +22,7 @@ const SDL_GamepadAxisEventSchema = {
     type: 'i16',
   } /**< The axis value (range: -32768 to 32767) */,
   padding4: { order: 9, type: 'u16' },
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_GamepadAxisEvent
@@ -31,6 +31,6 @@ export class SDL_GamepadAxisEvent extends BunStruct<
   typeof SDL_GamepadAxisEventSchema
 > {
   constructor() {
-    super(SDL_GamepadAxisEventSchema)
+    super(SDL_GamepadAxisEventSchema);
   }
 }

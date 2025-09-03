@@ -1,8 +1,8 @@
-import { SDL_GPUFilter, SDL_GPULoadOp } from '../../enum/gpu'
-import { SDL_FlipMode } from '../../enum/surface'
-import { BunStruct, type StructSchema } from '../_struct'
-import { SDL_FColor } from '../pixels/SDL_FColor'
-import { SDL_GPUBlitRegion } from './SDL_GPUBlitRegion'
+import { SDL_GPUFilter, SDL_GPULoadOp } from '../../enum/gpu';
+import { SDL_FlipMode } from '../../enum/surface';
+import { BunStruct, type StructSchema } from '../_struct';
+import { SDL_FColor } from '../pixels/SDL_FColor';
+import { SDL_GPUBlitRegion } from './SDL_GPUBlitRegion';
 
 const SDL_GPUBlitInfoSchema = {
   source: {
@@ -45,13 +45,13 @@ const SDL_GPUBlitInfoSchema = {
   padding1: { order: 7, type: 'u8' },
   padding2: { order: 8, type: 'u8' },
   padding3: { order: 9, type: 'u8' },
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_GPUBlitInfo
  */
 export class SDL_GPUBlitInfo extends BunStruct<typeof SDL_GPUBlitInfoSchema> {
   constructor() {
-    super(SDL_GPUBlitInfoSchema)
+    super(SDL_GPUBlitInfoSchema);
   }
 }

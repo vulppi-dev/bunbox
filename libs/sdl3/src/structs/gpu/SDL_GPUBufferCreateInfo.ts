@@ -1,4 +1,4 @@
-import { BunStruct, type StructSchema } from '../_struct'
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_GPUBufferCreateInfoSchema = {
   usage: {
@@ -10,7 +10,7 @@ const SDL_GPUBufferCreateInfoSchema = {
     order: 2,
     type: 'u32',
   } /**< A properties ID for extensions. Should be 0 if no extensions are needed. */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_GPUBufferCreateInfo
@@ -19,6 +19,6 @@ export class SDL_GPUBufferCreateInfo extends BunStruct<
   typeof SDL_GPUBufferCreateInfoSchema
 > {
   constructor() {
-    super(SDL_GPUBufferCreateInfoSchema)
+    super(SDL_GPUBufferCreateInfoSchema);
   }
 }

@@ -1,4 +1,4 @@
-import { BunStruct, type StructSchema } from '../_struct'
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_ClipboardEventSchema = {
   type: { order: 0, type: 'u32' },
@@ -7,7 +7,7 @@ const SDL_ClipboardEventSchema = {
   owner: { order: 3, type: 'boolean' },
   num_mime_types: { order: 4, type: 'i32' },
   mime_types: { order: 5, type: 'array', to: 'string' },
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_ClipboardEvent
@@ -16,6 +16,6 @@ export class SDL_ClipboardEvent extends BunStruct<
   typeof SDL_ClipboardEventSchema
 > {
   constructor() {
-    super(SDL_ClipboardEventSchema)
+    super(SDL_ClipboardEventSchema);
   }
 }

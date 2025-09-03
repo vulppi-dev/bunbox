@@ -1,5 +1,5 @@
-import { SDL_GPULoadOp, SDL_GPUStoreOp } from '../../enum/gpu'
-import { BunStruct, type StructSchema } from '../_struct'
+import { SDL_GPULoadOp, SDL_GPUStoreOp } from '../../enum/gpu';
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_GPUDepthStencilTargetInfoSchema = {
   texture: {
@@ -40,7 +40,7 @@ const SDL_GPUDepthStencilTargetInfoSchema = {
   } /**< The value to clear the stencil component to at the beginning of the render pass. Ignored if SDL_GPU_LOADOP_CLEAR is not used. */,
   padding1: { order: 8, type: 'u8' },
   padding2: { order: 9, type: 'u8' },
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_GPUDepthStencilTargetInfo
@@ -49,6 +49,6 @@ export class SDL_GPUDepthStencilTargetInfo extends BunStruct<
   typeof SDL_GPUDepthStencilTargetInfoSchema
 > {
   constructor() {
-    super(SDL_GPUDepthStencilTargetInfoSchema)
+    super(SDL_GPUDepthStencilTargetInfoSchema);
   }
 }

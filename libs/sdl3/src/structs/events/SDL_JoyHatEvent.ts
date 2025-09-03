@@ -1,5 +1,5 @@
-import { SDL_EventType } from '../../enum/events'
-import { BunStruct, type StructSchema } from '../_struct'
+import { SDL_EventType } from '../../enum/events';
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_JoyHatEventSchema = {
   type: {
@@ -23,13 +23,13 @@ const SDL_JoyHatEventSchema = {
    *   Note that zero means the POV is centered.
    */ padding1: { order: 6, type: 'u8' },
   padding2: { order: 7, type: 'u8' },
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_JoyHatEvent
  */
 export class SDL_JoyHatEvent extends BunStruct<typeof SDL_JoyHatEventSchema> {
   constructor() {
-    super(SDL_JoyHatEventSchema)
+    super(SDL_JoyHatEventSchema);
   }
 }

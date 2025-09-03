@@ -2,8 +2,8 @@ import {
   SDL_GamepadAxis,
   SDL_GamepadBindingType,
   SDL_GamepadButton,
-} from '../../enum/gamepad'
-import { BunStruct, type StructSchema } from '../_struct'
+} from '../../enum/gamepad';
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_GamepadBindingSchema = {
   input_type: { order: 0, type: 'enum', enum: SDL_GamepadBindingType },
@@ -18,7 +18,7 @@ const SDL_GamepadBindingSchema = {
   output_axis: { order: 9, type: 'enum', enum: SDL_GamepadAxis },
   output_axis_min: { order: 10, type: 'i32' },
   output_axis_max: { order: 11, type: 'i32' },
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_GamepadBinding
@@ -27,6 +27,6 @@ export class SDL_GamepadBinding extends BunStruct<
   typeof SDL_GamepadBindingSchema
 > {
   constructor() {
-    super(SDL_GamepadBindingSchema)
+    super(SDL_GamepadBindingSchema);
   }
 }

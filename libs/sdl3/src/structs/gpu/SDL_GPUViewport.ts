@@ -1,4 +1,4 @@
-import { BunStruct, type StructSchema } from '../_struct'
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_GPUViewportSchema = {
   x: {
@@ -25,13 +25,13 @@ const SDL_GPUViewportSchema = {
     order: 5,
     type: 'f32',
   } /**< The maximum depth of the viewport. */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_GPUViewport
  */
 export class SDL_GPUViewport extends BunStruct<typeof SDL_GPUViewportSchema> {
   constructor() {
-    super(SDL_GPUViewportSchema)
+    super(SDL_GPUViewportSchema);
   }
 }

@@ -1,4 +1,4 @@
-import type { FFIFunction } from 'bun:ffi'
+import type { FFIFunction } from 'bun:ffi';
 
 export const GUID_BINDINGS = {
   /**
@@ -9,4 +9,4 @@ export const GUID_BINDINGS = {
    * @description https://wiki.libsdl.org/SDL3/SDL_StringToGUID
    */
   SDL_StringToGUID: { args: ['ptr', 'cstring', 'i32'], returns: 'ptr' },
-} as const satisfies Record<string, FFIFunction>
+} as const satisfies Record<string, FFIFunction>;

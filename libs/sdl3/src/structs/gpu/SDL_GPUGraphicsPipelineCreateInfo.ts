@@ -1,10 +1,10 @@
-import { SDL_GPUPrimitiveType } from '../../enum/gpu'
-import { BunStruct, type StructSchema } from '../_struct'
-import { SDL_GPUDepthStencilState } from './SDL_GPUDepthStencilState'
-import { SDL_GPUGraphicsPipelineTargetInfo } from './SDL_GPUGraphicsPipelineTargetInfo'
-import { SDL_GPUMultisampleState } from './SDL_GPUMultisampleState'
-import { SDL_GPURasterizerState } from './SDL_GPURasterizerState'
-import { SDL_GPUVertexInputState } from './SDL_GPUVertexInputState'
+import { SDL_GPUPrimitiveType } from '../../enum/gpu';
+import { BunStruct, type StructSchema } from '../_struct';
+import { SDL_GPUDepthStencilState } from './SDL_GPUDepthStencilState';
+import { SDL_GPUGraphicsPipelineTargetInfo } from './SDL_GPUGraphicsPipelineTargetInfo';
+import { SDL_GPUMultisampleState } from './SDL_GPUMultisampleState';
+import { SDL_GPURasterizerState } from './SDL_GPURasterizerState';
+import { SDL_GPUVertexInputState } from './SDL_GPUVertexInputState';
 
 const SDL_GPUGraphicsPipelineCreateInfoSchema = {
   vertex_shader: {
@@ -54,7 +54,7 @@ const SDL_GPUGraphicsPipelineCreateInfoSchema = {
     order: 8,
     type: 'u32',
   } /**< A properties ID for extensions. Should be 0 if no extensions are needed. */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_GPUGraphicsPipelineCreateInfo
@@ -63,6 +63,6 @@ export class SDL_GPUGraphicsPipelineCreateInfo extends BunStruct<
   typeof SDL_GPUGraphicsPipelineCreateInfoSchema
 > {
   constructor() {
-    super(SDL_GPUGraphicsPipelineCreateInfoSchema)
+    super(SDL_GPUGraphicsPipelineCreateInfoSchema);
   }
 }

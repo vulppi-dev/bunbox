@@ -1,4 +1,4 @@
-import type { FFIFunction } from 'bun:ffi'
+import type { FFIFunction } from 'bun:ffi';
 
 export const ASYNC_IO_BINDINGS = {
   /**
@@ -51,4 +51,4 @@ export const ASYNC_IO_BINDINGS = {
     args: ['ptr', 'ptr', 'u64', 'u64', 'ptr', 'ptr'],
     returns: 'bool',
   },
-} as const satisfies Record<string, FFIFunction>
+} as const satisfies Record<string, FFIFunction>;

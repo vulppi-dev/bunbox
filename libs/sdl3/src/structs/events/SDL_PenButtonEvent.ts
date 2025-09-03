@@ -1,5 +1,5 @@
-import { SDL_EventType } from '../../enum/events'
-import { BunStruct, type StructSchema } from '../_struct'
+import { SDL_EventType } from '../../enum/events';
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_PenButtonEventSchema = {
   type: {
@@ -28,7 +28,7 @@ const SDL_PenButtonEventSchema = {
     type: 'u8',
   } /**< The pen button index (first button is 1). */,
   down: { order: 9, type: 'boolean' } /**<  true if the button is pressed  */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_PenButtonEvent
@@ -37,6 +37,6 @@ export class SDL_PenButtonEvent extends BunStruct<
   typeof SDL_PenButtonEventSchema
 > {
   constructor() {
-    super(SDL_PenButtonEventSchema)
+    super(SDL_PenButtonEventSchema);
   }
 }

@@ -1,6 +1,6 @@
-import { BunStruct, type StructSchema } from '../_struct'
-import { SDL_FColor } from '../pixels/SDL_FColor'
-import { SDL_FPoint } from '../rect/SDL_FPoint'
+import { BunStruct, type StructSchema } from '../_struct';
+import { SDL_FColor } from '../pixels/SDL_FColor';
+import { SDL_FPoint } from '../rect/SDL_FPoint';
 
 const SDL_VertexSchema = {
   position: {
@@ -21,13 +21,13 @@ const SDL_VertexSchema = {
     schema: SDL_FPoint,
     isInline: true,
   } /**< Normalized texture coordinates, if needed */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_Vertex
  */
 export class SDL_Vertex extends BunStruct<typeof SDL_VertexSchema> {
   constructor() {
-    super(SDL_VertexSchema)
+    super(SDL_VertexSchema);
   }
 }

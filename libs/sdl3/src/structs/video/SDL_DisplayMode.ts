@@ -1,5 +1,5 @@
-import { SDL_PixelFormat } from '../../enum/pixels'
-import { BunStruct, type StructSchema } from '../_struct'
+import { SDL_PixelFormat } from '../../enum/pixels';
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_DisplayModeSchema = {
   displayID: { order: 0, type: 'u32' },
@@ -11,13 +11,13 @@ const SDL_DisplayModeSchema = {
   refresh_rate_numerator: { order: 6, type: 'i32' },
   refresh_rate_denominator: { order: 7, type: 'i32' },
   internal: { order: 8, type: 'void' },
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_DisplayMode
  */
 export class SDL_DisplayMode extends BunStruct<typeof SDL_DisplayModeSchema> {
   constructor() {
-    super(SDL_DisplayModeSchema)
+    super(SDL_DisplayModeSchema);
   }
 }

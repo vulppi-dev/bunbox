@@ -1,4 +1,4 @@
-import { BunStruct, type StructSchema } from '../_struct'
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_GPUComputePipelineCreateInfoSchema = {
   code_size: {
@@ -58,7 +58,7 @@ const SDL_GPUComputePipelineCreateInfoSchema = {
     order: 13,
     type: 'u64',
   } /**< A properties ID for extensions. Should be 0 if no extensions are needed. */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_GPUComputePipelineCreateInfo
@@ -67,6 +67,6 @@ export class SDL_GPUComputePipelineCreateInfo extends BunStruct<
   typeof SDL_GPUComputePipelineCreateInfoSchema
 > {
   constructor() {
-    super(SDL_GPUComputePipelineCreateInfoSchema)
+    super(SDL_GPUComputePipelineCreateInfoSchema);
   }
 }

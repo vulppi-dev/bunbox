@@ -1,4 +1,4 @@
-import type { FFIFunction } from 'bun:ffi'
+import type { FFIFunction } from 'bun:ffi';
 
 export const IO_STREAM_BINDINGS = {
   /**
@@ -193,4 +193,4 @@ export const IO_STREAM_BINDINGS = {
    * @description https://wiki.libsdl.org/SDL3/SDL_WriteU8
    */
   SDL_WriteU8: { args: ['ptr', 'u8'], returns: 'bool' },
-} as const satisfies Record<string, FFIFunction>
+} as const satisfies Record<string, FFIFunction>;

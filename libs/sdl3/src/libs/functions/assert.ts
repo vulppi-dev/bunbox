@@ -1,4 +1,4 @@
-import type { FFIFunction } from 'bun:ffi'
+import type { FFIFunction } from 'bun:ffi';
 
 export const ASSERT_BINDINGS = {
   /**
@@ -25,4 +25,4 @@ export const ASSERT_BINDINGS = {
    * @description https://wiki.libsdl.org/SDL3/SDL_SetAssertionHandler
    */
   SDL_SetAssertionHandler: { args: ['ptr', 'ptr'], returns: 'void' },
-} as const satisfies Record<string, FFIFunction>
+} as const satisfies Record<string, FFIFunction>;

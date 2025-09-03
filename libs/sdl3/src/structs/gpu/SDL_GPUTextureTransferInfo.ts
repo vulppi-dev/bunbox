@@ -1,4 +1,4 @@
-import { BunStruct, type StructSchema } from '../_struct'
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_GPUTextureTransferInfoSchema = {
   transfer_buffer: {
@@ -17,7 +17,7 @@ const SDL_GPUTextureTransferInfoSchema = {
     order: 3,
     type: 'u32',
   } /**< The number of rows from one layer/depth-slice to the next. */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_GPUTextureTransferInfo
@@ -26,6 +26,6 @@ export class SDL_GPUTextureTransferInfo extends BunStruct<
   typeof SDL_GPUTextureTransferInfoSchema
 > {
   constructor() {
-    super(SDL_GPUTextureTransferInfoSchema)
+    super(SDL_GPUTextureTransferInfoSchema);
   }
 }

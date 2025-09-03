@@ -1,4 +1,4 @@
-import { BunStruct, type StructSchema } from '../_struct'
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_AssertDataSchema = {
   always_ignore: { order: 0, type: 'boolean' },
@@ -9,13 +9,13 @@ const SDL_AssertDataSchema = {
   function: { order: 5, type: 'string' },
   next: { order: 6, type: 'struct', schema: 'self' },
   asd: { order: 7, type: 'i64' },
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_AssertData
  */
 export class SDL_AssertData extends BunStruct<typeof SDL_AssertDataSchema> {
   constructor() {
-    super(SDL_AssertDataSchema)
+    super(SDL_AssertDataSchema);
   }
 }

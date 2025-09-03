@@ -1,6 +1,6 @@
-import { SDL_EventType } from '../../enum/events'
-import { SDL_Scancode } from '../../enum/scancode'
-import { BunStruct, type StructSchema } from '../_struct'
+import { SDL_EventType } from '../../enum/events';
+import { SDL_Scancode } from '../../enum/scancode';
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_KeyboardEventSchema = {
   type: {
@@ -31,7 +31,7 @@ const SDL_KeyboardEventSchema = {
   } /**< The platform dependent scancode for this event */,
   down: { order: 9, type: 'boolean' } /**< true if the key is pressed */,
   repeat: { order: 10, type: 'boolean' } /**< true if this is a key repeat */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_KeyboardEvent
@@ -40,6 +40,6 @@ export class SDL_KeyboardEvent extends BunStruct<
   typeof SDL_KeyboardEventSchema
 > {
   constructor() {
-    super(SDL_KeyboardEventSchema)
+    super(SDL_KeyboardEventSchema);
   }
 }

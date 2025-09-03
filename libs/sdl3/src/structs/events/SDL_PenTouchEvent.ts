@@ -1,5 +1,5 @@
-import { SDL_EventType } from '../../enum/events'
-import { BunStruct, type StructSchema } from '../_struct'
+import { SDL_EventType } from '../../enum/events';
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_PenTouchEventSchema = {
   type: {
@@ -31,7 +31,7 @@ const SDL_PenTouchEventSchema = {
     order: 9,
     type: 'boolean',
   } /**< true if the pen is touching or false if the pen is lifted off */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_PenTouchEvent
@@ -40,6 +40,6 @@ export class SDL_PenTouchEvent extends BunStruct<
   typeof SDL_PenTouchEventSchema
 > {
   constructor() {
-    super(SDL_PenTouchEventSchema)
+    super(SDL_PenTouchEventSchema);
   }
 }

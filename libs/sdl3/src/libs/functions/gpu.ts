@@ -1,4 +1,4 @@
-import type { FFIFunction } from 'bun:ffi'
+import type { FFIFunction } from 'bun:ffi';
 
 export const GPU_BINDINGS = {
   /**
@@ -487,4 +487,4 @@ export const GPU_BINDINGS = {
     args: ['ptr', 'ptr', 'u32'],
     returns: 'bool',
   },
-} as const satisfies Record<string, FFIFunction>
+} as const satisfies Record<string, FFIFunction>;

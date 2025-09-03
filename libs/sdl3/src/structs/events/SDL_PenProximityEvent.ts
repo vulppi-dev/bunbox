@@ -1,5 +1,5 @@
-import { SDL_EventType } from '../../enum/events'
-import { BunStruct, type StructSchema } from '../_struct'
+import { SDL_EventType } from '../../enum/events';
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_PenProximityEventSchema = {
   type: {
@@ -17,7 +17,7 @@ const SDL_PenProximityEventSchema = {
     type: 'u32',
   } /**< The window with keyboard focus, if any */,
   which: { order: 4, type: 'u32' } /**< The joystick instance id */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_PenProximityEvent
@@ -26,6 +26,6 @@ export class SDL_PenProximityEvent extends BunStruct<
   typeof SDL_PenProximityEventSchema
 > {
   constructor() {
-    super(SDL_PenProximityEventSchema)
+    super(SDL_PenProximityEventSchema);
   }
 }

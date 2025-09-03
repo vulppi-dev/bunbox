@@ -23,7 +23,8 @@
   "types": "./src/naga_wasm.d.ts",
   "scripts": {
     "dev": "tsc --watch --noEmit true --emitDeclarationOnly false",
-    "pub": "npm publish --access=public --tag=latest"
+    "pub": "npm publish --access=public --tag=latest",
+    "format": "prettier --write ."
   },
   "dependencies": {},
   "devDependencies": {

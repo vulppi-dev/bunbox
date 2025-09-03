@@ -1,4 +1,4 @@
-import type { FFIFunction } from 'bun:ffi'
+import type { FFIFunction } from 'bun:ffi';
 
 export const TIMER_BINDINGS = {
   /**
@@ -41,4 +41,4 @@ export const TIMER_BINDINGS = {
    * @description https://wiki.libsdl.org/SDL3/SDL_RemoveTimer
    */
   SDL_RemoveTimer: { args: ['u32'], returns: 'bool' },
-} as const satisfies Record<string, FFIFunction>
+} as const satisfies Record<string, FFIFunction>;

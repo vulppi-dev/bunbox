@@ -1,14 +1,14 @@
-import "./SDL3/darwin/libiconv.dylib" with { type: 'file' };
-import "./SDL3/linux/arm64/libiconv.so.2" with { type: 'file' };
-import "./SDL3/linux/ppc64/libiconv.so.2" with { type: 'file' };
-import "./SDL3/linux/x64/libiconv.so.2" with { type: 'file' };
+import './SDL3/darwin/libiconv.dylib' with { type: 'file' };
+import './SDL3/linux/arm64/libiconv.so.2' with { type: 'file' };
+import './SDL3/linux/ppc64/libiconv.so.2' with { type: 'file' };
+import './SDL3/linux/x64/libiconv.so.2' with { type: 'file' };
 
-import SDL3Darwin from "./SDL3/darwin/libSDL3.dylib" with { type: 'file' };
-import SDL3LinuxArm64 from "./SDL3/linux/arm64/libSDL3.so" with { type: 'file' };
-import SDL3LinuxPpc64 from "./SDL3/linux/ppc64/libSDL3.so" with { type: 'file' };
-import SDL3LinuxX64 from "./SDL3/linux/x64/libSDL3.so" with { type: 'file' };
-import SDL3Win32Arm64 from "./SDL3/win32/arm64/SDL3.dll" with { type: 'file' };
-import SDL3Win32X64 from "./SDL3/win32/x64/SDL3.dll" with { type: 'file' };
+import SDL3Darwin from './SDL3/darwin/libSDL3.dylib' with { type: 'file' };
+import SDL3LinuxArm64 from './SDL3/linux/arm64/libSDL3.so' with { type: 'file' };
+import SDL3LinuxPpc64 from './SDL3/linux/ppc64/libSDL3.so' with { type: 'file' };
+import SDL3LinuxX64 from './SDL3/linux/x64/libSDL3.so' with { type: 'file' };
+import SDL3Win32Arm64 from './SDL3/win32/arm64/SDL3.dll' with { type: 'file' };
+import SDL3Win32X64 from './SDL3/win32/x64/SDL3.dll' with { type: 'file' };
 
 import { dlopen } from 'bun:ffi';
 import * as functions from '../libs/functions';
@@ -16,7 +16,6 @@ import * as functions from '../libs/functions';
 export * from '@bunbox/naga';
 export { cstr } from '@bunbox/struct';
 export { CString, JSCallback, ptr } from 'bun:ffi';
-
 
 const SDL_LIBS: Record<string, any> = {
   darwin: SDL3Darwin,
@@ -31,11 +30,15 @@ const SDL_LIBS: Record<string, any> = {
   },
 };
 
-const SDL_PATH = process.platform === 'darwin' ? SDL_LIBS[process.platform]:
-SDL_LIBS[process.platform]?.[process.arch];
+const SDL_PATH =
+  process.platform === 'darwin'
+    ? SDL_LIBS[process.platform]
+    : SDL_LIBS[process.platform]?.[process.arch];
 
-if(!SDL_PATH) {
-  throw new Error(`Unsupported platform or architecture: ${process.platform} ${process.arch}`);
+if (!SDL_PATH) {
+  throw new Error(
+    `Unsupported platform or architecture: ${process.platform} ${process.arch}`,
+  );
 }
 
 const { symbols: SDL, close } = dlopen(SDL_PATH, {
@@ -95,11 +98,10 @@ const { symbols: SDL, close } = dlopen(SDL_PATH, {
   ...functions.VERSION_BINDINGS,
   ...functions.VIDEO_BINDINGS,
   ...functions.VULKAN_BINDINGS,
-})
+});
 
 process.on('exit', () => {
-  close()
-})
+  close();
+});
 
 export { SDL };
-

@@ -1,4 +1,4 @@
-import type { FFIFunction } from 'bun:ffi'
+import type { FFIFunction } from 'bun:ffi';
 
 export const CAMERA_BINDINGS = {
   /**
@@ -61,4 +61,4 @@ export const CAMERA_BINDINGS = {
    * @description https://wiki.libsdl.org/SDL3/SDL_ReleaseCameraFrame
    */
   SDL_ReleaseCameraFrame: { args: ['ptr', 'ptr'], returns: 'void' },
-} as const satisfies Record<string, FFIFunction>
+} as const satisfies Record<string, FFIFunction>;

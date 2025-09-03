@@ -1,5 +1,5 @@
-import { BunStruct, type StructSchema } from '../_struct'
-import { SDL_HapticDirection } from './SDL_HapticDirection'
+import { BunStruct, type StructSchema } from '../_struct';
+import { SDL_HapticDirection } from './SDL_HapticDirection';
 
 const SDL_HapticConditionSchema = {
   /* Header */
@@ -57,7 +57,7 @@ const SDL_HapticConditionSchema = {
     to: 'i16',
     length: 3,
   } /**< Position of the dead zone. */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_HapticCondition
@@ -66,6 +66,6 @@ export class SDL_HapticCondition extends BunStruct<
   typeof SDL_HapticConditionSchema
 > {
   constructor() {
-    super(SDL_HapticConditionSchema)
+    super(SDL_HapticConditionSchema);
   }
 }

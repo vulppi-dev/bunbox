@@ -1,5 +1,5 @@
-import { SDL_EventType } from '../../enum/events'
-import { BunStruct, type StructSchema } from '../_struct'
+import { SDL_EventType } from '../../enum/events';
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_GamepadSensorEventSchema = {
   type: {
@@ -27,7 +27,7 @@ const SDL_GamepadSensorEventSchema = {
     order: 6,
     type: 'u64',
   } /**< The timestamp of the sensor reading in nanoseconds, not necessarily synchronized with the system clock */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_GamepadSensorEvent
@@ -36,6 +36,6 @@ export class SDL_GamepadSensorEvent extends BunStruct<
   typeof SDL_GamepadSensorEventSchema
 > {
   constructor() {
-    super(SDL_GamepadSensorEventSchema)
+    super(SDL_GamepadSensorEventSchema);
   }
 }

@@ -32,7 +32,8 @@
     "build": "bun build:bundle && bun build:types",
     "build:bundle": "bun build --outdir dist --format esm --target bun src/index.ts",
     "build:types": "tsc --emitDeclarationOnly --declaration --declarationDir dist --outDir dist src/index.ts",
-    "pub": "npm publish --access=public --tag=latest"
+    "pub": "npm publish --access=public --tag=latest",
+    "format": "prettier --write ."
   },
   "dependencies": {
     "@bunbox/naga": "^0.0.4",

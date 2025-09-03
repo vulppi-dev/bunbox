@@ -1,5 +1,5 @@
-import { SDL_EventType } from '../../enum/events'
-import { BunStruct, type StructSchema } from '../_struct'
+import { SDL_EventType } from '../../enum/events';
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_WindowEventSchema = {
   type: {
@@ -27,13 +27,13 @@ const SDL_WindowEventSchema = {
     order: 5,
     type: 'i32',
   } /**< User-defined event data */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_WindowEvent
  */
 export class SDL_WindowEvent extends BunStruct<typeof SDL_WindowEventSchema> {
   constructor() {
-    super(SDL_WindowEventSchema)
+    super(SDL_WindowEventSchema);
   }
 }

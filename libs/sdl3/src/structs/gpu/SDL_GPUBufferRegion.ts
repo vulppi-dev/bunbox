@@ -1,4 +1,4 @@
-import { BunStruct, type StructSchema } from '../_struct'
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_GPUBufferRegionSchema = {
   buffer: { order: 0, type: 'void' } /**< The buffer. */,
@@ -10,7 +10,7 @@ const SDL_GPUBufferRegionSchema = {
     order: 2,
     type: 'u32',
   } /**< The size in bytes of the region. */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_GPUBufferRegion
@@ -19,6 +19,6 @@ export class SDL_GPUBufferRegion extends BunStruct<
   typeof SDL_GPUBufferRegionSchema
 > {
   constructor() {
-    super(SDL_GPUBufferRegionSchema)
+    super(SDL_GPUBufferRegionSchema);
   }
 }

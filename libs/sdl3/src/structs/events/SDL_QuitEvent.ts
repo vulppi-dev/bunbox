@@ -1,5 +1,5 @@
-import { SDL_EventType } from '../../enum/events'
-import { BunStruct, type StructSchema } from '../_struct'
+import { SDL_EventType } from '../../enum/events';
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_QuitEventSchema = {
   type: {
@@ -12,13 +12,13 @@ const SDL_QuitEventSchema = {
     order: 2,
     type: 'u64',
   } /**< In nanoseconds, populated using SDL_GetTicksNS() */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_QuitEvent
  */
 export class SDL_QuitEvent extends BunStruct<typeof SDL_QuitEventSchema> {
   constructor() {
-    super(SDL_QuitEventSchema)
+    super(SDL_QuitEventSchema);
   }
 }

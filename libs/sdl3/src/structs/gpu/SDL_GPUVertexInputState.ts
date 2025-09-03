@@ -1,6 +1,6 @@
-import { BunStruct, type StructSchema } from '../_struct'
-import { SDL_GPUVertexAttribute } from './SDL_GPUVertexAttribute'
-import { SDL_GPUVertexBufferDescription } from './SDL_GPUVertexBufferDescription'
+import { BunStruct, type StructSchema } from '../_struct';
+import { SDL_GPUVertexAttribute } from './SDL_GPUVertexAttribute';
+import { SDL_GPUVertexBufferDescription } from './SDL_GPUVertexBufferDescription';
 
 const SDL_GPUVertexInputStateSchema = {
   vertex_buffer_descriptions: {
@@ -21,7 +21,7 @@ const SDL_GPUVertexInputStateSchema = {
     order: 3,
     type: 'u32',
   } /**< The number of vertex attribute descriptions in the above array. */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_GPUVertexInputState
@@ -30,6 +30,6 @@ export class SDL_GPUVertexInputState extends BunStruct<
   typeof SDL_GPUVertexInputStateSchema
 > {
   constructor() {
-    super(SDL_GPUVertexInputStateSchema)
+    super(SDL_GPUVertexInputStateSchema);
   }
 }

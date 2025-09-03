@@ -1,5 +1,5 @@
-import { SDL_EventType } from '../../enum/events'
-import { BunStruct, type StructSchema } from '../_struct'
+import { SDL_EventType } from '../../enum/events';
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_TextInputEventSchema = {
   type: {
@@ -20,7 +20,7 @@ const SDL_TextInputEventSchema = {
     order: 4,
     type: 'string',
   } /**< The editing text */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_TextInputEvent
@@ -29,6 +29,6 @@ export class SDL_TextInputEvent extends BunStruct<
   typeof SDL_TextInputEventSchema
 > {
   constructor() {
-    super(SDL_TextInputEventSchema)
+    super(SDL_TextInputEventSchema);
   }
 }

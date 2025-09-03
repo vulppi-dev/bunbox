@@ -1,5 +1,5 @@
-import { SDL_hid_bus_type } from '../../enum/hdiapi'
-import { BunStruct, type StructSchema } from '../_struct'
+import { SDL_hid_bus_type } from '../../enum/hdiapi';
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_hid_device_infoSchema = {
   /** Platform-specific device path */
@@ -42,7 +42,7 @@ const SDL_hid_device_infoSchema = {
 
   /** Pointer to the next device */
   next: { order: 14, type: 'struct', schema: 'self' },
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_hid_device_info
@@ -51,6 +51,6 @@ export class SDL_hid_device_info extends BunStruct<
   typeof SDL_hid_device_infoSchema
 > {
   constructor() {
-    super(SDL_hid_device_infoSchema)
+    super(SDL_hid_device_infoSchema);
   }
 }

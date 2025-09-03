@@ -1,5 +1,5 @@
-import { SDL_EventType } from '../../enum/events'
-import { BunStruct, type StructSchema } from '../_struct'
+import { SDL_EventType } from '../../enum/events';
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_UserEventSchema = {
   type: {
@@ -31,13 +31,13 @@ const SDL_UserEventSchema = {
     order: 6,
     type: 'void',
   } /**< User-defined event data */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_UserEvent
  */
 export class SDL_UserEvent extends BunStruct<typeof SDL_UserEventSchema> {
   constructor() {
-    super(SDL_UserEventSchema)
+    super(SDL_UserEventSchema);
   }
 }

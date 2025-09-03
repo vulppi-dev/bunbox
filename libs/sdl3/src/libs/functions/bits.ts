@@ -1,4 +1,4 @@
-import type { FFIFunction } from 'bun:ffi'
+import type { FFIFunction } from 'bun:ffi';
 
 export const BITS_BINDINGS = {
   /**
@@ -9,4 +9,4 @@ export const BITS_BINDINGS = {
    * @description https://wiki.libsdl.org/SDL3/SDL_MostSignificantBitIndex32
    */
   // SDL_MostSignificantBitIndex32: { args: ['u32'], returns: 'i32' }, --- NOT FOUND ---
-} as const satisfies Record<string, FFIFunction>
+} as const satisfies Record<string, FFIFunction>;

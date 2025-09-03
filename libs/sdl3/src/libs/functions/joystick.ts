@@ -1,4 +1,4 @@
-import type { FFIFunction } from 'bun:ffi'
+import type { FFIFunction } from 'bun:ffi';
 
 export const JOYSTICK_BINDINGS = {
   /**
@@ -254,4 +254,4 @@ export const JOYSTICK_BINDINGS = {
    * @description https://wiki.libsdl.org/SDL3/SDL_UpdateJoysticks
    */
   SDL_UpdateJoysticks: { args: [], returns: 'void' },
-} as const satisfies Record<string, FFIFunction>
+} as const satisfies Record<string, FFIFunction>;

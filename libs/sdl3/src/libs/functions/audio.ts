@@ -1,4 +1,4 @@
-import type { FFIFunction } from 'bun:ffi'
+import type { FFIFunction } from 'bun:ffi';
 
 export const AUDIO_BINDINGS = {
   /**
@@ -267,4 +267,4 @@ export const AUDIO_BINDINGS = {
    * @description https://wiki.libsdl.org/SDL3/SDL_UnlockAudioStream
    */
   SDL_UnlockAudioStream: { args: ['ptr'], returns: 'bool' },
-} as const satisfies Record<string, FFIFunction>
+} as const satisfies Record<string, FFIFunction>;

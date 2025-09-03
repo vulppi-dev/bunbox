@@ -1,5 +1,5 @@
-import { SDL_GPUShaderStage } from '../../enum/gpu'
-import { BunStruct, type StructSchema } from '../_struct'
+import { SDL_GPUShaderStage } from '../../enum/gpu';
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_GPUShaderCreateInfoSchema = {
   code_size: {
@@ -41,7 +41,7 @@ const SDL_GPUShaderCreateInfoSchema = {
     order: 9,
     type: 'u64',
   } /**< A properties ID for extensions. Should be 0 if no extensions are needed. */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_GPUShaderCreateInfo
@@ -50,6 +50,6 @@ export class SDL_GPUShaderCreateInfo extends BunStruct<
   typeof SDL_GPUShaderCreateInfoSchema
 > {
   constructor() {
-    super(SDL_GPUShaderCreateInfoSchema)
+    super(SDL_GPUShaderCreateInfoSchema);
   }
 }

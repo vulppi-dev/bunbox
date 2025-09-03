@@ -1,5 +1,5 @@
-import { SDL_GPUVertexInputRate } from '../../enum/gpu'
-import { BunStruct, type StructSchema } from '../_struct'
+import { SDL_GPUVertexInputRate } from '../../enum/gpu';
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_GPUVertexBufferDescriptionSchema = {
   slot: {
@@ -19,7 +19,7 @@ const SDL_GPUVertexBufferDescriptionSchema = {
     order: 3,
     type: 'u32',
   } /**< Reserved for future use. Must be set to 0. */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_GPUVertexBufferDescription
@@ -28,6 +28,6 @@ export class SDL_GPUVertexBufferDescription extends BunStruct<
   typeof SDL_GPUVertexBufferDescriptionSchema
 > {
   constructor() {
-    super(SDL_GPUVertexBufferDescriptionSchema)
+    super(SDL_GPUVertexBufferDescriptionSchema);
   }
 }

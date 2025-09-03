@@ -2,8 +2,8 @@ import {
   SDL_GPUSampleCount,
   SDL_GPUTextureFormat,
   SDL_GPUTextureType,
-} from '../../enum/gpu'
-import { BunStruct, type StructSchema } from '../_struct'
+} from '../../enum/gpu';
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_GPUTextureCreateInfoSchema = {
   type: {
@@ -39,7 +39,7 @@ const SDL_GPUTextureCreateInfoSchema = {
     order: 8,
     type: 'u64',
   } /**< A properties ID for extensions. Should be 0 if no extensions are needed. */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_GPUTextureCreateInfo
@@ -48,6 +48,6 @@ export class SDL_GPUTextureCreateInfo extends BunStruct<
   typeof SDL_GPUTextureCreateInfoSchema
 > {
   constructor() {
-    super(SDL_GPUTextureCreateInfoSchema)
+    super(SDL_GPUTextureCreateInfoSchema);
   }
 }

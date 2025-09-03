@@ -1,4 +1,4 @@
-import { BunStruct, type StructSchema } from '../_struct'
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_GPUIndirectDispatchCommandSchema = {
   groupcount_x: {
@@ -13,7 +13,7 @@ const SDL_GPUIndirectDispatchCommandSchema = {
     order: 2,
     type: 'u32',
   } /**< The number of local workgroups to dispatch in the Z dimension. */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_GPUIndirectDispatchCommand
@@ -22,6 +22,6 @@ export class SDL_GPUIndirectDispatchCommand extends BunStruct<
   typeof SDL_GPUIndirectDispatchCommandSchema
 > {
   constructor() {
-    super(SDL_GPUIndirectDispatchCommandSchema)
+    super(SDL_GPUIndirectDispatchCommandSchema);
   }
 }

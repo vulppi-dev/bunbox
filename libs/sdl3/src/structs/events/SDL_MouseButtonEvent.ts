@@ -1,5 +1,5 @@
-import { SDL_EventType } from '../../enum/events'
-import { BunStruct, type StructSchema } from '../_struct'
+import { SDL_EventType } from '../../enum/events';
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_MouseButtonEventSchema = {
   type: {
@@ -26,7 +26,7 @@ const SDL_MouseButtonEventSchema = {
   padding: { order: 8, type: 'u8' },
   x: { order: 9, type: 'f32' } /**< X coordinate, relative to window */,
   y: { order: 10, type: 'f32' } /**< Y coordinate, relative to window */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_MouseButtonEvent
@@ -35,6 +35,6 @@ export class SDL_MouseButtonEvent extends BunStruct<
   typeof SDL_MouseButtonEventSchema
 > {
   constructor() {
-    super(SDL_MouseButtonEventSchema)
+    super(SDL_MouseButtonEventSchema);
   }
 }

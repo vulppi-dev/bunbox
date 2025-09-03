@@ -1,4 +1,4 @@
-import { BunStruct, type StructSchema } from '../_struct'
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_GPUBlitRegionSchema = {
   texture: { order: 0, type: 'void' } /**< The texture. */,
@@ -14,7 +14,7 @@ const SDL_GPUBlitRegionSchema = {
   y: { order: 4, type: 'u32' } /**< The top offset of the region. */,
   w: { order: 5, type: 'u32' } /**< The width of the region. */,
   h: { order: 6, type: 'u32' } /**< The height of the region. */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_GPUBlitRegion
@@ -23,6 +23,6 @@ export class SDL_GPUBlitRegion extends BunStruct<
   typeof SDL_GPUBlitRegionSchema
 > {
   constructor() {
-    super(SDL_GPUBlitRegionSchema)
+    super(SDL_GPUBlitRegionSchema);
   }
 }

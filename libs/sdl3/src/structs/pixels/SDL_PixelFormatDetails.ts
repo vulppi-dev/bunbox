@@ -1,5 +1,5 @@
-import { SDL_PixelFormat } from '../../enum/pixels'
-import { BunStruct, type StructSchema } from '../_struct'
+import { SDL_PixelFormat } from '../../enum/pixels';
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_PixelFormatDetailsSchema = {
   format: { order: 0, type: 'enum', enum: SDL_PixelFormat },
@@ -18,7 +18,7 @@ const SDL_PixelFormatDetailsSchema = {
   Gshift: { order: 13, type: 'u8' },
   Bshift: { order: 14, type: 'u8' },
   Ashift: { order: 15, type: 'u8' },
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_PixelFormatDetails
@@ -27,6 +27,6 @@ export class SDL_PixelFormatDetails extends BunStruct<
   typeof SDL_PixelFormatDetailsSchema
 > {
   constructor() {
-    super(SDL_PixelFormatDetailsSchema)
+    super(SDL_PixelFormatDetailsSchema);
   }
 }

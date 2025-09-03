@@ -1,6 +1,6 @@
-import { SDL_GPUTextureFormat } from '../../enum/gpu'
-import { BunStruct, type StructSchema } from '../_struct'
-import { SDL_GPUColorTargetDescription } from './SDL_GPUColorTargetDescription'
+import { SDL_GPUTextureFormat } from '../../enum/gpu';
+import { BunStruct, type StructSchema } from '../_struct';
+import { SDL_GPUColorTargetDescription } from './SDL_GPUColorTargetDescription';
 
 const SDL_GPUGraphicsPipelineTargetInfoSchema = {
   color_target_descriptions: {
@@ -24,7 +24,7 @@ const SDL_GPUGraphicsPipelineTargetInfoSchema = {
   padding1: { order: 4, type: 'u8' },
   padding2: { order: 5, type: 'u8' },
   padding3: { order: 6, type: 'u8' },
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_GPUGraphicsPipelineTargetInfo
@@ -33,6 +33,6 @@ export class SDL_GPUGraphicsPipelineTargetInfo extends BunStruct<
   typeof SDL_GPUGraphicsPipelineTargetInfoSchema
 > {
   constructor() {
-    super(SDL_GPUGraphicsPipelineTargetInfoSchema)
+    super(SDL_GPUGraphicsPipelineTargetInfoSchema);
   }
 }

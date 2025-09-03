@@ -1,8 +1,8 @@
-import type { FFIFunction } from 'bun:ffi'
+import type { FFIFunction } from 'bun:ffi';
 
 export const PROCESS_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/
    */
   //SDL_: {},
-} as const satisfies Record<string, FFIFunction>
+} as const satisfies Record<string, FFIFunction>;

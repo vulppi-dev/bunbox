@@ -1,5 +1,5 @@
-import { SDL_PixelFormat } from '../../enum/pixels'
-import { BunStruct, type StructSchema } from '../_struct'
+import { SDL_PixelFormat } from '../../enum/pixels';
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_SurfaceSchema = {
   flags: { order: 0, type: 'u32' } /**< The flags of the surface, read-only */,
@@ -23,13 +23,13 @@ const SDL_SurfaceSchema = {
     type: 'i32',
   } /**< Application reference count, used when freeing surface */,
   reserved: { order: 7, type: 'void' } /**< Reserved for internal use */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_Surface
  */
 export class SDL_Surface extends BunStruct<typeof SDL_SurfaceSchema> {
   constructor() {
-    super(SDL_SurfaceSchema)
+    super(SDL_SurfaceSchema);
   }
 }

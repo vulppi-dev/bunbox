@@ -1,4 +1,4 @@
-import type { FFIFunction } from 'bun:ffi'
+import type { FFIFunction } from 'bun:ffi';
 
 export const FILESYSTEM_BINDINGS = {
   /**
@@ -48,4 +48,4 @@ export const FILESYSTEM_BINDINGS = {
    * @description https://wiki.libsdl.org/SDL3/SDL_RenamePath
    */
   SDL_RenamePath: { args: ['cstring', 'cstring'], returns: 'bool' },
-} as const satisfies Record<string, FFIFunction>
+} as const satisfies Record<string, FFIFunction>;

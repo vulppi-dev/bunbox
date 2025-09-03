@@ -1,5 +1,5 @@
-import { SDL_EventType } from '../../enum/events'
-import { BunStruct, type StructSchema } from '../_struct'
+import { SDL_EventType } from '../../enum/events';
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_GamepadDeviceEventSchema = {
   type: {
@@ -13,7 +13,7 @@ const SDL_GamepadDeviceEventSchema = {
     type: 'u64',
   } /**< In nanoseconds, populated using SDL_GetTicksNS() */,
   which: { order: 3, type: 'u32' } /**< The joystick instance id */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_GamepadDeviceEvent
@@ -22,6 +22,6 @@ export class SDL_GamepadDeviceEvent extends BunStruct<
   typeof SDL_GamepadDeviceEventSchema
 > {
   constructor() {
-    super(SDL_GamepadDeviceEventSchema)
+    super(SDL_GamepadDeviceEventSchema);
   }
 }

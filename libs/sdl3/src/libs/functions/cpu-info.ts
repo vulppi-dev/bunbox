@@ -1,4 +1,4 @@
-import type { FFIFunction } from 'bun:ffi'
+import type { FFIFunction } from 'bun:ffi';
 
 export const CPU_INFO_BINDINGS = {
   /**
@@ -73,4 +73,4 @@ export const CPU_INFO_BINDINGS = {
    * @description https://wiki.libsdl.org/SDL3/SDL_HasSSE42
    */
   SDL_HasSSE42: { args: [], returns: 'bool' },
-} as const satisfies Record<string, FFIFunction>
+} as const satisfies Record<string, FFIFunction>;

@@ -1,5 +1,5 @@
-import { SDL_EventType } from '../../enum/events'
-import { BunStruct, type StructSchema } from '../_struct'
+import { SDL_EventType } from '../../enum/events';
+import { BunStruct, type StructSchema } from '../_struct';
 
 const SDL_RenderEventSchema = {
   type: {
@@ -16,13 +16,13 @@ const SDL_RenderEventSchema = {
     order: 3,
     type: 'u32',
   } /**< The window with keyboard focus, if any */,
-} as const satisfies StructSchema
+} as const satisfies StructSchema;
 
 /**
  * @description https://wiki.libsdl.org/SDL3/SDL_RenderEvent
  */
 export class SDL_RenderEvent extends BunStruct<typeof SDL_RenderEventSchema> {
   constructor() {
-    super(SDL_RenderEventSchema)
+    super(SDL_RenderEventSchema);
   }
 }
