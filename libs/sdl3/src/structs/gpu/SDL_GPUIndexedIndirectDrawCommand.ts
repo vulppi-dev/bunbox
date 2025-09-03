@@ -1,6 +1,6 @@
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_GPUIndexedIndirectDrawCommandSchema = {
+const SDL_GPUIndexedIndirectDrawCommandSchema = {
   num_indices: {
     order: 0,
     type: 'u32',

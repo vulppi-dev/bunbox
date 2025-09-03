@@ -1,6 +1,6 @@
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_IOStreamInterfaceSchema = {
+const SDL_IOStreamInterfaceSchema = {
   // TODO:
 } as const satisfies StructSchema
 

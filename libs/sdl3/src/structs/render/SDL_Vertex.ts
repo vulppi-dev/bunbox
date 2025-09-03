@@ -2,7 +2,7 @@ import { BunStruct, type StructSchema } from '../_struct'
 import { SDL_FColor } from '../pixels/SDL_FColor'
 import { SDL_FPoint } from '../rect/SDL_FPoint'
 
-export const SDL_VertexSchema = {
+const SDL_VertexSchema = {
   position: {
     order: 0,
     type: 'struct',

@@ -1,7 +1,7 @@
 import { SDL_PixelFormat } from '../../enum/pixels'
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_PixelFormatDetailsSchema = {
+const SDL_PixelFormatDetailsSchema = {
   format: { order: 0, type: 'enum', enum: SDL_PixelFormat },
   bits_per_pixel: { order: 1, type: 'u8' },
   bytes_per_pixel: { order: 2, type: 'u8' },

@@ -1,6 +1,6 @@
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_FingerSchema = {
+const SDL_FingerSchema = {
   id: { order: 0, type: 'u64' } /**< the finger ID */,
   x: {
     order: 1,

@@ -1,6 +1,6 @@
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_GPUBufferCreateInfoSchema = {
+const SDL_GPUBufferCreateInfoSchema = {
   usage: {
     order: 0,
     type: 'u32',

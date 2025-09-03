@@ -1,6 +1,6 @@
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_GUIDSchema = {
+const SDL_GUIDSchema = {
   data: { order: 0, type: 'array', to: 'u8', length: 16 },
 } as const satisfies StructSchema
 

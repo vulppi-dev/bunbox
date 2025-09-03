@@ -1,7 +1,7 @@
 import { SDL_EventType } from '../../enum/events'
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_GamepadDeviceEventSchema = {
+const SDL_GamepadDeviceEventSchema = {
   type: {
     order: 0,
     type: 'enum',

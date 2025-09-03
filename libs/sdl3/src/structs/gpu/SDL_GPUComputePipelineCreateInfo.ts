@@ -1,6 +1,6 @@
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_GPUComputePipelineCreateInfoSchema = {
+const SDL_GPUComputePipelineCreateInfoSchema = {
   code_size: {
     order: 0,
     type: 'u64',

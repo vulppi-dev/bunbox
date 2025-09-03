@@ -1,6 +1,6 @@
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_CameraSpecSchema = {
+const SDL_CameraSpecSchema = {
   format: { order: 0, type: 'u32' },
   colorspace: { order: 1, type: 'u32' },
   width: { order: 2, type: 'i32' },

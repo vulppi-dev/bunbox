@@ -8,6 +8,8 @@ src/
 .github/
 .ref/
 .old/
+src/
+tsconfig*.json
 
 # code coverage
 coverage

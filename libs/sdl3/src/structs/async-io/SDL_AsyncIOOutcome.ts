@@ -1,6 +1,6 @@
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_AsyncIOOutcomeSchema = {
+const SDL_AsyncIOOutcomeSchema = {
   asyncio: { order: 0, type: 'void' },
   type: { order: 1, type: 'u32' },
   result: { order: 2, type: 'u32' },

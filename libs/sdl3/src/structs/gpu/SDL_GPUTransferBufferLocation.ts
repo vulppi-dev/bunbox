@@ -1,6 +1,6 @@
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_GPUTransferBufferLocationSchema = {
+const SDL_GPUTransferBufferLocationSchema = {
   transfer_buffer: {
     order: 0,
     type: 'void',

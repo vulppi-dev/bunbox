@@ -1,7 +1,7 @@
 import { SDL_GPULoadOp, SDL_GPUStoreOp } from '../../enum/gpu'
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_GPUDepthStencilTargetInfoSchema = {
+const SDL_GPUDepthStencilTargetInfoSchema = {
   texture: {
     order: 0,
     type: 'void',

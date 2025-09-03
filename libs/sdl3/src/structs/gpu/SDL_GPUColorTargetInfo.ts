@@ -3,7 +3,7 @@ import { BunStruct, type StructSchema } from '../_struct'
 import { SDL_FColor } from '../pixels/SDL_FColor'
 import { SDL_GPUTextureCreateInfo } from './SDL_GPUTextureCreateInfo'
 
-export const SDL_GPUColorTargetInfoSchema = {
+const SDL_GPUColorTargetInfoSchema = {
   texture: {
     order: 0,
     type: 'struct',

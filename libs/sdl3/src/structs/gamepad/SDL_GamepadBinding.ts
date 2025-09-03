@@ -5,7 +5,7 @@ import {
 } from '../../enum/gamepad'
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_GamepadBindingSchema = {
+const SDL_GamepadBindingSchema = {
   input_type: { order: 0, type: 'enum', enum: SDL_GamepadBindingType },
   input_button: { order: 1, type: 'i32' },
   input_axis: { order: 2, type: 'i32' },

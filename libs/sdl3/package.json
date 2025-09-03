@@ -20,12 +20,18 @@
     "graphics",
     "audio",
     "input",
-    "typescript"
+    "typescript",
+    "bun"
   ],
   "type": "module",
-  "main": "./src/index.ts",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "scripts": {
     "dev": "tsc --watch --noEmit true --emitDeclarationOnly false",
+    "build": "bun build:bundle && bun build:types",
+    "build:bundle": "bun build --outdir dist --format esm --target bun src/index.ts",
+    "build:types": "tsc --emitDeclarationOnly --declaration --declarationDir dist --outDir dist src/index.ts",
     "pub": "npm publish --access=public --tag=latest"
   },
   "dependencies": {

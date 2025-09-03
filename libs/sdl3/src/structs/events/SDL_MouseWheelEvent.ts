@@ -2,7 +2,7 @@ import { SDL_EventType } from '../../enum/events'
 import { SDL_MouseWheelDirection } from '../../enum/mouse'
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_MouseWheelEventSchema = {
+const SDL_MouseWheelEventSchema = {
   type: {
     order: 0,
     type: 'enum',

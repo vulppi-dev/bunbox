@@ -1,7 +1,7 @@
 import { SDL_GPUBlendFactor, SDL_GPUBlendOp } from '../../enum/gpu'
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_GPUColorTargetBlendStateSchema = {
+const SDL_GPUColorTargetBlendStateSchema = {
   src_color_blendfactor: {
     order: 0,
     type: 'enum',

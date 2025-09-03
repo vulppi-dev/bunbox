@@ -1,7 +1,7 @@
 import { BunStruct, type StructSchema } from '../_struct'
 import { SDL_GPUTextureSamplerBinding } from './SDL_GPUTextureSamplerBinding'
 
-export const SDL_GPURenderStateDescSchema = {
+const SDL_GPURenderStateDescSchema = {
   version: { order: 0, type: 'u32' } /**< the version of this interface */,
   fragment_shader: {
     order: 1,

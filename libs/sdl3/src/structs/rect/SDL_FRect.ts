@@ -1,6 +1,6 @@
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_FRectSchema = {
+const SDL_FRectSchema = {
   x: { order: 0, type: 'f32' },
   y: { order: 1, type: 'f32' },
   w: { order: 2, type: 'f32' },

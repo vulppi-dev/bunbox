@@ -1,7 +1,7 @@
 import { SDL_GPUVertexElementFormat } from '../../enum/gpu'
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_GPUVertexAttributeSchema = {
+const SDL_GPUVertexAttributeSchema = {
   location: {
     order: 0,
     type: 'u32',

@@ -2,7 +2,7 @@ import { SDL_GPUTextureFormat } from '../../enum/gpu'
 import { BunStruct, type StructSchema } from '../_struct'
 import { SDL_GPUColorTargetDescription } from './SDL_GPUColorTargetDescription'
 
-export const SDL_GPUGraphicsPipelineTargetInfoSchema = {
+const SDL_GPUGraphicsPipelineTargetInfoSchema = {
   color_target_descriptions: {
     order: 0,
     type: 'struct',

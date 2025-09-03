@@ -6,7 +6,7 @@ import { SDL_HapticLeftRight } from './SDL_HapticLeftRight'
 import { SDL_HapticPeriodic } from './SDL_HapticPeriodic'
 import { SDL_HapticRamp } from './SDL_HapticRamp'
 
-export const SDL_HapticEffectSchema = {
+const SDL_HapticEffectSchema = {
   /* Common for all force feedback effects */
   type: { order: 0, type: 'u16' } /**< Effect type. */,
   constant: {

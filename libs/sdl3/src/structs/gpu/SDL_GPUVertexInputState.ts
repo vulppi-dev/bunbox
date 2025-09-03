@@ -2,7 +2,7 @@ import { BunStruct, type StructSchema } from '../_struct'
 import { SDL_GPUVertexAttribute } from './SDL_GPUVertexAttribute'
 import { SDL_GPUVertexBufferDescription } from './SDL_GPUVertexBufferDescription'
 
-export const SDL_GPUVertexInputStateSchema = {
+const SDL_GPUVertexInputStateSchema = {
   vertex_buffer_descriptions: {
     order: 0,
     type: 'struct',

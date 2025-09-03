@@ -1,6 +1,6 @@
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_FColorSchema = {
+const SDL_FColorSchema = {
   r: { order: 0, type: 'f32' },
   g: { order: 1, type: 'f32' },
   b: { order: 2, type: 'f32' },

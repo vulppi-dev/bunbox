@@ -1,6 +1,6 @@
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_GPUStorageTextureReadWriteBindingSchema = {
+const SDL_GPUStorageTextureReadWriteBindingSchema = {
   texture: {
     order: 0,
     type: 'void',

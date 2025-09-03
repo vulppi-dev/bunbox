@@ -2,7 +2,7 @@ import { BunStruct, type StructSchema } from '../_struct'
 import { SDL_MessageBoxButtonData } from './SDL_MessageBoxButtonData'
 import { SDL_MessageBoxColorScheme } from './SDL_MessageBoxColorScheme'
 
-export const SDL_MessageBoxDataSchema = {
+const SDL_MessageBoxDataSchema = {
   flags: { order: 0, type: 'u32' },
   window: { order: 1, type: 'void' },
   title: { order: 2, type: 'string' },

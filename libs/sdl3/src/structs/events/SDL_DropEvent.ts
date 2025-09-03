@@ -1,7 +1,7 @@
 import { SDL_EventType } from '../../enum/events'
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_DropEventSchema = {
+const SDL_DropEventSchema = {
   type: { order: 0, type: 'enum', enum: SDL_EventType },
   reserved: { order: 1, type: 'u32' },
   timestamp: { order: 2, type: 'u64' },

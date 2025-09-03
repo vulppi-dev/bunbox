@@ -1,6 +1,6 @@
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_GPUBufferLocationSchema = {
+const SDL_GPUBufferLocationSchema = {
   buffer: { order: 0, type: 'void' } /**< The buffer. */,
   offset: {
     order: 1,

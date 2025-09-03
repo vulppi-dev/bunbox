@@ -1,7 +1,7 @@
 import { SDL_GPUVertexInputRate } from '../../enum/gpu'
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_GPUVertexBufferDescriptionSchema = {
+const SDL_GPUVertexBufferDescriptionSchema = {
   slot: {
     order: 0,
     type: 'u32',

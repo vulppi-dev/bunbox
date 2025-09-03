@@ -2,7 +2,7 @@ import { SDL_GPUTextureFormat } from '../../enum/gpu'
 import { BunStruct, type StructSchema } from '../_struct'
 import { SDL_GPUColorTargetBlendState } from './SDL_GPUColorTargetBlendState'
 
-export const SDL_GPUColorTargetDescriptionSchema = {
+const SDL_GPUColorTargetDescriptionSchema = {
   format: {
     order: 0,
     type: 'enum',

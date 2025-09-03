@@ -1,6 +1,6 @@
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_VirtualJoystickTouchpadDescSchema = {
+const SDL_VirtualJoystickTouchpadDescSchema = {
   nfingers: {
     order: 0,
     type: 'u16',

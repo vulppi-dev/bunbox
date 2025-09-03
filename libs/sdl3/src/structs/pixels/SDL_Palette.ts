@@ -1,7 +1,7 @@
 import { BunStruct, type StructSchema } from '../_struct'
 import { SDL_Color } from './SDL_Color'
 
-export const SDL_PaletteSchema = {
+const SDL_PaletteSchema = {
   ncolors: { order: 0, type: 'i32' },
   colors: { order: 1, type: 'struct', schema: SDL_Color },
   version: { order: 2, type: 'u32' },

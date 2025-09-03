@@ -1,6 +1,6 @@
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_GPUViewportSchema = {
+const SDL_GPUViewportSchema = {
   x: {
     order: 0,
     type: 'f32',

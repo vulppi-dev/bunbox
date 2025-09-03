@@ -37,7 +37,7 @@ import { SDL_TouchFingerEvent } from './SDL_TouchFingerEvent'
 import { SDL_UserEvent } from './SDL_UserEvent'
 import { SDL_WindowEvent } from './SDL_WindowEvent'
 
-export const SDL_EventSchema = {
+const SDL_EventSchema = {
   type: {
     order: 0,
     type: 'u32',

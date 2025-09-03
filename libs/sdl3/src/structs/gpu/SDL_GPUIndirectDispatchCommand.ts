@@ -1,6 +1,6 @@
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_GPUIndirectDispatchCommandSchema = {
+const SDL_GPUIndirectDispatchCommandSchema = {
   groupcount_x: {
     order: 0,
     type: 'u32',

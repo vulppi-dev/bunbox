@@ -2,7 +2,7 @@ import { SDL_EventType } from '../../enum/events'
 import { SDL_Scancode } from '../../enum/scancode'
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_KeyboardEventSchema = {
+const SDL_KeyboardEventSchema = {
   type: {
     order: 0,
     type: 'enum',

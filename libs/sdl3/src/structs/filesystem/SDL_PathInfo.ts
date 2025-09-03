@@ -1,7 +1,7 @@
 import { SDL_PathType } from '../../enum/filesystem'
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_PathInfoSchema = {
+const SDL_PathInfoSchema = {
   type: { order: 0, type: 'enum', enum: SDL_PathType } /**< the path type */,
   size: { order: 1, type: 'u64' } /**< the file size in bytes */,
   create_time: {

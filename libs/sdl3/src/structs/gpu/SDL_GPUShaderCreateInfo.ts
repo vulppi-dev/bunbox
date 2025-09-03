@@ -1,7 +1,7 @@
 import { SDL_GPUShaderStage } from '../../enum/gpu'
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_GPUShaderCreateInfoSchema = {
+const SDL_GPUShaderCreateInfoSchema = {
   code_size: {
     order: 0,
     type: 'u64',

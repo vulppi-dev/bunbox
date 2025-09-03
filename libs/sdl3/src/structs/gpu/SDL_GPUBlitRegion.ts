@@ -1,6 +1,6 @@
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_GPUBlitRegionSchema = {
+const SDL_GPUBlitRegionSchema = {
   texture: { order: 0, type: 'void' } /**< The texture. */,
   mip_level: {
     order: 1,

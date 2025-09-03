@@ -1,6 +1,6 @@
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_MessageBoxButtonDataSchema = {
+const SDL_MessageBoxButtonDataSchema = {
   flags: { order: 0, type: 'u32' },
   buttonID: {
     order: 1,

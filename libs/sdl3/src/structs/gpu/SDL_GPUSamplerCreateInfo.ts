@@ -6,7 +6,7 @@ import {
 } from '../../enum/gpu'
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_GPUSamplerCreateInfoSchema = {
+const SDL_GPUSamplerCreateInfoSchema = {
   min_filter: {
     order: 0,
     type: 'enum',

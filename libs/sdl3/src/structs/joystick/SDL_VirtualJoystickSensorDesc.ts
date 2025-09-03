@@ -1,7 +1,7 @@
 import { SDL_SensorType } from '../../enum/sensor'
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_VirtualJoystickSensorDescSchema = {
+const SDL_VirtualJoystickSensorDescSchema = {
   type: {
     order: 0,
     type: 'enum',

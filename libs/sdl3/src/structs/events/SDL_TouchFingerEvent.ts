@@ -1,6 +1,6 @@
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_TouchFingerEventSchema = {
+const SDL_TouchFingerEventSchema = {
   type: {
     order: 0,
     type: 'u32',

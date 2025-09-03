@@ -1,6 +1,6 @@
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_GPUStorageBufferReadWriteBindingSchema = {
+const SDL_GPUStorageBufferReadWriteBindingSchema = {
   buffer: {
     order: 0,
     type: 'void',

@@ -5,7 +5,7 @@ import {
 } from '../../enum/gpu'
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_GPUTextureCreateInfoSchema = {
+const SDL_GPUTextureCreateInfoSchema = {
   type: {
     order: 0,
     type: 'enum',

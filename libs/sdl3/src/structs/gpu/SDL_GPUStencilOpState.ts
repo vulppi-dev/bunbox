@@ -1,7 +1,7 @@
 import { SDL_GPUCompareOp, SDL_GPUStencilOp } from '../../enum/gpu'
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_GPUStencilOpStateSchema = {
+const SDL_GPUStencilOpStateSchema = {
   fail_op: {
     order: 0,
     type: 'enum',

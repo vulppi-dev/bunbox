@@ -1,7 +1,7 @@
 import { SDL_hid_bus_type } from '../../enum/hdiapi'
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_hid_device_infoSchema = {
+const SDL_hid_device_infoSchema = {
   /** Platform-specific device path */
   path: { order: 0, type: 'string' },
   /** Device Vendor ID */

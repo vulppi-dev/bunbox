@@ -6,7 +6,7 @@ import { SDL_GPUMultisampleState } from './SDL_GPUMultisampleState'
 import { SDL_GPURasterizerState } from './SDL_GPURasterizerState'
 import { SDL_GPUVertexInputState } from './SDL_GPUVertexInputState'
 
-export const SDL_GPUGraphicsPipelineCreateInfoSchema = {
+const SDL_GPUGraphicsPipelineCreateInfoSchema = {
   vertex_shader: {
     order: 0,
     type: 'void',

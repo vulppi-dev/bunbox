@@ -1,6 +1,6 @@
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_VirtualJoystickDescSchema = {
+const SDL_VirtualJoystickDescSchema = {
   // TODO:
 } as const satisfies StructSchema
 

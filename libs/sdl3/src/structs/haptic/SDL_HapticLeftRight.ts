@@ -1,6 +1,6 @@
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_HapticLeftRightSchema = {
+const SDL_HapticLeftRightSchema = {
   /* Header */
   type: { order: 0, type: 'u16' } /**< SDL_HAPTIC_LEFTRIGHT */,
   /* Replay */

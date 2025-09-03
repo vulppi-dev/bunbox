@@ -1,6 +1,6 @@
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_StorageInterfaceSchema = {
+const SDL_StorageInterfaceSchema = {
   // TODO:
 } as const satisfies StructSchema
 

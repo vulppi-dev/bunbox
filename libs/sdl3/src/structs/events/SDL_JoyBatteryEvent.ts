@@ -2,7 +2,7 @@ import { SDL_EventType } from '../../enum/events'
 import { SDL_PowerState } from '../../enum/power'
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_JoyBatteryEventSchema = {
+const SDL_JoyBatteryEventSchema = {
   type: {
     order: 0,
     type: 'enum',

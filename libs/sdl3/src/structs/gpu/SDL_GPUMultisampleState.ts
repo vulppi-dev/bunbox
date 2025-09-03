@@ -1,7 +1,7 @@
 import { SDL_GPUSampleCount } from '../../enum/gpu'
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_GPUMultisampleStateSchema = {
+const SDL_GPUMultisampleStateSchema = {
   sample_count: {
     order: 0,
     type: 'enum',

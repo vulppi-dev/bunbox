@@ -5,7 +5,7 @@ import {
 } from '../../enum/gpu'
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_GPURasterizerStateSchema = {
+const SDL_GPURasterizerStateSchema = {
   fill_mode: {
     order: 0,
     type: 'enum',

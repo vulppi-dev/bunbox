@@ -1,7 +1,7 @@
 import { SDL_GPUTransferBufferUsage } from '../../enum/gpu'
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_GPUTransferBufferCreateInfoSchema = {
+const SDL_GPUTransferBufferCreateInfoSchema = {
   usage: {
     order: 0,
     type: 'enum',

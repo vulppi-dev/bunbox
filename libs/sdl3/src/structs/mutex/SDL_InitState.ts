@@ -1,7 +1,7 @@
 import { BunStruct, type StructSchema } from '../_struct'
 import { SDL_AtomicInt } from '../atomic/SDL_AtomicInt'
 
-export const SDL_InitStateSchema = {
+const SDL_InitStateSchema = {
   status: {
     order: 0,
     type: 'struct',

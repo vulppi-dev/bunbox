@@ -2,7 +2,7 @@ import { SDL_EventType } from '../../enum/events'
 import { SDL_PenAxis } from '../../enum/pen'
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_PenAxisEventSchema = {
+const SDL_PenAxisEventSchema = {
   type: {
     order: 0,
     type: 'enum',

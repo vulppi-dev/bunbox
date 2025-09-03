@@ -1,7 +1,7 @@
 import { SDL_PixelFormat } from '../../enum/pixels'
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_SurfaceSchema = {
+const SDL_SurfaceSchema = {
   flags: { order: 0, type: 'u32' } /**< The flags of the surface, read-only */,
   format: {
     order: 1,

@@ -1,7 +1,7 @@
 import { BunStruct, type StructSchema } from '../_struct'
 import { SDL_HapticDirection } from './SDL_HapticDirection'
 
-export const SDL_HapticCustomSchema = {
+const SDL_HapticCustomSchema = {
   /* Header */
   type: { order: 0, type: 'u16' } /**< SDL_HAPTIC_CUSTOM */,
   direction: {

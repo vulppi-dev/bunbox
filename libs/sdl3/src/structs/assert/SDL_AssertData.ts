@@ -1,6 +1,6 @@
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_AssertDataSchema = {
+const SDL_AssertDataSchema = {
   always_ignore: { order: 0, type: 'boolean' },
   trigger_count: { order: 1, type: 'u32' },
   condition: { order: 2, type: 'string' },

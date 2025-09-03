@@ -4,7 +4,7 @@ import { BunStruct, type StructSchema } from '../_struct'
 import { SDL_FColor } from '../pixels/SDL_FColor'
 import { SDL_GPUBlitRegion } from './SDL_GPUBlitRegion'
 
-export const SDL_GPUBlitInfoSchema = {
+const SDL_GPUBlitInfoSchema = {
   source: {
     order: 0,
     type: 'struct',

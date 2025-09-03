@@ -1,6 +1,6 @@
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_HapticDirectionSchema = {
+const SDL_HapticDirectionSchema = {
   type: { order: 0, type: 'u16' } /**< The type of encoding. */,
   dir: {
     order: 1,

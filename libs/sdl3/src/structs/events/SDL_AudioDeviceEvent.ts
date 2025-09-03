@@ -1,6 +1,6 @@
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_AudioDeviceEventSchema = {
+const SDL_AudioDeviceEventSchema = {
   type: { order: 0, type: 'u32' },
   reserved: { order: 1, type: 'u32' },
   timestamp: { order: 2, type: 'u64' },

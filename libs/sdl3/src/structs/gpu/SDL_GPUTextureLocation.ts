@@ -1,6 +1,6 @@
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_GPUTextureLocationSchema = {
+const SDL_GPUTextureLocationSchema = {
   texture: {
     order: 0,
     type: 'void',

@@ -1,6 +1,6 @@
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_DateTimeSchema = {
+const SDL_DateTimeSchema = {
   year: { order: 0, type: 'i32' },
   month: { order: 1, type: 'i32' },
   day: { order: 2, type: 'i32' },

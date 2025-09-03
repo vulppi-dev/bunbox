@@ -1,7 +1,7 @@
 import { BunStruct, type StructSchema } from '../_struct'
 import { SDL_MessageBoxColor } from './SDL_MessageBoxColor'
 
-export const SDL_MessageBoxColorSchemeSchema = {
+const SDL_MessageBoxColorSchemeSchema = {
   colors0: {
     order: 0,
     type: 'struct',

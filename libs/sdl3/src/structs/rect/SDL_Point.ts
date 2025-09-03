@@ -1,6 +1,6 @@
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_PointSchema = {
+const SDL_PointSchema = {
   x: { order: 0, type: 'i32' },
   y: { order: 1, type: 'i32' },
 } as const satisfies StructSchema

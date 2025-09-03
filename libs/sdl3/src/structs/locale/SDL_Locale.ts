@@ -1,6 +1,6 @@
 import { BunStruct, type StructSchema } from '../_struct'
 
-export const SDL_LocaleSchema = {
+const SDL_LocaleSchema = {
   language: {
     order: 0,
     type: 'string',
