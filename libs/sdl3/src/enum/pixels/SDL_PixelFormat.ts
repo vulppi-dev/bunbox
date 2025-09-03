@@ -112,26 +112,36 @@ export enum SDL_PixelFormat {
   SDL_PIXELFORMAT_ABGR128_FLOAT = 0x1b608010,
   /* SDL_DEFINE_PIXELFORMAT(SDL_PIXELTYPE_ARRAYF32, SDL_ARRAYORDER_ABGR, 0, 128, 16), */
 
-  SDL_PIXELFORMAT_YV12 = 0x32315659 /**< Planar mode: Y + V + U  (3 planes) */,
+  /**< Planar mode: Y + V + U  (3 planes) */
+  SDL_PIXELFORMAT_YV12 = 0x32315659,
   /* SDL_DEFINE_PIXELFOURCC('Y', 'V', '1', '2'), */
-  SDL_PIXELFORMAT_IYUV = 0x56555949 /**< Planar mode: Y + U + V  (3 planes) */,
+  /**< Planar mode: Y + U + V  (3 planes) */
+  SDL_PIXELFORMAT_IYUV = 0x56555949,
   /* SDL_DEFINE_PIXELFOURCC('I', 'Y', 'U', 'V'), */
-  SDL_PIXELFORMAT_YUY2 = 0x32595559 /**< Packed mode: Y0+U0+Y1+V0 (1 plane) */,
+  /**< Packed mode: Y0+U0+Y1+V0 (1 plane) */
+  SDL_PIXELFORMAT_YUY2 = 0x32595559,
   /* SDL_DEFINE_PIXELFOURCC('Y', 'U', 'Y', '2'), */
-  SDL_PIXELFORMAT_UYVY = 0x59565955 /**< Packed mode: U0+Y0+V0+Y1 (1 plane) */,
+  /**< Packed mode: U0+Y0+V0+Y1 (1 plane) */
+  SDL_PIXELFORMAT_UYVY = 0x59565955,
   /* SDL_DEFINE_PIXELFOURCC('U', 'Y', 'V', 'Y'), */
-  SDL_PIXELFORMAT_YVYU = 0x55595659 /**< Packed mode: Y0+V0+Y1+U0 (1 plane) */,
+  /**< Packed mode: Y0+V0+Y1+U0 (1 plane) */
+  SDL_PIXELFORMAT_YVYU = 0x55595659,
   /* SDL_DEFINE_PIXELFOURCC('Y', 'V', 'Y', 'U'), */
-  SDL_PIXELFORMAT_NV12 = 0x3231564e /**< Planar mode: Y + U/V interleaved  (2 planes) */,
+  /**< Planar mode: Y + U/V interleaved  (2 planes) */
+  SDL_PIXELFORMAT_NV12 = 0x3231564e,
   /* SDL_DEFINE_PIXELFOURCC('N', 'V', '1', '2'), */
-  SDL_PIXELFORMAT_NV21 = 0x3132564e /**< Planar mode: Y + V/U interleaved  (2 planes) */,
+  /**< Planar mode: Y + V/U interleaved  (2 planes) */
+  SDL_PIXELFORMAT_NV21 = 0x3132564e,
   /* SDL_DEFINE_PIXELFOURCC('N', 'V', '2', '1'), */
-  SDL_PIXELFORMAT_P010 = 0x30313050 /**< Planar mode: Y + U/V interleaved  (2 planes) */,
+  /**< Planar mode: Y + U/V interleaved  (2 planes) */
+  SDL_PIXELFORMAT_P010 = 0x30313050,
   /* SDL_DEFINE_PIXELFOURCC('P', '0', '1', '0'), */
-  SDL_PIXELFORMAT_EXTERNAL_OES = 0x2053454f /**< Android video texture format */,
+  /**< Android video texture format */
+  SDL_PIXELFORMAT_EXTERNAL_OES = 0x2053454f,
   /* SDL_DEFINE_PIXELFOURCC('O', 'E', 'S', ' ') */
 
-  SDL_PIXELFORMAT_MJPG = 0x47504a4d /**< Motion JPEG */,
+  /**< Motion JPEG */
+  SDL_PIXELFORMAT_MJPG = 0x47504a4d,
   /* SDL_DEFINE_PIXELFOURCC('M', 'J', 'P', 'G') */
 
   SDL_PIXELFORMAT_RGBA32 = SDL_PIXELFORMAT_ABGR8888,
