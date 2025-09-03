@@ -144,6 +144,35 @@ export type SDL_EnumerateDirectoryCallback = (
  */
 export type SDL_Gamepad = Record<string, unknown> & { __gamepad: undefined }
 
+// MARK: Haptic
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_Haptic
+ */
+export type SDL_Haptic = Record<string, unknown> & { __haptic: undefined }
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_HapticDirectionType
+ */
+export type SDL_HapticDirectionType = number & {
+  __haptic_direction_type: undefined
+}
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_HapticEffectID
+ */
+export type SDL_HapticEffectID = number & { __haptic_effect_id: undefined }
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_HapticEffectType
+ */
+export type SDL_HapticEffectType = number & { __haptic_effect_type: undefined }
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_HapticID
+ */
+export type SDL_HapticID = number & { __haptic_id: undefined }
+
 // MARK: Timer
 
 /**
