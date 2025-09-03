@@ -182,6 +182,18 @@ export type SDL_hid_device = Record<string, unknown> & {
   __hid_device: undefined
 }
 
+// MARK: Hint
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_HintCallback
+ */
+export type SDL_HintCallback = (
+  userdata: Pointer,
+  name: Pointer,
+  oldValue: Pointer,
+  newValue: Pointer,
+) => void
+
 // MARK: Timer
 
 /**
