@@ -232,6 +232,18 @@ export type SDL_MainThreadCallback = (userdata: Pointer) => void
  */
 export type SDL_IOStream = Record<string, unknown> & { __io_stream: undefined }
 
+// MARK: Joystick
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_Joystick
+ */
+export type SDL_Joystick = Record<string, unknown> & { __joystick: undefined }
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_JoystickID
+ */
+export type SDL_JoystickID = number & { __joystick_id: undefined }
+
 // MARK: Timer
 
 /**
