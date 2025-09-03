@@ -22,7 +22,6 @@ export * from './init';
 export * from './io-stream';
 export * from './joystick';
 export * from './keyboard';
-export * from './keycode';
 export * from './locale';
 export * from './log';
 export * from './main';

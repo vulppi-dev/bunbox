@@ -2,6 +2,7 @@ import type {
   SDL_AssertState,
   SDL_EnumerationResult,
   SDL_HitTestResult,
+  SDL_LogPriority,
 } from '$enum';
 import { type Pointer } from 'bun:ffi';
 
@@ -250,6 +251,18 @@ export type SDL_JoystickID = number & { __joystick_id: undefined };
  * @description https://wiki.libsdl.org/SDL3/SDL_KeyboardID
  */
 export type SDL_KeyboardID = number & { __keyboard_id: undefined };
+
+// MARK: Log
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_LogOutputFunction
+ */
+export type SDL_LogOutputFunction = (
+  userdata: Pointer,
+  category: number,
+  priority: SDL_LogPriority,
+  message: Pointer,
+) => void;
 
 // MARK: Timer
 
