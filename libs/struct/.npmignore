@@ -8,7 +8,6 @@ node_modules
 .ref/
 .old/
 src/
-tsconfig*.json
 
 # code coverage
 coverage

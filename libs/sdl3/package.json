@@ -1,6 +1,6 @@
 {
   "name": "@bunbox/sdl3",
-  "version": "0.0.1-alpha.2",
+  "version": "0.0.1-alpha.3",
   "description": "Implement SDL (Simple DirectMedia Layer) bindings",
   "author": {
     "name": "Renato Rodrigues",
@@ -25,14 +25,11 @@
     "bun"
   ],
   "type": "module",
-  "main": "./dist/index.js",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./src/index.ts",
+  "module": "./src/index.ts",
+  "types": "./src/index.ts",
   "scripts": {
     "dev": "tsc --watch --noEmit true --emitDeclarationOnly false",
-    "build": "bun build:bundle && bun build:types",
-    "build:bundle": "bun build src/index.ts --outdir dist --format esm --target bun",
-    "build:types": "tsc --project tsconfig.json",
     "pub": "npm publish --access=public --tag=latest",
     "format": "prettier --write ."
   },

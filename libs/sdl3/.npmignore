@@ -2,15 +2,12 @@
 node_modules
 
 # input
-src/
 .vscode/
 .scripts/
 .github/
 .ref/
 .old/
-src/
 test/
-tsconfig*.json
 
 # code coverage
 coverage

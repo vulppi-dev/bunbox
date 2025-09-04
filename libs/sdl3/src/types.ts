@@ -3,7 +3,7 @@ import type {
   SDL_EnumerationResult,
   SDL_HitTestResult,
   SDL_LogPriority,
-} from '$enum';
+} from './enum';
 import { type Pointer } from 'bun:ffi';
 
 // MARK: Assert

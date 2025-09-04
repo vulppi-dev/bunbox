@@ -1,11 +1,9 @@
 import './SDL3/darwin/libiconv.dylib' with { type: 'file' };
 import './SDL3/linux/arm64/libiconv.so.2' with { type: 'file' };
-import './SDL3/linux/ppc64/libiconv.so.2' with { type: 'file' };
 import './SDL3/linux/x64/libiconv.so.2' with { type: 'file' };
 
 import SDL3Darwin from './SDL3/darwin/libSDL3.dylib' with { type: 'file' };
 import SDL3LinuxArm64 from './SDL3/linux/arm64/libSDL3.so' with { type: 'file' };
-import SDL3LinuxPpc64 from './SDL3/linux/ppc64/libSDL3.so' with { type: 'file' };
 import SDL3LinuxX64 from './SDL3/linux/x64/libSDL3.so' with { type: 'file' };
 import SDL3Win32Arm64 from './SDL3/win32/arm64/SDL3.dll' with { type: 'file' };
 import SDL3Win32X64 from './SDL3/win32/x64/SDL3.dll' with { type: 'file' };
@@ -13,15 +11,21 @@ import SDL3Win32X64 from './SDL3/win32/x64/SDL3.dll' with { type: 'file' };
 import { dlopen } from 'bun:ffi';
 import * as functions from '../libs/functions';
 
+import { dirname, resolve } from 'path';
+import { existsSync } from 'fs';
+import { fileURLToPath } from 'url';
+
 export * from '@bunbox/naga';
 export { cstr } from '@bunbox/struct';
 export { CString, JSCallback, ptr } from 'bun:ffi';
 
 const SDL_LIBS: Record<string, any> = {
-  darwin: SDL3Darwin,
+  darwin: {
+    arm64: SDL3Darwin,
+    x64: SDL3Darwin,
+  },
   linux: {
     arm64: SDL3LinuxArm64,
-    ppc64: SDL3LinuxPpc64,
     x64: SDL3LinuxX64,
   },
   win32: {
@@ -30,10 +34,13 @@ const SDL_LIBS: Record<string, any> = {
   },
 };
 
-const SDL_PATH =
-  process.platform === 'darwin'
-    ? SDL_LIBS[process.platform]
-    : SDL_LIBS[process.platform]?.[process.arch];
+const SDL_PATH = ((path?: string) => {
+  if (!path) return null;
+  if (existsSync(path)) return path;
+  const relative = resolve(dirname(fileURLToPath(import.meta.url)), path);
+  if (existsSync(relative)) return relative;
+  return null;
+})(SDL_LIBS[process.platform]?.[process.arch]);
 
 if (!SDL_PATH) {
   throw new Error(
