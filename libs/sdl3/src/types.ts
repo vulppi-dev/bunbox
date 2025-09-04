@@ -295,6 +295,32 @@ export type SDL_MouseMotionTransformCallback = (
   y: Pointer,
 ) => void;
 
+// MARK: Mutex
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_Condition
+ */
+export type SDL_Condition = Record<string, unknown> & {
+  __condition: undefined;
+};
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_Mutex
+ */
+export type SDL_Mutex = Record<string, unknown> & { __mutex: undefined };
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_RWLock
+ */
+export type SDL_RWLock = Record<string, unknown> & { __rw_lock: undefined };
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_Semaphore
+ */
+export type SDL_Semaphore = Record<string, unknown> & {
+  __semaphore: undefined;
+};
+
 // MARK: Timer
 
 /**
