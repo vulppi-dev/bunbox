@@ -321,6 +321,60 @@ export type SDL_Semaphore = Record<string, unknown> & {
   __semaphore: undefined;
 };
 
+// MARK: Pen
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_Pen
+ */
+export type SDL_PenID = number & { __pen_id: undefined };
+
+// MARK: Process
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_Process
+ */
+export type SDL_Process = Record<string, unknown> & { __process: undefined };
+
+// MARK: Properties
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_CleanupPropertyCallback
+ */
+export type SDL_CleanupPropertyCallback = (
+  userdata: Pointer,
+  value: Pointer,
+) => void;
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_EnumeratePropertiesCallback
+ */
+export type SDL_EnumeratePropertiesCallback = (
+  userdata: Pointer,
+  props: SDL_PropertiesID,
+  name: Pointer,
+) => number;
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_PropertiesID
+ */
+export type SDL_PropertiesID = number & { __properties_id: undefined };
+
+// MARK: Timer
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_GPURenderState
+ */
+export type SDL_GPURenderState = Record<string, unknown> & {
+  __gpu_render_state: undefined;
+};
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_GPURenderer
+ */
+export type SDL_GPURenderer = Record<string, unknown> & {
+  __gpu_renderer: undefined;
+};
+
 // MARK: Timer
 
 /**

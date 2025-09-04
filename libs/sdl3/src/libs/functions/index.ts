@@ -30,7 +30,6 @@ export * from './metal';
 export * from './misc';
 export * from './mouse';
 export * from './mutex';
-export * from './pen';
 export * from './pixels';
 export * from './platform';
 export * from './power';
