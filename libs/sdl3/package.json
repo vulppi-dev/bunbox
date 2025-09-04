@@ -1,6 +1,6 @@
 {
   "name": "@bunbox/sdl3",
-  "version": "0.0.1-reserved",
+  "version": "0.0.1-alpha.2",
   "description": "Implement SDL (Simple DirectMedia Layer) bindings",
   "author": {
     "name": "Renato Rodrigues",
@@ -10,7 +10,8 @@
   "private": false,
   "repository": {
     "type": "git",
-    "directory": "sdl"
+    "url": "https://github.com/vulppi-dev/bunbox",
+    "directory": "libs/sdl3"
   },
   "keywords": [
     "sdl",
@@ -30,18 +31,17 @@
   "scripts": {
     "dev": "tsc --watch --noEmit true --emitDeclarationOnly false",
     "build": "bun build:bundle && bun build:types",
-    "build:bundle": "bun build --outdir dist --format esm --target bun src/index.ts",
-    "build:types": "tsc --emitDeclarationOnly --declaration --declarationDir dist --outDir dist src/index.ts",
+    "build:bundle": "bun build src/index.ts --outdir dist --format esm --target bun",
+    "build:types": "tsc --project tsconfig.json",
     "pub": "npm publish --access=public --tag=latest",
     "format": "prettier --write ."
   },
   "dependencies": {
     "@bunbox/naga": "^0.0.4",
-    "@bunbox/struct": "^1.0.2"
+    "@bunbox/struct": "^1.0.5"
   },
   "devDependencies": {
     "@types/bun": "^1.2.21",
-    "@types/node": "^24.3.0",
     "prettier": "^3.6.2",
     "typescript": "^5.9.2"
   },
