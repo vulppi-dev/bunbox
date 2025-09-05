@@ -375,6 +375,116 @@ export type SDL_GPURenderer = Record<string, unknown> & {
   __gpu_renderer: undefined;
 };
 
+// MARK: Sensor
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_Sensor
+ */
+export type SDL_Sensor = Record<string, unknown> & { __sensor: undefined };
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_SensorID
+ */
+export type SDL_SensorID = number & { __sensor_id: undefined };
+
+// MARK: SharedObject
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_SharedObject
+ */
+export type SDL_SharedObject = Record<string, unknown> & {
+  __shared_object: undefined;
+};
+
+// MARK: Std
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_calloc_func
+ */
+export type SDL_calloc_func = (nmemb: bigint, size: bigint) => Pointer;
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_CompareCallback
+ */
+export type SDL_CompareCallback = (a: Pointer, b: Pointer) => number;
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_CompareCallback_r
+ */
+export type SDL_CompareCallback_r = (
+  userdata: Pointer,
+  a: Pointer,
+  b: Pointer,
+) => number;
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_Environment
+ */
+export type SDL_Environment = Record<string, unknown> & {
+  __environment: undefined;
+};
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_free_func
+ */
+export type SDL_free_func = (ptr: Pointer) => void;
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_FunctionPointer
+ */
+export type SDL_FunctionPointer = () => void;
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_iconv_t
+ */
+export type SDL_iconv_t = Pointer & { __iconv_t: undefined };
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_malloc_func
+ */
+export type SDL_malloc_func = (size: bigint) => Pointer;
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_realloc_func
+ */
+export type SDL_realloc_func = (ptr: Pointer, size: bigint) => Pointer;
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_Time
+ */
+export type SDL_Time = bigint & { __time: undefined };
+
+// MARK: Storage
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_Storage
+ */
+export type SDL_Storage = Record<string, unknown> & {
+  __storage: undefined;
+};
+
+// MARK: System
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_iOSAnimationCallback
+ */
+export type SDL_iOSAnimationCallback = {};
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_RequestAndroidPermissionCallback
+ */
+export type SDL_RequestAndroidPermissionCallback = {};
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_WindowsMessageHook
+ */
+export type SDL_WindowsMessageHook = {};
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_X11EventHook
+ */
+export type SDL_X11EventHook = {};
+
 // MARK: Timer
 
 /**

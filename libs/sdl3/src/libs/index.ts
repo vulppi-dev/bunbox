@@ -88,7 +88,6 @@ const { symbols: SDL, close } = dlopen(SDL_PATH, {
   ...functions.PROPERTIES_BINDINGS,
   ...functions.RECT_BINDINGS,
   ...functions.RENDER_BINDINGS,
-  ...functions.SCANCODE_BINDINGS,
   ...functions.SENSOR_BINDINGS,
   ...functions.SHARED_OBJECT_BINDINGS,
   ...functions.STD_BINDINGS,

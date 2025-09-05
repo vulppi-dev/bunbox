@@ -37,7 +37,6 @@ export * from './process';
 export * from './properties';
 export * from './rect';
 export * from './render';
-export * from './scancode';
 export * from './sensor';
 export * from './shared-object';
 export * from './std';
