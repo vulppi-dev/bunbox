@@ -1,6 +1,6 @@
 name: Support / Question
 description: Ask a question or request support
-title: '[Support] <short summary>'
+title: '[Support] '
 labels: ['question', 'needs-triage']
 assignees: []
 projects: ['vulppi-dev/2']

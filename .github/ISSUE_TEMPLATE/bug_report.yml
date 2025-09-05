@@ -1,122 +1,71 @@
 name: Bug Report
-description: Report a reproducible bug to help us improve
-title: "[BUG] <short summary>"
-labels: ["bug", "needs-triage"]
+description: Report a bug or unexpected behavior
+title: '[Bug] '
+labels: ['bug', 'needs-triage']
 assignees: []
-projects: ["vulppi-dev/2"]
+projects: ['vulppi-dev/2']
 
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to file a bug.
-        Please provide as much detail as possible so we can reproduce and fix it quickly.
+        Thanks for reporting a bug! Please provide as much detail as possible to help us reproduce and fix the issue.
 
   - type: input
     id: summary
     attributes:
       label: Summary
-      description: A one-sentence description of the problem.
-      placeholder: e.g., Crash when clicking "Save" on the settings page
+      description: A short description of the bug.
     validations:
       required: true
 
   - type: textarea
-    id: steps
+    id: problem
     attributes:
-      label: Steps to Reproduce
-      description: Exact, numbered steps so anyone can reproduce the issue.
-      placeholder: |
-        1. Go to Settings → Profile
-        2. Click "Save" with empty name
-        3. Observe the crash
+      label: Problem to Solve
+      description: What problem or limitation does this bug represent?
+      placeholder: The application crashes when opening a file with special characters in the name.
     validations:
       required: true
 
   - type: textarea
-    id: expected
+    id: proposal
     attributes:
-      label: Expected Behavior
-      description: What you thought should happen.
-      placeholder: The profile should save successfully or show a validation error.
-    validations:
-      required: true
-
-  - type: textarea
-    id: actual
-    attributes:
-      label: Actual Behavior
-      description: What actually happened (include full error messages).
-      placeholder: The app crashes with "TypeError: cannot read properties of undefined".
+      label: Proposed Solution
+      description: Describe how you think the bug should be fixed.
+      placeholder: Sanitize file names before processing to handle special characters.
     validations:
       required: true
 
   - type: dropdown
-    id: severity
+    id: scope
     attributes:
-      label: Severity
-      description: How bad is the impact?
+      label: Scope of Impact
+      description: Which area does this improvement affect?
+      multiple: true
       options:
-        - Critical (data loss, security, crash on launch)
-        - High (major feature broken, blocks workflow)
-        - Medium (workaround exists)
-        - Low (minor issue, cosmetic)
+        - UI/UX
+        - API / SDK
+        - Performance
+        - Security
+        - Documentation
+        - Tooling
+        - Other
     validations:
       required: true
 
   - type: dropdown
-    id: frequency
+    id: priority
     attributes:
-      label: Frequency
-      description: How often does it happen?
+      label: Priority
+      description: How important is this improvement to you?
       options:
-        - Always
-        - Often
-        - Sometimes
-        - Rarely
-        - Unable to determine
+        - Critical (blocks usage)
+        - High (strongly improves workflow)
+        - Medium (nice to have)
+        - Low (minor enhancement)
     validations:
       required: true
-
-  - type: input
-    id: version
-    attributes:
-      label: App/Package Version
-      description: Version or commit where the issue occurs (semver or SHA).
-      placeholder: v1.4.2 or 3f2a9c1
-    validations:
-      required: true
-
-  - type: textarea
-    id: environment
-    attributes:
-      label: Environment
-      description: Tell us where this occurred.
-      placeholder: |
-        OS: Windows 11
-        Bun: 1.2.x
-        validations:
-      required: true
-
-  - type: textarea
-    id: logs
-    attributes:
-      label: Logs & Stack Traces
-      description: Paste relevant logs. Use code fences for readability.
-      placeholder: |
-        ```
-        <paste logs here>
-        ```
-    validations:
-      required: false
-
-  - type: textarea
-    id: screenshots
-    attributes:
-      label: Screenshots / Screen Recording
-      description: Drag-and-drop images or link to a video/GIF that shows the issue.
-    validations:
-      required: false
 
   - type: checkboxes
     id: confirmations
@@ -129,3 +78,12 @@ body:
           required: false
         - label: I agree to follow the Code of Conduct
           required: true
+
+  - type: input
+    id: contact
+    attributes:
+      label: Contact Details (optional)
+      description: How can we reach you if we need clarification?
+      placeholder: email or @handle
+    validations:
+      required: false
