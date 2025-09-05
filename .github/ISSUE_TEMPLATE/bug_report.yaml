@@ -1,0 +1,235 @@
+name: Bug Report
+description: Report a reproducible bug to help us improve
+title: "[BUG] <short summary>"
+labels: ["bug", "needs-triage"]
+assignees: []
+projects: ["vulppi-dev/2"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug. Please provide as much detail as possible so we can reproduce and fix it quickly.
+
+  - type: input
+    id: summary
+    attributes:
+      label: Summary
+      description: A one-sentence description of the problem.
+      placeholder: e.g., Crash when clicking "Save" on the settings page
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: Exact, numbered steps so anyone can reproduce the issue.
+      placeholder: |
+        1. Go to Settings → Profile
+        2. Click "Save" with empty name
+        3. Observe the crash
+      render: bash
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What you thought should happen.
+      placeholder: The profile should save successfully or show a validation error.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened (include full error messages).
+      placeholder: The app crashes with "TypeError: cannot read properties of undefined".
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: How bad is the impact?
+      options:
+        - Critical (data loss, security, crash on launch)
+        - High (major feature broken, blocks workflow)
+        - Medium (workaround exists)
+        - Low (minor issue, cosmetic)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: Frequency
+      description: How often does it happen?
+      options:
+        - Always
+        - Often
+        - Sometimes
+        - Rarely
+        - Unable to determine
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: regression
+    attributes:
+      label: Regression?
+      description: Did this work before?
+      options:
+        - label: This is a regression from a previous version
+        - label: Not a regression / first time seen
+    validations:
+      required: false
+
+  - type: input
+    id: version
+    attributes:
+      label: App/Package Version
+      description: Version or commit where the issue occurs (semver or SHA).
+      placeholder: v1.4.2 or 3f2a9c1
+    validations:
+      required: true
+
+  - type: input
+    id: build
+    attributes:
+      label: Build / Channel
+      description: Release type.
+      placeholder: Release / Beta / Nightly / Local dev
+    validations:
+      required: true
+
+  - type: input
+    id: commit
+    attributes:
+      label: Commit SHA (if building from source)
+      placeholder: 40-char git SHA
+    validations:
+      required: false
+
+  - type: input
+    id: branch
+    attributes:
+      label: Branch
+      placeholder: main / develop / feature/xyz
+    validations:
+      required: false
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Tell us where this occurred. Delete non-applicable lines.
+      placeholder: |
+        OS: Windows 11 23H2 / macOS 14.5 / Ubuntu 22.04
+        CPU/GPU: Intel i7-12700K / AMD RX 6800
+        Node: 22.x
+        Bun: 1.2.x
+        Browser: Chrome 128 / Firefox 129
+        Runtime: Docker 26.x / Bare metal
+        Display/Resolution: 2560×1440 @ 144Hz
+    validations:
+      required: true
+
+  - type: input
+    id: dependencies
+    attributes:
+      label: Package Manager & Lockfile
+      placeholder: pnpm 9.0.0 (pnpm-lock.yaml) / npm 10 (package-lock.json) / yarn 4 (yarn.lock)
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: repro_artifacts
+    attributes:
+      label: Minimal Reproduction
+      description: A small, standalone example that reproduces the bug speeds up fixes dramatically.
+      options:
+        - label: I provided a minimal reproduction (link below)
+        - label: I cannot provide a minimal reproduction
+    validations:
+      required: false
+
+  - type: input
+    id: repro_link
+    attributes:
+      label: Reproduction Link
+      description: GitHub repo, Gist, or zip file link.
+      placeholder: https://github.com/yourname/repro-bug-123
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs & Stack Traces
+      description: Paste relevant logs. Use code fences for readability.
+      placeholder: |
+        ```
+        <paste logs here>
+        ```
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots / Screen Recording
+      description: Drag-and-drop images or link to a video/GIF that shows the issue.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Affected Area / Component
+      multiple: true
+      options:
+        - UI
+        - Rendering
+        - Networking/API
+        - Storage/DB
+        - Build/Tooling
+        - Docs
+        - Other
+    validations:
+      required: false
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: Workarounds
+      description: Any temporary workaround you found?
+      placeholder: Rolling back to v1.4.1 avoids the crash.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Checks
+      options:
+        - label: I have searched existing issues and Discussions
+          required: true
+        - label: I have read the contributing guidelines
+          required: false
+        - label: I agree to follow the Code of Conduct
+          required: true
+
+  - type: input
+    id: contact
+    attributes:
+      label: Contact Details (optional)
+      description: How can we reach you if we need more info?
+      placeholder: email or @handle
+    validations:
+      required: false
