@@ -485,6 +485,33 @@ export type SDL_WindowsMessageHook = {};
  */
 export type SDL_X11EventHook = {};
 
+// MARK: Thread
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_Thread
+ */
+export type SDL_Thread = Record<string, unknown> & { __thread: undefined };
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_ThreadFunction
+ */
+export type SDL_ThreadFunction = (data: Pointer) => number;
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_ThreadID
+ */
+export type SDL_ThreadID = bigint & { __thread_id: undefined };
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_TLSDestructorCallback
+ */
+export type SDL_TLSDestructorCallback = (value: Pointer) => void;
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_TLSID
+ */
+export type SDL_TLSID = bigint & { __tls_id: undefined };
+
 // MARK: Timer
 
 /**
@@ -500,6 +527,42 @@ export type SDL_TimerCallback = (
  * @description https://wiki.libsdl.org/SDL3/SDL_TimerID
  */
 export type SDL_TimerID = number & { __time_id: undefined };
+
+// MARK: Touch
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_FingerID
+ */
+export type SDL_FingerID = number & { __finger_id: undefined };
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_TouchID
+ */
+export type SDL_TouchID = number & { __touch_id: undefined };
+
+// MARK: Tray
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_Tray
+ */
+export type SDL_Tray = Record<string, unknown> & { __tray: undefined };
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_TrayCallback
+ */
+export type SDL_TrayCallback = (userdata: Pointer, entry: Pointer) => void;
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_TrayEntry
+ */
+export type SDL_TrayEntry = Record<string, unknown> & {
+  __tray_entry: undefined;
+};
+
+/**
+ * @description https://wiki.libsdl.org/SDL3/SDL_TrayMenu
+ */
+export type SDL_TrayMenu = Record<string, unknown> & { __tray_menu: undefined };
 
 // MARK: Video
 

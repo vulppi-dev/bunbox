@@ -31,4 +31,5 @@ export * from './system';
 export * from './thread';
 export * from './time';
 export * from './touch';
+export * from './tray';
 export * from './video';
