@@ -9,7 +9,8 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to file a bug. Please provide as much detail as possible so we can reproduce and fix it quickly.
+        Thanks for taking the time to file a bug.
+        Please provide as much detail as possible so we can reproduce and fix it quickly.
 
   - type: input
     id: summary
@@ -29,7 +30,6 @@ body:
         1. Go to Settings → Profile
         2. Click "Save" with empty name
         3. Observe the crash
-      render: bash
     validations:
       required: true
 
@@ -78,17 +78,6 @@ body:
     validations:
       required: true
 
-  - type: checkboxes
-    id: regression
-    attributes:
-      label: Regression?
-      description: Did this work before?
-      options:
-        - label: This is a regression from a previous version
-        - label: Not a regression / first time seen
-    validations:
-      required: false
-
   - type: input
     id: version
     attributes:
@@ -98,74 +87,16 @@ body:
     validations:
       required: true
 
-  - type: input
-    id: build
-    attributes:
-      label: Build / Channel
-      description: Release type.
-      placeholder: Release / Beta / Nightly / Local dev
-    validations:
-      required: true
-
-  - type: input
-    id: commit
-    attributes:
-      label: Commit SHA (if building from source)
-      placeholder: 40-char git SHA
-    validations:
-      required: false
-
-  - type: input
-    id: branch
-    attributes:
-      label: Branch
-      placeholder: main / develop / feature/xyz
-    validations:
-      required: false
-
   - type: textarea
     id: environment
     attributes:
       label: Environment
-      description: Tell us where this occurred. Delete non-applicable lines.
+      description: Tell us where this occurred.
       placeholder: |
-        OS: Windows 11 23H2 / macOS 14.5 / Ubuntu 22.04
-        CPU/GPU: Intel i7-12700K / AMD RX 6800
-        Node: 22.x
+        OS: Windows 11
         Bun: 1.2.x
-        Browser: Chrome 128 / Firefox 129
-        Runtime: Docker 26.x / Bare metal
-        Display/Resolution: 2560×1440 @ 144Hz
-    validations:
+        validations:
       required: true
-
-  - type: input
-    id: dependencies
-    attributes:
-      label: Package Manager & Lockfile
-      placeholder: pnpm 9.0.0 (pnpm-lock.yaml) / npm 10 (package-lock.json) / yarn 4 (yarn.lock)
-    validations:
-      required: false
-
-  - type: checkboxes
-    id: repro_artifacts
-    attributes:
-      label: Minimal Reproduction
-      description: A small, standalone example that reproduces the bug speeds up fixes dramatically.
-      options:
-        - label: I provided a minimal reproduction (link below)
-        - label: I cannot provide a minimal reproduction
-    validations:
-      required: false
-
-  - type: input
-    id: repro_link
-    attributes:
-      label: Reproduction Link
-      description: GitHub repo, Gist, or zip file link.
-      placeholder: https://github.com/yourname/repro-bug-123
-    validations:
-      required: false
 
   - type: textarea
     id: logs
@@ -176,7 +107,6 @@ body:
         ```
         <paste logs here>
         ```
-      render: shell
     validations:
       required: false
 
@@ -185,31 +115,6 @@ body:
     attributes:
       label: Screenshots / Screen Recording
       description: Drag-and-drop images or link to a video/GIF that shows the issue.
-    validations:
-      required: false
-
-  - type: dropdown
-    id: component
-    attributes:
-      label: Affected Area / Component
-      multiple: true
-      options:
-        - UI
-        - Rendering
-        - Networking/API
-        - Storage/DB
-        - Build/Tooling
-        - Docs
-        - Other
-    validations:
-      required: false
-
-  - type: textarea
-    id: workaround
-    attributes:
-      label: Workarounds
-      description: Any temporary workaround you found?
-      placeholder: Rolling back to v1.4.1 avoids the crash.
     validations:
       required: false
 
@@ -224,12 +129,3 @@ body:
           required: false
         - label: I agree to follow the Code of Conduct
           required: true
-
-  - type: input
-    id: contact
-    attributes:
-      label: Contact Details (optional)
-      description: How can we reach you if we need more info?
-      placeholder: email or @handle
-    validations:
-      required: false
