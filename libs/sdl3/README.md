@@ -2,6 +2,8 @@
 
 > WARNING: This is a low-level binding to SDL3 using Bun FFI. Is under development and may change in the future. Use at your own risk.
 
+> WARNING 2: The most binding are auto-generated with AI. Some functions may be have incorrect signatures. Please report issues or contribute fixes.
+
 A Bun package for SDL3 bindings.
 
 ## Installation
