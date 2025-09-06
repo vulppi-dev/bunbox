@@ -1,6 +1,6 @@
 {
   "name": "@bunbox/sdl3",
-  "version": "0.0.1-alpha.4",
+  "version": "0.0.1-beta.1",
   "description": "Implement SDL (Simple DirectMedia Layer) bindings",
   "author": {
     "name": "Renato Rodrigues",
@@ -34,8 +34,8 @@
     "format": "prettier --write ."
   },
   "dependencies": {
-    "@bunbox/naga": "^0.0.4",
-    "@bunbox/struct": "^1.0.5"
+    "@bunbox/naga": "^0.0.5",
+    "@bunbox/struct": "^1.0.6"
   },
   "devDependencies": {
     "@types/bun": "^1.2.21",

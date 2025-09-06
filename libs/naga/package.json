@@ -1,6 +1,6 @@
 {
   "name": "@bunbox/naga",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Simple WGSL parser for TypeScript",
   "author": {
     "name": "Renato Rodrigues",
