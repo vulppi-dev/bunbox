@@ -51,7 +51,7 @@
     "format": "prettier --write ."
   },
   "dependencies": {
-    "@bunbox/sdl3": "^0.0.1-beta.1",
+    "@bunbox/sdl3": "^0.0.1-beta.2",
     "glob": "^11.0.3"
   },
   "devDependencies": {

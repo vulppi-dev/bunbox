@@ -16,4 +16,5 @@ export enum SDL_InitFlags {
   SDL_INIT_SENSOR = 0x00008000,
   /**< `SDL_INIT_CAMERA` implies `SDL_INIT_EVENTS` */
   SDL_INIT_CAMERA = 0x00010000,
+  SDL_INIT_ALL = 0x0001ffff,
 }

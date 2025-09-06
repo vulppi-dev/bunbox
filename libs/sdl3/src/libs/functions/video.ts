@@ -224,11 +224,11 @@ export const VIDEO_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_GetWindowProgressState
    */
-  SDL_GetWindowProgressState: { args: ['ptr'], returns: 'u32' },
+  // SDL_GetWindowProgressState: { args: ['ptr'], returns: 'u32' }, --- NOT FOUND ---
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_GetWindowProgressValue
    */
-  SDL_GetWindowProgressValue: { args: ['ptr'], returns: 'f32' },
+  // SDL_GetWindowProgressValue: { args: ['ptr'], returns: 'f32' }, --- NOT FOUND ---
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_GetWindowProperties
    */
@@ -416,11 +416,11 @@ export const VIDEO_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_SetWindowProgressState
    */
-  SDL_SetWindowProgressState: { args: ['ptr', 'u32'], returns: 'bool' },
+  // SDL_SetWindowProgressState: { args: ['ptr', 'u32'], returns: 'bool' }, --- NOT FOUND ---
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_SetWindowProgressValue
    */
-  SDL_SetWindowProgressValue: { args: ['ptr', 'f32'], returns: 'bool' },
+  // SDL_SetWindowProgressValue: { args: ['ptr', 'f32'], returns: 'bool' }, --- NOT FOUND ---
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_SetWindowResizable
    */

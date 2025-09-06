@@ -67,7 +67,7 @@ export const TRAY_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_IsTraySupported
    */
-  SDL_IsTraySupported: { args: [], returns: 'bool' },
+  // SDL_IsTraySupported: { args: [], returns: 'bool' }, --- NOT FOUND ---
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_RemoveTrayEntry
    */

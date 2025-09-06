@@ -463,55 +463,6 @@ export type SDL_Storage = Record<string, unknown> & {
   __storage: undefined;
 };
 
-// MARK: System
-
-/**
- * @description https://wiki.libsdl.org/SDL3/SDL_iOSAnimationCallback
- */
-export type SDL_iOSAnimationCallback = {};
-
-/**
- * @description https://wiki.libsdl.org/SDL3/SDL_RequestAndroidPermissionCallback
- */
-export type SDL_RequestAndroidPermissionCallback = {};
-
-/**
- * @description https://wiki.libsdl.org/SDL3/SDL_WindowsMessageHook
- */
-export type SDL_WindowsMessageHook = {};
-
-/**
- * @description https://wiki.libsdl.org/SDL3/SDL_X11EventHook
- */
-export type SDL_X11EventHook = {};
-
-// MARK: Thread
-
-/**
- * @description https://wiki.libsdl.org/SDL3/SDL_Thread
- */
-export type SDL_Thread = Record<string, unknown> & { __thread: undefined };
-
-/**
- * @description https://wiki.libsdl.org/SDL3/SDL_ThreadFunction
- */
-export type SDL_ThreadFunction = (data: Pointer) => number;
-
-/**
- * @description https://wiki.libsdl.org/SDL3/SDL_ThreadID
- */
-export type SDL_ThreadID = bigint & { __thread_id: undefined };
-
-/**
- * @description https://wiki.libsdl.org/SDL3/SDL_TLSDestructorCallback
- */
-export type SDL_TLSDestructorCallback = (value: Pointer) => void;
-
-/**
- * @description https://wiki.libsdl.org/SDL3/SDL_TLSID
- */
-export type SDL_TLSID = bigint & { __tls_id: undefined };
-
 // MARK: Timer
 
 /**

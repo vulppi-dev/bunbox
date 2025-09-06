@@ -42,8 +42,6 @@ export * from './shared-object';
 export * from './std';
 export * from './storage';
 export * from './surface';
-export * from './system';
-export * from './thread';
 export * from './time';
 export * from './timer';
 export * from './touch';

@@ -27,8 +27,6 @@ export * from './render';
 export * from './scancode';
 export * from './sensor';
 export * from './surface';
-export * from './system';
-export * from './thread';
 export * from './time';
 export * from './touch';
 export * from './tray';
