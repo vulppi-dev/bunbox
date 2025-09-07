@@ -1,6 +1,6 @@
 {
   "name": "@bunbox/sdl3",
-  "version": "0.0.1-beta.2",
+  "version": "0.0.1-beta.3",
   "description": "Implement SDL (Simple DirectMedia Layer) bindings",
   "author": {
     "name": "Renato Rodrigues",

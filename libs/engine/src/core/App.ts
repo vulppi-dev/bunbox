@@ -1,6 +1,6 @@
 import { cstr, SDL, SDL_InitFlags } from '@bunbox/sdl3';
 import { EventEmitter } from '../abstract/EventEmitter';
-import { RETAIN_MAP } from '../utils/retain';
+import { RETAIN_MAP } from '../stores/global';
 
 type AppFeatures =
   | 'audio'
@@ -77,7 +77,7 @@ export class App extends EventEmitter {
       // Initialize SDL with the specified flags
       const result = SDL.SDL_Init(flags);
       if (!result) {
-        throw new Error(`Failed to initialize SDL: ${SDL.SDL_GetError()}`);
+        throw new Error(`SDL: ${SDL.SDL_GetError()}`);
       }
 
       const nameValue = cstr(name);

@@ -1,8 +1,9 @@
-import { cstr, SDL, SDL_WindowFlags } from '@bunbox/sdl3';
-import { EventEmitter } from '../abstract/EventEmitter';
-import type { App } from './App';
+import { cstr, SDL, SDL_DisplayMode, SDL_WindowFlags } from '@bunbox/sdl3';
 import type { Pointer } from 'bun:ffi';
-import { RETAIN_MAP } from '../utils/retain';
+import { Node } from '../abstract/Node';
+import { POINTERS_MAP, RETAIN_MAP } from '../stores/global';
+import { pointerToBuffer } from '../utils/buffer';
+import type { App } from './App';
 
 type WindowsFeatures = {
   alwaysOnTop?: boolean;
@@ -40,12 +41,11 @@ export type WindowOptions = {
   y?: number;
   features?: WindowsFeatures;
 };
-
-type WindowEvents = {};
-
-export class Window extends EventEmitter<WindowEvents> {
-  #features: WindowsFeatures;
+export class Window extends Node {
   #winPtr: Pointer;
+  #features: WindowsFeatures;
+
+  #displayMode: SDL_DisplayMode;
 
   constructor({ app, title, height, width, x, y, features }: WindowOptions) {
     super();
@@ -56,21 +56,25 @@ export class Window extends EventEmitter<WindowEvents> {
       titleValue,
       width ?? 800,
       height ?? 600,
-      this.#getFeaturesFlags(),
+      Window.#getFeaturesFlags(this.#features),
     );
 
     if (!winPointer) {
-      throw new Error('Failed to create window');
+      throw new Error(`SDL: ${SDL.SDL_GetError()}`);
     }
 
     this.#winPtr = winPointer;
+    POINTERS_MAP.set(this.id, this.#winPtr);
 
     if (x != null || y != null) {
       SDL.SDL_SetWindowPosition(this.#winPtr, x ?? 0, y ?? 0);
     }
 
+    this.#displayMode = new SDL_DisplayMode();
+
     this.on('dispose', () => {
       RETAIN_MAP.delete(`${this.id}-title`);
+      POINTERS_MAP.delete(this.id);
       if (this.#winPtr) {
         SDL.SDL_DestroyWindow(this.#winPtr);
       }
@@ -79,79 +83,165 @@ export class Window extends EventEmitter<WindowEvents> {
       this.dispose();
     });
   }
-  #getFeaturesFlags(): number {
+
+  get title() {
+    return SDL.SDL_GetWindowTitle(this.#winPtr).toString();
+  }
+
+  set title(value: string) {
+    const titleValue = cstr(value);
+    RETAIN_MAP.set(`${this.id}-title`, titleValue);
+    SDL.SDL_SetWindowTitle(this.#winPtr, titleValue);
+  }
+
+  getDisplayFrameRate() {
+    return this.#displayMode.properties.refresh_rate;
+  }
+
+  static #getFeaturesFlags(features: WindowsFeatures): number {
     let flags =
       process.platform === 'darwin'
         ? SDL_WindowFlags.SDL_WINDOW_METAL
         : SDL_WindowFlags.SDL_WINDOW_VULKAN;
 
-    if (this.#features.fullscreen) {
+    if (features.fullscreen) {
       flags |= SDL_WindowFlags.SDL_WINDOW_FULLSCREEN;
     }
-    if (this.#features.occluded) {
+    if (features.occluded) {
       flags |= SDL_WindowFlags.SDL_WINDOW_OCCLUDED;
     }
-    if (this.#features.hidden) {
+    if (features.hidden) {
       flags |= SDL_WindowFlags.SDL_WINDOW_HIDDEN;
     }
-    if (this.#features.borderless) {
+    if (features.borderless) {
       flags |= SDL_WindowFlags.SDL_WINDOW_BORDERLESS;
     }
-    if (this.#features.resizable) {
+    if (features.resizable) {
       flags |= SDL_WindowFlags.SDL_WINDOW_RESIZABLE;
     }
-    if (this.#features.minimized) {
+    if (features.minimized) {
       flags |= SDL_WindowFlags.SDL_WINDOW_MINIMIZED;
     }
-    if (this.#features.maximized) {
+    if (features.maximized) {
       flags |= SDL_WindowFlags.SDL_WINDOW_MAXIMIZED;
     }
-    if (this.#features.mouseGrabbed) {
+    if (features.mouseGrabbed) {
       flags |= SDL_WindowFlags.SDL_WINDOW_MOUSE_GRABBED;
     }
-    if (this.#features.inputFocus) {
+    if (features.inputFocus) {
       flags |= SDL_WindowFlags.SDL_WINDOW_INPUT_FOCUS;
     }
-    if (this.#features.mouseFocus) {
+    if (features.mouseFocus) {
       flags |= SDL_WindowFlags.SDL_WINDOW_MOUSE_FOCUS;
     }
-    if (this.#features.external) {
+    if (features.external) {
       flags |= SDL_WindowFlags.SDL_WINDOW_EXTERNAL;
     }
-    if (this.#features.modal) {
+    if (features.modal) {
       flags |= SDL_WindowFlags.SDL_WINDOW_MODAL;
     }
-    if (this.#features.highPixelDensity) {
+    if (features.highPixelDensity) {
       flags |= SDL_WindowFlags.SDL_WINDOW_HIGH_PIXEL_DENSITY;
     }
-    if (this.#features.mouseCapture) {
+    if (features.mouseCapture) {
       flags |= SDL_WindowFlags.SDL_WINDOW_MOUSE_CAPTURE;
     }
-    if (this.#features.mouseRelativeMode) {
+    if (features.mouseRelativeMode) {
       flags |= SDL_WindowFlags.SDL_WINDOW_MOUSE_RELATIVE_MODE;
     }
-    if (this.#features.alwaysOnTop) {
+    if (features.alwaysOnTop) {
       flags |= SDL_WindowFlags.SDL_WINDOW_ALWAYS_ON_TOP;
     }
-    if (this.#features.utility) {
+    if (features.utility) {
       flags |= SDL_WindowFlags.SDL_WINDOW_UTILITY;
     }
-    if (this.#features.tooltip) {
+    if (features.tooltip) {
       flags |= SDL_WindowFlags.SDL_WINDOW_TOOLTIP;
     }
-    if (this.#features.popupMenu) {
+    if (features.popupMenu) {
       flags |= SDL_WindowFlags.SDL_WINDOW_POPUP_MENU;
     }
-    if (this.#features.keyboardGrabbed) {
+    if (features.keyboardGrabbed) {
       flags |= SDL_WindowFlags.SDL_WINDOW_KEYBOARD_GRABBED;
     }
-    if (this.#features.transparent) {
+    if (features.transparent) {
       flags |= SDL_WindowFlags.SDL_WINDOW_TRANSPARENT;
     }
-    if (this.#features.notFocusable) {
+    if (features.notFocusable) {
       flags |= SDL_WindowFlags.SDL_WINDOW_NOT_FOCUSABLE;
     }
 
     return flags;
+  }
+
+  async startLooper() {
+    let now = performance.now();
+    let prev = 0;
+    let delta = 0;
+    let processTime = 0;
+    const { promise, resolve } = Promise.withResolvers<void>();
+    const tid = setInterval(() => {
+      delta = now - prev;
+      processTime += delta;
+
+      this.#processDisplayMode();
+      const processMaxTime = 1000 / this.getDisplayFrameRate();
+
+      if (processTime >= processMaxTime) {
+        this.#callProcessStack(processTime);
+        processTime = 0;
+      }
+
+      this.#callStaticProcessStack(delta);
+
+      prev = now;
+      now = performance.now();
+    }, 1);
+
+    this.once('dispose', () => {
+      clearInterval(tid);
+      resolve();
+    });
+
+    return promise;
+  }
+
+  #processDisplayMode() {
+    const displayId = SDL.SDL_GetDisplayForWindow(this.#winPtr);
+    const displayModePtr = SDL.SDL_GetCurrentDisplayMode(displayId);
+
+    if (!displayModePtr) {
+      throw new Error(`SDL: ${SDL.SDL_GetError()}`);
+    }
+    const buffer = pointerToBuffer(displayModePtr, this.#displayMode.size);
+    this.#displayMode.copy(buffer);
+  }
+
+  #getChildrenStack(parent: Node) {
+    const stack: Node[] = [parent];
+    for (const child of parent.children) {
+      stack.push(...this.#getChildrenStack(child));
+    }
+    return stack;
+  }
+
+  #callProcessStack(delta: number) {
+    const stack: Node[] = this.#getChildrenStack(this).sort(
+      (a, b) => a.priority - b.priority,
+    );
+
+    for (const node of stack) {
+      node._process(delta);
+    }
+  }
+
+  #callStaticProcessStack(delta: number) {
+    const stack: Node[] = this.#getChildrenStack(this).sort(
+      (a, b) => a.priority - b.priority,
+    );
+
+    for (const node of stack) {
+      node._processStatic(delta);
+    }
   }
 }

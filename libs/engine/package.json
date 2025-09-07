@@ -52,7 +52,9 @@
   },
   "dependencies": {
     "@bunbox/sdl3": "^0.0.1-beta.2",
-    "glob": "^11.0.3"
+    "@vulppi/toolbelt": "^1.3.2",
+    "glob": "^11.0.3",
+    "ulid": "^3.0.1"
   },
   "devDependencies": {
     "@types/bun": "^1.2.21",

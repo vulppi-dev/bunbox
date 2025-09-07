@@ -1,4 +1,4 @@
-import { randomUUIDv7 } from 'bun';
+import { ulid } from 'ulid';
 import { Dirtyable } from './Dyrtiable';
 
 export type EventMap = Record<string | symbol, any[]>;
@@ -25,7 +25,7 @@ export class EventEmitter<T extends EventMap = any> extends Dirtyable {
 
   constructor() {
     super();
-    this.#id = randomUUIDv7();
+    this.#id = ulid();
   }
 
   get id() {

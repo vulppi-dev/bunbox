@@ -1,3 +1,5 @@
+export * from './_struct';
+
 export * from './assert';
 export * from './async-io';
 export * from './atomic';
