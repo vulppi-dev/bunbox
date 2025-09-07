@@ -12,22 +12,10 @@ import type { FixedArray } from '../types';
  */
 export class Matrix extends Dirtyable {
   #m = new Float32Array([
-    1,
-    0,
-    0,
-    0, // col 0
-    0,
-    1,
-    0,
-    0, // col 1
-    0,
-    0,
-    1,
-    0, // col 2
-    0,
-    0,
-    0,
-    1, // col 3 (translation)
+    1, 0, 0, 0, // col 0
+    0, 1, 0, 0, // col 1
+    0, 0, 1, 0, // col 2
+    0, 0, 0, 1, // col 3 (translation)
   ]);
 
   /**
@@ -133,7 +121,12 @@ export class Matrix extends Dirtyable {
    * @returns This matrix after resetting.
    */
   reset() {
-    this.#m.set([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+    this.#m.set([
+      1, 0, 0, 0,
+      0, 1, 0, 0,
+      0, 0, 1, 0,
+      0, 0, 0, 1,
+    ]);
     return this.markAsDirty();
   }
 
@@ -445,22 +438,10 @@ export class Matrix extends Dirtyable {
 
     // prettier-multiline-arrays-next-line-pattern: 4
     return this.set([
-      y.x,
-      y.y,
-      y.z,
-      0,
-      x.x,
-      x.y,
-      x.z,
-      0,
-      z.x,
-      z.y,
-      z.z,
-      0,
-      -x.dot(eye),
-      -y.dot(eye),
-      -z.dot(eye),
-      1,
+      y.x, y.y, y.z, 0,
+      x.x, x.y, x.z, 0,
+      z.x, z.y, z.z, 0,
+      -x.dot(eye), -y.dot(eye), -z.dot(eye), 1,
     ]);
   }
 
