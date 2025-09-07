@@ -52,6 +52,7 @@ export type WindowOptions = {
 export class Window extends Node {
   #winPtr: Pointer;
   #features: WindowsFeatures;
+  #running = false;
 
   #displayMode: SDL_DisplayMode;
 
@@ -99,6 +100,9 @@ export class Window extends Node {
   }
 
   set title(value: string) {
+    if (this.isDisposed) {
+      throw new Error('Window is disposed');
+    }
     const titleValue = cstr(value);
     RETAIN_MAP.set(`${this.id}-title`, titleValue);
     SDL.SDL_SetWindowTitle(this.#winPtr, titleValue);
@@ -185,6 +189,11 @@ export class Window extends Node {
   }
 
   async startLooper() {
+    if (this.isDisposed) {
+      throw new Error('Window is disposed');
+    }
+    if (this.#running) return;
+    this.#running = true;
     let now = performance.now();
     let prev = 0;
     let delta = 0;
