@@ -1,4 +1,4 @@
-import { EventEmitter, type EventMap } from './EventEmitter';
+import { EventEmitter, type EventMap } from '../abstract';
 
 type NodeEvents = {
   'add-child': [child: Node];
@@ -223,11 +223,27 @@ export class Node<
     return node;
   }
 
+  _beforeProcess(deltaTime: number): void {
+    // Override in subclasses
+  }
+
   _process(deltaTime: number): void {
     // Override in subclasses
   }
 
+  _afterProcess(deltaTime: number): void {
+    // Override in subclasses
+  }
+
+  _beforeProcessStatic(deltaTime: number): void {
+    // Override in subclasses
+  }
+
   _processStatic(deltaTime: number): void {
+    // Override in subclasses
+  }
+
+  _afterProcessStatic(deltaTime: number): void {
     // Override in subclasses
   }
 

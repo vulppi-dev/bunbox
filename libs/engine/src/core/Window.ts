@@ -1,6 +1,14 @@
-import { cstr, SDL, SDL_DisplayMode, SDL_WindowFlags } from '@bunbox/sdl3';
+import {
+  cstr,
+  SDL,
+  SDL_DisplayMode,
+  SDL_Event,
+  SDL_EventType,
+  SDL_Scancode,
+  SDL_WindowFlags,
+} from '@bunbox/sdl3';
 import type { Pointer } from 'bun:ffi';
-import { Node } from '../abstract/Node';
+import { Node } from './Node';
 import { POINTERS_MAP, RETAIN_MAP } from '../stores/global';
 import { pointerToBuffer } from '../utils/buffer';
 import type { App } from './App';
@@ -46,6 +54,8 @@ export class Window extends Node {
   #features: WindowsFeatures;
 
   #displayMode: SDL_DisplayMode;
+
+  #eventStruct = new SDL_Event();
 
   constructor({ app, title, height, width, x, y, features }: WindowOptions) {
     super();
@@ -184,6 +194,19 @@ export class Window extends Node {
       delta = now - prev;
       processTime += delta;
 
+      while (SDL.SDL_PollEvent(this.#eventStruct.bunPointer)) {
+        const type = this.#eventStruct.properties.type;
+        if (type === SDL_EventType.SDL_EVENT_QUIT) {
+          this.dispose();
+        }
+        if (type === SDL_EventType.SDL_EVENT_KEY_DOWN) {
+          const ev = this.#eventStruct.properties.key;
+          if (ev.properties.scancode === SDL_Scancode.SDL_SCANCODE_ESCAPE)
+            this.dispose();
+        }
+        // TODO: handle more events
+      }
+
       this.#processDisplayMode();
       const processMaxTime = 1000 / this.getDisplayFrameRate();
 
@@ -231,7 +254,13 @@ export class Window extends Node {
     );
 
     for (const node of stack) {
+      node._beforeProcess(delta);
+    }
+    for (const node of stack) {
       node._process(delta);
+    }
+    for (const node of stack) {
+      node._afterProcess(delta);
     }
   }
 
@@ -241,7 +270,13 @@ export class Window extends Node {
     );
 
     for (const node of stack) {
+      node._beforeProcessStatic(delta);
+    }
+    for (const node of stack) {
       node._processStatic(delta);
+    }
+    for (const node of stack) {
+      node._afterProcessStatic(delta);
     }
   }
 }

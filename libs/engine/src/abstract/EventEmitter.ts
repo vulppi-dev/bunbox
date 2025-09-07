@@ -1,5 +1,5 @@
 import { ulid } from 'ulid';
-import { Dirtyable } from './Dyrtiable';
+import { Dirtyable } from './Dirtyable';
 
 export type EventMap = Record<string | symbol, any[]>;
 
@@ -100,7 +100,7 @@ export class EventEmitter<T extends EventMap = any> extends Dirtyable {
     return this.on(eventName, onceListener as Listener<K, T & InitialEvents>);
   }
 
-  clear<K extends keyof (T & InitialEvents)>(eventName?: K): this {
+  clearListeners<K extends keyof (T & InitialEvents)>(eventName?: K): this {
     if (this.#isDisposed) return this;
     if (eventName) {
       this.#listeners.delete(eventName);

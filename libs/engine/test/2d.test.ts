@@ -24,6 +24,7 @@ const win = new Window({
 });
 
 const renderer = new Renderer();
+renderer.clearColor.set(0.06, 0.06, 0.09, 1.0); // dark blue-ish
 
 win.addChild(renderer);
 

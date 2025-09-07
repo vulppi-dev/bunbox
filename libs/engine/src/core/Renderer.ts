@@ -1,15 +1,17 @@
 import { cstr, SDL } from '@bunbox/sdl3';
-import { EventEmitter } from '../abstract/EventEmitter';
-import { Window } from './Window';
 import { ptr, type Pointer } from 'bun:ffi';
+import { Node } from './Node';
 import { POINTERS_MAP, RETAIN_MAP } from '../stores/global';
-import { Node } from '../abstract/Node';
+import { Window } from './Window';
+import { SDL_Color } from '@bunbox/sdl3';
+import { Color } from '../math';
 
 export class Renderer extends Node {
   #rendererPtr: Pointer | null = null;
   #widthBuffer = new Int32Array(1);
   #heightBuffer = new Int32Array(1);
 
+  #clearColor = new Color();
   #width = 0;
   #height = 0;
 
@@ -23,6 +25,27 @@ export class Renderer extends Node {
         this.#rendererPtr = null;
       }
     });
+  }
+
+  get width() {
+    return this.#width;
+  }
+
+  get height() {
+    return this.#height;
+  }
+
+  get viewport() {
+    return { x: 0, y: 0, width: this.#width, height: this.#height };
+  }
+
+  get clearColor() {
+    return this.#clearColor;
+  }
+
+  set clearColor(value: Color) {
+    this.#clearColor.copy(value);
+    this.markAsDirty();
   }
 
   protected override _ready(): void {
@@ -39,7 +62,7 @@ export class Renderer extends Node {
     POINTERS_MAP.set(this.id, this.#rendererPtr);
   }
 
-  override _process(deltaTime: number): void {
+  override _beforeProcess(deltaTime: number): void {
     if (!this.#rendererPtr) return;
 
     // Update width and height
@@ -54,18 +77,22 @@ export class Renderer extends Node {
     } else {
       this.#width = 0;
       this.#height = 0;
+      console.warn('SDL_GetRenderOutputSize failed:', SDL.SDL_GetError());
     }
+
+    // Clear render color
+    SDL.SDL_SetRenderDrawColor(
+      this.#rendererPtr,
+      this.#clearColor.r * 255,
+      this.#clearColor.g * 255,
+      this.#clearColor.b * 255,
+      this.#clearColor.a * 255,
+    );
+    SDL.SDL_RenderClear(this.#rendererPtr);
   }
 
-  get width() {
-    return this.#width;
-  }
-
-  get height() {
-    return this.#height;
-  }
-
-  get viewport() {
-    return { x: 0, y: 0, width: this.#width, height: this.#height };
+  override _afterProcess(deltaTime: number): void {
+    if (!this.#rendererPtr) return;
+    SDL.SDL_RenderPresent(this.#rendererPtr);
   }
 }
