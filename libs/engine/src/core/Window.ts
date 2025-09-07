@@ -200,6 +200,12 @@ export class Window extends Node {
     let processTime = 0;
     const { promise, resolve } = Promise.withResolvers<void>();
     const tid = setInterval(() => {
+      if (this.isDisposed) {
+        clearInterval(tid);
+        resolve();
+        return;
+      }
+
       delta = now - prev;
       processTime += delta;
 
@@ -207,11 +213,14 @@ export class Window extends Node {
         const type = this.#eventStruct.properties.type;
         if (type === SDL_EventType.SDL_EVENT_QUIT) {
           this.dispose();
+          return;
         }
         if (type === SDL_EventType.SDL_EVENT_KEY_DOWN) {
           const ev = this.#eventStruct.properties.key;
-          if (ev.properties.scancode === SDL_Scancode.SDL_SCANCODE_ESCAPE)
+          if (ev.properties.scancode === SDL_Scancode.SDL_SCANCODE_ESCAPE) {
             this.dispose();
+            return;
+          }
         }
         // TODO: handle more events
       }
