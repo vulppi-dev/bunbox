@@ -1,4 +1,3 @@
-import { SDL_GPUGraphicsPipelineCreateInfo } from '@bunbox/sdl3';
 import { App, Renderer, Window } from '../src/core';
 
 const app = new App();
@@ -14,6 +13,11 @@ const win = new Window({
     highPixelDensity: true,
   },
 });
+
+const render = new Renderer();
+render.clearColor.set(1.0, 0.4, 0.0, 1);
+
+win.addChild(render);
 
 // Toggle: only enable if your struct layouts match (Viewport=24 bytes, Rect=16 bytes)
 // const USE_VIEWPORT_AND_SCISSOR = true;
@@ -98,7 +102,7 @@ const win = new Window({
 // multisample.properties.enable_mask = false; // reserved → false
 // multisample.properties.enable_alpha_to_coverage = false;
 
-const gpci = new SDL_GPUGraphicsPipelineCreateInfo();
+// const gpci = new SDL_GPUGraphicsPipelineCreateInfo();
 // gpci.properties.vertex_shader = BigInt(vs);
 // gpci.properties.fragment_shader = BigInt(fs);
 // gpci.properties.primitive_type =
@@ -214,5 +218,3 @@ const gpci = new SDL_GPUGraphicsPipelineCreateInfo();
 // }
 
 await win.startLooper();
-
-app.dispose();

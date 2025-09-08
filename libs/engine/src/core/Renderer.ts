@@ -1,41 +1,32 @@
-import { cstr, SDL } from '@bunbox/sdl3';
-import { ptr, type Pointer } from 'bun:ffi';
+import {
+  SDL,
+  SDL_FColor,
+  SDL_GPUColorTargetInfo,
+  SDL_GPULoadOp,
+  SDL_GPUStoreOp,
+} from '@bunbox/sdl3';
+import type { Pointer } from 'bun:ffi';
 import { Color } from '../math';
-import { POINTERS_MAP, RETAIN_MAP } from '../stores/global';
+import { POINTERS_MAP } from '../stores/global';
 import { Node } from './Node';
 import { Window } from './Window';
 
 export class Renderer extends Node {
-  #rendererPtr: Pointer | null = null;
-  #widthBuffer = new Int32Array(1);
-  #heightBuffer = new Int32Array(1);
-
   #clearColor = new Color();
-  #width = 0;
-  #height = 0;
+  #winPtr: Pointer | null = null;
+  #devicePtr: Pointer | null = null;
+  #background: 'vulkan' | 'metal' = 'vulkan';
+  #swapFormat: number = 0;
+
+  // Helpers
+  #currentCmd: Pointer | null = null;
+  #texPtr = new BigUint64Array(1);
+  #widthPtr = new Uint32Array(1);
+  #heightPtr = new Uint32Array(1);
 
   constructor() {
     super();
-    this.on('dispose', () => {
-      if (this.#rendererPtr) {
-        SDL.SDL_DestroyRenderer(this.#rendererPtr);
-        RETAIN_MAP.delete(`${this.id}-background`);
-        POINTERS_MAP.delete(this.id);
-        this.#rendererPtr = null;
-      }
-    });
-  }
-
-  get width() {
-    return this.#width;
-  }
-
-  get height() {
-    return this.#height;
-  }
-
-  get viewport() {
-    return { x: 0, y: 0, width: this.#width, height: this.#height };
+    this.on('dispose', () => {});
   }
 
   get clearColor() {
@@ -50,48 +41,73 @@ export class Renderer extends Node {
   protected override _ready(): void {
     const win = this.findByType(Window)[0];
     if (!win) throw new Error('No window parent found in the node tree');
-    const winPtr = POINTERS_MAP.get(win.id)!;
-    const background = cstr(process.platform === 'darwin' ? 'metal' : 'vulkan');
-    RETAIN_MAP.set(`${this.id}-background`, background);
-    if (this.#rendererPtr) {
-      SDL.SDL_DestroyRenderer(this.#rendererPtr);
-    }
-    this.#rendererPtr = SDL.SDL_CreateRenderer(winPtr, background);
-    if (!this.#rendererPtr) throw new Error(`SDL: ${SDL.SDL_GetError()}`);
-    POINTERS_MAP.set(this.id, this.#rendererPtr);
+    this.#winPtr = POINTERS_MAP.get(win.id) ?? null;
+    this.#devicePtr = POINTERS_MAP.get(`${win.id}-device`) ?? null;
+    this.#background = process.platform === 'darwin' ? 'metal' : 'vulkan';
+    this.#swapFormat = SDL.SDL_GetGPUSwapchainTextureFormat(
+      this.#devicePtr,
+      this.#winPtr,
+    );
   }
 
-  override _beforeProcess(deltaTime: number): void {
-    if (!this.#rendererPtr) return;
-
-    // Update width and height
-    let success = SDL.SDL_GetRenderOutputSize(
-      this.#rendererPtr,
-      ptr(this.#widthBuffer),
-      ptr(this.#heightBuffer),
-    );
-    if (success) {
-      this.#width = this.#widthBuffer[0]!;
-      this.#height = this.#heightBuffer[0]!;
-    } else {
-      this.#width = 0;
-      this.#height = 0;
-      console.warn('SDL_GetRenderOutputSize failed:', SDL.SDL_GetError());
-    }
-
-    // Clear render color
-    SDL.SDL_SetRenderDrawColor(
-      this.#rendererPtr,
-      this.#clearColor.r * 255,
-      this.#clearColor.g * 255,
-      this.#clearColor.b * 255,
-      this.#clearColor.a * 255,
-    );
-    SDL.SDL_RenderClear(this.#rendererPtr);
-  }
+  override _beforeProcess(deltaTime: number): void {}
 
   override _afterProcess(deltaTime: number): void {
-    if (!this.#rendererPtr) return;
-    SDL.SDL_RenderPresent(this.#rendererPtr);
+    if (!this.#winPtr || !this.#devicePtr) return;
+
+    this.#currentCmd = SDL.SDL_AcquireGPUCommandBuffer(this.#devicePtr);
+    if (!this.#currentCmd) {
+      console.warn('SDL_AcquireGPUCommandBuffer failed');
+      return;
+    }
+
+    let success = SDL.SDL_AcquireGPUSwapchainTexture(
+      this.#currentCmd,
+      this.#winPtr,
+      this.#texPtr,
+      this.#widthPtr,
+      this.#heightPtr,
+    );
+
+    if (
+      !success ||
+      !this.#texPtr[0] ||
+      this.#widthPtr[0] === 0 ||
+      this.#heightPtr[0] === 0
+    ) {
+      SDL.SDL_SubmitGPUCommandBuffer(this.#currentCmd);
+      return;
+    }
+
+    this.#clearScreen();
+
+    // TODO: add actual rendering here
+
+    SDL.SDL_SubmitGPUCommandBuffer(this.#currentCmd);
+    this.#currentCmd = null;
+    const err = SDL.SDL_GetError().toString();
+    if (err) console.log('[SDL ERROR]', err);
+  }
+
+  #clearScreen() {
+    const colorTarget = new SDL_GPUColorTargetInfo();
+    colorTarget.properties.texture = this.#texPtr[0]!;
+    const clear_color = new SDL_FColor();
+
+    clear_color.properties.r = this.#clearColor.r;
+    clear_color.properties.g = this.#clearColor.g;
+    clear_color.properties.b = this.#clearColor.b;
+    clear_color.properties.a = this.#clearColor.a;
+    colorTarget.properties.clear_color = clear_color;
+    colorTarget.properties.load_op = SDL_GPULoadOp.SDL_GPU_LOADOP_CLEAR;
+    colorTarget.properties.store_op = SDL_GPUStoreOp.SDL_GPU_STOREOP_STORE;
+
+    const pass = SDL.SDL_BeginGPURenderPass(
+      this.#currentCmd,
+      colorTarget.bunPointer,
+      1,
+      null,
+    );
+    SDL.SDL_EndGPURenderPass(pass);
   }
 }
