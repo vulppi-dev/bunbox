@@ -1,4 +1,5 @@
 import { EventEmitter, type EventMap } from '../abstract';
+import type { RenderProps } from '../types';
 
 type NodeEvents = {
   'add-child': [child: Node];

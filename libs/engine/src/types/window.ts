@@ -22,4 +22,4 @@ export type WindowsFeature =
   | 'transparent'
   | 'utility';
 
-export type WindowsFeaturesOptions = Record<WindowsFeature, boolean>;
+export type WindowsFeaturesOptions = Partial<Record<WindowsFeature, boolean>>;

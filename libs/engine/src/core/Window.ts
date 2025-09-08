@@ -9,36 +9,13 @@ import {
   SDL_WindowFlags,
 } from '@bunbox/sdl3';
 import type { Pointer } from 'bun:ffi';
-import { Node } from './Node';
+import { WINDOW_FEATURES_MAP } from '../constants';
 import { POINTERS_MAP } from '../stores/global';
+import type { WindowsFeature, WindowsFeaturesOptions } from '../types';
 import { pointerToBuffer } from '../utils/buffer';
 import type { App } from './App';
-import { WINDOW_FEATURES_MAP } from '../constants';
-
-type WindowsFeatures = {
-  alwaysOnTop?: boolean;
-  borderless?: boolean;
-  external?: boolean;
-  fullscreen?: boolean;
-  hidden?: boolean;
-  highPixelDensity?: boolean;
-  inputFocus?: boolean;
-  keyboardGrabbed?: boolean;
-  maximized?: boolean;
-  minimized?: boolean;
-  modal?: boolean;
-  mouseCapture?: boolean;
-  mouseFocus?: boolean;
-  mouseGrabbed?: boolean;
-  mouseRelativeMode?: boolean;
-  notFocusable?: boolean;
-  occluded?: boolean;
-  popupMenu?: boolean;
-  resizable?: boolean;
-  tooltip?: boolean;
-  transparent?: boolean;
-  utility?: boolean;
-};
+import { Node } from './Node';
+import { getChildrenStack } from '../utils/node';
 
 export type WindowOptions = {
   app: App;
@@ -49,13 +26,13 @@ export type WindowOptions = {
   height?: number;
   x?: number;
   y?: number;
-  features?: WindowsFeatures;
+  features?: WindowsFeaturesOptions;
 };
 export class Window extends Node {
   #winPtr: Pointer;
   #devicePtr: Pointer;
 
-  #features: WindowsFeatures;
+  #features: WindowsFeaturesOptions;
   #running = false;
   #stack: Node[] = [];
 
@@ -105,11 +82,11 @@ export class Window extends Node {
 
     this.on('add-child', () => {
       if (!this.#running) return;
-      this.#stack = this.#getChildrenStack(this);
+      this.#stack = getChildrenStack(this);
     });
     this.on('remove-child', () => {
       if (!this.#running) return;
-      this.#stack = this.#getChildrenStack(this);
+      this.#stack = getChildrenStack(this);
     });
 
     this.on('dispose', () => {
@@ -138,13 +115,13 @@ export class Window extends Node {
     return Math.max(this.#displayMode.properties.refresh_rate, 24);
   }
 
-  static #getFeaturesFlags(features: WindowsFeatures): number {
+  static #getFeaturesFlags(features: WindowsFeaturesOptions): number {
     let flags =
       process.platform === 'darwin'
         ? SDL_WindowFlags.SDL_WINDOW_METAL
         : SDL_WindowFlags.SDL_WINDOW_VULKAN;
     for (const [key, value] of Object.entries(features)) {
-      flags |= WINDOW_FEATURES_MAP[key as keyof WindowsFeatures] ?? 0;
+      flags |= value ? (WINDOW_FEATURES_MAP[key as WindowsFeature] ?? 0) : 0;
     }
 
     return flags;
@@ -156,7 +133,7 @@ export class Window extends Node {
     }
     if (this.#running) return;
     this.#running = true;
-    this.#stack = this.#getChildrenStack(this);
+    this.#stack = getChildrenStack(this);
 
     let now = performance.now();
     let prev = now;
@@ -234,14 +211,6 @@ export class Window extends Node {
     }
     const buffer = pointerToBuffer(displayModePtr, this.#displayMode.size);
     this.#displayMode.copy(buffer);
-  }
-
-  #getChildrenStack(parent: Node) {
-    const stack: Node[] = [parent];
-    for (const child of parent.children) {
-      stack.push(...this.#getChildrenStack(child));
-    }
-    return stack;
   }
 
   #callProcessStack(delta: number) {

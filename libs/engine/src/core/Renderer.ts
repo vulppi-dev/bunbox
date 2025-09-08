@@ -8,6 +8,7 @@ import {
 import type { Pointer } from 'bun:ffi';
 import { Color } from '../math';
 import { POINTERS_MAP } from '../stores/global';
+import { getChildrenStack } from '../utils/node';
 import { Node } from './Node';
 import { Window } from './Window';
 
@@ -24,9 +25,20 @@ export class Renderer extends Node {
   #widthPtr = new Uint32Array(1);
   #heightPtr = new Uint32Array(1);
 
+  #ready = false;
+  #stack: Node[] = [];
+
   constructor() {
     super();
-    this.on('dispose', () => {});
+
+    this.on('add-child', () => {
+      if (!this.#ready) return;
+      this.#stack = getChildrenStack(this);
+    });
+    this.on('remove-child', () => {
+      if (!this.#ready) return;
+      this.#stack = getChildrenStack(this);
+    });
   }
 
   get clearColor() {
@@ -48,11 +60,12 @@ export class Renderer extends Node {
       this.#devicePtr,
       this.#winPtr,
     );
+
+    this.#ready = true;
+    this.#stack = getChildrenStack(this);
   }
 
-  override _beforeProcess(deltaTime: number): void {}
-
-  override _afterProcess(deltaTime: number): void {
+  override _afterProcess(_: number): void {
     if (!this.#winPtr || !this.#devicePtr) return;
 
     this.#currentCmd = SDL.SDL_AcquireGPUCommandBuffer(this.#devicePtr);
@@ -81,7 +94,7 @@ export class Renderer extends Node {
 
     this.#clearScreen();
 
-    // TODO: add actual rendering here
+    // TODO: render children
 
     SDL.SDL_SubmitGPUCommandBuffer(this.#currentCmd);
     this.#currentCmd = null;
