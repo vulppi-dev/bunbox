@@ -1,20 +1,15 @@
-import { cstr, SDL, SDL_InitFlags } from '@bunbox/sdl3';
-import { EventEmitter } from '../abstract/EventEmitter';
-import { RETAIN_MAP } from '../stores/global';
-
-type AppFeatures =
-  | 'audio'
-  | 'video'
-  | 'joystick'
-  | 'haptic'
-  | 'gamepad'
-  | 'events'
-  | 'sensor'
-  | 'camera';
+import { cstr, SDL } from '@bunbox/sdl3';
+import { EventEmitter } from '../abstract';
+import {
+  APP_FEATURES_MAP,
+  APP_LOG_CATEGORY_MAP,
+  APP_LOG_PRIORITY_MAP,
+} from '../constants';
+import type { AppFeature, AppLogCategory, AppLogPriority } from '../types';
 
 export type AppOptions = {
   /** @default ['video','events'] */
-  features?: AppFeatures[];
+  features?: AppFeature[];
   name?: string;
   version?: string;
   identifier?: string;
@@ -45,34 +40,7 @@ export class App extends EventEmitter {
 
     let flags = 0;
     for (const feature of features) {
-      switch (feature) {
-        case 'audio':
-          flags |= SDL_InitFlags.SDL_INIT_AUDIO;
-          break;
-        case 'video':
-          flags |= SDL_InitFlags.SDL_INIT_VIDEO;
-          break;
-        case 'joystick':
-          flags |= SDL_InitFlags.SDL_INIT_JOYSTICK;
-          break;
-        case 'haptic':
-          flags |= SDL_InitFlags.SDL_INIT_HAPTIC;
-          break;
-        case 'gamepad':
-          flags |= SDL_InitFlags.SDL_INIT_GAMEPAD;
-          break;
-        case 'events':
-          flags |= SDL_InitFlags.SDL_INIT_EVENTS;
-          break;
-        case 'sensor':
-          flags |= SDL_InitFlags.SDL_INIT_SENSOR;
-          break;
-        case 'camera':
-          flags |= SDL_InitFlags.SDL_INIT_CAMERA;
-          break;
-        default:
-          throw new Error(`Unknown feature: ${feature}`);
-      }
+      flags |= APP_FEATURES_MAP[feature] ?? 0;
 
       // Initialize SDL with the specified flags
       const result = SDL.SDL_Init(flags);
@@ -80,20 +48,10 @@ export class App extends EventEmitter {
         throw new Error(`SDL: ${SDL.SDL_GetError()}`);
       }
 
-      const nameValue = cstr(name);
-      const versionValue = cstr(version);
-      const identifierValue = cstr(identifier);
-      RETAIN_MAP.set(`${this.id}-name`, nameValue);
-      RETAIN_MAP.set(`${this.id}-version`, versionValue);
-      RETAIN_MAP.set(`${this.id}-identifier`, identifierValue);
-
-      SDL.SDL_SetAppMetadata(nameValue, versionValue, identifierValue);
+      SDL.SDL_SetAppMetadata(cstr(name), cstr(version), cstr(identifier));
+      SDL.SDL_SetHint(cstr('SDL_LOGGING'), cstr('test=verbose,*=info'));
 
       this.on('dispose', () => {
-        RETAIN_MAP.delete(`${this.id}-name`);
-        RETAIN_MAP.delete(`${this.id}-version`);
-        RETAIN_MAP.delete(`${this.id}-identifier`);
-
         SDL.SDL_Quit();
         App.#singleAppInstance = null;
       });
@@ -109,5 +67,16 @@ export class App extends EventEmitter {
         enumerable: true,
       });
     }
+  }
+
+  setLogPriority(priority: AppLogPriority) {
+    SDL.SDL_SetLogPriorities(APP_LOG_PRIORITY_MAP[priority]);
+  }
+
+  setCategoryLogPriority(category: AppLogCategory, priority: AppLogPriority) {
+    SDL.SDL_SetLogPriority(
+      APP_LOG_CATEGORY_MAP[category],
+      APP_LOG_PRIORITY_MAP[priority],
+    );
   }
 }

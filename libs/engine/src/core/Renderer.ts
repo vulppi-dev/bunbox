@@ -1,10 +1,9 @@
 import { cstr, SDL } from '@bunbox/sdl3';
 import { ptr, type Pointer } from 'bun:ffi';
-import { Node } from './Node';
-import { POINTERS_MAP, RETAIN_MAP } from '../stores/global';
-import { Window } from './Window';
-import { SDL_Color } from '@bunbox/sdl3';
 import { Color } from '../math';
+import { POINTERS_MAP, RETAIN_MAP } from '../stores/global';
+import { Node } from './Node';
+import { Window } from './Window';
 
 export class Renderer extends Node {
   #rendererPtr: Pointer | null = null;

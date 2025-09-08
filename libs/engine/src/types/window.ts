@@ -1,0 +1,25 @@
+export type WindowsFeature =
+  | 'alwaysOnTop'
+  | 'borderless'
+  | 'external'
+  | 'fullscreen'
+  | 'hidden'
+  | 'highPixelDensity'
+  | 'inputFocus'
+  | 'keyboardGrabbed'
+  | 'maximized'
+  | 'minimized'
+  | 'modal'
+  | 'mouseCapture'
+  | 'mouseFocus'
+  | 'mouseGrabbed'
+  | 'mouseRelativeMode'
+  | 'notFocusable'
+  | 'occluded'
+  | 'popupMenu'
+  | 'resizable'
+  | 'tooltip'
+  | 'transparent'
+  | 'utility';
+
+export type WindowsFeaturesOptions = Record<WindowsFeature, boolean>;

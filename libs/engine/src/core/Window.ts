@@ -4,14 +4,16 @@ import {
   SDL_DisplayMode,
   SDL_Event,
   SDL_EventType,
+  SDL_GPUShaderFormat,
   SDL_Scancode,
   SDL_WindowFlags,
 } from '@bunbox/sdl3';
 import type { Pointer } from 'bun:ffi';
 import { Node } from './Node';
-import { POINTERS_MAP, RETAIN_MAP } from '../stores/global';
+import { POINTERS_MAP } from '../stores/global';
 import { pointerToBuffer } from '../utils/buffer';
 import type { App } from './App';
+import { WINDOW_FEATURES_MAP } from '../constants';
 
 type WindowsFeatures = {
   alwaysOnTop?: boolean;
@@ -51,8 +53,11 @@ export type WindowOptions = {
 };
 export class Window extends Node {
   #winPtr: Pointer;
+  #devicePtr: Pointer;
+
   #features: WindowsFeatures;
   #running = false;
+  #stack: Node[] = [];
 
   #displayMode: SDL_DisplayMode;
 
@@ -60,11 +65,9 @@ export class Window extends Node {
 
   constructor({ app, title, height, width, x, y, features }: WindowOptions) {
     super();
-    const titleValue = cstr(title);
-    RETAIN_MAP.set(`${this.id}-title`, titleValue);
     this.#features = features ?? {};
     const winPointer = SDL.SDL_CreateWindow(
-      titleValue,
+      cstr(title),
       width ?? 800,
       height ?? 600,
       Window.#getFeaturesFlags(this.#features),
@@ -82,13 +85,38 @@ export class Window extends Node {
     }
 
     this.#displayMode = new SDL_DisplayMode();
+    const devicePtr = SDL.SDL_CreateGPUDevice(
+      process.platform === 'darwin'
+        ? SDL_GPUShaderFormat.SDL_GPU_SHADERFORMAT_METALLIB
+        : SDL_GPUShaderFormat.SDL_GPU_SHADERFORMAT_SPIRV,
+      true,
+      cstr(process.platform === 'darwin' ? 'metal' : 'vulkan'),
+    );
+
+    if (!devicePtr) {
+      throw new Error(`SDL: ${SDL.SDL_GetError()}`);
+    }
+    this.#devicePtr = devicePtr;
+    POINTERS_MAP.set(`${this.id}-device`, this.#devicePtr);
+
+    if (!SDL.SDL_ClaimWindowForGPUDevice(this.#devicePtr, this.#winPtr)) {
+      throw new Error(`SDL: ${SDL.SDL_GetError()}`);
+    }
+
+    this.on('add-child', () => {
+      if (!this.#running) return;
+      this.#stack = this.#getChildrenStack(this);
+    });
+    this.on('remove-child', () => {
+      if (!this.#running) return;
+      this.#stack = this.#getChildrenStack(this);
+    });
 
     this.on('dispose', () => {
-      RETAIN_MAP.delete(`${this.id}-title`);
+      POINTERS_MAP.delete(`${this.id}-device`);
       POINTERS_MAP.delete(this.id);
-      if (this.#winPtr) {
-        SDL.SDL_DestroyWindow(this.#winPtr);
-      }
+      SDL.SDL_DestroyGPUDevice(this.#devicePtr);
+      SDL.SDL_DestroyWindow(this.#winPtr);
     });
     app.on('dispose', () => {
       this.dispose();
@@ -103,13 +131,11 @@ export class Window extends Node {
     if (this.isDisposed) {
       throw new Error('Window is disposed');
     }
-    const titleValue = cstr(value);
-    RETAIN_MAP.set(`${this.id}-title`, titleValue);
-    SDL.SDL_SetWindowTitle(this.#winPtr, titleValue);
+    SDL.SDL_SetWindowTitle(this.#winPtr, cstr(value));
   }
 
   getDisplayFrameRate() {
-    return this.#displayMode.properties.refresh_rate;
+    return Math.max(this.#displayMode.properties.refresh_rate, 24);
   }
 
   static #getFeaturesFlags(features: WindowsFeatures): number {
@@ -117,72 +143,8 @@ export class Window extends Node {
       process.platform === 'darwin'
         ? SDL_WindowFlags.SDL_WINDOW_METAL
         : SDL_WindowFlags.SDL_WINDOW_VULKAN;
-
-    if (features.fullscreen) {
-      flags |= SDL_WindowFlags.SDL_WINDOW_FULLSCREEN;
-    }
-    if (features.occluded) {
-      flags |= SDL_WindowFlags.SDL_WINDOW_OCCLUDED;
-    }
-    if (features.hidden) {
-      flags |= SDL_WindowFlags.SDL_WINDOW_HIDDEN;
-    }
-    if (features.borderless) {
-      flags |= SDL_WindowFlags.SDL_WINDOW_BORDERLESS;
-    }
-    if (features.resizable) {
-      flags |= SDL_WindowFlags.SDL_WINDOW_RESIZABLE;
-    }
-    if (features.minimized) {
-      flags |= SDL_WindowFlags.SDL_WINDOW_MINIMIZED;
-    }
-    if (features.maximized) {
-      flags |= SDL_WindowFlags.SDL_WINDOW_MAXIMIZED;
-    }
-    if (features.mouseGrabbed) {
-      flags |= SDL_WindowFlags.SDL_WINDOW_MOUSE_GRABBED;
-    }
-    if (features.inputFocus) {
-      flags |= SDL_WindowFlags.SDL_WINDOW_INPUT_FOCUS;
-    }
-    if (features.mouseFocus) {
-      flags |= SDL_WindowFlags.SDL_WINDOW_MOUSE_FOCUS;
-    }
-    if (features.external) {
-      flags |= SDL_WindowFlags.SDL_WINDOW_EXTERNAL;
-    }
-    if (features.modal) {
-      flags |= SDL_WindowFlags.SDL_WINDOW_MODAL;
-    }
-    if (features.highPixelDensity) {
-      flags |= SDL_WindowFlags.SDL_WINDOW_HIGH_PIXEL_DENSITY;
-    }
-    if (features.mouseCapture) {
-      flags |= SDL_WindowFlags.SDL_WINDOW_MOUSE_CAPTURE;
-    }
-    if (features.mouseRelativeMode) {
-      flags |= SDL_WindowFlags.SDL_WINDOW_MOUSE_RELATIVE_MODE;
-    }
-    if (features.alwaysOnTop) {
-      flags |= SDL_WindowFlags.SDL_WINDOW_ALWAYS_ON_TOP;
-    }
-    if (features.utility) {
-      flags |= SDL_WindowFlags.SDL_WINDOW_UTILITY;
-    }
-    if (features.tooltip) {
-      flags |= SDL_WindowFlags.SDL_WINDOW_TOOLTIP;
-    }
-    if (features.popupMenu) {
-      flags |= SDL_WindowFlags.SDL_WINDOW_POPUP_MENU;
-    }
-    if (features.keyboardGrabbed) {
-      flags |= SDL_WindowFlags.SDL_WINDOW_KEYBOARD_GRABBED;
-    }
-    if (features.transparent) {
-      flags |= SDL_WindowFlags.SDL_WINDOW_TRANSPARENT;
-    }
-    if (features.notFocusable) {
-      flags |= SDL_WindowFlags.SDL_WINDOW_NOT_FOCUSABLE;
+    for (const [key, value] of Object.entries(features)) {
+      flags |= WINDOW_FEATURES_MAP[key as keyof WindowsFeatures] ?? 0;
     }
 
     return flags;
@@ -194,20 +156,21 @@ export class Window extends Node {
     }
     if (this.#running) return;
     this.#running = true;
+    this.#stack = this.#getChildrenStack(this);
+
     let now = performance.now();
-    let prev = 0;
+    let prev = now;
     let delta = 0;
     let processTime = 0;
     const { promise, resolve } = Promise.withResolvers<void>();
-    const tid = setInterval(() => {
-      if (this.isDisposed) {
-        clearInterval(tid);
-        resolve();
-        return;
-      }
 
+    this.#processDisplayMode();
+
+    const looper = () => {
+      if (this.isDisposed || !this.#running) return;
+
+      now = performance.now();
       delta = now - prev;
-      processTime += delta;
 
       while (SDL.SDL_PollEvent(this.#eventStruct.bunPointer)) {
         const type = this.#eventStruct.properties.type;
@@ -215,6 +178,17 @@ export class Window extends Node {
           this.dispose();
           return;
         }
+
+        if (
+          [
+            SDL_EventType.SDL_EVENT_WINDOW_DISPLAY_CHANGED,
+            SDL_EventType.SDL_EVENT_WINDOW_RESIZED,
+            SDL_EventType.SDL_EVENT_DISPLAY_ORIENTATION,
+          ].includes(type)
+        ) {
+          this.#processDisplayMode();
+        }
+
         if (type === SDL_EventType.SDL_EVENT_KEY_DOWN) {
           const ev = this.#eventStruct.properties.key;
           if (ev.properties.scancode === SDL_Scancode.SDL_SCANCODE_ESCAPE) {
@@ -223,24 +197,28 @@ export class Window extends Node {
           }
         }
         // TODO: handle more events
+
+        // TODO: this.#processDisplayMode(); when display changed
       }
 
-      this.#processDisplayMode();
       const processMaxTime = 1000 / this.getDisplayFrameRate();
-
       if (processTime >= processMaxTime) {
         this.#callProcessStack(processTime);
         processTime = 0;
+      } else {
+        processTime += delta;
       }
 
       this.#callStaticProcessStack(delta);
 
       prev = now;
-      now = performance.now();
-    }, 1);
+      setTimeout(looper, 1);
+    };
+
+    setTimeout(looper, 1);
 
     this.once('dispose', () => {
-      clearInterval(tid);
+      this.#running = false;
       resolve();
     });
 
@@ -267,33 +245,25 @@ export class Window extends Node {
   }
 
   #callProcessStack(delta: number) {
-    const stack: Node[] = this.#getChildrenStack(this).sort(
-      (a, b) => a.priority - b.priority,
-    );
-
-    for (const node of stack) {
+    for (const node of this.#stack) {
       node._beforeProcess(delta);
     }
-    for (const node of stack) {
+    for (const node of this.#stack) {
       node._process(delta);
     }
-    for (const node of stack) {
+    for (const node of this.#stack) {
       node._afterProcess(delta);
     }
   }
 
   #callStaticProcessStack(delta: number) {
-    const stack: Node[] = this.#getChildrenStack(this).sort(
-      (a, b) => a.priority - b.priority,
-    );
-
-    for (const node of stack) {
+    for (const node of this.#stack) {
       node._beforeProcessStatic(delta);
     }
-    for (const node of stack) {
+    for (const node of this.#stack) {
       node._processStatic(delta);
     }
-    for (const node of stack) {
+    for (const node of this.#stack) {
       node._afterProcessStatic(delta);
     }
   }

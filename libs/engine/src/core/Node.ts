@@ -4,6 +4,7 @@ type NodeEvents = {
   'add-child': [child: Node];
   'remove-child': [child: Node];
   rename: [child: Node, prev: string, next: string];
+  priority: [child: Node, priority: number];
 };
 
 export class Node<
@@ -13,7 +14,6 @@ export class Node<
 > extends EventEmitter<T & NodeEvents> {
   readonly #properties: P;
   metadata: Partial<M> = {};
-  #priority: number = 0;
 
   #name: string = '';
   #parent: Node | null = null;
@@ -56,16 +56,6 @@ export class Node<
 
   get children() {
     return [...this.#children];
-  }
-
-  get priority() {
-    return this.#priority;
-  }
-
-  set priority(value: number) {
-    if (this.#priority === value) return;
-    this.#priority = value;
-    this.markAsDirty();
   }
 
   get name() {
