@@ -1,17 +1,18 @@
-import { ulid } from 'ulid';
 import { Dirtyable } from './Dirtyable';
 
 export type EventMap = Record<string | symbol, any[]>;
 
-export type Listener<K, T> = K extends keyof T
-  ? T[K] extends any[]
-    ? (...args: T[K]) => void | Promise<void>
-    : never
-  : never;
+export type Listener<K extends keyof T, T extends EventMap> = T[K] extends any[]
+  ? (...args: T[K]) => void | Promise<void>
+  : () => void | Promise<void>;
 
 export type Disposable = {
   dispose(): void | Promise<void>;
 };
+
+type Args<K extends keyof T, T extends EventMap> = T[K] extends any[]
+  ? T[K]
+  : [];
 
 type BaseEvents = {
   dispose: [];
@@ -19,10 +20,12 @@ type BaseEvents = {
 
 export type MergeEventMaps<A extends EventMap, B extends EventMap> = {
   [K in keyof A | keyof B]: K extends keyof A
-    ? A[K]
+    ? K extends keyof B
+      ? A[K] | B[K]
+      : A[K]
     : K extends keyof B
       ? B[K]
-      : never;
+      : [];
 };
 
 type WithBase<T extends EventMap> = MergeEventMaps<BaseEvents, T>;
@@ -30,15 +33,9 @@ type WithBase<T extends EventMap> = MergeEventMaps<BaseEvents, T>;
 export class EventEmitter<T extends EventMap = {}> extends Dirtyable {
   #isDisposed = false;
   #listeners: Map<keyof WithBase<T>, Set<(...args: any[]) => void>> = new Map();
-  readonly #id: string;
 
   constructor() {
     super();
-    this.#id = ulid();
-  }
-
-  get id() {
-    return this.#id;
   }
 
   get isDisposed() {
@@ -57,7 +54,7 @@ export class EventEmitter<T extends EventMap = {}> extends Dirtyable {
 
   emit<K extends keyof WithBase<T>>(
     eventName: K,
-    ...args: WithBase<T>[K]
+    ...args: Args<K, WithBase<T>>
   ): this {
     if (this.#isDisposed) return this;
     const set = this.#listeners.get(eventName);
@@ -76,7 +73,7 @@ export class EventEmitter<T extends EventMap = {}> extends Dirtyable {
 
   async asyncEmit<K extends keyof WithBase<T>>(
     eventName: K,
-    ...args: WithBase<T>[K]
+    ...args: Args<K, WithBase<T>>
   ) {
     if (this.#isDisposed) return this;
     const set = this.#listeners.get(eventName);
@@ -129,6 +126,7 @@ export class EventEmitter<T extends EventMap = {}> extends Dirtyable {
   ): this {
     if (this.#isDisposed) return this;
     const onceListener = (...args: any[]) => {
+      // @ts-ignore
       listener(...args);
       this.off<K>(eventName, onceListener as Listener<K, WithBase<T>>);
     };

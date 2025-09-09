@@ -1,31 +1,54 @@
+import { ulid } from 'ulid';
 import { EventEmitter, type EventMap, type MergeEventMaps } from '../abstract';
 
 type NodeEvents = {
   'add-child': [child: Node];
   'remove-child': [child: Node];
   rename: [child: Node, prev: string, next: string];
-  priority: [child: Node, priority: number];
 };
+
+export const NODE_ID_MAP = new Map<string, Node>();
+export const NODE_NAME_MAP = new Map<string, Set<Node>>();
+export const NODE_TYPE_MAP = new Map<string, Set<Node>>();
+
+function setOnMap(key: string, node: Node, map: Map<string, Set<Node>>) {
+  if (!key) return;
+
+  if (!map.has(key)) {
+    map.set(key, new Set());
+  }
+  map.get(key)!.add(node);
+}
+
+function deleteOnMap(key: string, node: Node, map: Map<string, Set<Node>>) {
+  if (!key) return;
+
+  if (map.has(key)) {
+    map.get(key)!.delete(node);
+    if (map.get(key)!.size === 0) {
+      map.delete(key);
+    }
+  }
+}
 
 export class Node<
   P extends Record<string, any> = Record<string, any>,
   M extends Record<string, any> = Record<string, any>,
   T extends EventMap = {},
 > extends EventEmitter<MergeEventMaps<NodeEvents, T>> {
+  readonly #id: string;
   readonly #properties: P;
   metadata: Partial<M> = {};
 
   #name: string = '';
   #parent: Node | null = null;
   #children: Node[] = [];
-  #idMap: Map<string, Node> = new Map();
-  #nameMap: Map<string, Set<Node>> = new Map();
-  #typeMap: Map<string, Set<Node>> = new Map();
+
   #bindMap: Map<string, () => void> = new Map();
 
-  constructor() {
+  constructor(name?: string) {
     super();
-
+    this.#id = ulid();
     this.#properties = new Proxy({} as P, {
       set: (target, prop, value) => {
         const key = prop as keyof P;
@@ -44,6 +67,33 @@ export class Node<
         return true;
       },
     });
+
+    NODE_ID_MAP.set(this.#id, this as Node);
+    setOnMap(this.constructor.name, this as Node, NODE_TYPE_MAP);
+    if (name) {
+      this.#name = name;
+      setOnMap(name, this as Node, NODE_NAME_MAP);
+    }
+
+    this.on('dispose', () => {
+      NODE_ID_MAP.delete(this.#id);
+      deleteOnMap(this.#name, this as Node, NODE_NAME_MAP);
+      deleteOnMap(this.constructor.name, this as Node, NODE_TYPE_MAP);
+
+      if (this.#parent) {
+        this.#parent.removeChild(this as Node);
+      }
+
+      const snapshot = [...this.#children];
+      for (const child of snapshot) {
+        child.dispose();
+      }
+      this.#children = [];
+    });
+  }
+
+  get id() {
+    return this.#id;
   }
 
   get properties() {
@@ -54,7 +104,7 @@ export class Node<
     return this.#parent;
   }
 
-  get children() {
+  get children(): readonly Node[] {
     return [...this.#children];
   }
 
@@ -68,8 +118,9 @@ export class Node<
     const oldName = this.#name;
     this.#name = value;
     this.markAsDirty();
-    // @ts-expect-error
-    this.emit('rename', this, oldName, value);
+    deleteOnMap(oldName, this as Node, NODE_NAME_MAP);
+    setOnMap(value, this as Node, NODE_NAME_MAP);
+    (this as Node).emit('rename', this as Node, oldName, value);
   }
 
   #isAncestorOf(node: Node): boolean {
@@ -81,76 +132,39 @@ export class Node<
     return false;
   }
 
-  #setOnMap(key: string, node: Node, map: Map<string, Set<Node>>) {
-    if (!key) return;
-
-    if (!map.has(key)) {
-      map.set(key, new Set());
-    }
-    map.get(key)!.add(node);
-  }
-
-  #deleteOnMap(key: string, node: Node, map: Map<string, Set<Node>>) {
-    if (!key) return;
-
-    if (map.has(key)) {
-      map.get(key)!.delete(node);
-      if (map.get(key)!.size === 0) {
-        map.delete(key);
-      }
-    }
-  }
-
   addChild(child: Node) {
-    if (this.#idMap.has(child.id)) {
-      throw new Error(`Child with id ${child.id} already exists`);
-    }
     if (child === this) {
       throw new Error('Cannot add a node as a child of itself');
     }
-    if (this.#isAncestorOf(child)) {
+    if (child.#isAncestorOf(this as Node)) {
       throw new Error('Cannot add an ancestor as a child (cycle detected)');
     }
-
-    this.#children.push(child);
-    this.#idMap.set(child.id, child);
-    this.#setOnMap(child.name, child, this.#nameMap);
-    this.#setOnMap(child.constructor.name, child, this.#typeMap);
 
     if (child.#parent) {
       child.#parent.removeChild(child);
     }
 
+    if (child.#parent === this) return this;
+    if (this.#children.includes(child)) return this;
+
+    this.#children.push(child);
     child.#parent = this as any;
     this.markAsDirty();
-    // @ts-expect-error
-    this.emit('add-child', child);
+    (this as Node).emit('add-child', child);
 
     // Bind child events
     const unsubscribe = [
       child.subscribe('rename', (c, prev, next) => {
-        this.#deleteOnMap(prev, c, this.#nameMap);
-        this.#setOnMap(next, c, this.#nameMap);
         this.markAsDirty();
-        // @ts-expect-error
-        this.emit('rename', c, prev, next);
+        (this as Node).emit('rename', c, prev, next);
       }),
       child.subscribe('add-child', (c) => {
-        this.#idMap.set(c.id, c);
-        this.#setOnMap(c.name, c, this.#nameMap);
-        this.#setOnMap(c.constructor.name, c, this.#typeMap);
         this.markAsDirty();
-        // @ts-expect-error
-        this.emit('add-child', c);
+        (this as Node).emit('add-child', c);
       }),
       child.subscribe('remove-child', (c) => {
-        this.#idMap.delete(c.id);
-        this.#deleteOnMap(c.name, c, this.#nameMap);
-        this.#deleteOnMap(c.constructor.name, c, this.#typeMap);
-
         this.markAsDirty();
-        // @ts-expect-error
-        this.emit('remove-child', c);
+        (this as Node).emit('remove-child', c);
       }),
     ];
 
@@ -164,14 +178,12 @@ export class Node<
   }
 
   removeChild(child: Node) {
-    if (!this.#idMap.has(child.id)) {
-      throw new Error(`Child with id ${child.id} does not exist`);
+    const index = this.#children.indexOf(child);
+    if (index === -1) {
+      throw new Error('The specified node is not a child of this node');
     }
 
-    this.#children = this.#children.filter((c) => c.id !== child.id);
-    this.#idMap.delete(child.id);
-    this.#deleteOnMap(child.name, child, this.#nameMap);
-    this.#deleteOnMap(child.constructor.name, child, this.#typeMap);
+    this.#children.splice(index, 1);
     child.#parent = null;
 
     // Unbind child events
@@ -182,42 +194,21 @@ export class Node<
     }
 
     this.markAsDirty();
-    // @ts-expect-error
-    this.emit('remove-child', child);
+    (this as Node).emit('remove-child', child);
 
     return this;
   }
 
-  getChildById(id: string): Node | null {
-    return this.#idMap.get(id) ?? null;
-  }
-
-  getChildrenByName(name: string): Node[] {
-    return [...(this.#nameMap.get(name) ?? [])];
-  }
-
-  getChildrenByType<T extends Node>(type: new (...args: any[]) => T): T[] {
-    return [...(this.#typeMap.get(type.name) ?? [])] as T[];
-  }
-
-  findById(id: string): Node | null {
-    const root = this.getRoot();
-    if (root.id === id) return root;
-    return root.#idMap.get(id) ?? null;
+  getById(id: string): Node | null {
+    return this.#id === id ? (this as Node) : (NODE_ID_MAP.get(id) ?? null);
   }
 
   findByName(name: string): Node[] {
-    const root = this.getRoot();
-    const found = [...(root.#nameMap.get(name) ?? [])];
-    if (root.#name === name) found.push(root);
-    return found;
+    return [...(NODE_NAME_MAP.get(name) ?? [])];
   }
 
   findByType<T extends Node>(type: new (...args: any[]) => T): T[] {
-    const root = this.getRoot();
-    const found = [...(root.#typeMap.get(type.name) ?? [])] as T[];
-    if (root instanceof type) found.push(root as T);
-    return found;
+    return [...(NODE_TYPE_MAP.get(type.name) ?? [])] as T[];
   }
 
   getRoot(): Node {
