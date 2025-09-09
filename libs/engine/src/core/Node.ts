@@ -1,4 +1,4 @@
-import { EventEmitter, type EventMap } from '../abstract';
+import { EventEmitter, type EventMap, type MergeEventMaps } from '../abstract';
 
 type NodeEvents = {
   'add-child': [child: Node];
@@ -11,7 +11,7 @@ export class Node<
   P extends Record<string, any> = Record<string, any>,
   M extends Record<string, any> = Record<string, any>,
   T extends EventMap = {},
-> extends EventEmitter<T & NodeEvents> {
+> extends EventEmitter<MergeEventMaps<NodeEvents, T>> {
   readonly #properties: P;
   metadata: Partial<M> = {};
 
@@ -72,9 +72,44 @@ export class Node<
     this.emit('rename', this, oldName, value);
   }
 
+  #isAncestorOf(node: Node): boolean {
+    let curr: Node | null = node.#parent;
+    while (curr) {
+      if (curr === this) return true;
+      curr = curr.#parent;
+    }
+    return false;
+  }
+
+  #setOnMap(key: string, node: Node, map: Map<string, Set<Node>>) {
+    if (!key) return;
+
+    if (!map.has(key)) {
+      map.set(key, new Set());
+    }
+    map.get(key)!.add(node);
+  }
+
+  #deleteOnMap(key: string, node: Node, map: Map<string, Set<Node>>) {
+    if (!key) return;
+
+    if (map.has(key)) {
+      map.get(key)!.delete(node);
+      if (map.get(key)!.size === 0) {
+        map.delete(key);
+      }
+    }
+  }
+
   addChild(child: Node) {
     if (this.#idMap.has(child.id)) {
       throw new Error(`Child with id ${child.id} already exists`);
+    }
+    if (child === this) {
+      throw new Error('Cannot add a node as a child of itself');
+    }
+    if (this.#isAncestorOf(child)) {
+      throw new Error('Cannot add an ancestor as a child (cycle detected)');
     }
 
     this.#children.push(child);
@@ -151,26 +186,6 @@ export class Node<
     this.emit('remove-child', child);
 
     return this;
-  }
-
-  #setOnMap(key: string, node: Node, map: Map<string, Set<Node>>) {
-    if (!key) return;
-
-    if (!map.has(key)) {
-      map.set(key, new Set());
-    }
-    map.get(key)!.add(node);
-  }
-
-  #deleteOnMap(key: string, node: Node, map: Map<string, Set<Node>>) {
-    if (!key) return;
-
-    if (map.has(key)) {
-      map.get(key)!.delete(node);
-      if (map.get(key)!.size === 0) {
-        map.delete(key);
-      }
-    }
   }
 
   getChildById(id: string): Node | null {
