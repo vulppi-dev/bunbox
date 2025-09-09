@@ -5,3 +5,5 @@ export type FixedArray<
 > = R['length'] extends N ? R : FixedArray<T, N, [...R, T]>;
 
 export type WithName<T, S extends string = string> = T & { name: S };
+
+export type Ctor = new (...args: any[]) => any;

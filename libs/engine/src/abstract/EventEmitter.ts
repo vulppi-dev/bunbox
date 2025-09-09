@@ -17,7 +17,7 @@ type InitialEvents = {
   dispose: [];
 };
 
-export class EventEmitter<T extends EventMap = any> extends Dirtyable {
+export class EventEmitter<T extends EventMap = {}> extends Dirtyable {
   #isDisposed = false;
   #listeners: Map<keyof (T & InitialEvents), Set<(...args: any[]) => void>> =
     new Map();

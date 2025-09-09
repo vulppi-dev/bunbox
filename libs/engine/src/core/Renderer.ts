@@ -11,6 +11,7 @@ import { POINTERS_MAP } from '../stores/global';
 import { getChildrenStack } from '../utils/node';
 import { Node } from './Node';
 import { Window } from './Window';
+import { Mesh } from '../elements/Mesh';
 
 export class Renderer extends Node {
   #clearColor = new Color();
@@ -26,18 +27,18 @@ export class Renderer extends Node {
   #heightPtr = new Uint32Array(1);
 
   #ready = false;
-  #stack: Node[] = [];
+  #meshes: Mesh[] = [];
 
   constructor() {
     super();
 
     this.on('add-child', () => {
       if (!this.#ready) return;
-      this.#stack = getChildrenStack(this);
+      this.#meshes = getChildrenStack(this, Mesh);
     });
     this.on('remove-child', () => {
       if (!this.#ready) return;
-      this.#stack = getChildrenStack(this);
+      this.#meshes = getChildrenStack(this, Mesh);
     });
   }
 
@@ -62,7 +63,7 @@ export class Renderer extends Node {
     );
 
     this.#ready = true;
-    this.#stack = getChildrenStack(this);
+    this.#meshes = getChildrenStack(this, Mesh);
   }
 
   override _afterProcess(_: number): void {

@@ -1,5 +1,4 @@
 import { EventEmitter, type EventMap } from '../abstract';
-import type { RenderProps } from '../types';
 
 type NodeEvents = {
   'add-child': [child: Node];
@@ -11,7 +10,7 @@ type NodeEvents = {
 export class Node<
   P extends Record<string, any> = Record<string, any>,
   M extends Record<string, any> = Record<string, any>,
-  T extends EventMap = any,
+  T extends EventMap = {},
 > extends EventEmitter<T & NodeEvents> {
   readonly #properties: P;
   metadata: Partial<M> = {};
@@ -87,7 +86,7 @@ export class Node<
       child.#parent.removeChild(child);
     }
 
-    child.#parent = this;
+    child.#parent = this as any;
     this.markAsDirty();
     // @ts-expect-error
     this.emit('add-child', child);
@@ -207,7 +206,7 @@ export class Node<
   }
 
   getRoot(): Node {
-    let node: Node = this;
+    let node: Node = this as any;
     while (node.#parent) {
       node = node.#parent;
     }
