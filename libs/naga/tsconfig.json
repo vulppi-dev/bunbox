@@ -1,4 +1,12 @@
 {
+  "exclude": [
+    "node_modules",
+    "dist",
+    "example"
+  ],
+  "include": [
+    "src/**/*.ts",
+  ],
   "compilerOptions": {
     // Environment setup & latest features
     "lib": [
@@ -24,10 +32,7 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false,
-    "paths": {
-      "$libs/*": [
-        "./src/libs/*"
-      ]
-    }
+    "outDir": "./dist",
+    "declarationDir": "./dist",
   }
 }
