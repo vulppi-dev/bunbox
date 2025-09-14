@@ -5,6 +5,14 @@
       "path": "./libs/engine"
     },
     {
+      "name": "tree",
+      "path": "./libs/tree"
+    },
+    {
+      "name": "utils",
+      "path": "./libs/utils"
+    },
+    {
       "name": "sdl3",
       "path": "./libs/sdl3"
     },

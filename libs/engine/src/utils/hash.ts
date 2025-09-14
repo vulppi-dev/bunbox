@@ -79,19 +79,3 @@ export function xxhash32(input: string | Uint8Array, seed = 0): number {
 
   return h32 >>> 0;
 }
-
-export async function sha256(text: string): Promise<string> {
-  // converte string em Uint8Array
-  const encoder = new TextEncoder();
-  const data = encoder.encode(text);
-
-  // calcula o hash (retorna ArrayBuffer)
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-
-  // converte ArrayBuffer em hex
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hashHex = hashArray
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
-  return hashHex;
-}

@@ -1,4 +1,4 @@
-import { Dirtyable } from './Dirtyable';
+import { DirtyState } from './DirtyState';
 
 export type EventMap = Record<string | symbol, any[]>;
 
@@ -30,7 +30,7 @@ export type MergeEventMaps<A extends EventMap, B extends EventMap> = {
 
 type WithBase<T extends EventMap> = MergeEventMaps<BaseEvents, T>;
 
-export class EventEmitter<T extends EventMap = {}> extends Dirtyable {
+export class EventEmitter<T extends EventMap = {}> extends DirtyState {
   #isDisposed = false;
   #listeners: Map<keyof WithBase<T>, Set<(...args: any[]) => void>> = new Map();
 

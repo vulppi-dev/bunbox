@@ -1,8 +1,11 @@
 import type { FixedArray } from './types';
-import { Dirtyable } from './Dirtyable';
+import { DirtyState } from './DirtyState';
 import type { Cloneable } from './Cloneable';
 
-export abstract class Calculable<N extends number = 1> extends Dirtyable implements Cloneable {
+export abstract class Calculable<N extends number = 1>
+  extends DirtyState
+  implements Cloneable
+{
   abstract sum(vector: this): this;
   abstract sub(vector: this): this;
   abstract mul(vector: this): this;

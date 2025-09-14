@@ -1,18 +1,8 @@
 {
-  "exclude": [
-    "node_modules",
-    "dist",
-    "example"
-  ],
-  "include": [
-    "src/**/*.ts",
-  ],
   "compilerOptions": {
     // Environment setup & latest features
-    "lib": [
-      "ESNext"
-    ],
-    "target": "esnext",
+    "lib": ["ESNext"],
+    "target": "ESNext",
     "module": "Preserve",
     "moduleDetection": "force",
     "jsx": "react-jsx",
@@ -21,8 +11,7 @@
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
-    "declaration": true,
-    "emitDeclarationOnly": true,
+    "noEmit": true,
     // Best practices
     "strict": true,
     "skipLibCheck": true,
@@ -33,5 +22,8 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false,
+    "paths": {
+      "$libs/*": ["./src/libs/*"]
+    }
   }
 }

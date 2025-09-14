@@ -1,7 +1,7 @@
 {
-  "name": "@bunbox/struct",
-  "version": "1.0.7",
-  "description": "TypeScript library for defining and working with C-like structs in memory, with support for alignment, nested structs, enums, arrays, and FFI/WebAssembly interop.",
+  "name": "@bunbox/tree",
+  "version": "0.0.1",
+  "description": "Tree data structure implementation for Bunbox",
   "author": {
     "name": "Renato Rodrigues",
     "email": "renato@vulppi.dev"
@@ -11,17 +11,12 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/vulppi-dev/bunbox",
-    "directory": "libs/struct"
+    "directory": "libs/tree"
   },
   "keywords": [
     "bunbox",
-    "struct",
-    "binary",
-    "buffer",
-    "typescript",
-    "serialization",
-    "ffi",
-    "wasm"
+    "tree",
+    "typescript"
   ],
   "type": "module",
   "main": "./dist/index.js",
@@ -31,13 +26,16 @@
     "dev": "tsc --watch --noEmit true --emitDeclarationOnly false",
     "build": "bun build:bundle && bun build:types",
     "build:bundle": "bun build src/index.ts --outdir dist --format esm",
-    "build:types": "tsc --project tsconfig.json src/index.ts",
+    "build:types": "tsc --emitDeclarationOnly --declaration --declarationDir dist --outDir dist src/index.ts",
     "pub": "npm publish --access=public --tag=latest",
     "format": "prettier --write ."
   },
-  "dependencies": {},
+  "dependencies": {
+    "@bunbox/utils": "^0.0.1",
+    "ulid": "^3.0.1"
+  },
   "devDependencies": {
-    "@types/node": "^24.3.3",
+    "@types/node": "^24.3.0",
     "prettier": "^3.6.2",
     "typescript": "^5.9.2"
   },

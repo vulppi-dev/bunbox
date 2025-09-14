@@ -1,4 +1,4 @@
-export class Dirtyable {
+export class DirtyState {
   #isDirty: boolean = false;
 
   get isDirty(): boolean {
