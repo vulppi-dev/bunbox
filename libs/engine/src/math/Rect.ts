@@ -1,4 +1,4 @@
-import { Calculable } from '../abstract';
+import { Calculable } from '@bunbox/utils';
 import { Vector2 } from './Vector2';
 
 export class Rect extends Calculable<4> {

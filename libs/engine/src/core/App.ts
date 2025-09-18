@@ -1,11 +1,11 @@
 import { cstr, SDL } from '@bunbox/sdl3';
-import { EventEmitter } from '../abstract';
 import {
   APP_FEATURES_MAP,
   APP_LOG_CATEGORY_MAP,
   APP_LOG_PRIORITY_MAP,
 } from '../constants';
 import type { AppFeature, AppLogCategory, AppLogPriority } from '../types';
+import { EventEmitter } from '@bunbox/utils';
 
 export type AppOptions = {
   /** @default ['video','events'] */

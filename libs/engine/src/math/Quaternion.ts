@@ -1,5 +1,5 @@
-import { AbstractVector } from '../abstract';
 import type { FixedArray } from '../types';
+import { AbstractVector } from './AbstractVector';
 import type { Vector3 } from './Vector3';
 
 /**

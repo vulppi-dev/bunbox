@@ -4,13 +4,13 @@ import { clamp } from '@vulppi/toolbelt/math';
 import { Euler } from './Euler';
 import { Quaternion } from './Quaternion';
 import { Vector3 } from './Vector3';
-import { Dirtyable } from '../abstract';
 import type { FixedArray } from '../types';
+import { DirtyState } from '@bunbox/utils';
 
 /**
  * Represents a 4x4 matrix.
  */
-export class Matrix extends Dirtyable {
+export class Matrix extends DirtyState {
   #m = new Float32Array([
     1, 0, 0, 0, // col 0
     0, 1, 0, 0, // col 1

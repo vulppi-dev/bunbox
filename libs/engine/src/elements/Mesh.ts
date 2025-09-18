@@ -6,6 +6,10 @@ export class Mesh extends Node3D {
   #geometry: Geometry | null = null;
   #materials: Material[] = [];
 
+  protected override _getType(): string {
+    return 'Mesh';
+  }
+
   get geometry() {
     return this.#geometry;
   }

@@ -1,4 +1,4 @@
-import { Calculable } from './Calculable';
+import { Calculable } from '@bunbox/utils';
 
 export abstract class AbstractVector<
   N extends number = 1,

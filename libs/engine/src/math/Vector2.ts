@@ -1,5 +1,5 @@
-import { AbstractVector } from '../abstract';
 import type { FixedArray } from '../types';
+import { AbstractVector } from './AbstractVector';
 
 export class Vector2 extends AbstractVector<2> {
   #x: number;

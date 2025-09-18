@@ -9,9 +9,9 @@ import type { Pointer } from 'bun:ffi';
 import { Color } from '../math';
 import { POINTERS_MAP } from '../stores/global';
 import { getChildrenStack } from '../utils/node';
-import { Node } from './Node';
 import { Window } from './Window';
 import { Mesh } from '../elements/Mesh';
+import { Node } from './Node';
 
 export class Renderer extends Node {
   #clearColor = new Color();
@@ -40,6 +40,10 @@ export class Renderer extends Node {
       if (!this.#ready) return;
       this.#meshes = getChildrenStack(this, Mesh);
     });
+  }
+
+  protected override _getType(): string {
+    return 'Renderer';
   }
 
   get clearColor() {

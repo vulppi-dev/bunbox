@@ -82,11 +82,11 @@ export class Window extends Node {
 
     this.on('add-child', () => {
       if (!this.#running) return;
-      this.#stack = getChildrenStack(this);
+      this.#stack = getChildrenStack(this, Node);
     });
     this.on('remove-child', () => {
       if (!this.#running) return;
-      this.#stack = getChildrenStack(this);
+      this.#stack = getChildrenStack(this, Node);
     });
 
     this.on('dispose', () => {
@@ -98,6 +98,10 @@ export class Window extends Node {
     app.on('dispose', () => {
       this.dispose();
     });
+  }
+
+  protected override _getType(): string {
+    return 'Window';
   }
 
   get title() {
@@ -133,7 +137,7 @@ export class Window extends Node {
     }
     if (this.#running) return;
     this.#running = true;
-    this.#stack = getChildrenStack(this);
+    this.#stack = getChildrenStack(this, Node);
 
     let now = performance.now();
     let prev = now;

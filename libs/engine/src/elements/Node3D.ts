@@ -1,9 +1,13 @@
-import type { EventMap } from '../abstract';
+import type { EventMap } from '@bunbox/utils';
 import { Node } from '../core';
 import { Euler, Matrix, Quaternion, Vector3 } from '../math';
 import { Layer } from './Layer';
 
-export class Node3D<T extends EventMap = {}> extends Node<T> {
+export class Node3D<
+  P extends Record<string, any> = Record<string, any>,
+  M extends Record<string, any> = Record<string, any>,
+  T extends EventMap = {},
+> extends Node<P, M, T> {
   #matrix: Matrix = new Matrix();
   #position: Vector3 = new Vector3();
   #scale: Vector3 = new Vector3(1, 1, 1);
@@ -11,6 +15,10 @@ export class Node3D<T extends EventMap = {}> extends Node<T> {
   #rotationQ: Quaternion | null = null;
 
   #layer: Layer = new Layer();
+
+  protected override _getType(): string {
+    return 'Node3D';
+  }
 
   get transform(): Matrix {
     return this.#matrix;

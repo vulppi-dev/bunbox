@@ -1,4 +1,4 @@
-import { Calculable } from '../abstract';
+import { Calculable } from '@bunbox/utils';
 import type { FixedArray } from '../types';
 
 export const EULER_ORDERS = ['xyz', 'xzy', 'yxz', 'yzx', 'zxy', 'zyx'] as const;

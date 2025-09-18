@@ -1,6 +1,6 @@
-import { Dirtyable } from '../abstract';
+import { DirtyState } from '@bunbox/utils';
 
-export class Layer extends Dirtyable {
+export class Layer extends DirtyState {
   #layerValue = 255;
 
   hasLayer(value: number): boolean {

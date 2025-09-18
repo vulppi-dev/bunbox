@@ -1,10 +1,9 @@
-import type { Node } from '../core';
-import type { Ctor } from '../types';
+import type { AbstractNode } from '@bunbox/tree';
 
-type NodeCtor = new (...args: any[]) => Node;
+type NodeCtor = new (...args: any[]) => AbstractNode;
 
 export function getChildrenStack<C extends NodeCtor>(
-  node: Node,
+  node: AbstractNode,
   filter?: C,
 ): InstanceType<C>[] {
   const stack: InstanceType<C>[] = [];
