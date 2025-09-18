@@ -1,6 +1,6 @@
 {
   "name": "@bunbox/struct",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "TypeScript library for defining and working with C-like structs in memory, with support for alignment, nested structs, enums, arrays, and FFI/WebAssembly interop.",
   "author": {
     "name": "Renato Rodrigues",
@@ -31,7 +31,7 @@
     "dev": "tsc --watch --noEmit true --emitDeclarationOnly false",
     "build": "bun build:bundle && bun build:types",
     "build:bundle": "bun build src/index.ts --outdir dist --format esm",
-    "build:types": "tsc --project tsconfig.json src/index.ts",
+    "build:types": "tsc --project tsconfig.json",
     "pub": "npm publish --access=public --tag=latest",
     "format": "prettier --write ."
   },

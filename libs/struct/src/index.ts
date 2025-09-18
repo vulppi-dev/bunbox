@@ -40,6 +40,7 @@ export abstract class AbstractStruct<TSchema extends StructSchema> {
   private _offsets: { [K in keyof TSchema]: number };
   private _retained: { [K in keyof TSchema]: Uint8Array | Uint8Array[] };
   private _isOverlay: boolean;
+  private _parent: AbstractStruct<any> | null = null;
 
   private _buffer: DataView;
   private _u8: Uint8Array;
@@ -78,6 +79,16 @@ export abstract class AbstractStruct<TSchema extends StructSchema> {
     this._schema = schema;
 
     populateValues(this._schema, this._values);
+
+    for (const key in this._values) {
+      if (
+        typeof this._values[key] !== 'object' ||
+        !((this._values[key] as AbstractStruct<any>) instanceof AbstractStruct)
+      )
+        continue;
+      const s = this._values[key] as AbstractStruct<any>;
+      s._parent = this;
+    }
 
     const { size, alignment } = calcSchemaLayout(
       this._schema,
@@ -184,7 +195,18 @@ export abstract class AbstractStruct<TSchema extends StructSchema> {
         }
 
         this._values[prop as keyof TSchema] = value;
+        if (
+          value &&
+          typeof value === 'object' &&
+          (value as AbstractStruct<any>) instanceof AbstractStruct
+        ) {
+          const s = value as AbstractStruct<any>;
+          s._parent = this;
+        }
         this.#write(prop as keyof TSchema);
+        if (this._parent) {
+          this._parent.#writeChild(this);
+        }
 
         return true;
       },
@@ -345,6 +367,15 @@ export abstract class AbstractStruct<TSchema extends StructSchema> {
   /*
    * MARK: Write struct fields into this buffer
    */
+
+  #writeChild(child: AbstractStruct<any>) {
+    const entry = Object.entries(this._values).find(([, v]) => v === child);
+    if (!entry) {
+      this._parent = null;
+      return;
+    }
+    this.#write(entry[0] as keyof TSchema);
+  }
 
   #write(key: keyof TSchema) {
     const spec = this._schema[key]!;
