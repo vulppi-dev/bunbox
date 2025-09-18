@@ -1,7 +1,17 @@
 {
+  "exclude": [
+    "node_modules",
+    "dist",
+    "example"
+  ],
+  "include": [
+    "src/**/*.ts",
+  ],
   "compilerOptions": {
     // Environment setup & latest features
-    "lib": ["ESNext"],
+    "lib": [
+      "ESNext"
+    ],
     "target": "ESNext",
     "module": "Preserve",
     "moduleDetection": "force",
@@ -11,7 +21,6 @@
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
-    "noEmit": true,
     // Best practices
     "strict": true,
     "skipLibCheck": true,
@@ -22,8 +31,10 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false,
-    "paths": {
-      "$libs/*": ["./src/libs/*"]
-    }
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "rootDir": "./src",
+    "outDir": "./dist",
+    "declarationDir": "./dist",
   }
 }
