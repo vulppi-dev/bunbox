@@ -6,16 +6,20 @@ import {
 import { ulid } from 'ulid';
 
 type NodeEvents = {
-  'add-child': [child: Node];
-  'remove-child': [child: Node];
-  rename: [child: Node, prev: string, next: string];
+  'add-child': [child: AbstractNode];
+  'remove-child': [child: AbstractNode];
+  rename: [child: AbstractNode, prev: string, next: string];
 };
 
-export const NODE_ID_MAP = new Map<string, Node>();
-export const NODE_NAME_MAP = new Map<string, Set<Node>>();
-export const NODE_TYPE_MAP = new Map<string, Set<Node>>();
+const NODE_ID_MAP = new Map<string, AbstractNode>();
+const NODE_NAME_MAP = new Map<string, Set<AbstractNode>>();
+const NODE_TYPE_MAP = new Map<string, Set<AbstractNode>>();
 
-function setOnMap(key: string, node: Node, map: Map<string, Set<Node>>) {
+function setOnMap(
+  key: string,
+  node: AbstractNode,
+  map: Map<string, Set<AbstractNode>>,
+) {
   if (!key) return;
 
   if (!map.has(key)) {
@@ -24,7 +28,11 @@ function setOnMap(key: string, node: Node, map: Map<string, Set<Node>>) {
   map.get(key)!.add(node);
 }
 
-function deleteOnMap(key: string, node: Node, map: Map<string, Set<Node>>) {
+function deleteOnMap(
+  key: string,
+  node: AbstractNode,
+  map: Map<string, Set<AbstractNode>>,
+) {
   if (!key) return;
 
   if (map.has(key)) {
@@ -35,7 +43,7 @@ function deleteOnMap(key: string, node: Node, map: Map<string, Set<Node>>) {
   }
 }
 
-export class Node<
+export abstract class AbstractNode<
   P extends Record<string, any> = Record<string, any>,
   M extends Record<string, any> = Record<string, any>,
   T extends EventMap = {},
@@ -45,8 +53,8 @@ export class Node<
   metadata: Partial<M> = {};
 
   #name: string = '';
-  #parent: Node | null = null;
-  #children: Node[] = [];
+  #parent: AbstractNode | null = null;
+  #children: Set<AbstractNode> = new Set();
 
   #bindMap: Map<string, () => void> = new Map();
 
@@ -72,27 +80,27 @@ export class Node<
       },
     });
 
-    NODE_ID_MAP.set(this.#id, this as Node);
-    setOnMap(this.constructor.name, this as Node, NODE_TYPE_MAP);
+    NODE_ID_MAP.set(this.#id, this as AbstractNode);
+    setOnMap(this._getType(), this as AbstractNode, NODE_TYPE_MAP);
     if (name) {
       this.#name = name;
-      setOnMap(name, this as Node, NODE_NAME_MAP);
+      setOnMap(name, this as AbstractNode, NODE_NAME_MAP);
     }
 
     this.on('dispose', () => {
       NODE_ID_MAP.delete(this.#id);
-      deleteOnMap(this.#name, this as Node, NODE_NAME_MAP);
-      deleteOnMap(this.constructor.name, this as Node, NODE_TYPE_MAP);
+      deleteOnMap(this.#name, this as AbstractNode, NODE_NAME_MAP);
+      deleteOnMap(this._getType(), this as AbstractNode, NODE_TYPE_MAP);
 
       if (this.#parent) {
-        this.#parent.removeChild(this as Node);
+        this.#parent.removeChild(this as AbstractNode);
       }
 
       const snapshot = [...this.#children];
       for (const child of snapshot) {
         child.dispose();
       }
-      this.#children = [];
+      this.#children.clear();
     });
   }
 
@@ -108,8 +116,8 @@ export class Node<
     return this.#parent;
   }
 
-  get children(): readonly Node[] {
-    return [...this.#children];
+  get children(): readonly AbstractNode[] {
+    return Object.freeze([...this.#children]);
   }
 
   get name() {
@@ -122,13 +130,13 @@ export class Node<
     const oldName = this.#name;
     this.#name = value;
     this.markAsDirty();
-    deleteOnMap(oldName, this as Node, NODE_NAME_MAP);
-    setOnMap(value, this as Node, NODE_NAME_MAP);
-    (this as Node).emit('rename', this as Node, oldName, value);
+    deleteOnMap(oldName, this as AbstractNode, NODE_NAME_MAP);
+    setOnMap(value, this as AbstractNode, NODE_NAME_MAP);
+    (this as AbstractNode).emit('rename', this as AbstractNode, oldName, value);
   }
 
-  #isAncestorOf(node: Node): boolean {
-    let curr: Node | null = node.#parent;
+  #isAncestorOf(node: AbstractNode): boolean {
+    let curr: AbstractNode | null = node.#parent;
     while (curr) {
       if (curr === this) return true;
       curr = curr.#parent;
@@ -136,11 +144,11 @@ export class Node<
     return false;
   }
 
-  addChild(child: Node) {
+  addChild(child: AbstractNode) {
     if (child === this) {
       throw new Error('Cannot add a node as a child of itself');
     }
-    if (child.#isAncestorOf(this as Node)) {
+    if (child.#isAncestorOf(this as AbstractNode)) {
       throw new Error('Cannot add an ancestor as a child (cycle detected)');
     }
 
@@ -148,27 +156,27 @@ export class Node<
       child.#parent.removeChild(child);
     }
 
-    if (child.#parent === this) return this;
-    if (this.#children.includes(child)) return this;
+    if (child.#parent === this) return true;
+    if (this.#children.has(child)) return true;
 
-    this.#children.push(child);
+    this.#children.add(child);
     child.#parent = this as any;
     this.markAsDirty();
-    (this as Node).emit('add-child', child);
+    (this as AbstractNode).emit('add-child', child);
 
     // Bind child events
     const unsubscribe = [
       child.subscribe('rename', (c, prev, next) => {
         this.markAsDirty();
-        (this as Node).emit('rename', c, prev, next);
+        (this as AbstractNode).emit('rename', c, prev, next);
       }),
       child.subscribe('add-child', (c) => {
         this.markAsDirty();
-        (this as Node).emit('add-child', c);
+        (this as AbstractNode).emit('add-child', c);
       }),
       child.subscribe('remove-child', (c) => {
         this.markAsDirty();
-        (this as Node).emit('remove-child', c);
+        (this as AbstractNode).emit('remove-child', c);
       }),
     ];
 
@@ -178,16 +186,15 @@ export class Node<
 
     child._ready();
 
-    return this;
+    return true;
   }
 
-  removeChild(child: Node) {
-    const index = this.#children.indexOf(child);
-    if (index === -1) {
-      throw new Error('The specified node is not a child of this node');
+  removeChild(child: AbstractNode) {
+    if (!this.#children.has(child)) {
+      return false;
     }
 
-    this.#children.splice(index, 1);
+    this.#children.delete(child);
     child.#parent = null;
 
     // Unbind child events
@@ -198,25 +205,27 @@ export class Node<
     }
 
     this.markAsDirty();
-    (this as Node).emit('remove-child', child);
+    (this as AbstractNode).emit('remove-child', child);
 
-    return this;
+    return true;
   }
 
-  getById(id: string): Node | null {
-    return this.#id === id ? (this as Node) : (NODE_ID_MAP.get(id) ?? null);
+  getById(id: string): AbstractNode | null {
+    return this.#id === id
+      ? (this as AbstractNode)
+      : (NODE_ID_MAP.get(id) ?? null);
   }
 
-  findByName(name: string): Node[] {
+  findByName(name: string): AbstractNode[] {
     return [...(NODE_NAME_MAP.get(name) ?? [])];
   }
 
-  findByType<T extends Node>(type: new (...args: any[]) => T): T[] {
+  findByType<T extends AbstractNode>(type: new (...args: any[]) => T): T[] {
     return [...(NODE_TYPE_MAP.get(type.name) ?? [])] as T[];
   }
 
-  getRoot(): Node {
-    let node: Node = this as any;
+  getRoot(): AbstractNode {
+    let node: AbstractNode = this as any;
     while (node.#parent) {
       node = node.#parent;
     }
@@ -225,5 +234,17 @@ export class Node<
 
   protected _ready(): void {
     // Override in subclasses
+  }
+
+  protected abstract _getType(): string;
+}
+
+export class Node<
+  P extends Record<string, any> = Record<string, any>,
+  M extends Record<string, any> = Record<string, any>,
+  T extends EventMap = {},
+> extends AbstractNode<P, M, T> {
+  protected override _getType(): string {
+    return 'Node';
   }
 }
