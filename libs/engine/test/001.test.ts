@@ -1,4 +1,5 @@
 import { App, Renderer, Window } from '../src/core';
+import { Vector2 } from '../src/math';
 
 const app = new App();
 app.setLogPriority('verbose');
@@ -6,13 +7,17 @@ app.setLogPriority('verbose');
 const win = new Window({
   app,
   title: '2D Square',
-  x: 16,
-  y: 16,
   features: {
     resizable: true,
     highPixelDensity: true,
   },
 });
+win.on('quit', (ev) => {
+  win.dispose();
+  app.dispose();
+});
+
+win.size = new Vector2(200, 200);
 
 const render = new Renderer();
 render.clearColor.set(1.0, 0.4, 0.0, 1);
@@ -216,5 +221,3 @@ win.addChild(render);
 
 //   await sleep(0);
 // }
-
-await win.startLooper();

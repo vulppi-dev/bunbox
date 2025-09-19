@@ -9,3 +9,4 @@ export * from './SDL_HitTestResult';
 export * from './SDL_ProgressState';
 export * from './SDL_SystemTheme';
 export * from './SDL_WindowFlags';
+export * from './SDL_WindowCreateProperties';

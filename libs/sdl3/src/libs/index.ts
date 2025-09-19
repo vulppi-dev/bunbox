@@ -48,7 +48,7 @@ if (!SDL_PATH) {
   );
 }
 
-const { symbols: SDL, close } = dlopen(SDL_PATH, {
+export const { symbols: SDL, close: SDL_Close } = dlopen(SDL_PATH, {
   ...functions.ASSERT_BINDINGS,
   ...functions.ASYNC_IO_BINDINGS,
   ...functions.ATOMIC_BINDINGS,
@@ -103,7 +103,5 @@ const { symbols: SDL, close } = dlopen(SDL_PATH, {
 });
 
 process.on('exit', () => {
-  close();
+  SDL_Close();
 });
-
-export { SDL };

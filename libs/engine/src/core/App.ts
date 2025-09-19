@@ -1,4 +1,4 @@
-import { cstr, SDL } from '@bunbox/sdl3';
+import { cstr, SDL, SDL_Close } from '@bunbox/sdl3';
 import {
   APP_FEATURES_MAP,
   APP_LOG_CATEGORY_MAP,
@@ -41,32 +41,32 @@ export class App extends EventEmitter {
     let flags = 0;
     for (const feature of features) {
       flags |= APP_FEATURES_MAP[feature] ?? 0;
-
-      // Initialize SDL with the specified flags
-      const result = SDL.SDL_Init(flags);
-      if (!result) {
-        throw new Error(`SDL: ${SDL.SDL_GetError()}`);
-      }
-
-      SDL.SDL_SetAppMetadata(cstr(name), cstr(version), cstr(identifier));
-      SDL.SDL_SetHint(cstr('SDL_LOGGING'), cstr('test=verbose,*=info'));
-
-      this.on('dispose', () => {
-        SDL.SDL_Quit();
-        App.#singleAppInstance = null;
-      });
-
-      process.on('exit', () => {
-        this.dispose();
-      });
-
-      Object.defineProperty(globalThis, 'appInstance', {
-        value: this,
-        writable: false,
-        configurable: false,
-        enumerable: true,
-      });
     }
+
+    // Initialize SDL with the specified flags
+    const result = SDL.SDL_Init(flags);
+    if (!result) {
+      throw new Error(`SDL: ${SDL.SDL_GetError()}`);
+    }
+
+    SDL.SDL_SetAppMetadata(cstr(name), cstr(version), cstr(identifier));
+    SDL.SDL_SetHint(cstr('SDL_LOGGING'), cstr('test=verbose,*=info'));
+
+    this.on('dispose', () => {
+      SDL.SDL_Quit();
+      App.#singleAppInstance = null;
+    });
+
+    process.on('exit', () => {
+      this.dispose();
+    });
+
+    Object.defineProperty(globalThis, 'appInstance', {
+      value: this,
+      writable: false,
+      configurable: false,
+      enumerable: true,
+    });
   }
 
   setLogPriority(priority: AppLogPriority) {
