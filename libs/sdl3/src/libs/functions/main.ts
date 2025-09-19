@@ -35,7 +35,7 @@ export const MAIN_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_RegisterApp
    */
-  SDL_RegisterApp: { args: ['cstring', 'u32', 'ptr'], returns: 'bool' },
+  // SDL_RegisterApp: { args: ['cstring', 'u32', 'ptr'], returns: 'bool' }, --- NOT FOUND ---
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_RunApp
    */
@@ -47,5 +47,5 @@ export const MAIN_BINDINGS = {
   /**
    * @description https://wiki.libsdl.org/SDL3/SDL_UnregisterApp
    */
-  SDL_UnregisterApp: { args: [], returns: 'void' },
+  // SDL_UnregisterApp: { args: [], returns: 'void' }, --- NOT FOUND ---
 } as const satisfies Record<string, FFIFunction>;
