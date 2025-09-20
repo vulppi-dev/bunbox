@@ -2,7 +2,7 @@ import { Event, type EventOptions } from './Event';
 
 export type KeyEventOptions = {
   windowId: number;
-  which: number;
+  deviceId: number;
   code: number;
   key: number;
   ctrl: boolean;
@@ -14,7 +14,7 @@ export type KeyEventOptions = {
 
 export class KeyEvent extends Event {
   #windowId: number;
-  #which: number;
+  #deviceId: number;
   #code: number;
   #key: number;
   #ctrl: boolean;
@@ -26,7 +26,7 @@ export class KeyEvent extends Event {
   constructor(options: KeyEventOptions) {
     super(options);
     this.#windowId = options.windowId;
-    this.#which = options.which;
+    this.#deviceId = options.deviceId;
     this.#code = options.code;
     this.#key = options.key;
     this.#ctrl = options.ctrl;
@@ -40,8 +40,8 @@ export class KeyEvent extends Event {
     return this.#windowId;
   }
 
-  get which() {
-    return this.#which;
+  get deviceId() {
+    return this.#deviceId;
   }
 
   get code() {

@@ -20,6 +20,7 @@ import { Node } from './Node';
 import { promiseDelay } from '@vulppi/toolbelt';
 import { getChildrenStack } from '../utils/node';
 import {
+  DeviceEvent,
   DisplayEvent,
   Event,
   KeyEvent,
@@ -735,7 +736,7 @@ export class App extends Node {
           reserved: evStruct.properties.reserved,
           timestamp: timestampToDate(evStruct.properties.timestamp),
           windowId: evStruct.properties.windowID,
-          which: evStruct.properties.which,
+          deviceId: evStruct.properties.which,
           code: evStruct.properties.scancode,
           key: evStruct.properties.key,
           repeat: Boolean(evStruct.properties.repeat),
@@ -754,7 +755,7 @@ export class App extends Node {
           reserved: evStruct.properties.reserved,
           timestamp: timestampToDate(evStruct.properties.timestamp),
           windowId: evStruct.properties.windowID,
-          which: evStruct.properties.which,
+          deviceId: evStruct.properties.which,
           code: evStruct.properties.scancode,
           key: evStruct.properties.key,
           repeat: Boolean(evStruct.properties.repeat),
@@ -828,9 +829,27 @@ export class App extends Node {
         break;
       }
       case SDL_EventType.SDL_EVENT_KEYBOARD_ADDED: {
+        const evStruct = this.#eventStruct.properties.kdevice;
+
+        event = new DeviceEvent({
+          type: 'deviceAdded',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          deviceType: 'keyboard',
+          deviceId: evStruct.properties.which,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_KEYBOARD_REMOVED: {
+        const evStruct = this.#eventStruct.properties.kdevice;
+
+        event = new DeviceEvent({
+          type: 'deviceRemoved',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          deviceType: 'keyboard',
+          deviceId: evStruct.properties.which,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_MOUSE_MOTION: {
@@ -846,9 +865,28 @@ export class App extends Node {
         break;
       }
       case SDL_EventType.SDL_EVENT_MOUSE_ADDED: {
+        const evStruct = this.#eventStruct.properties.mdevice;
+
+        event = new DeviceEvent({
+          type: 'deviceAdded',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          deviceType: 'mouse',
+          deviceId: evStruct.properties.which,
+        });
+
         break;
       }
       case SDL_EventType.SDL_EVENT_MOUSE_REMOVED: {
+        const evStruct = this.#eventStruct.properties.mdevice;
+
+        event = new DeviceEvent({
+          type: 'deviceRemoved',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          deviceType: 'mouse',
+          deviceId: evStruct.properties.which,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_JOYSTICK_AXIS_MOTION: {
@@ -867,9 +905,27 @@ export class App extends Node {
         break;
       }
       case SDL_EventType.SDL_EVENT_JOYSTICK_ADDED: {
+        const evStruct = this.#eventStruct.properties.jdevice;
+
+        event = new DeviceEvent({
+          type: 'deviceAdded',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          deviceType: 'joystick',
+          deviceId: evStruct.properties.which,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_JOYSTICK_REMOVED: {
+        const evStruct = this.#eventStruct.properties.jdevice;
+
+        event = new DeviceEvent({
+          type: 'deviceRemoved',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          deviceType: 'joystick',
+          deviceId: evStruct.properties.which,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_JOYSTICK_BATTERY_UPDATED: {
@@ -888,9 +944,27 @@ export class App extends Node {
         break;
       }
       case SDL_EventType.SDL_EVENT_GAMEPAD_ADDED: {
+        const evStruct = this.#eventStruct.properties.gdevice;
+
+        event = new DeviceEvent({
+          type: 'deviceAdded',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          deviceType: 'gamepad',
+          deviceId: evStruct.properties.which,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_GAMEPAD_REMOVED: {
+        const evStruct = this.#eventStruct.properties.gdevice;
+
+        event = new DeviceEvent({
+          type: 'deviceRemoved',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          deviceType: 'gamepad',
+          deviceId: evStruct.properties.which,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_GAMEPAD_REMAPPED: {
@@ -945,9 +1019,27 @@ export class App extends Node {
         break;
       }
       case SDL_EventType.SDL_EVENT_AUDIO_DEVICE_ADDED: {
+        const evStruct = this.#eventStruct.properties.adevice;
+
+        event = new DeviceEvent({
+          type: 'deviceAdded',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          deviceType: 'audio',
+          deviceId: evStruct.properties.which,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_AUDIO_DEVICE_REMOVED: {
+        const evStruct = this.#eventStruct.properties.adevice;
+
+        event = new DeviceEvent({
+          type: 'deviceRemoved',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          deviceType: 'audio',
+          deviceId: evStruct.properties.which,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_AUDIO_DEVICE_FORMAT_CHANGED: {
@@ -981,9 +1073,27 @@ export class App extends Node {
         break;
       }
       case SDL_EventType.SDL_EVENT_CAMERA_DEVICE_ADDED: {
+        const evStruct = this.#eventStruct.properties.cdevice;
+
+        event = new DeviceEvent({
+          type: 'deviceAdded',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          deviceType: 'camera',
+          deviceId: evStruct.properties.which,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_CAMERA_DEVICE_REMOVED: {
+        const evStruct = this.#eventStruct.properties.cdevice;
+
+        event = new DeviceEvent({
+          type: 'deviceRemoved',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          deviceType: 'camera',
+          deviceId: evStruct.properties.which,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_CAMERA_DEVICE_APPROVED: {

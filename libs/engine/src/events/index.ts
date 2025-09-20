@@ -1,20 +1,22 @@
+import type { DeviceEvent } from './DeviceEvent';
 import type { DisplayEvent } from './DisplayEvent';
 import type { Event } from './Event';
 import type { KeyEvent } from './KeyEvent';
 import type { LocaleEvent } from './LocaleEvent';
 import type { QuitEvent } from './QuitEvent';
+import type { TextEvent } from './TextEvent';
 import type { ThemeEvent } from './ThemeEvent';
 import type { WindowEvent } from './WindowEvent';
-import type { TextEvent } from './TextEvent';
 
+export * from './DeviceEvent';
 export * from './DisplayEvent';
 export * from './Event';
 export * from './KeyEvent';
 export * from './LocaleEvent';
 export * from './QuitEvent';
+export * from './TextEvent';
 export * from './ThemeEvent';
 export * from './WindowEvent';
-export * from './TextEvent';
 
 export type SDL_EventMap = {
   quit: [QuitEvent];
@@ -49,4 +51,6 @@ export type SDL_EventMap = {
   text: [TextEvent];
   textEdit: [TextEvent];
   textEditCandidates: [TextEvent];
+  deviceAdded: [DeviceEvent];
+  deviceRemoved: [DeviceEvent];
 };
