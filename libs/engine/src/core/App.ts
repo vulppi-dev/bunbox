@@ -5,6 +5,7 @@ import {
   SDL_Event,
   SDL_EventType,
   SDL_InitFlags,
+  SDL_Keymod,
   SDL_Locale,
   SDL_Rect,
   SDL_SystemTheme,
@@ -21,6 +22,7 @@ import { getChildrenStack } from '../utils/node';
 import {
   DisplayEvent,
   Event,
+  KeyEvent,
   LocaleEvent,
   QuitEvent,
   ThemeEvent,
@@ -725,9 +727,41 @@ export class App extends Node {
         break;
       }
       case SDL_EventType.SDL_EVENT_KEY_DOWN: {
+        const evStruct = this.#eventStruct.properties.key;
+
+        event = new KeyEvent({
+          type: 'keyDown',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowId: evStruct.properties.windowID,
+          which: evStruct.properties.which,
+          code: evStruct.properties.scancode,
+          key: evStruct.properties.key,
+          repeat: Boolean(evStruct.properties.repeat),
+          shift: Boolean(evStruct.properties.mod & SDL_Keymod.SDL_KMOD_SHIFT),
+          ctrl: Boolean(evStruct.properties.mod & SDL_Keymod.SDL_KMOD_CTRL),
+          alt: Boolean(evStruct.properties.mod & SDL_Keymod.SDL_KMOD_ALT),
+          meta: Boolean(evStruct.properties.mod & SDL_Keymod.SDL_KMOD_GUI),
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_KEY_UP: {
+        const evStruct = this.#eventStruct.properties.key;
+
+        event = new KeyEvent({
+          type: 'keyUp',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowId: evStruct.properties.windowID,
+          which: evStruct.properties.which,
+          code: evStruct.properties.scancode,
+          key: evStruct.properties.key,
+          repeat: Boolean(evStruct.properties.repeat),
+          shift: Boolean(evStruct.properties.mod & SDL_Keymod.SDL_KMOD_SHIFT),
+          ctrl: Boolean(evStruct.properties.mod & SDL_Keymod.SDL_KMOD_CTRL),
+          alt: Boolean(evStruct.properties.mod & SDL_Keymod.SDL_KMOD_ALT),
+          meta: Boolean(evStruct.properties.mod & SDL_Keymod.SDL_KMOD_GUI),
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_TEXT_EDITING: {

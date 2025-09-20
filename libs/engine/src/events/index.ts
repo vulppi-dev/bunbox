@@ -1,15 +1,17 @@
+import type { DisplayEvent } from './DisplayEvent';
 import type { Event } from './Event';
+import type { KeyEvent } from './KeyEvent';
 import type { LocaleEvent } from './LocaleEvent';
 import type { QuitEvent } from './QuitEvent';
 import type { ThemeEvent } from './ThemeEvent';
-import type { DisplayEvent } from './DisplayEvent';
 import type { WindowEvent } from './WindowEvent';
 
+export * from './DisplayEvent';
 export * from './Event';
+export * from './KeyEvent';
 export * from './LocaleEvent';
 export * from './QuitEvent';
 export * from './ThemeEvent';
-export * from './DisplayEvent';
 export * from './WindowEvent';
 
 export type SDL_EventMap = {
@@ -39,4 +41,6 @@ export type SDL_EventMap = {
   windowFullscreenEnter: [WindowEvent];
   windowFullscreenLeave: [WindowEvent];
   windowDestroy: [WindowEvent];
+  keyDown: [KeyEvent];
+  keyUp: [KeyEvent];
 };
