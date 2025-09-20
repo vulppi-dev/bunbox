@@ -5,6 +5,7 @@ import type { LocaleEvent } from './LocaleEvent';
 import type { QuitEvent } from './QuitEvent';
 import type { ThemeEvent } from './ThemeEvent';
 import type { WindowEvent } from './WindowEvent';
+import type { TextEvent } from './TextEvent';
 
 export * from './DisplayEvent';
 export * from './Event';
@@ -13,6 +14,7 @@ export * from './LocaleEvent';
 export * from './QuitEvent';
 export * from './ThemeEvent';
 export * from './WindowEvent';
+export * from './TextEvent';
 
 export type SDL_EventMap = {
   quit: [QuitEvent];
@@ -43,4 +45,8 @@ export type SDL_EventMap = {
   windowDestroy: [WindowEvent];
   keyDown: [KeyEvent];
   keyUp: [KeyEvent];
+  keymapChange: [Event];
+  text: [TextEvent];
+  textEdit: [TextEvent];
+  textEditCandidates: [TextEvent];
 };

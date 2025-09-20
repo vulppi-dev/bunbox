@@ -25,11 +25,12 @@ import {
   KeyEvent,
   LocaleEvent,
   QuitEvent,
+  TextEvent,
   ThemeEvent,
   WindowEvent,
   type DisplayOrientation,
 } from '../events';
-import { read, type Pointer } from 'bun:ffi';
+import { CString, read, type Pointer } from 'bun:ffi';
 import { pointerToBuffer } from '../utils/buffer';
 import { Rect } from '../math';
 
@@ -765,21 +766,71 @@ export class App extends Node {
         break;
       }
       case SDL_EventType.SDL_EVENT_TEXT_EDITING: {
+        const evStruct = this.#eventStruct.properties.edit;
+
+        event = new TextEvent({
+          type: 'textEditing',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowID: evStruct.properties.windowID,
+          text: evStruct.properties.text,
+          start: evStruct.properties.start,
+          length: evStruct.properties.length,
+        });
+        break;
+      }
+      case SDL_EventType.SDL_EVENT_TEXT_EDITING_CANDIDATES: {
+        const evStruct = this.#eventStruct.properties.edit_candidates;
+        const candidates: string[] = [];
+
+        for (let i = 0; i < evStruct.properties.num_candidates; i++) {
+          const ptr = read.ptr(
+            Number(evStruct.properties.candidates as bigint) as Pointer,
+            i,
+          ) as Pointer;
+          if (!ptr) {
+            candidates.push('');
+          } else {
+            candidates.push(new CString(ptr).toString());
+          }
+        }
+
+        event = new TextEvent({
+          type: 'textEditingCandidates',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowID: evStruct.properties.windowID,
+          text: candidates[evStruct.properties.selected_candidate] ?? '',
+          candidates,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_TEXT_INPUT: {
+        const evStruct = this.#eventStruct.properties.text;
+
+        event = new TextEvent({
+          type: 'textInput',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowID: evStruct.properties.windowID,
+          text: evStruct.properties.text,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_KEYMAP_CHANGED: {
+        const evStruct = this.#eventStruct.properties.common;
+
+        event = new Event({
+          type: 'keymapChange',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_KEYBOARD_ADDED: {
         break;
       }
       case SDL_EventType.SDL_EVENT_KEYBOARD_REMOVED: {
-        break;
-      }
-      case SDL_EventType.SDL_EVENT_TEXT_EDITING_CANDIDATES: {
         break;
       }
       case SDL_EventType.SDL_EVENT_MOUSE_MOTION: {
