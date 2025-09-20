@@ -3,12 +3,14 @@ import type { LocaleEvent } from './LocaleEvent';
 import type { QuitEvent } from './QuitEvent';
 import type { ThemeEvent } from './ThemeEvent';
 import type { DisplayEvent } from './DisplayEvent';
+import type { WindowEvent } from './WindowEvent';
 
 export * from './Event';
 export * from './LocaleEvent';
 export * from './QuitEvent';
 export * from './ThemeEvent';
 export * from './DisplayEvent';
+export * from './WindowEvent';
 
 export type SDL_EventMap = {
   quit: [QuitEvent];
@@ -19,5 +21,22 @@ export type SDL_EventMap = {
   orientation: [DisplayEvent];
   displayAdded: [DisplayEvent];
   displayRemoved: [DisplayEvent];
-  displayMoved: [DisplayEvent];
+  displayMove: [DisplayEvent];
+  displayChange: [DisplayEvent];
+  windowShown: [WindowEvent];
+  windowHidden: [WindowEvent];
+  windowMove: [WindowEvent];
+  windowResize: [WindowEvent];
+  windowMinimized: [WindowEvent];
+  windowMaximized: [WindowEvent];
+  windowRestored: [WindowEvent];
+  windowPointerEnter: [WindowEvent];
+  windowPointerLeave: [WindowEvent];
+  windowFocus: [WindowEvent];
+  windowBlur: [WindowEvent];
+  windowClose: [WindowEvent];
+  windowDisplayChanged: [WindowEvent];
+  windowFullscreenEnter: [WindowEvent];
+  windowFullscreenLeave: [WindowEvent];
+  windowDestroy: [WindowEvent];
 };

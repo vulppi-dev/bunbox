@@ -24,6 +24,7 @@ import {
   LocaleEvent,
   QuitEvent,
   ThemeEvent,
+  WindowEvent,
   type DisplayOrientation,
 } from '../events';
 import { read, type Pointer } from 'bun:ffi';
@@ -194,6 +195,17 @@ export class App extends Node {
       rect.properties.w,
       rect.properties.h,
     );
+  }
+
+  getWindowBoundRect(windowId: number) {
+    const window = SDL.SDL_GetWindowFromID(windowId);
+    const x = new Int32Array(1);
+    const y = new Int32Array(1);
+    const w = new Int32Array(1);
+    const h = new Int32Array(1);
+    SDL.SDL_GetWindowPosition(window, x, y);
+    SDL.SDL_GetWindowSizeInPixels(window, w, h);
+    return new Rect(x[0]!, y[0]!, w[0]!, h[0]!);
   }
 
   async #startEventLooper() {
@@ -367,7 +379,7 @@ export class App extends Node {
         const rect = this.getDisplayBoundRect(evStruct.properties.displayID);
 
         event = new DisplayEvent({
-          type: 'displayMoved',
+          type: 'displayMove',
           reserved: evStruct.properties.reserved,
           timestamp: timestampToDate(evStruct.properties.timestamp),
           displayId: evStruct.properties.displayID,
@@ -388,7 +400,7 @@ export class App extends Node {
         const rect = this.getDisplayBoundRect(evStruct.properties.displayID);
 
         event = new DisplayEvent({
-          type: 'displayChanged',
+          type: 'displayChange',
           reserved: evStruct.properties.reserved,
           timestamp: timestampToDate(evStruct.properties.timestamp),
           displayId: evStruct.properties.displayID,
@@ -402,81 +414,314 @@ export class App extends Node {
         });
         break;
       }
-      case SDL_EventType.SDL_EVENT_WINDOW_SHOWN: {
-        const evStruct = this.#eventStruct.properties.window;
-
-        break;
-      }
-      case SDL_EventType.SDL_EVENT_WINDOW_HIDDEN: {
-        break;
-      }
+      case SDL_EventType.SDL_EVENT_WINDOW_SHOWN:
       case SDL_EventType.SDL_EVENT_WINDOW_EXPOSED: {
+        const evStruct = this.#eventStruct.properties.window;
+        const window = SDL.SDL_GetWindowFromID(evStruct.properties.windowID);
+        const rect = this.getWindowBoundRect(evStruct.properties.windowID);
+
+        event = new WindowEvent({
+          type: 'windowShown',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowId: evStruct.properties.windowID,
+          currentDisplayId: SDL.SDL_GetDisplayForWindow(window),
+          x: rect.x,
+          y: rect.y,
+          width: rect.width,
+          height: rect.height,
+        });
+        break;
+      }
+      case SDL_EventType.SDL_EVENT_WINDOW_HIDDEN:
+      case SDL_EventType.SDL_EVENT_WINDOW_OCCLUDED: {
+        const evStruct = this.#eventStruct.properties.window;
+        const window = SDL.SDL_GetWindowFromID(evStruct.properties.windowID);
+        const rect = this.getWindowBoundRect(evStruct.properties.windowID);
+
+        event = new WindowEvent({
+          type: 'windowHidden',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowId: evStruct.properties.windowID,
+          currentDisplayId: SDL.SDL_GetDisplayForWindow(window),
+          x: rect.x,
+          y: rect.y,
+          width: rect.width,
+          height: rect.height,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_WINDOW_MOVED: {
+        const evStruct = this.#eventStruct.properties.window;
+        const window = SDL.SDL_GetWindowFromID(evStruct.properties.windowID);
+        const rect = this.getWindowBoundRect(evStruct.properties.windowID);
+
+        event = new WindowEvent({
+          type: 'windowMove',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowId: evStruct.properties.windowID,
+          currentDisplayId: SDL.SDL_GetDisplayForWindow(window),
+          x: rect.x,
+          y: rect.y,
+          width: rect.width,
+          height: rect.height,
+        });
         break;
       }
-      case SDL_EventType.SDL_EVENT_WINDOW_RESIZED: {
-        break;
-      }
-      case SDL_EventType.SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED: {
-        break;
-      }
+      case SDL_EventType.SDL_EVENT_WINDOW_RESIZED:
+      case SDL_EventType.SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
       case SDL_EventType.SDL_EVENT_WINDOW_METAL_VIEW_RESIZED: {
+        const evStruct = this.#eventStruct.properties.window;
+        const window = SDL.SDL_GetWindowFromID(evStruct.properties.windowID);
+        const rect = this.getWindowBoundRect(evStruct.properties.windowID);
+
+        event = new WindowEvent({
+          type: 'windowResize',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowId: evStruct.properties.windowID,
+          currentDisplayId: SDL.SDL_GetDisplayForWindow(window),
+          x: rect.x,
+          y: rect.y,
+          width: rect.width,
+          height: rect.height,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_WINDOW_MINIMIZED: {
+        const evStruct = this.#eventStruct.properties.window;
+        const window = SDL.SDL_GetWindowFromID(evStruct.properties.windowID);
+        const rect = this.getWindowBoundRect(evStruct.properties.windowID);
+
+        event = new WindowEvent({
+          type: 'windowMinimized',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowId: evStruct.properties.windowID,
+          currentDisplayId: SDL.SDL_GetDisplayForWindow(window),
+          x: rect.x,
+          y: rect.y,
+          width: rect.width,
+          height: rect.height,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_WINDOW_MAXIMIZED: {
+        const evStruct = this.#eventStruct.properties.window;
+        const window = SDL.SDL_GetWindowFromID(evStruct.properties.windowID);
+        const rect = this.getWindowBoundRect(evStruct.properties.windowID);
+
+        event = new WindowEvent({
+          type: 'windowMaximized',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowId: evStruct.properties.windowID,
+          currentDisplayId: SDL.SDL_GetDisplayForWindow(window),
+          x: rect.x,
+          y: rect.y,
+          width: rect.width,
+          height: rect.height,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_WINDOW_RESTORED: {
+        const evStruct = this.#eventStruct.properties.window;
+        const window = SDL.SDL_GetWindowFromID(evStruct.properties.windowID);
+        const rect = this.getWindowBoundRect(evStruct.properties.windowID);
+
+        event = new WindowEvent({
+          type: 'windowRestored',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowId: evStruct.properties.windowID,
+          currentDisplayId: SDL.SDL_GetDisplayForWindow(window),
+          x: rect.x,
+          y: rect.y,
+          width: rect.width,
+          height: rect.height,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_WINDOW_MOUSE_ENTER: {
+        const evStruct = this.#eventStruct.properties.window;
+        const window = SDL.SDL_GetWindowFromID(evStruct.properties.windowID);
+        const rect = this.getWindowBoundRect(evStruct.properties.windowID);
+
+        event = new WindowEvent({
+          type: 'windowPointerEnter',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowId: evStruct.properties.windowID,
+          currentDisplayId: SDL.SDL_GetDisplayForWindow(window),
+          x: rect.x,
+          y: rect.y,
+          width: rect.width,
+          height: rect.height,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_WINDOW_MOUSE_LEAVE: {
+        const evStruct = this.#eventStruct.properties.window;
+        const window = SDL.SDL_GetWindowFromID(evStruct.properties.windowID);
+        const rect = this.getWindowBoundRect(evStruct.properties.windowID);
+
+        event = new WindowEvent({
+          type: 'windowPointerLeave',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowId: evStruct.properties.windowID,
+          currentDisplayId: SDL.SDL_GetDisplayForWindow(window),
+          x: rect.x,
+          y: rect.y,
+          width: rect.width,
+          height: rect.height,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_WINDOW_FOCUS_GAINED: {
+        const evStruct = this.#eventStruct.properties.window;
+        const window = SDL.SDL_GetWindowFromID(evStruct.properties.windowID);
+        const rect = this.getWindowBoundRect(evStruct.properties.windowID);
+
+        event = new WindowEvent({
+          type: 'windowFocus',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowId: evStruct.properties.windowID,
+          currentDisplayId: SDL.SDL_GetDisplayForWindow(window),
+          x: rect.x,
+          y: rect.y,
+          width: rect.width,
+          height: rect.height,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_WINDOW_FOCUS_LOST: {
+        const evStruct = this.#eventStruct.properties.window;
+        const window = SDL.SDL_GetWindowFromID(evStruct.properties.windowID);
+        const rect = this.getWindowBoundRect(evStruct.properties.windowID);
+
+        event = new WindowEvent({
+          type: 'windowBlur',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowId: evStruct.properties.windowID,
+          currentDisplayId: SDL.SDL_GetDisplayForWindow(window),
+          x: rect.x,
+          y: rect.y,
+          width: rect.width,
+          height: rect.height,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_WINDOW_CLOSE_REQUESTED: {
+        const evStruct = this.#eventStruct.properties.window;
+        const window = SDL.SDL_GetWindowFromID(evStruct.properties.windowID);
+        const rect = this.getWindowBoundRect(evStruct.properties.windowID);
+
+        event = new WindowEvent({
+          type: 'windowClose',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowId: evStruct.properties.windowID,
+          currentDisplayId: SDL.SDL_GetDisplayForWindow(window),
+          x: rect.x,
+          y: rect.y,
+          width: rect.width,
+          height: rect.height,
+        });
         break;
       }
-      case SDL_EventType.SDL_EVENT_WINDOW_HIT_TEST: {
-        break;
-      }
-      case SDL_EventType.SDL_EVENT_WINDOW_ICCPROF_CHANGED: {
-        break;
-      }
-      case SDL_EventType.SDL_EVENT_WINDOW_DISPLAY_CHANGED: {
-        break;
-      }
+      case SDL_EventType.SDL_EVENT_WINDOW_DISPLAY_CHANGED:
       case SDL_EventType.SDL_EVENT_WINDOW_DISPLAY_SCALE_CHANGED: {
+        const evStruct = this.#eventStruct.properties.window;
+        const window = SDL.SDL_GetWindowFromID(evStruct.properties.windowID);
+        const rect = this.getWindowBoundRect(evStruct.properties.windowID);
+
+        event = new WindowEvent({
+          type: 'windowDisplayChange',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowId: evStruct.properties.windowID,
+          currentDisplayId: SDL.SDL_GetDisplayForWindow(window),
+          x: rect.x,
+          y: rect.y,
+          width: rect.width,
+          height: rect.height,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_WINDOW_SAFE_AREA_CHANGED: {
-        break;
-      }
-      case SDL_EventType.SDL_EVENT_WINDOW_OCCLUDED: {
+        const evStruct = this.#eventStruct.properties.window;
+        const window = SDL.SDL_GetWindowFromID(evStruct.properties.windowID);
+        const rect = this.getWindowBoundRect(evStruct.properties.windowID);
+
+        event = new WindowEvent({
+          type: 'windowSafeArea',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowId: evStruct.properties.windowID,
+          currentDisplayId: SDL.SDL_GetDisplayForWindow(window),
+          x: rect.x,
+          y: rect.y,
+          width: rect.width,
+          height: rect.height,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_WINDOW_ENTER_FULLSCREEN: {
+        const evStruct = this.#eventStruct.properties.window;
+        const window = SDL.SDL_GetWindowFromID(evStruct.properties.windowID);
+        const rect = this.getWindowBoundRect(evStruct.properties.windowID);
+
+        event = new WindowEvent({
+          type: 'windowFullscreenEnter',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowId: evStruct.properties.windowID,
+          currentDisplayId: SDL.SDL_GetDisplayForWindow(window),
+          x: rect.x,
+          y: rect.y,
+          width: rect.width,
+          height: rect.height,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_WINDOW_LEAVE_FULLSCREEN: {
+        const evStruct = this.#eventStruct.properties.window;
+        const window = SDL.SDL_GetWindowFromID(evStruct.properties.windowID);
+        const rect = this.getWindowBoundRect(evStruct.properties.windowID);
+
+        event = new WindowEvent({
+          type: 'windowFullscreenLeave',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowId: evStruct.properties.windowID,
+          currentDisplayId: SDL.SDL_GetDisplayForWindow(window),
+          x: rect.x,
+          y: rect.y,
+          width: rect.width,
+          height: rect.height,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_WINDOW_DESTROYED: {
-        break;
-      }
-      case SDL_EventType.SDL_EVENT_WINDOW_HDR_STATE_CHANGED: {
+        const evStruct = this.#eventStruct.properties.window;
+        const window = SDL.SDL_GetWindowFromID(evStruct.properties.windowID);
+
+        event = new WindowEvent({
+          type: 'windowDestroy',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowId: evStruct.properties.windowID,
+          currentDisplayId: SDL.SDL_GetDisplayForWindow(window),
+          x: 0,
+          y: 0,
+          width: 0,
+          height: 0,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_KEY_DOWN: {
