@@ -51,7 +51,7 @@
     "format": "prettier --write ."
   },
   "dependencies": {
-    "@bunbox/sdl3": "^0.0.2",
+    "@bunbox/sdl3": "^0.0.5",
     "@bunbox/tree": "^0.0.3",
     "@bunbox/utils": "^0.0.2",
     "@ffmpeg/ffmpeg": "^0.12.15",

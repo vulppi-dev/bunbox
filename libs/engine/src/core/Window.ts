@@ -5,12 +5,14 @@ import {
   SDL_Event,
   SDL_EventType,
   SDL_GPUShaderFormat,
+  SDL_Locale,
+  SDL_SystemTheme,
   SDL_WindowFlags,
 } from '@bunbox/sdl3';
 import { promiseDelay } from '@vulppi/toolbelt';
-import { type Pointer } from 'bun:ffi';
+import { read, type Pointer } from 'bun:ffi';
 import { WINDOW_FEATURES_MAP } from '../constants';
-import { QuitEvent, type Event } from '../events';
+import { Event, LocaleEvent, QuitEvent, ThemeEvent } from '../events';
 import { Vector2 } from '../math';
 import { POINTERS_MAP } from '../stores/global';
 import type { WindowsFeature, WindowsFeaturesOptions } from '../types';
@@ -32,6 +34,7 @@ export type WindowOptions = {
 export class Window extends Node {
   #winPtr: Pointer;
   #devicePtr: Pointer;
+  #app: App;
 
   #features: WindowsFeaturesOptions;
   #stack: Node[] = [];
@@ -39,6 +42,8 @@ export class Window extends Node {
   #displayMode: SDL_DisplayMode;
   #width: Int32Array;
   #height: Int32Array;
+  #x: Int32Array;
+  #y: Int32Array;
 
   #eventStruct = new SDL_Event();
 
@@ -57,14 +62,18 @@ export class Window extends Node {
       throw new Error(`SDL: ${SDL.SDL_GetError()}`);
     }
 
+    this.#app = app;
     this.#winPtr = winPointer;
     POINTERS_MAP.set(this.id, this.#winPtr);
 
     this.#displayMode = new SDL_DisplayMode();
     this.#width = new Int32Array(1);
     this.#height = new Int32Array(1);
+    this.#x = new Int32Array(1);
+    this.#y = new Int32Array(1);
 
     SDL.SDL_GetWindowSizeInPixels(this.#winPtr, this.#width, this.#height);
+    SDL.SDL_GetWindowPosition(this.#winPtr, this.#x, this.#y);
 
     const devicePtr = SDL.SDL_CreateGPUDevice(
       process.platform === 'darwin'
@@ -147,17 +156,28 @@ export class Window extends Node {
     SDL.SDL_SetWindowSize(this.#winPtr, this.#width[0]!, this.#height[0]);
   }
 
-  get size() {
-    return new Vector2(this.width, this.height);
+  get x() {
+    return this.#x[0]!;
   }
 
-  set size(value: Vector2) {
+  set x(value: number) {
     if (this.isDisposed) {
       throw new Error('Window is disposed');
     }
-    this.#width[0] = value.x;
-    this.#height[0] = value.y;
-    SDL.SDL_SetWindowSize(this.#winPtr, this.#width[0], this.#height[0]);
+    this.#x[0] = value;
+    SDL.SDL_SetWindowPosition(this.#winPtr, this.#x[0], this.#y[0]!);
+  }
+
+  get y() {
+    return this.#y[0]!;
+  }
+
+  set y(value: number) {
+    if (this.isDisposed) {
+      throw new Error('Window is disposed');
+    }
+    this.#y[0] = value;
+    SDL.SDL_SetWindowPosition(this.#winPtr, this.#x[0]!, this.#y[0]);
   }
 
   getCurrentDisplayFrameRate() {
@@ -256,6 +276,10 @@ export class Window extends Node {
 
   #dispatchEvent() {
     const type = this.#eventStruct.properties.type;
+    const now = this.#app.timestamp;
+    const timestampToDate = (t: bigint) =>
+      new Date(Number(t / 1_000_000n) + now);
+
     let event: Event | null = null;
     switch (type) {
       case SDL_EventType.SDL_EVENT_QUIT: {
@@ -263,32 +287,88 @@ export class Window extends Node {
         event = new QuitEvent({
           type: 'quit',
           reserved: evStruct.properties.reserved,
-          timestamp: new Date(Number(evStruct.properties.timestamp)),
+          timestamp: timestampToDate(evStruct.properties.timestamp),
         });
         break;
       }
       case SDL_EventType.SDL_EVENT_TERMINATING: {
+        const evStruct = this.#eventStruct.properties.common;
+        event = new Event({
+          type: 'terminating',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_LOW_MEMORY: {
-        break;
-      }
-      case SDL_EventType.SDL_EVENT_WILL_ENTER_BACKGROUND: {
+        const evStruct = this.#eventStruct.properties.common;
+        event = new Event({
+          type: 'lowMemory',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_DID_ENTER_BACKGROUND: {
-        break;
-      }
-      case SDL_EventType.SDL_EVENT_WILL_ENTER_FOREGROUND: {
+        const evStruct = this.#eventStruct.properties.common;
+        event = new Event({
+          type: 'enterBackground',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_DID_ENTER_FOREGROUND: {
+        const evStruct = this.#eventStruct.properties.common;
+        event = new Event({
+          type: 'enterForeground',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_LOCALE_CHANGED: {
+        const evStruct = this.#eventStruct.properties.common;
+        const locales: SDL_Locale[] = [];
+        const localeCount = new Int32Array(1);
+
+        const pointers = SDL.SDL_GetPreferredLocales(localeCount);
+        if (!pointers) break;
+        for (let i = 0; i < localeCount[0]!; i++) {
+          const pointer = read.ptr(pointers, i) as Pointer;
+          if (!pointer) continue;
+          const locale = new SDL_Locale();
+          const buffer = pointerToBuffer(pointer, locale.size);
+          locale.copy(buffer);
+          locales.push(locale);
+        }
+
+        event = new LocaleEvent({
+          type: 'locale',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          locales: locales.map((l) => ({
+            country: l.properties.country,
+            language: l.properties.language,
+          })),
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_SYSTEM_THEME_CHANGED: {
+        const evStruct = this.#eventStruct.properties.common;
+        const theme = SDL.SDL_GetSystemTheme();
+
+        event = new ThemeEvent({
+          type: 'theme',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          mode:
+            theme === SDL_SystemTheme.SDL_SYSTEM_THEME_DARK
+              ? 'dark'
+              : theme === SDL_SystemTheme.SDL_SYSTEM_THEME_LIGHT
+                ? 'light'
+                : 'system',
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_DISPLAY_ORIENTATION: {

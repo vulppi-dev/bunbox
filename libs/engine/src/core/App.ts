@@ -22,6 +22,8 @@ declare global {
 export class App extends EventEmitter {
   static #singleAppInstance: App | null = null;
 
+  #initialDate: Date;
+
   constructor(options?: AppOptions) {
     super();
 
@@ -48,6 +50,7 @@ export class App extends EventEmitter {
     if (!result) {
       throw new Error(`SDL: ${SDL.SDL_GetError()}`);
     }
+    this.#initialDate = new Date();
 
     SDL.SDL_SetAppMetadata(cstr(name), cstr(version), cstr(identifier));
     SDL.SDL_SetHint(cstr('SDL_LOGGING'), cstr('test=verbose,*=info'));
@@ -67,6 +70,10 @@ export class App extends EventEmitter {
       configurable: false,
       enumerable: true,
     });
+  }
+
+  get timestamp() {
+    return this.#initialDate.getTime();
   }
 
   setLogPriority(priority: AppLogPriority) {
