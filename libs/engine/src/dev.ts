@@ -1,11 +1,9 @@
-import { App, Renderer, Window } from '../src/core';
-import { Vector2 } from '../src/math';
+import { App, Renderer, Window } from '.';
 
 const app = new App();
 app.setLogPriority('verbose');
 
 const win = new Window({
-  app,
   title: '2D Square',
   features: {
     resizable: true,
@@ -17,11 +15,13 @@ win.on('quit', (ev) => {
   app.dispose();
 });
 
-win.size = new Vector2(200, 200);
+win.width = 200;
+win.height = 200;
 
 const render = new Renderer();
 render.clearColor.set(1.0, 0.4, 0.0, 1);
 
+app.addChild(win);
 win.addChild(render);
 
 // Toggle: only enable if your struct layouts match (Viewport=24 bytes, Rect=16 bytes)

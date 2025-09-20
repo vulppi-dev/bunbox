@@ -11,6 +11,18 @@ export class Node<
     return 'Node';
   }
 
+  _beforeRender(deltaTime: number): void {
+    // Override in subclasses
+  }
+
+  _render(deltaTime: number): void {
+    // Override in subclasses
+  }
+
+  _afterRender(deltaTime: number): void {
+    // Override in subclasses
+  }
+
   _beforeProcess(deltaTime: number): void {
     // Override in subclasses
   }
@@ -20,18 +32,6 @@ export class Node<
   }
 
   _afterProcess(deltaTime: number): void {
-    // Override in subclasses
-  }
-
-  _beforeProcessStatic(deltaTime: number): void {
-    // Override in subclasses
-  }
-
-  _processStatic(deltaTime: number): void {
-    // Override in subclasses
-  }
-
-  _afterProcessStatic(deltaTime: number): void {
     // Override in subclasses
   }
 }

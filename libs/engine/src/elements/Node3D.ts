@@ -74,7 +74,7 @@ export class Node3D<
     return this.#layer;
   }
 
-  override _beforeProcess(_: number): void {
+  override _beforeRender(_: number): void {
     if (
       this.#position.isDirty ||
       this.#scale.isDirty ||

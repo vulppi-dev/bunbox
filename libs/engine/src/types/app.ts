@@ -1,10 +1,8 @@
 export type AppFeature =
   | 'audio'
-  | 'video'
   | 'joystick'
   | 'haptic'
   | 'gamepad'
-  | 'events'
   | 'sensor'
   | 'camera';
 

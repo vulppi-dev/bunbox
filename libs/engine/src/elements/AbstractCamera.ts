@@ -58,7 +58,7 @@ export default abstract class AbstractCamera extends Node3D {
     this.markAsDirty();
   }
 
-  override _process(deltaTime: number): void {
+  override _render(deltaTime: number): void {
     if (this.isDirty) {
       this._updateProjectionMatrix();
       this.#updateViewMatrix();

@@ -3,11 +3,9 @@ import type { AppFeature, AppLogCategory, AppLogPriority } from '../../types';
 
 export const APP_FEATURES_MAP: Record<AppFeature, number> = {
   audio: SDL_InitFlags.SDL_INIT_AUDIO,
-  video: SDL_InitFlags.SDL_INIT_VIDEO,
   joystick: SDL_InitFlags.SDL_INIT_JOYSTICK,
   haptic: SDL_InitFlags.SDL_INIT_HAPTIC,
   gamepad: SDL_InitFlags.SDL_INIT_GAMEPAD,
-  events: SDL_InitFlags.SDL_INIT_EVENTS,
   sensor: SDL_InitFlags.SDL_INIT_SENSOR,
   camera: SDL_InitFlags.SDL_INIT_CAMERA,
 };

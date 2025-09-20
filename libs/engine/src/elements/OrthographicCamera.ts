@@ -55,8 +55,8 @@ export default class OrthographicCamera extends AbstractCamera {
     this.markAsDirty();
   }
 
-  override _process(deltaTime: number): void {
-    super._process(deltaTime);
+  override _render(deltaTime: number): void {
+    super._render(deltaTime);
 
     if (this.#horizontal.isDirty || this.#vertical.isDirty) {
       this._updateProjectionMatrix();

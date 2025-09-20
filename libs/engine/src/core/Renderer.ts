@@ -70,7 +70,7 @@ export class Renderer extends Node {
     this.#meshes = getChildrenStack(this, Mesh);
   }
 
-  override _afterProcess(_: number): void {
+  override _afterRender(_: number): void {
     if (!this.#winPtr || !this.#devicePtr) return;
 
     this.#currentCmd = SDL.SDL_AcquireGPUCommandBuffer(this.#devicePtr);

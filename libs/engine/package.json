@@ -43,7 +43,7 @@
     }
   },
   "scripts": {
-    "dev": "bun --hot src/index.ts",
+    "dev": "bun src/dev.ts",
     "build": "bun build:bundle && bun build:types",
     "build:bundle": "bun build src/index.ts --outdir dist --format esm --target bun",
     "build:types": "tsc --project tsconfig.json",
