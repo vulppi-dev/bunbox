@@ -25,6 +25,7 @@ import {
   Event,
   KeyEvent,
   LocaleEvent,
+  PointerEvent,
   QuitEvent,
   TextEvent,
   ThemeEvent,
@@ -853,15 +854,83 @@ export class App extends Node {
         break;
       }
       case SDL_EventType.SDL_EVENT_MOUSE_MOTION: {
+        const evStruct = this.#eventStruct.properties.motion;
+
+        event = new PointerEvent({
+          type: 'pointerMove',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowId: evStruct.properties.windowID,
+          deviceId: evStruct.properties.which,
+          pointerId: 0,
+          pointerType: 'mouse',
+          x: evStruct.properties.x,
+          y: evStruct.properties.y,
+          deltaX: evStruct.properties.xrel,
+          deltaY: evStruct.properties.yrel,
+          isDoubleClick: false,
+          pressure: 0,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_MOUSE_BUTTON_DOWN: {
+        const evStruct = this.#eventStruct.properties.button;
+
+        event = new PointerEvent({
+          type: 'pointerDown',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowId: evStruct.properties.windowID,
+          deviceId: evStruct.properties.which,
+          pointerId: evStruct.properties.button,
+          pointerType: 'mouse',
+          x: evStruct.properties.x,
+          y: evStruct.properties.y,
+          deltaX: 0,
+          deltaY: 0,
+          isDoubleClick: evStruct.properties.clicks === 2,
+          pressure: 1,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_MOUSE_BUTTON_UP: {
+        const evStruct = this.#eventStruct.properties.button;
+
+        event = new PointerEvent({
+          type: 'pointerUp',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowId: evStruct.properties.windowID,
+          deviceId: evStruct.properties.which,
+          pointerId: evStruct.properties.button,
+          pointerType: 'mouse',
+          x: evStruct.properties.x,
+          y: evStruct.properties.y,
+          deltaX: 0,
+          deltaY: 0,
+          isDoubleClick: evStruct.properties.clicks === 2,
+          pressure: 0,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_MOUSE_WHEEL: {
+        const evStruct = this.#eventStruct.properties.wheel;
+
+        event = new PointerEvent({
+          type: 'pointerWheel',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowId: evStruct.properties.windowID,
+          deviceId: evStruct.properties.which,
+          pointerId: 0,
+          pointerType: 'mouse',
+          x: evStruct.properties.mouse_x,
+          y: evStruct.properties.mouse_y,
+          deltaX: evStruct.properties.x,
+          deltaY: evStruct.properties.y,
+          isDoubleClick: false,
+          pressure: 0,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_MOUSE_ADDED: {
@@ -890,18 +959,23 @@ export class App extends Node {
         break;
       }
       case SDL_EventType.SDL_EVENT_JOYSTICK_AXIS_MOTION: {
+        const evStruct = this.#eventStruct.properties.jaxis;
         break;
       }
       case SDL_EventType.SDL_EVENT_JOYSTICK_BALL_MOTION: {
+        const evStruct = this.#eventStruct.properties.jball;
         break;
       }
       case SDL_EventType.SDL_EVENT_JOYSTICK_HAT_MOTION: {
+        const evStruct = this.#eventStruct.properties.jhat;
         break;
       }
       case SDL_EventType.SDL_EVENT_JOYSTICK_BUTTON_DOWN: {
+        const evStruct = this.#eventStruct.properties.jbutton;
         break;
       }
       case SDL_EventType.SDL_EVENT_JOYSTICK_BUTTON_UP: {
+        const evStruct = this.#eventStruct.properties.jbutton;
         break;
       }
       case SDL_EventType.SDL_EVENT_JOYSTICK_ADDED: {
@@ -929,18 +1003,23 @@ export class App extends Node {
         break;
       }
       case SDL_EventType.SDL_EVENT_JOYSTICK_BATTERY_UPDATED: {
+        const evStruct = this.#eventStruct.properties.jbattery;
         break;
       }
       case SDL_EventType.SDL_EVENT_JOYSTICK_UPDATE_COMPLETE: {
+        const evStruct = this.#eventStruct.properties.common;
         break;
       }
       case SDL_EventType.SDL_EVENT_GAMEPAD_AXIS_MOTION: {
+        const evStruct = this.#eventStruct.properties.gaxis;
         break;
       }
       case SDL_EventType.SDL_EVENT_GAMEPAD_BUTTON_DOWN: {
+        const evStruct = this.#eventStruct.properties.gbutton;
         break;
       }
       case SDL_EventType.SDL_EVENT_GAMEPAD_BUTTON_UP: {
+        const evStruct = this.#eventStruct.properties.gbutton;
         break;
       }
       case SDL_EventType.SDL_EVENT_GAMEPAD_ADDED: {
@@ -968,54 +1047,72 @@ export class App extends Node {
         break;
       }
       case SDL_EventType.SDL_EVENT_GAMEPAD_REMAPPED: {
+        const evStruct = this.#eventStruct.properties.common;
         break;
       }
       case SDL_EventType.SDL_EVENT_GAMEPAD_TOUCHPAD_DOWN: {
+        const evStruct = this.#eventStruct.properties.gtouchpad;
+
         break;
       }
       case SDL_EventType.SDL_EVENT_GAMEPAD_TOUCHPAD_MOTION: {
+        const evStruct = this.#eventStruct.properties.gtouchpad;
         break;
       }
       case SDL_EventType.SDL_EVENT_GAMEPAD_TOUCHPAD_UP: {
+        const evStruct = this.#eventStruct.properties.gtouchpad;
         break;
       }
       case SDL_EventType.SDL_EVENT_GAMEPAD_SENSOR_UPDATE: {
+        const evStruct = this.#eventStruct.properties.gsensor;
         break;
       }
       case SDL_EventType.SDL_EVENT_GAMEPAD_UPDATE_COMPLETE: {
+        const evStruct = this.#eventStruct.properties.common;
         break;
       }
       case SDL_EventType.SDL_EVENT_GAMEPAD_STEAM_HANDLE_UPDATED: {
+        const evStruct = this.#eventStruct.properties.common;
         break;
       }
       case SDL_EventType.SDL_EVENT_FINGER_DOWN: {
+        const evStruct = this.#eventStruct.properties.tfinger;
         break;
       }
       case SDL_EventType.SDL_EVENT_FINGER_UP: {
+        const evStruct = this.#eventStruct.properties.tfinger;
         break;
       }
       case SDL_EventType.SDL_EVENT_FINGER_MOTION: {
+        const evStruct = this.#eventStruct.properties.tfinger;
         break;
       }
       case SDL_EventType.SDL_EVENT_FINGER_CANCELED: {
+        const evStruct = this.#eventStruct.properties.tfinger;
         break;
       }
       case SDL_EventType.SDL_EVENT_CLIPBOARD_UPDATE: {
+        const evStruct = this.#eventStruct.properties.clipboard;
         break;
       }
       case SDL_EventType.SDL_EVENT_DROP_FILE: {
+        const evStruct = this.#eventStruct.properties.drop;
         break;
       }
       case SDL_EventType.SDL_EVENT_DROP_TEXT: {
+        const evStruct = this.#eventStruct.properties.drop;
         break;
       }
       case SDL_EventType.SDL_EVENT_DROP_BEGIN: {
+        const evStruct = this.#eventStruct.properties.drop;
         break;
       }
       case SDL_EventType.SDL_EVENT_DROP_COMPLETE: {
+        const evStruct = this.#eventStruct.properties.drop;
         break;
       }
       case SDL_EventType.SDL_EVENT_DROP_POSITION: {
+        const evStruct = this.#eventStruct.properties.drop;
         break;
       }
       case SDL_EventType.SDL_EVENT_AUDIO_DEVICE_ADDED: {
@@ -1043,33 +1140,43 @@ export class App extends Node {
         break;
       }
       case SDL_EventType.SDL_EVENT_AUDIO_DEVICE_FORMAT_CHANGED: {
+        const evStruct = this.#eventStruct.properties.adevice;
         break;
       }
       case SDL_EventType.SDL_EVENT_SENSOR_UPDATE: {
+        const evStruct = this.#eventStruct.properties.sensor;
         break;
       }
       case SDL_EventType.SDL_EVENT_PEN_PROXIMITY_IN: {
+        const evStruct = this.#eventStruct.properties.pproximity;
         break;
       }
       case SDL_EventType.SDL_EVENT_PEN_PROXIMITY_OUT: {
+        const evStruct = this.#eventStruct.properties.pproximity;
         break;
       }
       case SDL_EventType.SDL_EVENT_PEN_DOWN: {
+        const evStruct = this.#eventStruct.properties.ptouch;
         break;
       }
       case SDL_EventType.SDL_EVENT_PEN_UP: {
+        const evStruct = this.#eventStruct.properties.ptouch;
         break;
       }
       case SDL_EventType.SDL_EVENT_PEN_BUTTON_DOWN: {
+        const evStruct = this.#eventStruct.properties.pbutton;
         break;
       }
       case SDL_EventType.SDL_EVENT_PEN_BUTTON_UP: {
+        const evStruct = this.#eventStruct.properties.pbutton;
         break;
       }
       case SDL_EventType.SDL_EVENT_PEN_MOTION: {
+        const evStruct = this.#eventStruct.properties.pmotion;
         break;
       }
       case SDL_EventType.SDL_EVENT_PEN_AXIS: {
+        const evStruct = this.#eventStruct.properties.paxis;
         break;
       }
       case SDL_EventType.SDL_EVENT_CAMERA_DEVICE_ADDED: {
@@ -1097,21 +1204,27 @@ export class App extends Node {
         break;
       }
       case SDL_EventType.SDL_EVENT_CAMERA_DEVICE_APPROVED: {
+        const evStruct = this.#eventStruct.properties.cdevice;
         break;
       }
       case SDL_EventType.SDL_EVENT_CAMERA_DEVICE_DENIED: {
+        const evStruct = this.#eventStruct.properties.cdevice;
         break;
       }
       case SDL_EventType.SDL_EVENT_RENDER_TARGETS_RESET: {
+        const evStruct = this.#eventStruct.properties.render;
         break;
       }
       case SDL_EventType.SDL_EVENT_RENDER_DEVICE_RESET: {
+        const evStruct = this.#eventStruct.properties.render;
         break;
       }
       case SDL_EventType.SDL_EVENT_RENDER_DEVICE_LOST: {
+        const evStruct = this.#eventStruct.properties.render;
         break;
       }
       case SDL_EventType.SDL_EVENT_POLL_SENTINEL: {
+        const evStruct = this.#eventStruct.properties.common;
         break;
       }
     }
@@ -1120,35 +1233,9 @@ export class App extends Node {
 
     // @ts-ignore
     this.emit(event.type, event);
-
     for (const node of this.#stack) {
       // @ts-ignore
       node.emit(event.type, event);
     }
-
-    // if (type === SDL_EventType.SDL_EVENT_QUIT) {
-    //   this.dispose();
-    //   return;
-    // }
-
-    // if (
-    //   [
-    //     SDL_EventType.SDL_EVENT_WINDOW_DISPLAY_CHANGED,
-    //     SDL_EventType.SDL_EVENT_WINDOW_RESIZED,
-    //     SDL_EventType.SDL_EVENT_DISPLAY_ORIENTATION,
-    //   ].includes(type)
-    // ) {
-    //   this.#processDisplayMode();
-    // }
-
-    // if (type === SDL_EventType.SDL_EVENT_KEY_DOWN) {
-    //   const ev = this.#eventStruct.properties.key;
-    //   if (ev.properties.scancode === SDL_Scancode.SDL_SCANCODE_ESCAPE) {
-    //     this.dispose();
-    //     return;
-    //   }
-    // }
-
-    // SDL.SDL_GetWindowSizeInPixels(this.#winPtr, this.#width, this.#height);
   }
 }

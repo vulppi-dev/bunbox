@@ -7,6 +7,7 @@ import type { QuitEvent } from './QuitEvent';
 import type { TextEvent } from './TextEvent';
 import type { ThemeEvent } from './ThemeEvent';
 import type { WindowEvent } from './WindowEvent';
+import type { PointerEvent } from './PointerEvent';
 
 export * from './DeviceEvent';
 export * from './DisplayEvent';
@@ -17,6 +18,7 @@ export * from './QuitEvent';
 export * from './TextEvent';
 export * from './ThemeEvent';
 export * from './WindowEvent';
+export * from './PointerEvent';
 
 export type SDL_EventMap = {
   quit: [QuitEvent];
@@ -53,4 +55,8 @@ export type SDL_EventMap = {
   textEditCandidates: [TextEvent];
   deviceAdded: [DeviceEvent];
   deviceRemoved: [DeviceEvent];
+  pointerMove: [PointerEvent];
+  pointerDown: [PointerEvent];
+  pointerUp: [PointerEvent];
+  pointerWheel: [PointerEvent];
 };

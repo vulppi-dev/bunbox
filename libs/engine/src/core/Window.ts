@@ -27,6 +27,7 @@ export type WindowOptions = {
 export class Window extends Node {
   #winPtr: Pointer;
   #devicePtr: Pointer;
+  #winId: number;
 
   #features: WindowsFeaturesOptions;
   #stack: Node[] = [];
@@ -62,6 +63,7 @@ export class Window extends Node {
     }
 
     this.#winPtr = winPointer;
+    this.#winId = SDL.SDL_GetWindowID(this.#winPtr);
     POINTERS_MAP.set(this.id, this.#winPtr);
 
     this.#displayMode = new SDL_DisplayMode();
@@ -93,16 +95,28 @@ export class Window extends Node {
       throw new Error(`SDL: ${SDL.SDL_GetError()}`);
     }
 
-    const unsubAddChild = this.subscribe('add-child', () => {
-      this.#stack = getChildrenStack(this, Node);
-    });
-    const unsubRemoveChild = this.subscribe('remove-child', () => {
-      this.#stack = getChildrenStack(this, Node);
-    });
+    const unsubscribes = [
+      this.subscribe('add-child', () => {
+        this.#stack = getChildrenStack(this, Node);
+      }),
+      this.subscribe('remove-child', () => {
+        this.#stack = getChildrenStack(this, Node);
+      }),
+      this.subscribe('orientation', () => {
+        this.#processDisplayMode();
+      }),
+      this.subscribe('windowDisplayChanged', (ev) => {
+        if (ev.windowId !== this.#winId) return;
+        this.#processDisplayMode();
+      }),
+      this.subscribe('windowResize', (ev) => {
+        if (ev.windowId !== this.#winId) return;
+        this.#processDisplayMode();
+      }),
+    ];
 
     this.on('dispose', () => {
-      unsubAddChild();
-      unsubRemoveChild();
+      unsubscribes.forEach((fn) => fn());
       this.#stack = [];
       POINTERS_MAP.delete(`${this.id}-device`);
       POINTERS_MAP.delete(this.id);
