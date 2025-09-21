@@ -1,3 +1,4 @@
+import { SDL_Keycode } from '@bunbox/sdl3';
 import { App, Renderer, Window } from '.';
 
 const app = new App();
@@ -10,9 +11,21 @@ const win = new Window({
     highPixelDensity: true,
   },
 });
-win.on('quit', (ev) => {
+
+win.on('windowClose', (ev) => {
+  console.log(ev.type);
   win.dispose();
+});
+
+win.on('quit', (ev) => {
+  console.log(ev.type);
   app.dispose();
+});
+
+win.on('keyDown', (ev) => {
+  if (ev.key === SDL_Keycode.SDLK_ESCAPE) {
+    app.dispose();
+  }
 });
 
 win.width = 200;
@@ -24,14 +37,6 @@ render.clearColor.set(1.0, 0.4, 0.0, 1);
 app.addChild(win);
 win.addChild(render);
 
-// Toggle: only enable if your struct layouts match (Viewport=24 bytes, Rect=16 bytes)
-// const USE_VIEWPORT_AND_SCISSOR = true;
-// const INVERSE_VIEWPORT = process.platform === 'darwin' ? 1 : -1; // flip Y on Vulkan
-
-// console.log('SDL_GPU Driver:', SDL.SDL_GetGPUDeviceDriver(device)?.toString());
-// const swapFormat = SDL.SDL_GetGPUSwapchainTextureFormat(device, win);
-
-// // --- shaders (minimal; const color) ---
 // const VS_WGSL = `
 // @vertex fn main(@builtin(vertex_index) i:u32) -> @builtin(position) vec4<f32> {
 //   var p = array<vec2<f32>,3>( vec2(-0.6,-0.6), vec2(0.6,-0.6), vec2(0.0,0.6) );
@@ -215,9 +220,3 @@ win.addChild(render);
 //   SDL.SDL_EndGPURenderPass(pass);
 
 //   SDL.SDL_SubmitGPUCommandBuffer(cmdbuf);
-
-//   const err = SDL.SDL_GetError().toString();
-//   if (err) console.log('[SDL ERROR]', err);
-
-//   await sleep(0);
-// }

@@ -7,7 +7,7 @@ import {
   SDL_WindowFlags,
 } from '@bunbox/sdl3';
 import { type Pointer } from 'bun:ffi';
-import { WINDOW_FEATURES_MAP } from '../constants';
+import { USING_VULKAN, WINDOW_FEATURES_MAP } from '../constants';
 import { Vector2 } from '../math';
 import { POINTERS_MAP } from '../stores/global';
 import type { WindowsFeature, WindowsFeaturesOptions } from '../types';
@@ -78,11 +78,11 @@ export class Window extends Node {
     this.#processDisplayMode();
 
     const devicePtr = SDL.SDL_CreateGPUDevice(
-      process.platform === 'darwin'
-        ? SDL_GPUShaderFormat.SDL_GPU_SHADERFORMAT_METALLIB
-        : SDL_GPUShaderFormat.SDL_GPU_SHADERFORMAT_SPIRV,
+      USING_VULKAN
+        ? SDL_GPUShaderFormat.SDL_GPU_SHADERFORMAT_SPIRV
+        : SDL_GPUShaderFormat.SDL_GPU_SHADERFORMAT_METALLIB,
       true,
-      cstr(process.platform === 'darwin' ? 'metal' : 'vulkan'),
+      cstr(USING_VULKAN ? 'vulkan' : 'metal'),
     );
 
     if (!devicePtr) {
@@ -234,10 +234,9 @@ export class Window extends Node {
   }
 
   static #getFeaturesFlags(features: WindowsFeaturesOptions): number {
-    let flags =
-      process.platform === 'darwin'
-        ? SDL_WindowFlags.SDL_WINDOW_METAL
-        : SDL_WindowFlags.SDL_WINDOW_VULKAN;
+    let flags = USING_VULKAN
+      ? SDL_WindowFlags.SDL_WINDOW_VULKAN
+      : SDL_WindowFlags.SDL_WINDOW_METAL;
     for (const [key, value] of Object.entries(features)) {
       flags |= value ? (WINDOW_FEATURES_MAP[key as WindowsFeature] ?? 0) : 0;
     }

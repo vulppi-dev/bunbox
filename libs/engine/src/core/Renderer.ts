@@ -6,12 +6,13 @@ import {
   SDL_GPUStoreOp,
 } from '@bunbox/sdl3';
 import type { Pointer } from 'bun:ffi';
+import { USING_VULKAN } from '../constants';
+import { Mesh } from '../elements/Mesh';
 import { Color } from '../math';
 import { POINTERS_MAP } from '../stores/global';
 import { getChildrenStack } from '../utils/node';
-import { Window } from './Window';
-import { Mesh } from '../elements/Mesh';
 import { Node } from './Node';
+import { Window } from './Window';
 
 export class Renderer extends Node {
   #clearColor = new Color();
@@ -19,6 +20,7 @@ export class Renderer extends Node {
   #devicePtr: Pointer | null = null;
   #background: 'vulkan' | 'metal' = 'vulkan';
   #swapFormat: number = 0;
+  #viewportFactor: number;
 
   // Helpers
   #currentCmd: Pointer | null = null;
@@ -31,13 +33,12 @@ export class Renderer extends Node {
 
   constructor() {
     super();
+    this.#viewportFactor = USING_VULKAN ? -1 : 1;
 
     this.on('add-child', () => {
-      if (!this.#ready) return;
       this.#meshes = getChildrenStack(this, Mesh);
     });
     this.on('remove-child', () => {
-      if (!this.#ready) return;
       this.#meshes = getChildrenStack(this, Mesh);
     });
   }
@@ -60,7 +61,7 @@ export class Renderer extends Node {
     if (!win) throw new Error('No window parent found in the node tree');
     this.#winPtr = POINTERS_MAP.get(win.id) ?? null;
     this.#devicePtr = POINTERS_MAP.get(`${win.id}-device`) ?? null;
-    this.#background = process.platform === 'darwin' ? 'metal' : 'vulkan';
+    this.#background = USING_VULKAN ? 'vulkan' : 'metal';
     this.#swapFormat = SDL.SDL_GetGPUSwapchainTextureFormat(
       this.#devicePtr,
       this.#winPtr,
