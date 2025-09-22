@@ -1,24 +1,30 @@
 import type { DeviceEvent } from './DeviceEvent';
 import type { DisplayEvent } from './DisplayEvent';
 import type { Event } from './Event';
+import type { GamepadBatteryEvent } from './GamepadBatteryEvent';
 import type { KeyEvent } from './KeyEvent';
 import type { LocaleEvent } from './LocaleEvent';
+import type { PointerEvent } from './PointerEvent';
 import type { QuitEvent } from './QuitEvent';
 import type { TextEvent } from './TextEvent';
 import type { ThemeEvent } from './ThemeEvent';
 import type { WindowEvent } from './WindowEvent';
-import type { PointerEvent } from './PointerEvent';
+import type { GamepadAxisEvent } from './GamepadAxisEvent';
+import type { GamepadButtonEvent } from './GamepadButtonEvent';
 
 export * from './DeviceEvent';
 export * from './DisplayEvent';
 export * from './Event';
+export * from './GamepadAxisEvent';
+export * from './GamepadBatteryEvent';
+export * from './GamepadButtonEvent';
 export * from './KeyEvent';
 export * from './LocaleEvent';
+export * from './PointerEvent';
 export * from './QuitEvent';
 export * from './TextEvent';
 export * from './ThemeEvent';
 export * from './WindowEvent';
-export * from './PointerEvent';
 
 export type SDL_EventMap = {
   quit: [QuitEvent];
@@ -59,4 +65,9 @@ export type SDL_EventMap = {
   pointerDown: [PointerEvent];
   pointerUp: [PointerEvent];
   pointerWheel: [PointerEvent];
+  gamepadBattery: [GamepadBatteryEvent];
+  gamepadAxis: [GamepadAxisEvent];
+  gamepadDown: [GamepadButtonEvent];
+  gamepadUp: [GamepadButtonEvent];
+  gamepadRemap: [DeviceEvent];
 };

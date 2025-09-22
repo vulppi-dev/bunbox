@@ -4,9 +4,11 @@ import {
   SDL_DisplayOrientation,
   SDL_Event,
   SDL_EventType,
+  SDL_GamepadAxis,
   SDL_InitFlags,
   SDL_Keymod,
   SDL_Locale,
+  SDL_PowerState,
   SDL_Rect,
   SDL_SystemTheme,
 } from '@bunbox/sdl3';
@@ -23,6 +25,9 @@ import {
   DeviceEvent,
   DisplayEvent,
   Event,
+  GamepadAxisEvent,
+  GamepadBatteryEvent,
+  GamepadButtonEvent,
   KeyEvent,
   LocaleEvent,
   PointerEvent,
@@ -325,6 +330,7 @@ export class App extends Node {
         });
         break;
       }
+      // MARK: Display events
       case SDL_EventType.SDL_EVENT_DISPLAY_ORIENTATION: {
         const evStruct = this.#eventStruct.properties.display;
         const rect = this.getDisplayBoundRect(evStruct.properties.displayID);
@@ -419,6 +425,7 @@ export class App extends Node {
         });
         break;
       }
+      // MARK: Window events
       case SDL_EventType.SDL_EVENT_WINDOW_SHOWN:
       case SDL_EventType.SDL_EVENT_WINDOW_EXPOSED: {
         const evStruct = this.#eventStruct.properties.window;
@@ -729,6 +736,7 @@ export class App extends Node {
         });
         break;
       }
+      // MARK: Keyboard events
       case SDL_EventType.SDL_EVENT_KEY_DOWN: {
         const evStruct = this.#eventStruct.properties.key;
 
@@ -853,6 +861,7 @@ export class App extends Node {
         });
         break;
       }
+      // MARK: Mouse events
       case SDL_EventType.SDL_EVENT_MOUSE_MOTION: {
         const evStruct = this.#eventStruct.properties.motion;
 
@@ -958,26 +967,7 @@ export class App extends Node {
         });
         break;
       }
-      case SDL_EventType.SDL_EVENT_JOYSTICK_AXIS_MOTION: {
-        const evStruct = this.#eventStruct.properties.jaxis;
-        break;
-      }
-      case SDL_EventType.SDL_EVENT_JOYSTICK_BALL_MOTION: {
-        const evStruct = this.#eventStruct.properties.jball;
-        break;
-      }
-      case SDL_EventType.SDL_EVENT_JOYSTICK_HAT_MOTION: {
-        const evStruct = this.#eventStruct.properties.jhat;
-        break;
-      }
-      case SDL_EventType.SDL_EVENT_JOYSTICK_BUTTON_DOWN: {
-        const evStruct = this.#eventStruct.properties.jbutton;
-        break;
-      }
-      case SDL_EventType.SDL_EVENT_JOYSTICK_BUTTON_UP: {
-        const evStruct = this.#eventStruct.properties.jbutton;
-        break;
-      }
+      // MARK: Joystick events
       case SDL_EventType.SDL_EVENT_JOYSTICK_ADDED: {
         const evStruct = this.#eventStruct.properties.jdevice;
 
@@ -985,7 +975,9 @@ export class App extends Node {
           type: 'deviceAdded',
           reserved: evStruct.properties.reserved,
           timestamp: timestampToDate(evStruct.properties.timestamp),
-          deviceType: 'joystick',
+          deviceType: SDL.SDL_IsGamepad(evStruct.properties.which)
+            ? 'gamepad'
+            : 'joystick',
           deviceId: evStruct.properties.which,
         });
         break;
@@ -997,57 +989,102 @@ export class App extends Node {
           type: 'deviceRemoved',
           reserved: evStruct.properties.reserved,
           timestamp: timestampToDate(evStruct.properties.timestamp),
-          deviceType: 'joystick',
+          deviceType: SDL.SDL_IsGamepad(evStruct.properties.which)
+            ? 'gamepad'
+            : 'joystick',
           deviceId: evStruct.properties.which,
         });
         break;
       }
       case SDL_EventType.SDL_EVENT_JOYSTICK_BATTERY_UPDATED: {
         const evStruct = this.#eventStruct.properties.jbattery;
+
+        event = new GamepadBatteryEvent({
+          type: 'gamepadBattery',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          deviceId: evStruct.properties.which,
+          batteryLevel: evStruct.properties.percent,
+          state: (() => {
+            switch (evStruct.properties.state) {
+              case SDL_PowerState.SDL_POWERSTATE_ERROR:
+                return 'error';
+              case SDL_PowerState.SDL_POWERSTATE_ON_BATTERY:
+                return 'onBattery';
+              case SDL_PowerState.SDL_POWERSTATE_NO_BATTERY:
+                return 'noBattery';
+              case SDL_PowerState.SDL_POWERSTATE_CHARGING:
+                return 'charging';
+              case SDL_PowerState.SDL_POWERSTATE_CHARGED:
+                return 'charged';
+              default:
+                return 'unknown';
+            }
+          })(),
+        });
         break;
       }
-      case SDL_EventType.SDL_EVENT_JOYSTICK_UPDATE_COMPLETE: {
-        const evStruct = this.#eventStruct.properties.common;
-        break;
-      }
+      // MARK: Gamepad events
       case SDL_EventType.SDL_EVENT_GAMEPAD_AXIS_MOTION: {
         const evStruct = this.#eventStruct.properties.gaxis;
+
+        event = new GamepadAxisEvent({
+          type: 'gamepadAxis',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          deviceId: evStruct.properties.which,
+          axis: (() => {
+            switch (evStruct.properties.axis) {
+              case SDL_GamepadAxis.SDL_GAMEPAD_AXIS_LEFTX:
+              case SDL_GamepadAxis.SDL_GAMEPAD_AXIS_RIGHTX:
+                return 'x';
+              case SDL_GamepadAxis.SDL_GAMEPAD_AXIS_LEFTY:
+              case SDL_GamepadAxis.SDL_GAMEPAD_AXIS_RIGHTY:
+                return 'y';
+              case SDL_GamepadAxis.SDL_GAMEPAD_AXIS_LEFT_TRIGGER:
+                return 'leftTrigger';
+              case SDL_GamepadAxis.SDL_GAMEPAD_AXIS_RIGHT_TRIGGER:
+                return 'rightTrigger';
+              default:
+                return 'unknown';
+            }
+          })(),
+          value: evStruct.properties.value / 32767,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_GAMEPAD_BUTTON_DOWN: {
         const evStruct = this.#eventStruct.properties.gbutton;
+
+        event = new GamepadButtonEvent({
+          type: 'gamepadDown',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          deviceId: evStruct.properties.which,
+          key: evStruct.properties.button,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_GAMEPAD_BUTTON_UP: {
         const evStruct = this.#eventStruct.properties.gbutton;
-        break;
-      }
-      case SDL_EventType.SDL_EVENT_GAMEPAD_ADDED: {
-        const evStruct = this.#eventStruct.properties.gdevice;
 
-        event = new DeviceEvent({
-          type: 'deviceAdded',
+        event = new GamepadButtonEvent({
+          type: 'gamepadUp',
           reserved: evStruct.properties.reserved,
           timestamp: timestampToDate(evStruct.properties.timestamp),
-          deviceType: 'gamepad',
           deviceId: evStruct.properties.which,
-        });
-        break;
-      }
-      case SDL_EventType.SDL_EVENT_GAMEPAD_REMOVED: {
-        const evStruct = this.#eventStruct.properties.gdevice;
-
-        event = new DeviceEvent({
-          type: 'deviceRemoved',
-          reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
-          deviceType: 'gamepad',
-          deviceId: evStruct.properties.which,
+          key: evStruct.properties.button,
         });
         break;
       }
       case SDL_EventType.SDL_EVENT_GAMEPAD_REMAPPED: {
         const evStruct = this.#eventStruct.properties.common;
+
+        event = new Event({
+          type: 'gamepadRemap',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_GAMEPAD_TOUCHPAD_DOWN: {
@@ -1067,14 +1104,11 @@ export class App extends Node {
         const evStruct = this.#eventStruct.properties.gsensor;
         break;
       }
-      case SDL_EventType.SDL_EVENT_GAMEPAD_UPDATE_COMPLETE: {
-        const evStruct = this.#eventStruct.properties.common;
-        break;
-      }
       case SDL_EventType.SDL_EVENT_GAMEPAD_STEAM_HANDLE_UPDATED: {
         const evStruct = this.#eventStruct.properties.common;
         break;
       }
+      // MARK: Finger events
       case SDL_EventType.SDL_EVENT_FINGER_DOWN: {
         const evStruct = this.#eventStruct.properties.tfinger;
         break;
@@ -1091,10 +1125,12 @@ export class App extends Node {
         const evStruct = this.#eventStruct.properties.tfinger;
         break;
       }
+      // MARK: Clipboard events
       case SDL_EventType.SDL_EVENT_CLIPBOARD_UPDATE: {
         const evStruct = this.#eventStruct.properties.clipboard;
         break;
       }
+      // MARK: Drop events
       case SDL_EventType.SDL_EVENT_DROP_FILE: {
         const evStruct = this.#eventStruct.properties.drop;
         break;
@@ -1107,14 +1143,11 @@ export class App extends Node {
         const evStruct = this.#eventStruct.properties.drop;
         break;
       }
-      case SDL_EventType.SDL_EVENT_DROP_COMPLETE: {
-        const evStruct = this.#eventStruct.properties.drop;
-        break;
-      }
       case SDL_EventType.SDL_EVENT_DROP_POSITION: {
         const evStruct = this.#eventStruct.properties.drop;
         break;
       }
+      // MARK: Audio events
       case SDL_EventType.SDL_EVENT_AUDIO_DEVICE_ADDED: {
         const evStruct = this.#eventStruct.properties.adevice;
 
@@ -1143,10 +1176,12 @@ export class App extends Node {
         const evStruct = this.#eventStruct.properties.adevice;
         break;
       }
+      // MARK: Sensor events
       case SDL_EventType.SDL_EVENT_SENSOR_UPDATE: {
         const evStruct = this.#eventStruct.properties.sensor;
         break;
       }
+      // MARK: Pen events
       case SDL_EventType.SDL_EVENT_PEN_PROXIMITY_IN: {
         const evStruct = this.#eventStruct.properties.pproximity;
         break;
@@ -1179,6 +1214,7 @@ export class App extends Node {
         const evStruct = this.#eventStruct.properties.paxis;
         break;
       }
+      // MARK: Camera events
       case SDL_EventType.SDL_EVENT_CAMERA_DEVICE_ADDED: {
         const evStruct = this.#eventStruct.properties.cdevice;
 
@@ -1211,6 +1247,7 @@ export class App extends Node {
         const evStruct = this.#eventStruct.properties.cdevice;
         break;
       }
+      // MARK: Render events
       case SDL_EventType.SDL_EVENT_RENDER_TARGETS_RESET: {
         const evStruct = this.#eventStruct.properties.render;
         break;
@@ -1221,10 +1258,6 @@ export class App extends Node {
       }
       case SDL_EventType.SDL_EVENT_RENDER_DEVICE_LOST: {
         const evStruct = this.#eventStruct.properties.render;
-        break;
-      }
-      case SDL_EventType.SDL_EVENT_POLL_SENTINEL: {
-        const evStruct = this.#eventStruct.properties.common;
         break;
       }
     }
