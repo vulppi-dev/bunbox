@@ -1,11 +1,13 @@
 import { Event, type EventOptions } from './Event';
 
-type PointerType = 'mouse' | 'pen' | 'touch';
+type PointerType = 'mouse' | 'pen' | 'touch' | 'gamepad';
 
 export type PointerEventOptions = {
   windowId: number;
   deviceId: number;
   pointerId: number;
+  /** Only for gamepad touch events */
+  touchIndex?: number;
   x: number;
   y: number;
   deltaX: number;
@@ -19,6 +21,7 @@ export class PointerEvent extends Event {
   #windowId: number;
   #deviceId: number;
   #pointerId: number;
+  #touchIndex?: number;
   #x: number;
   #y: number;
   #deltaX: number;
@@ -32,6 +35,7 @@ export class PointerEvent extends Event {
     this.#windowId = options.windowId;
     this.#deviceId = options.deviceId;
     this.#pointerId = options.pointerId;
+    this.#touchIndex = options.touchIndex;
     this.#x = options.x;
     this.#y = options.y;
     this.#deltaX = options.deltaX;
@@ -51,6 +55,11 @@ export class PointerEvent extends Event {
 
   get pointerId() {
     return this.#pointerId;
+  }
+
+  /** Only for gamepad touch events */
+  get touchIndex() {
+    return this.#touchIndex;
   }
 
   get x() {

@@ -10,6 +10,7 @@ import {
   SDL_Locale,
   SDL_PowerState,
   SDL_Rect,
+  SDL_SensorType,
   SDL_SystemTheme,
 } from '@bunbox/sdl3';
 import {
@@ -28,6 +29,7 @@ import {
   GamepadAxisEvent,
   GamepadBatteryEvent,
   GamepadButtonEvent,
+  GamepadSensorEvent,
   KeyEvent,
   LocaleEvent,
   PointerEvent,
@@ -39,7 +41,7 @@ import {
 } from '../events';
 import { CString, read, type Pointer } from 'bun:ffi';
 import { pointerToBuffer } from '../utils/buffer';
-import { Rect } from '../math';
+import { Rect, Vector3 } from '../math';
 
 export type AppOptions = {
   /**
@@ -1090,18 +1092,95 @@ export class App extends Node {
       case SDL_EventType.SDL_EVENT_GAMEPAD_TOUCHPAD_DOWN: {
         const evStruct = this.#eventStruct.properties.gtouchpad;
 
+        event = new PointerEvent({
+          type: 'pointerDown',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowId: -1,
+          deviceId: evStruct.properties.which,
+          pointerId: evStruct.properties.finger,
+          touchIndex: evStruct.properties.touchpad,
+          pointerType: 'gamepad',
+          x: evStruct.properties.x,
+          y: evStruct.properties.y,
+          deltaX: 0,
+          deltaY: 0,
+          pressure: evStruct.properties.pressure,
+          isDoubleClick: false, // TODO: handle double click
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_GAMEPAD_TOUCHPAD_MOTION: {
         const evStruct = this.#eventStruct.properties.gtouchpad;
+
+        event = new PointerEvent({
+          type: 'pointerMove',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowId: -1,
+          deviceId: evStruct.properties.which,
+          pointerId: evStruct.properties.finger,
+          touchIndex: evStruct.properties.touchpad,
+          pointerType: 'gamepad',
+          x: evStruct.properties.x,
+          y: evStruct.properties.y,
+          deltaX: 0, // TODO: calculate delta
+          deltaY: 0,
+          pressure: evStruct.properties.pressure,
+          isDoubleClick: false,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_GAMEPAD_TOUCHPAD_UP: {
         const evStruct = this.#eventStruct.properties.gtouchpad;
+
+        event = new PointerEvent({
+          type: 'pointerUp',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowId: -1,
+          deviceId: evStruct.properties.which,
+          pointerId: evStruct.properties.finger,
+          touchIndex: evStruct.properties.touchpad,
+          pointerType: 'gamepad',
+          x: evStruct.properties.x,
+          y: evStruct.properties.y,
+          deltaX: 0,
+          deltaY: 0,
+          pressure: evStruct.properties.pressure,
+          isDoubleClick: false,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_GAMEPAD_SENSOR_UPDATE: {
         const evStruct = this.#eventStruct.properties.gsensor;
+        const sensorData = evStruct.properties.data as Float32Array;
+
+        event = new GamepadSensorEvent({
+          type: 'gamepadSensor',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          deviceId: evStruct.properties.which,
+          value: new Vector3(sensorData[0]!, sensorData[1]!, sensorData[2]!),
+          sensorType: (() => {
+            switch (evStruct.properties.sensor) {
+              case SDL_SensorType.SDL_SENSOR_ACCEL:
+                return 'accelerometer';
+              case SDL_SensorType.SDL_SENSOR_GYRO:
+                return 'gyroscope';
+              case SDL_SensorType.SDL_SENSOR_ACCEL_L:
+                return 'leftAccelerometer';
+              case SDL_SensorType.SDL_SENSOR_GYRO_L:
+                return 'leftGyroscope';
+              case SDL_SensorType.SDL_SENSOR_ACCEL_R:
+                return 'rightAccelerometer';
+              case SDL_SensorType.SDL_SENSOR_GYRO_R:
+                return 'rightGyroscope';
+              default:
+                return 'unknown';
+            }
+          })(),
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_GAMEPAD_STEAM_HANDLE_UPDATED: {
