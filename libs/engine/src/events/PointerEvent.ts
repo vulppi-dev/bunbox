@@ -6,8 +6,7 @@ export type PointerEventOptions = {
   windowId: number;
   deviceId: number;
   pointerId: number;
-  /** Only for gamepad touch events */
-  touchIndex?: number;
+  pointerIndex?: number;
   x: number;
   y: number;
   deltaX: number;
@@ -21,7 +20,7 @@ export class PointerEvent extends Event {
   #windowId: number;
   #deviceId: number;
   #pointerId: number;
-  #touchIndex?: number;
+  #pointerIndex?: number;
   #x: number;
   #y: number;
   #deltaX: number;
@@ -35,7 +34,7 @@ export class PointerEvent extends Event {
     this.#windowId = options.windowId;
     this.#deviceId = options.deviceId;
     this.#pointerId = options.pointerId;
-    this.#touchIndex = options.touchIndex;
+    this.#pointerIndex = options.pointerIndex;
     this.#x = options.x;
     this.#y = options.y;
     this.#deltaX = options.deltaX;
@@ -57,9 +56,13 @@ export class PointerEvent extends Event {
     return this.#pointerId;
   }
 
-  /** Only for gamepad touch events */
-  get touchIndex() {
-    return this.#touchIndex;
+  /**
+   * For touch, this is the index of the touch point.
+   * For pen, this is the flag state (e.g., barrel button pressed).
+   * For gamepad, this is the touch index.
+   */
+  get pointerIndex() {
+    return this.#pointerIndex;
   }
 
   get x() {

@@ -8,6 +8,7 @@ import {
   SDL_InitFlags,
   SDL_Keymod,
   SDL_Locale,
+  SDL_MouseWheelDirection,
   SDL_PowerState,
   SDL_Rect,
   SDL_SensorType,
@@ -83,7 +84,7 @@ export class App extends Node {
 
   #stack: Node[] = [];
 
-  #initialDate: Date;
+  #epochOffsetMs: number;
   #eventStruct: SDL_Event;
 
   constructor(options?: AppOptions) {
@@ -112,7 +113,8 @@ export class App extends Node {
     if (!result) {
       throw new Error(`SDL: ${SDL.SDL_GetError()}`);
     }
-    this.#initialDate = new Date();
+    this.#epochOffsetMs =
+      Date.now() - Number(SDL.SDL_GetTicksNS() / 1_000_000n);
     this.#eventStruct = new SDL_Event();
 
     SDL.SDL_SetAppMetadata(cstr(name), cstr(version), cstr(identifier));
@@ -124,6 +126,8 @@ export class App extends Node {
     const unsubRemoveChild = this.subscribe('remove-child', () => {
       this.#stack = getChildrenStack(this, Node);
     });
+
+    App.#singleAppInstance = this;
 
     this.on('dispose', () => {
       unsubAddChild();
@@ -144,6 +148,7 @@ export class App extends Node {
       enumerable: true,
     });
 
+    this.#stack = getChildrenStack(this, Node);
     this.#startEventLooper();
     this.#startProcessLooper();
   }
@@ -152,13 +157,13 @@ export class App extends Node {
     return 'App';
   }
 
-  get timestamp() {
-    return this.#initialDate.getTime();
+  get epochOffsetMs() {
+    return this.#epochOffsetMs;
   }
 
   get now() {
     const time = Number(SDL.SDL_GetTicksNS() / 1_000_000n);
-    return this.#initialDate.getTime() + time;
+    return this.#epochOffsetMs + time;
   }
 
   setLogPriority(priority: AppLogPriority) {
@@ -177,14 +182,19 @@ export class App extends Node {
     const localeCount = new Int32Array(1);
 
     const pointers = SDL.SDL_GetPreferredLocales(localeCount);
-    if (!pointers) return [];
-    for (let i = 0; i < localeCount[0]!; i++) {
-      const pointer = read.ptr(pointers, i) as Pointer;
-      if (!pointer) continue;
-      const locale = new SDL_Locale();
-      const buffer = pointerToBuffer(pointer, locale.size);
-      locale.copy(buffer);
-      locales.push(locale);
+    try {
+      if (!pointers) return [];
+      for (let i = 0; i < localeCount[0]!; i++) {
+        const pointer = read.ptr(pointers, i) as Pointer;
+        if (!pointer) continue;
+        const locale = new SDL_Locale();
+        const buffer = pointerToBuffer(pointer, locale.size);
+        locale.copy(buffer);
+        locales.push(locale);
+      }
+    } catch (_) {
+    } finally {
+      SDL.SDL_free(pointers);
     }
 
     return locales.map((l) => ({
@@ -241,10 +251,18 @@ export class App extends Node {
     return new Rect(x[0]!, y[0]!, w[0]!, h[0]!);
   }
 
+  #helperTimestampToDate(t: bigint) {
+    const now = this.epochOffsetMs;
+    return new Date(Number(t / 1_000_000n) + now);
+  }
+
   async #startEventLooper() {
     while (!this.isDisposed) {
-      while (SDL.SDL_PollEvent(this.#eventStruct.bunPointer)) {
-        this.#dispatchEvent();
+      try {
+        const got = SDL.SDL_WaitEventTimeout(this.#eventStruct.bunPointer, 8);
+        if (got) this.#dispatchEvent();
+      } catch (error) {
+        console.error('Error while polling events:', error);
       }
       await promiseDelay(1);
     }
@@ -280,9 +298,7 @@ export class App extends Node {
 
   #dispatchEvent() {
     const type = this.#eventStruct.properties.type;
-    const now = this.timestamp;
-    const timestampToDate = (t: bigint) =>
-      new Date(Number(t / 1_000_000n) + now);
+    const now = this.epochOffsetMs;
 
     let event: Event | null = null;
     switch (type) {
@@ -291,7 +307,7 @@ export class App extends Node {
         event = new QuitEvent({
           type: 'quit',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
         });
         break;
       }
@@ -300,7 +316,7 @@ export class App extends Node {
         event = new Event({
           type: 'terminating',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
         });
         break;
       }
@@ -309,7 +325,7 @@ export class App extends Node {
         event = new Event({
           type: 'lowMemory',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
         });
         break;
       }
@@ -318,7 +334,7 @@ export class App extends Node {
         event = new Event({
           type: 'enterBackground',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
         });
         break;
       }
@@ -327,7 +343,7 @@ export class App extends Node {
         event = new Event({
           type: 'enterForeground',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
         });
         break;
       }
@@ -337,7 +353,7 @@ export class App extends Node {
         event = new LocaleEvent({
           type: 'locale',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           locales: this.getLocales(),
         });
         break;
@@ -348,7 +364,7 @@ export class App extends Node {
         event = new ThemeEvent({
           type: 'theme',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           mode: this.getTheme(),
         });
         break;
@@ -361,7 +377,7 @@ export class App extends Node {
         event = new DisplayEvent({
           type: 'orientation',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           displayId: evStruct.properties.displayID,
           orientation: this.getDisplayOrientation(
             evStruct.properties.displayID,
@@ -380,7 +396,7 @@ export class App extends Node {
         event = new DisplayEvent({
           type: 'displayAdded',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           displayId: evStruct.properties.displayID,
           orientation: this.getDisplayOrientation(
             evStruct.properties.displayID,
@@ -398,7 +414,7 @@ export class App extends Node {
         event = new DisplayEvent({
           type: 'displayRemoved',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           displayId: evStruct.properties.displayID,
           orientation: 'unknown',
           x: 0,
@@ -415,7 +431,7 @@ export class App extends Node {
         event = new DisplayEvent({
           type: 'displayMove',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           displayId: evStruct.properties.displayID,
           orientation: this.getDisplayOrientation(
             evStruct.properties.displayID,
@@ -436,7 +452,7 @@ export class App extends Node {
         event = new DisplayEvent({
           type: 'displayChange',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           displayId: evStruct.properties.displayID,
           orientation: this.getDisplayOrientation(
             evStruct.properties.displayID,
@@ -458,7 +474,7 @@ export class App extends Node {
         event = new WindowEvent({
           type: 'windowShown',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowId: evStruct.properties.windowID,
           currentDisplayId: SDL.SDL_GetDisplayForWindow(window),
           x: rect.x,
@@ -477,7 +493,7 @@ export class App extends Node {
         event = new WindowEvent({
           type: 'windowHidden',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowId: evStruct.properties.windowID,
           currentDisplayId: SDL.SDL_GetDisplayForWindow(window),
           x: rect.x,
@@ -495,7 +511,7 @@ export class App extends Node {
         event = new WindowEvent({
           type: 'windowMove',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowId: evStruct.properties.windowID,
           currentDisplayId: SDL.SDL_GetDisplayForWindow(window),
           x: rect.x,
@@ -515,7 +531,7 @@ export class App extends Node {
         event = new WindowEvent({
           type: 'windowResize',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowId: evStruct.properties.windowID,
           currentDisplayId: SDL.SDL_GetDisplayForWindow(window),
           x: rect.x,
@@ -533,7 +549,7 @@ export class App extends Node {
         event = new WindowEvent({
           type: 'windowMinimized',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowId: evStruct.properties.windowID,
           currentDisplayId: SDL.SDL_GetDisplayForWindow(window),
           x: rect.x,
@@ -551,7 +567,7 @@ export class App extends Node {
         event = new WindowEvent({
           type: 'windowMaximized',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowId: evStruct.properties.windowID,
           currentDisplayId: SDL.SDL_GetDisplayForWindow(window),
           x: rect.x,
@@ -569,7 +585,7 @@ export class App extends Node {
         event = new WindowEvent({
           type: 'windowRestored',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowId: evStruct.properties.windowID,
           currentDisplayId: SDL.SDL_GetDisplayForWindow(window),
           x: rect.x,
@@ -587,7 +603,7 @@ export class App extends Node {
         event = new WindowEvent({
           type: 'windowPointerEnter',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowId: evStruct.properties.windowID,
           currentDisplayId: SDL.SDL_GetDisplayForWindow(window),
           x: rect.x,
@@ -605,7 +621,7 @@ export class App extends Node {
         event = new WindowEvent({
           type: 'windowPointerLeave',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowId: evStruct.properties.windowID,
           currentDisplayId: SDL.SDL_GetDisplayForWindow(window),
           x: rect.x,
@@ -623,7 +639,7 @@ export class App extends Node {
         event = new WindowEvent({
           type: 'windowFocus',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowId: evStruct.properties.windowID,
           currentDisplayId: SDL.SDL_GetDisplayForWindow(window),
           x: rect.x,
@@ -641,7 +657,7 @@ export class App extends Node {
         event = new WindowEvent({
           type: 'windowBlur',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowId: evStruct.properties.windowID,
           currentDisplayId: SDL.SDL_GetDisplayForWindow(window),
           x: rect.x,
@@ -659,7 +675,7 @@ export class App extends Node {
         event = new WindowEvent({
           type: 'windowClose',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowId: evStruct.properties.windowID,
           currentDisplayId: SDL.SDL_GetDisplayForWindow(window),
           x: rect.x,
@@ -678,7 +694,7 @@ export class App extends Node {
         event = new WindowEvent({
           type: 'windowDisplayChange',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowId: evStruct.properties.windowID,
           currentDisplayId: SDL.SDL_GetDisplayForWindow(window),
           x: rect.x,
@@ -696,7 +712,7 @@ export class App extends Node {
         event = new WindowEvent({
           type: 'windowSafeArea',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowId: evStruct.properties.windowID,
           currentDisplayId: SDL.SDL_GetDisplayForWindow(window),
           x: rect.x,
@@ -714,7 +730,7 @@ export class App extends Node {
         event = new WindowEvent({
           type: 'windowFullscreenEnter',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowId: evStruct.properties.windowID,
           currentDisplayId: SDL.SDL_GetDisplayForWindow(window),
           x: rect.x,
@@ -732,7 +748,7 @@ export class App extends Node {
         event = new WindowEvent({
           type: 'windowFullscreenLeave',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowId: evStruct.properties.windowID,
           currentDisplayId: SDL.SDL_GetDisplayForWindow(window),
           x: rect.x,
@@ -744,14 +760,13 @@ export class App extends Node {
       }
       case SDL_EventType.SDL_EVENT_WINDOW_DESTROYED: {
         const evStruct = this.#eventStruct.properties.window;
-        const window = SDL.SDL_GetWindowFromID(evStruct.properties.windowID);
 
         event = new WindowEvent({
           type: 'windowDestroy',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowId: evStruct.properties.windowID,
-          currentDisplayId: SDL.SDL_GetDisplayForWindow(window),
+          currentDisplayId: -1,
           x: 0,
           y: 0,
           width: 0,
@@ -766,7 +781,7 @@ export class App extends Node {
         event = new KeyEvent({
           type: 'keyDown',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowId: evStruct.properties.windowID,
           deviceId: evStruct.properties.which,
           code: evStruct.properties.scancode,
@@ -785,7 +800,7 @@ export class App extends Node {
         event = new KeyEvent({
           type: 'keyUp',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowId: evStruct.properties.windowID,
           deviceId: evStruct.properties.which,
           code: evStruct.properties.scancode,
@@ -804,7 +819,7 @@ export class App extends Node {
         event = new TextEvent({
           type: 'textEditing',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowID: evStruct.properties.windowID,
           text: evStruct.properties.text,
           start: evStruct.properties.start,
@@ -831,7 +846,7 @@ export class App extends Node {
         event = new TextEvent({
           type: 'textEditingCandidates',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowID: evStruct.properties.windowID,
           text: candidates[evStruct.properties.selected_candidate] ?? '',
           candidates,
@@ -844,7 +859,7 @@ export class App extends Node {
         event = new TextEvent({
           type: 'textInput',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowID: evStruct.properties.windowID,
           text: evStruct.properties.text,
         });
@@ -856,7 +871,7 @@ export class App extends Node {
         event = new Event({
           type: 'keymapChange',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
         });
         break;
       }
@@ -866,7 +881,7 @@ export class App extends Node {
         event = new DeviceEvent({
           type: 'deviceAdded',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           deviceType: 'keyboard',
           deviceId: evStruct.properties.which,
         });
@@ -878,7 +893,7 @@ export class App extends Node {
         event = new DeviceEvent({
           type: 'deviceRemoved',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           deviceType: 'keyboard',
           deviceId: evStruct.properties.which,
         });
@@ -891,7 +906,7 @@ export class App extends Node {
         event = new PointerEvent({
           type: 'pointerMove',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowId: evStruct.properties.windowID,
           deviceId: evStruct.properties.which,
           pointerId: 0,
@@ -911,7 +926,7 @@ export class App extends Node {
         event = new PointerEvent({
           type: 'pointerDown',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowId: evStruct.properties.windowID,
           deviceId: evStruct.properties.which,
           pointerId: evStruct.properties.button,
@@ -931,7 +946,7 @@ export class App extends Node {
         event = new PointerEvent({
           type: 'pointerUp',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowId: evStruct.properties.windowID,
           deviceId: evStruct.properties.which,
           pointerId: evStruct.properties.button,
@@ -947,11 +962,16 @@ export class App extends Node {
       }
       case SDL_EventType.SDL_EVENT_MOUSE_WHEEL: {
         const evStruct = this.#eventStruct.properties.wheel;
+        const dir =
+          evStruct.properties.direction ===
+          SDL_MouseWheelDirection.SDL_MOUSEWHEEL_NORMAL
+            ? 1
+            : -1;
 
         event = new PointerEvent({
           type: 'pointerWheel',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowId: evStruct.properties.windowID,
           deviceId: evStruct.properties.which,
           pointerId: 0,
@@ -959,7 +979,7 @@ export class App extends Node {
           x: evStruct.properties.mouse_x,
           y: evStruct.properties.mouse_y,
           deltaX: evStruct.properties.x,
-          deltaY: evStruct.properties.y,
+          deltaY: evStruct.properties.y * dir,
           isDoubleClick: false,
           pressure: 0,
         });
@@ -971,7 +991,7 @@ export class App extends Node {
         event = new DeviceEvent({
           type: 'deviceAdded',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           deviceType: 'mouse',
           deviceId: evStruct.properties.which,
         });
@@ -984,7 +1004,7 @@ export class App extends Node {
         event = new DeviceEvent({
           type: 'deviceRemoved',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           deviceType: 'mouse',
           deviceId: evStruct.properties.which,
         });
@@ -997,7 +1017,7 @@ export class App extends Node {
         event = new DeviceEvent({
           type: 'deviceAdded',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           deviceType: SDL.SDL_IsGamepad(evStruct.properties.which)
             ? 'gamepad'
             : 'joystick',
@@ -1011,7 +1031,7 @@ export class App extends Node {
         event = new DeviceEvent({
           type: 'deviceRemoved',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           deviceType: SDL.SDL_IsGamepad(evStruct.properties.which)
             ? 'gamepad'
             : 'joystick',
@@ -1025,7 +1045,7 @@ export class App extends Node {
         event = new GamepadBatteryEvent({
           type: 'gamepadBattery',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           deviceId: evStruct.properties.which,
           batteryLevel: evStruct.properties.percent,
           state: (() => {
@@ -1050,12 +1070,15 @@ export class App extends Node {
       // MARK: Gamepad events
       case SDL_EventType.SDL_EVENT_GAMEPAD_AXIS_MOTION: {
         const evStruct = this.#eventStruct.properties.gaxis;
+        const raw = evStruct.properties.value; // -32768..32767
+        const value = raw >= 0 ? raw / 32767 : raw / 32768; // [-1, 1] sem overshoot
 
         event = new GamepadAxisEvent({
           type: 'gamepadAxis',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           deviceId: evStruct.properties.which,
+          value,
           axis: (() => {
             switch (evStruct.properties.axis) {
               case SDL_GamepadAxis.SDL_GAMEPAD_AXIS_LEFTX:
@@ -1072,7 +1095,6 @@ export class App extends Node {
                 return 'unknown';
             }
           })(),
-          value: evStruct.properties.value / 32767,
         });
         break;
       }
@@ -1082,7 +1104,7 @@ export class App extends Node {
         event = new GamepadButtonEvent({
           type: 'gamepadDown',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           deviceId: evStruct.properties.which,
           key: evStruct.properties.button,
         });
@@ -1094,7 +1116,7 @@ export class App extends Node {
         event = new GamepadButtonEvent({
           type: 'gamepadUp',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           deviceId: evStruct.properties.which,
           key: evStruct.properties.button,
         });
@@ -1106,7 +1128,7 @@ export class App extends Node {
         event = new DeviceEvent({
           type: 'gamepadRemap',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           deviceType: 'gamepad',
           deviceId: evStruct.properties.which,
         });
@@ -1118,11 +1140,11 @@ export class App extends Node {
         event = new PointerEvent({
           type: 'pointerDown',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowId: -1,
           deviceId: evStruct.properties.which,
           pointerId: evStruct.properties.finger,
-          touchIndex: evStruct.properties.touchpad,
+          pointerIndex: evStruct.properties.touchpad,
           pointerType: 'gamepad',
           x: evStruct.properties.x,
           y: evStruct.properties.y,
@@ -1139,11 +1161,11 @@ export class App extends Node {
         event = new PointerEvent({
           type: 'pointerMove',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowId: -1,
           deviceId: evStruct.properties.which,
           pointerId: evStruct.properties.finger,
-          touchIndex: evStruct.properties.touchpad,
+          pointerIndex: evStruct.properties.touchpad,
           pointerType: 'gamepad',
           x: evStruct.properties.x,
           y: evStruct.properties.y,
@@ -1160,11 +1182,11 @@ export class App extends Node {
         event = new PointerEvent({
           type: 'pointerUp',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowId: -1,
           deviceId: evStruct.properties.which,
           pointerId: evStruct.properties.finger,
-          touchIndex: evStruct.properties.touchpad,
+          pointerIndex: evStruct.properties.touchpad,
           pointerType: 'gamepad',
           x: evStruct.properties.x,
           y: evStruct.properties.y,
@@ -1182,7 +1204,7 @@ export class App extends Node {
         event = new GamepadSensorEvent({
           type: 'gamepadSensor',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           deviceId: evStruct.properties.which,
           value: new Vector3(sensorData[0]!, sensorData[1]!, sensorData[2]!),
           sensorType: getSensorType(evStruct.properties.sensor),
@@ -1195,7 +1217,7 @@ export class App extends Node {
         event = new DeviceEvent({
           type: 'gamepadSteamHandle',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           deviceType: 'gamepad',
           deviceId: evStruct.properties.which,
         });
@@ -1208,7 +1230,7 @@ export class App extends Node {
         event = new PointerEvent({
           type: 'pointerDown',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowId: evStruct.properties.windowID,
           deviceId: Number(evStruct.properties.touchId),
           pointerId: Number(evStruct.properties.fingerId),
@@ -1228,7 +1250,7 @@ export class App extends Node {
         event = new PointerEvent({
           type: 'pointerUp',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowId: evStruct.properties.windowID,
           deviceId: Number(evStruct.properties.touchId),
           pointerId: Number(evStruct.properties.fingerId),
@@ -1248,7 +1270,7 @@ export class App extends Node {
         event = new PointerEvent({
           type: 'pointerMove',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowId: evStruct.properties.windowID,
           deviceId: Number(evStruct.properties.touchId),
           pointerId: Number(evStruct.properties.fingerId),
@@ -1268,7 +1290,7 @@ export class App extends Node {
         event = new PointerEvent({
           type: 'pointerCancel',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowId: evStruct.properties.windowID,
           deviceId: Number(evStruct.properties.touchId),
           pointerId: Number(evStruct.properties.fingerId),
@@ -1298,7 +1320,7 @@ export class App extends Node {
         event = new ClipboardEvent({
           type: 'clipboardUpdated',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           origin: evStruct.properties.owner ? 'self' : 'external',
           mimeTypes,
         });
@@ -1311,7 +1333,7 @@ export class App extends Node {
         event = new DropEvent({
           type: 'drop',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowId: evStruct.properties.windowID,
           x: evStruct.properties.x,
           y: evStruct.properties.y,
@@ -1327,7 +1349,7 @@ export class App extends Node {
         event = new DropEvent({
           type: 'drop',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowId: evStruct.properties.windowID,
           x: evStruct.properties.x,
           y: evStruct.properties.y,
@@ -1343,7 +1365,7 @@ export class App extends Node {
         event = new DropEvent({
           type: 'dropBegin',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowId: evStruct.properties.windowID,
           x: evStruct.properties.x,
           y: evStruct.properties.y,
@@ -1359,7 +1381,7 @@ export class App extends Node {
         event = new DropEvent({
           type: 'dropComplete',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowId: evStruct.properties.windowID,
           x: evStruct.properties.x,
           y: evStruct.properties.y,
@@ -1375,7 +1397,7 @@ export class App extends Node {
         event = new DropEvent({
           type: 'dropMove',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowId: evStruct.properties.windowID,
           x: evStruct.properties.x,
           y: evStruct.properties.y,
@@ -1392,7 +1414,7 @@ export class App extends Node {
         event = new DeviceEvent({
           type: 'deviceAdded',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           deviceType: 'audio',
           deviceId: evStruct.properties.which,
         });
@@ -1404,7 +1426,7 @@ export class App extends Node {
         event = new DeviceEvent({
           type: 'deviceRemoved',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           deviceType: 'audio',
           deviceId: evStruct.properties.which,
         });
@@ -1416,7 +1438,7 @@ export class App extends Node {
         event = new DeviceEvent({
           type: 'deviceUpdated',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           deviceType: 'audio',
           deviceId: evStruct.properties.which,
         });
@@ -1429,7 +1451,7 @@ export class App extends Node {
         event = new DeviceEvent({
           type: 'deviceUpdated',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           deviceType: 'sensor',
           deviceId: evStruct.properties.which,
         });
@@ -1442,7 +1464,7 @@ export class App extends Node {
         event = new PointerEvent({
           type: 'pointerIn',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowId: evStruct.properties.windowID,
           deviceId: evStruct.properties.which,
           pointerId: 0,
@@ -1462,7 +1484,7 @@ export class App extends Node {
         event = new PointerEvent({
           type: 'pointerOut',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowId: evStruct.properties.windowID,
           deviceId: evStruct.properties.which,
           pointerId: 0,
@@ -1482,10 +1504,10 @@ export class App extends Node {
         event = new PointerEvent({
           type: 'pointerDown',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowId: evStruct.properties.windowID,
           deviceId: evStruct.properties.which,
-          touchIndex: evStruct.properties.pen_state,
+          pointerIndex: evStruct.properties.pen_state,
           pointerId: 0,
           pointerType: 'pen',
           x: evStruct.properties.x,
@@ -1503,10 +1525,10 @@ export class App extends Node {
         event = new PointerEvent({
           type: 'pointerUp',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowId: evStruct.properties.windowID,
           deviceId: evStruct.properties.which,
-          touchIndex: evStruct.properties.pen_state,
+          pointerIndex: evStruct.properties.pen_state,
           pointerId: 0,
           pointerType: 'pen',
           x: evStruct.properties.x,
@@ -1524,10 +1546,10 @@ export class App extends Node {
         event = new PointerEvent({
           type: 'pointerDown',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowId: evStruct.properties.windowID,
           deviceId: evStruct.properties.which,
-          touchIndex: evStruct.properties.pen_state,
+          pointerIndex: evStruct.properties.pen_state,
           pointerId: evStruct.properties.button,
           pointerType: 'pen',
           x: evStruct.properties.x,
@@ -1545,10 +1567,10 @@ export class App extends Node {
         event = new PointerEvent({
           type: 'pointerUp',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowId: evStruct.properties.windowID,
           deviceId: evStruct.properties.which,
-          touchIndex: evStruct.properties.pen_state,
+          pointerIndex: evStruct.properties.pen_state,
           pointerId: evStruct.properties.button,
           pointerType: 'pen',
           x: evStruct.properties.x,
@@ -1566,10 +1588,10 @@ export class App extends Node {
         event = new PointerEvent({
           type: 'pointerMove',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowId: evStruct.properties.windowID,
           deviceId: evStruct.properties.which,
-          touchIndex: evStruct.properties.pen_state,
+          pointerIndex: evStruct.properties.pen_state,
           pointerId: 0,
           pointerType: 'pen',
           x: evStruct.properties.x,
@@ -1583,14 +1605,15 @@ export class App extends Node {
       }
       case SDL_EventType.SDL_EVENT_PEN_AXIS: {
         const evStruct = this.#eventStruct.properties.paxis;
+        evStruct.properties.value;
 
         event = new PointerEvent({
           type: 'pointerMove',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           windowId: evStruct.properties.windowID,
           deviceId: evStruct.properties.which,
-          touchIndex: evStruct.properties.pen_state,
+          pointerIndex: evStruct.properties.pen_state,
           pointerId: evStruct.properties.axis,
           pointerType: 'pen-axis',
           x: evStruct.properties.x,
@@ -1598,7 +1621,7 @@ export class App extends Node {
           deltaX: 0,
           deltaY: 0,
           isDoubleClick: false,
-          pressure: 0,
+          pressure: evStruct.properties.value,
         });
         break;
       }
@@ -1609,7 +1632,7 @@ export class App extends Node {
         event = new DeviceEvent({
           type: 'deviceAdded',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           deviceType: 'camera',
           deviceId: evStruct.properties.which,
         });
@@ -1621,7 +1644,7 @@ export class App extends Node {
         event = new DeviceEvent({
           type: 'deviceRemoved',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           deviceType: 'camera',
           deviceId: evStruct.properties.which,
         });
@@ -1633,7 +1656,7 @@ export class App extends Node {
         event = new DeviceEvent({
           type: 'deviceApproved',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           deviceType: 'camera',
           deviceId: evStruct.properties.which,
         });
@@ -1645,7 +1668,7 @@ export class App extends Node {
         event = new DeviceEvent({
           type: 'deviceDenied',
           reserved: evStruct.properties.reserved,
-          timestamp: timestampToDate(evStruct.properties.timestamp),
+          timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           deviceType: 'camera',
           deviceId: evStruct.properties.which,
         });
