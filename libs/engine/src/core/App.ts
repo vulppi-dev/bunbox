@@ -26,6 +26,7 @@ import {
   ClipboardEvent,
   DeviceEvent,
   DisplayEvent,
+  DropEvent,
   Event,
   GamepadAxisEvent,
   GamepadBatteryEvent,
@@ -1306,18 +1307,82 @@ export class App extends Node {
       // MARK: Drop events
       case SDL_EventType.SDL_EVENT_DROP_FILE: {
         const evStruct = this.#eventStruct.properties.drop;
+
+        event = new DropEvent({
+          type: 'drop',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowId: evStruct.properties.windowID,
+          x: evStruct.properties.x,
+          y: evStruct.properties.y,
+          source: evStruct.properties.source,
+          data: evStruct.properties.data,
+          dropType: 'file',
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_DROP_TEXT: {
         const evStruct = this.#eventStruct.properties.drop;
+
+        event = new DropEvent({
+          type: 'drop',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowId: evStruct.properties.windowID,
+          x: evStruct.properties.x,
+          y: evStruct.properties.y,
+          source: evStruct.properties.source,
+          data: evStruct.properties.data,
+          dropType: 'text',
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_DROP_BEGIN: {
         const evStruct = this.#eventStruct.properties.drop;
+
+        event = new DropEvent({
+          type: 'dropBegin',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowId: evStruct.properties.windowID,
+          x: evStruct.properties.x,
+          y: evStruct.properties.y,
+          source: evStruct.properties.source,
+          data: evStruct.properties.data,
+          dropType: 'unknown',
+        });
+        break;
+      }
+      case SDL_EventType.SDL_EVENT_DROP_COMPLETE: {
+        const evStruct = this.#eventStruct.properties.drop;
+
+        event = new DropEvent({
+          type: 'dropComplete',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowId: evStruct.properties.windowID,
+          x: evStruct.properties.x,
+          y: evStruct.properties.y,
+          source: evStruct.properties.source,
+          data: evStruct.properties.data,
+          dropType: 'unknown',
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_DROP_POSITION: {
         const evStruct = this.#eventStruct.properties.drop;
+
+        event = new DropEvent({
+          type: 'dropMove',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowId: evStruct.properties.windowID,
+          x: evStruct.properties.x,
+          y: evStruct.properties.y,
+          source: evStruct.properties.source,
+          data: evStruct.properties.data,
+          dropType: 'unknown',
+        });
         break;
       }
       // MARK: Audio events
@@ -1584,19 +1649,6 @@ export class App extends Node {
           deviceType: 'camera',
           deviceId: evStruct.properties.which,
         });
-        break;
-      }
-      // MARK: Render events
-      case SDL_EventType.SDL_EVENT_RENDER_TARGETS_RESET: {
-        const evStruct = this.#eventStruct.properties.render;
-        break;
-      }
-      case SDL_EventType.SDL_EVENT_RENDER_DEVICE_RESET: {
-        const evStruct = this.#eventStruct.properties.render;
-        break;
-      }
-      case SDL_EventType.SDL_EVENT_RENDER_DEVICE_LOST: {
-        const evStruct = this.#eventStruct.properties.render;
         break;
       }
     }

@@ -13,6 +13,7 @@ import type { QuitEvent } from './QuitEvent';
 import type { TextEvent } from './TextEvent';
 import type { ThemeEvent } from './ThemeEvent';
 import type { WindowEvent } from './WindowEvent';
+import type { DropEvent } from './DropEvent';
 
 export * from './ClipboardEvent';
 export * from './DeviceEvent';
@@ -29,6 +30,7 @@ export * from './QuitEvent';
 export * from './TextEvent';
 export * from './ThemeEvent';
 export * from './WindowEvent';
+export * from './DropEvent';
 
 export type SDL_EventMap = {
   quit: [QuitEvent];
@@ -83,4 +85,8 @@ export type SDL_EventMap = {
   gamepadSensor: [GamepadSensorEvent];
   gamepadSteamHandle: [DeviceEvent];
   clipboardUpdated: [ClipboardEvent];
+  drop: [DropEvent];
+  dropBegin: [DropEvent];
+  dropMove: [DropEvent];
+  dropComplete: [DropEvent];
 };
