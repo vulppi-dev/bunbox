@@ -67,10 +67,12 @@ export type SDL_EventMap = {
   pointerDown: [PointerEvent];
   pointerUp: [PointerEvent];
   pointerWheel: [PointerEvent];
+  pointerCancel: [PointerEvent];
   gamepadBattery: [GamepadBatteryEvent];
   gamepadAxis: [GamepadAxisEvent];
   gamepadDown: [GamepadButtonEvent];
   gamepadUp: [GamepadButtonEvent];
   gamepadRemap: [DeviceEvent];
   gamepadSensor: [GamepadSensorEvent];
+  gamepadSteamHandle: [DeviceEvent];
 };

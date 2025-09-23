@@ -1080,12 +1080,14 @@ export class App extends Node {
         break;
       }
       case SDL_EventType.SDL_EVENT_GAMEPAD_REMAPPED: {
-        const evStruct = this.#eventStruct.properties.common;
+        const evStruct = this.#eventStruct.properties.gdevice;
 
-        event = new Event({
+        event = new DeviceEvent({
           type: 'gamepadRemap',
           reserved: evStruct.properties.reserved,
           timestamp: timestampToDate(evStruct.properties.timestamp),
+          deviceType: 'gamepad',
+          deviceId: evStruct.properties.which,
         });
         break;
       }
@@ -1184,24 +1186,95 @@ export class App extends Node {
         break;
       }
       case SDL_EventType.SDL_EVENT_GAMEPAD_STEAM_HANDLE_UPDATED: {
-        const evStruct = this.#eventStruct.properties.common;
+        const evStruct = this.#eventStruct.properties.gdevice;
+
+        event = new DeviceEvent({
+          type: 'gamepadSteamHandle',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          deviceType: 'gamepad',
+          deviceId: evStruct.properties.which,
+        });
         break;
       }
       // MARK: Finger events
       case SDL_EventType.SDL_EVENT_FINGER_DOWN: {
         const evStruct = this.#eventStruct.properties.tfinger;
+
+        event = new PointerEvent({
+          type: 'pointerDown',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowId: evStruct.properties.windowID,
+          deviceId: Number(evStruct.properties.touchId),
+          pointerId: Number(evStruct.properties.fingerId),
+          pointerType: 'touch',
+          x: evStruct.properties.x,
+          y: evStruct.properties.y,
+          deltaX: evStruct.properties.dx,
+          deltaY: evStruct.properties.dy,
+          isDoubleClick: false,
+          pressure: evStruct.properties.pressure,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_FINGER_UP: {
         const evStruct = this.#eventStruct.properties.tfinger;
+
+        event = new PointerEvent({
+          type: 'pointerUp',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowId: evStruct.properties.windowID,
+          deviceId: Number(evStruct.properties.touchId),
+          pointerId: Number(evStruct.properties.fingerId),
+          pointerType: 'touch',
+          x: evStruct.properties.x,
+          y: evStruct.properties.y,
+          deltaX: evStruct.properties.dx,
+          deltaY: evStruct.properties.dy,
+          isDoubleClick: false,
+          pressure: evStruct.properties.pressure,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_FINGER_MOTION: {
         const evStruct = this.#eventStruct.properties.tfinger;
+
+        event = new PointerEvent({
+          type: 'pointerMove',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowId: evStruct.properties.windowID,
+          deviceId: Number(evStruct.properties.touchId),
+          pointerId: Number(evStruct.properties.fingerId),
+          pointerType: 'touch',
+          x: evStruct.properties.x,
+          y: evStruct.properties.y,
+          deltaX: evStruct.properties.dx,
+          deltaY: evStruct.properties.dy,
+          isDoubleClick: false,
+          pressure: evStruct.properties.pressure,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_FINGER_CANCELED: {
         const evStruct = this.#eventStruct.properties.tfinger;
+        event = new PointerEvent({
+          type: 'pointerCancel',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowId: evStruct.properties.windowID,
+          deviceId: Number(evStruct.properties.touchId),
+          pointerId: Number(evStruct.properties.fingerId),
+          pointerType: 'touch',
+          x: evStruct.properties.x,
+          y: evStruct.properties.y,
+          deltaX: evStruct.properties.dx,
+          deltaY: evStruct.properties.dy,
+          isDoubleClick: false,
+          pressure: evStruct.properties.pressure,
+        });
         break;
       }
       // MARK: Clipboard events
