@@ -1,6 +1,6 @@
 import { Event, type EventOptions } from './Event';
 
-type PointerType = 'mouse' | 'pen' | 'touch' | 'gamepad';
+type PointerType = 'mouse' | 'pen' | 'pen-axis' | 'touch' | 'gamepad';
 
 export type PointerEventOptions = {
   windowId: number;

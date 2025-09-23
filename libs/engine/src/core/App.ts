@@ -23,6 +23,7 @@ import { Node } from './Node';
 import { promiseDelay } from '@vulppi/toolbelt';
 import { getChildrenStack } from '../utils/node';
 import {
+  ClipboardEvent,
   DeviceEvent,
   DisplayEvent,
   Event,
@@ -55,6 +56,25 @@ export type AppOptions = {
 
 declare global {
   const appInstance: InstanceType<typeof App>;
+}
+
+function getSensorType(sensor: SDL_SensorType) {
+  switch (sensor) {
+    case SDL_SensorType.SDL_SENSOR_ACCEL:
+      return 'accelerometer';
+    case SDL_SensorType.SDL_SENSOR_GYRO:
+      return 'gyroscope';
+    case SDL_SensorType.SDL_SENSOR_ACCEL_L:
+      return 'leftAccelerometer';
+    case SDL_SensorType.SDL_SENSOR_GYRO_L:
+      return 'leftGyroscope';
+    case SDL_SensorType.SDL_SENSOR_ACCEL_R:
+      return 'rightAccelerometer';
+    case SDL_SensorType.SDL_SENSOR_GYRO_R:
+      return 'rightGyroscope';
+    default:
+      return 'unknown';
+  }
 }
 
 export class App extends Node {
@@ -1164,24 +1184,7 @@ export class App extends Node {
           timestamp: timestampToDate(evStruct.properties.timestamp),
           deviceId: evStruct.properties.which,
           value: new Vector3(sensorData[0]!, sensorData[1]!, sensorData[2]!),
-          sensorType: (() => {
-            switch (evStruct.properties.sensor) {
-              case SDL_SensorType.SDL_SENSOR_ACCEL:
-                return 'accelerometer';
-              case SDL_SensorType.SDL_SENSOR_GYRO:
-                return 'gyroscope';
-              case SDL_SensorType.SDL_SENSOR_ACCEL_L:
-                return 'leftAccelerometer';
-              case SDL_SensorType.SDL_SENSOR_GYRO_L:
-                return 'leftGyroscope';
-              case SDL_SensorType.SDL_SENSOR_ACCEL_R:
-                return 'rightAccelerometer';
-              case SDL_SensorType.SDL_SENSOR_GYRO_R:
-                return 'rightGyroscope';
-              default:
-                return 'unknown';
-            }
-          })(),
+          sensorType: getSensorType(evStruct.properties.sensor),
         });
         break;
       }
@@ -1260,6 +1263,7 @@ export class App extends Node {
       }
       case SDL_EventType.SDL_EVENT_FINGER_CANCELED: {
         const evStruct = this.#eventStruct.properties.tfinger;
+
         event = new PointerEvent({
           type: 'pointerCancel',
           reserved: evStruct.properties.reserved,
@@ -1280,6 +1284,23 @@ export class App extends Node {
       // MARK: Clipboard events
       case SDL_EventType.SDL_EVENT_CLIPBOARD_UPDATE: {
         const evStruct = this.#eventStruct.properties.clipboard;
+        const mimeTypes: string[] = [];
+        for (let i = 0; i < evStruct.properties.num_mime_types; i++) {
+          const pointer = read.ptr(
+            Number(evStruct.properties.mime_types as bigint) as Pointer,
+            i,
+          ) as Pointer;
+          if (!pointer) continue;
+          mimeTypes.push(new CString(pointer).toString());
+        }
+
+        event = new ClipboardEvent({
+          type: 'clipboardUpdated',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          origin: evStruct.properties.owner ? 'self' : 'external',
+          mimeTypes,
+        });
         break;
       }
       // MARK: Drop events
@@ -1326,44 +1347,194 @@ export class App extends Node {
       }
       case SDL_EventType.SDL_EVENT_AUDIO_DEVICE_FORMAT_CHANGED: {
         const evStruct = this.#eventStruct.properties.adevice;
+
+        event = new DeviceEvent({
+          type: 'deviceUpdated',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          deviceType: 'audio',
+          deviceId: evStruct.properties.which,
+        });
         break;
       }
       // MARK: Sensor events
       case SDL_EventType.SDL_EVENT_SENSOR_UPDATE: {
         const evStruct = this.#eventStruct.properties.sensor;
+
+        event = new DeviceEvent({
+          type: 'deviceUpdated',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          deviceType: 'sensor',
+          deviceId: evStruct.properties.which,
+        });
         break;
       }
       // MARK: Pen events
       case SDL_EventType.SDL_EVENT_PEN_PROXIMITY_IN: {
         const evStruct = this.#eventStruct.properties.pproximity;
+
+        event = new PointerEvent({
+          type: 'pointerIn',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowId: evStruct.properties.windowID,
+          deviceId: evStruct.properties.which,
+          pointerId: 0,
+          pointerType: 'pen',
+          x: 0,
+          y: 0,
+          deltaX: 0,
+          deltaY: 0,
+          isDoubleClick: false,
+          pressure: 0,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_PEN_PROXIMITY_OUT: {
         const evStruct = this.#eventStruct.properties.pproximity;
+
+        event = new PointerEvent({
+          type: 'pointerOut',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowId: evStruct.properties.windowID,
+          deviceId: evStruct.properties.which,
+          pointerId: 0,
+          pointerType: 'pen',
+          x: 0,
+          y: 0,
+          deltaX: 0,
+          deltaY: 0,
+          isDoubleClick: false,
+          pressure: 0,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_PEN_DOWN: {
         const evStruct = this.#eventStruct.properties.ptouch;
+
+        event = new PointerEvent({
+          type: 'pointerDown',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowId: evStruct.properties.windowID,
+          deviceId: evStruct.properties.which,
+          touchIndex: evStruct.properties.pen_state,
+          pointerId: 0,
+          pointerType: 'pen',
+          x: evStruct.properties.x,
+          y: evStruct.properties.y,
+          deltaX: 0,
+          deltaY: 0,
+          isDoubleClick: false,
+          pressure: 0,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_PEN_UP: {
         const evStruct = this.#eventStruct.properties.ptouch;
+
+        event = new PointerEvent({
+          type: 'pointerUp',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowId: evStruct.properties.windowID,
+          deviceId: evStruct.properties.which,
+          touchIndex: evStruct.properties.pen_state,
+          pointerId: 0,
+          pointerType: 'pen',
+          x: evStruct.properties.x,
+          y: evStruct.properties.y,
+          deltaX: 0,
+          deltaY: 0,
+          isDoubleClick: false,
+          pressure: 0,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_PEN_BUTTON_DOWN: {
         const evStruct = this.#eventStruct.properties.pbutton;
+
+        event = new PointerEvent({
+          type: 'pointerDown',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowId: evStruct.properties.windowID,
+          deviceId: evStruct.properties.which,
+          touchIndex: evStruct.properties.pen_state,
+          pointerId: evStruct.properties.button,
+          pointerType: 'pen',
+          x: evStruct.properties.x,
+          y: evStruct.properties.y,
+          deltaX: 0,
+          deltaY: 0,
+          isDoubleClick: false,
+          pressure: 0,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_PEN_BUTTON_UP: {
         const evStruct = this.#eventStruct.properties.pbutton;
+
+        event = new PointerEvent({
+          type: 'pointerUp',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowId: evStruct.properties.windowID,
+          deviceId: evStruct.properties.which,
+          touchIndex: evStruct.properties.pen_state,
+          pointerId: evStruct.properties.button,
+          pointerType: 'pen',
+          x: evStruct.properties.x,
+          y: evStruct.properties.y,
+          deltaX: 0,
+          deltaY: 0,
+          isDoubleClick: false,
+          pressure: 0,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_PEN_MOTION: {
         const evStruct = this.#eventStruct.properties.pmotion;
+
+        event = new PointerEvent({
+          type: 'pointerMove',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowId: evStruct.properties.windowID,
+          deviceId: evStruct.properties.which,
+          touchIndex: evStruct.properties.pen_state,
+          pointerId: 0,
+          pointerType: 'pen',
+          x: evStruct.properties.x,
+          y: evStruct.properties.y,
+          deltaX: 0,
+          deltaY: 0,
+          isDoubleClick: false,
+          pressure: 0,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_PEN_AXIS: {
         const evStruct = this.#eventStruct.properties.paxis;
+
+        event = new PointerEvent({
+          type: 'pointerMove',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          windowId: evStruct.properties.windowID,
+          deviceId: evStruct.properties.which,
+          touchIndex: evStruct.properties.pen_state,
+          pointerId: evStruct.properties.axis,
+          pointerType: 'pen-axis',
+          x: evStruct.properties.x,
+          y: evStruct.properties.y,
+          deltaX: 0,
+          deltaY: 0,
+          isDoubleClick: false,
+          pressure: 0,
+        });
         break;
       }
       // MARK: Camera events
@@ -1393,10 +1564,26 @@ export class App extends Node {
       }
       case SDL_EventType.SDL_EVENT_CAMERA_DEVICE_APPROVED: {
         const evStruct = this.#eventStruct.properties.cdevice;
+
+        event = new DeviceEvent({
+          type: 'deviceApproved',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          deviceType: 'camera',
+          deviceId: evStruct.properties.which,
+        });
         break;
       }
       case SDL_EventType.SDL_EVENT_CAMERA_DEVICE_DENIED: {
         const evStruct = this.#eventStruct.properties.cdevice;
+
+        event = new DeviceEvent({
+          type: 'deviceDenied',
+          reserved: evStruct.properties.reserved,
+          timestamp: timestampToDate(evStruct.properties.timestamp),
+          deviceType: 'camera',
+          deviceId: evStruct.properties.which,
+        });
         break;
       }
       // MARK: Render events

@@ -1,3 +1,4 @@
+import type { ClipboardEvent } from './ClipboardEvent';
 import type { DeviceEvent } from './DeviceEvent';
 import type { DisplayEvent } from './DisplayEvent';
 import type { Event } from './Event';
@@ -13,6 +14,7 @@ import type { TextEvent } from './TextEvent';
 import type { ThemeEvent } from './ThemeEvent';
 import type { WindowEvent } from './WindowEvent';
 
+export * from './ClipboardEvent';
 export * from './DeviceEvent';
 export * from './DisplayEvent';
 export * from './Event';
@@ -63,11 +65,16 @@ export type SDL_EventMap = {
   textEditCandidates: [TextEvent];
   deviceAdded: [DeviceEvent];
   deviceRemoved: [DeviceEvent];
+  deviceUpdated: [DeviceEvent];
+  deviceApproved: [DeviceEvent];
+  deviceDenied: [DeviceEvent];
   pointerMove: [PointerEvent];
   pointerDown: [PointerEvent];
   pointerUp: [PointerEvent];
   pointerWheel: [PointerEvent];
   pointerCancel: [PointerEvent];
+  pointerIn: [PointerEvent];
+  pointerOut: [PointerEvent];
   gamepadBattery: [GamepadBatteryEvent];
   gamepadAxis: [GamepadAxisEvent];
   gamepadDown: [GamepadButtonEvent];
@@ -75,4 +82,5 @@ export type SDL_EventMap = {
   gamepadRemap: [DeviceEvent];
   gamepadSensor: [GamepadSensorEvent];
   gamepadSteamHandle: [DeviceEvent];
+  clipboardUpdated: [ClipboardEvent];
 };

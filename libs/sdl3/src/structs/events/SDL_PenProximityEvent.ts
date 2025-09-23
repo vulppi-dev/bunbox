@@ -16,7 +16,7 @@ const SDL_PenProximityEventSchema = {
     order: 3,
     type: 'u32',
   } /**< The window with keyboard focus, if any */,
-  which: { order: 4, type: 'u32' } /**< The joystick instance id */,
+  which: { order: 4, type: 'u32' } /**< The pen instance id */,
 } as const satisfies StructSchema;
 
 /**

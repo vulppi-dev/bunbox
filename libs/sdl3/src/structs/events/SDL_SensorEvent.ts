@@ -12,7 +12,7 @@ const SDL_SensorEventSchema = {
     order: 2,
     type: 'u64',
   } /**< In nanoseconds, populated using SDL_GetTicksNS() */,
-  which: { order: 3, type: 'u32' } /**< The joystick instance id */,
+  which: { order: 3, type: 'u32' } /**< The instance ID of the sensor */,
   data: {
     order: 4,
     type: 'array',

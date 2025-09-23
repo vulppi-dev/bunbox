@@ -1,3 +1,4 @@
+import { SDL_PenInputFlags } from '../../enum';
 import { SDL_EventType } from '../../enum/events';
 import { BunStruct, type StructSchema } from '../_struct';
 
@@ -19,7 +20,8 @@ const SDL_PenTouchEventSchema = {
   which: { order: 4, type: 'u32' } /**< The joystick instance id */,
   pen_state: {
     order: 5,
-    type: 'u32',
+    type: 'enum',
+    enum: SDL_PenInputFlags,
   } /**< Complete pen input state at time of event */,
   x: { order: 6, type: 'f32' } /**< X coordinate, relative to window */,
   y: { order: 7, type: 'f32' } /**< Y coordinate, relative to window */,

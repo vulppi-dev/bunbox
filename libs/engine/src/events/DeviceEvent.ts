@@ -6,7 +6,8 @@ export type DeviceType =
   | 'gamepad'
   | 'audio'
   | 'camera'
-  | 'joystick';
+  | 'joystick'
+  | 'sensor';
 
 export type DeviceEventOptions = {
   deviceType: DeviceType;
