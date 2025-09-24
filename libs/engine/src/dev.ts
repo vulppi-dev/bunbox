@@ -15,17 +15,18 @@ const win = new Window({
 win.on('windowClose', (ev) => {
   console.log(ev.type);
   win.dispose();
+  app.dispose();
 });
 
 win.on('quit', (ev) => {
   console.log(ev.type);
-  app.dispose();
 });
 
 win.on('keyDown', (ev) => {
   if (ev.key === SDL_Keycode.SDLK_ESCAPE) {
     app.dispose();
   }
+  console.log(ev.type, ev.keyText);
 });
 
 win.width = 200;
