@@ -1,6 +1,6 @@
+import { validate_wgsl } from '@bunbox/naga';
 import { DirtyState } from '@bunbox/utils';
 import { sha } from 'bun';
-import { validate_wgsl } from '@bunbox/naga';
 
 export type MaterialOptions = {
   shader: string;
