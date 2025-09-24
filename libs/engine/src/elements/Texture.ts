@@ -1,5 +1,5 @@
+import { DirtyState } from '@bunbox/utils';
 import { sha } from 'bun';
-import { Dirtyable } from '../abstract';
 
 export type TextureDimension = '2d' | '3d' | 'cube';
 
@@ -50,7 +50,7 @@ export enum TextureUsage {
   GENERATE_MIPS = 1 << 6,
 }
 
-export class Texture extends Dirtyable {
+export class Texture extends DirtyState {
   #label: string = '';
   #width: number = 1;
   #height: number = 1;
@@ -60,6 +60,11 @@ export class Texture extends Dirtyable {
   #mipLevels: number = 1;
   #sampleCount: SampleCount = 1;
   #usage: number = TextureUsage.SAMPLED | TextureUsage.COPY_DST;
+
+  static computeMaxMipLevels(w: number, h: number, d: number = 1): number {
+    const maxDim = Math.max(1, w | 0, h | 0, d | 0);
+    return Math.floor(Math.log2(maxDim)) + 1;
+  }
 
   constructor(desc: TextureDescriptor) {
     super();
@@ -90,6 +95,15 @@ export class Texture extends Dirtyable {
     const nv = Math.max(1, v | 0);
     if (this.#width === nv) return;
     this.#width = nv;
+    // Clamp mip levels to new size constraints
+    this.#mipLevels = Math.min(
+      this.#mipLevels,
+      Texture.computeMaxMipLevels(
+        this.#width,
+        this.#height,
+        this.#dimension === '3d' ? this.#depthOrLayers : 1,
+      ),
+    );
     this.markAsDirty();
   }
 
@@ -100,6 +114,14 @@ export class Texture extends Dirtyable {
     const nv = Math.max(1, v | 0);
     if (this.#height === nv) return;
     this.#height = nv;
+    this.#mipLevels = Math.min(
+      this.#mipLevels,
+      Texture.computeMaxMipLevels(
+        this.#width,
+        this.#height,
+        this.#dimension === '3d' ? this.#depthOrLayers : 1,
+      ),
+    );
     this.markAsDirty();
   }
 
@@ -110,6 +132,16 @@ export class Texture extends Dirtyable {
     const nv = this.#normalizeDepthOrLayers(v);
     if (this.#depthOrLayers === nv) return;
     this.#depthOrLayers = nv;
+    if (this.#dimension === '3d') {
+      this.#mipLevels = Math.min(
+        this.#mipLevels,
+        Texture.computeMaxMipLevels(
+          this.#width,
+          this.#height,
+          this.#depthOrLayers,
+        ),
+      );
+    }
     this.markAsDirty();
   }
 
@@ -120,6 +152,15 @@ export class Texture extends Dirtyable {
     if (this.#dimension === v) return;
     this.#dimension = v;
     this.#depthOrLayers = this.#normalizeDepthOrLayers(this.#depthOrLayers);
+    // After changing dimension, clamp mip levels according to 3D rule
+    this.#mipLevels = Math.min(
+      this.#mipLevels,
+      Texture.computeMaxMipLevels(
+        this.#width,
+        this.#height,
+        this.#dimension === '3d' ? this.#depthOrLayers : 1,
+      ),
+    );
     this.markAsDirty();
   }
 
@@ -137,8 +178,14 @@ export class Texture extends Dirtyable {
   }
   set mipLevels(v: number) {
     const nv = Math.max(1, v | 0);
-    if (this.#mipLevels === nv) return;
-    this.#mipLevels = nv;
+    const maxAllowed = Texture.computeMaxMipLevels(
+      this.#width,
+      this.#height,
+      this.#dimension === '3d' ? this.#depthOrLayers : 1,
+    );
+    const clamped = Math.min(nv, maxAllowed);
+    if (this.#mipLevels === clamped) return;
+    this.#mipLevels = clamped;
     this.markAsDirty();
   }
 
@@ -184,6 +231,15 @@ export class Texture extends Dirtyable {
     this.width = width;
     this.height = height;
     this.depthOrLayers = depthOrLayers;
+    // Clamp mip levels to maximum allowed by the new size
+    this.mipLevels = Math.min(
+      this.#mipLevels,
+      Texture.computeMaxMipLevels(
+        this.#width,
+        this.#height,
+        this.#dimension === '3d' ? this.#depthOrLayers : 1,
+      ),
+    );
     return this;
   }
 
@@ -224,11 +280,6 @@ export class Texture extends Dirtyable {
       this.#dimension === '3d' ? this.#depthOrLayers : 1,
     );
     return this;
-  }
-
-  static computeMaxMipLevels(w: number, h: number, d: number = 1): number {
-    const maxDim = Math.max(1, w | 0, h | 0, d | 0);
-    return Math.floor(Math.log2(maxDim)) + 1;
   }
 
   mipSize(level: number): {
@@ -304,11 +355,56 @@ export class Texture extends Dirtyable {
     });
   }
 
+  equals(other: Texture): boolean {
+    return (
+      this.#dimension === other.#dimension &&
+      this.#width === other.#width &&
+      this.#height === other.#height &&
+      this.#depthOrLayers === other.#depthOrLayers &&
+      this.#format === other.#format &&
+      this.#mipLevels === other.#mipLevels &&
+      this.#sampleCount === other.#sampleCount &&
+      this.#usage === other.#usage
+    );
+  }
+
+  copy(other: Texture): this {
+    if (this.equals(other) && this.#label === other.#label) return this;
+    this.#label = other.#label;
+    this.#dimension = other.#dimension;
+    this.#width = other.#width;
+    this.#height = other.#height;
+    this.#depthOrLayers = this.#normalizeDepthOrLayers(other.#depthOrLayers);
+    this.#format = other.#format;
+    this.#mipLevels = Math.min(
+      other.#mipLevels,
+      Texture.computeMaxMipLevels(
+        this.#width,
+        this.#height,
+        this.#dimension === '3d' ? this.#depthOrLayers : 1,
+      ),
+    );
+    this.#sampleCount = other.#sampleCount;
+    this.#usage = other.#usage >>> 0;
+    return this.markAsDirty();
+  }
+
   #normalizeDepthOrLayers(v: number): number {
     const n = Math.max(1, v | 0);
     if (this.#dimension === 'cube') {
       return Math.max(6, Math.ceil(n / 6) * 6);
     }
     return n;
+  }
+
+  // Convenience helpers
+  /** Layer count for 2D/cube, or 1 for 3D. */
+  get layerCount(): number {
+    return this.#dimension === '3d' ? 1 : this.#depthOrLayers;
+  }
+
+  /** Depth for 3D textures, else 1. */
+  get depth(): number {
+    return this.#dimension === '3d' ? this.#depthOrLayers : 1;
   }
 }

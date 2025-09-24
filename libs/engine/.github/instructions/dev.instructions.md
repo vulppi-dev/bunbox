@@ -1,3 +1,7 @@
+---
+applyTo: '**/*.ts'
+---
+
 ## Documentação
 
 Garantir que a implementação está correta observe as documentações nos site abaixo:

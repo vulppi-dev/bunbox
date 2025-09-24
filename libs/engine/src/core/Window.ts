@@ -2,18 +2,23 @@ import {
   cstr,
   SDL,
   SDL_DisplayMode,
+  SDL_FColor,
+  SDL_GPUColorTargetInfo,
+  SDL_GPULoadOp,
   SDL_GPUShaderFormat,
+  SDL_GPUStoreOp,
   SDL_InitFlags,
   SDL_WindowFlags,
 } from '@bunbox/sdl3';
 import { type Pointer } from 'bun:ffi';
 import { USING_VULKAN, WINDOW_FEATURES_MAP } from '../constants';
-import { Vector2 } from '../math';
+import { Color, Vector2 } from '../math';
 import { POINTERS_MAP } from '../stores/global';
 import type { WindowsFeature, WindowsFeaturesOptions } from '../types';
 import { pointerToBuffer } from '../utils/buffer';
 import { getChildrenStack } from '../utils/node';
 import { Node } from './Node';
+import { Mesh } from '../nodes/Mesh';
 
 export type WindowOptions = {
   title: string;
@@ -28,17 +33,42 @@ export class Window extends Node {
   #winPtr: Pointer;
   #devicePtr: Pointer;
   #winId: number;
+  #background: 'vulkan' | 'metal' = 'vulkan';
+  #swapFormat: number = 0;
+  #viewportFactor: number;
 
   #features: WindowsFeaturesOptions;
   #stack: Node[] = [];
+  #meshStack: Mesh[] = [];
+  // #lightStack: Node[] = [];
 
   #displayMode: SDL_DisplayMode;
   #width: Int32Array;
   #height: Int32Array;
   #x: Int32Array;
   #y: Int32Array;
+  #clearColor = new Color();
 
-  #processDelayCount: number;
+  // Helpers
+  #currentCmd: Pointer | null = null;
+  #swapTexPtr = new BigUint64Array(1);
+  #swapWidthPtr = new Uint32Array(1);
+  #swapHeightPtr = new Uint32Array(1);
+
+  #clearColorStruct = new SDL_FColor();
+
+  #renderDelayCount: number;
+
+  static #getFeaturesFlags(features: WindowsFeaturesOptions): number {
+    let flags = USING_VULKAN
+      ? SDL_WindowFlags.SDL_WINDOW_VULKAN
+      : SDL_WindowFlags.SDL_WINDOW_METAL;
+    for (const [key, value] of Object.entries(features)) {
+      flags |= value ? (WINDOW_FEATURES_MAP[key as WindowsFeature] ?? 0) : 0;
+    }
+
+    return flags;
+  }
 
   constructor({ title, height, width, features }: WindowOptions) {
     super();
@@ -71,18 +101,16 @@ export class Window extends Node {
     this.#height = new Int32Array(1);
     this.#x = new Int32Array(1);
     this.#y = new Int32Array(1);
-    this.#processDelayCount = 0;
+    this.#renderDelayCount = 0;
 
-    SDL.SDL_GetWindowSizeInPixels(this.#winPtr, this.#width, this.#height);
-    SDL.SDL_GetWindowPosition(this.#winPtr, this.#x, this.#y);
-    this.#processDisplayMode();
-
+    this.#background = USING_VULKAN ? 'vulkan' : 'metal';
+    this.#viewportFactor = USING_VULKAN ? -1 : 1;
     const devicePtr = SDL.SDL_CreateGPUDevice(
       USING_VULKAN
         ? SDL_GPUShaderFormat.SDL_GPU_SHADERFORMAT_SPIRV
         : SDL_GPUShaderFormat.SDL_GPU_SHADERFORMAT_METALLIB,
       true,
-      cstr(USING_VULKAN ? 'vulkan' : 'metal'),
+      cstr(this.#background),
     );
 
     if (!devicePtr) {
@@ -95,12 +123,22 @@ export class Window extends Node {
       throw new Error(`SDL: ${SDL.SDL_GetError()}`);
     }
 
+    SDL.SDL_GetWindowSizeInPixels(this.#winPtr, this.#width, this.#height);
+    SDL.SDL_GetWindowPosition(this.#winPtr, this.#x, this.#y);
+    this.#processDisplayMode();
+    this.#swapFormat = SDL.SDL_GetGPUSwapchainTextureFormat(
+      this.#devicePtr,
+      this.#winPtr,
+    );
+
     const unsubscribes = [
       this.subscribe('add-child', () => {
         this.#stack = getChildrenStack(this, Node);
+        this.#meshStack = getChildrenStack(this, Mesh);
       }),
       this.subscribe('remove-child', () => {
         this.#stack = getChildrenStack(this, Node);
+        this.#meshStack = getChildrenStack(this, Mesh);
       }),
       this.subscribe('orientation', () => {
         this.#processDisplayMode();
@@ -118,16 +156,24 @@ export class Window extends Node {
     this.on('dispose', () => {
       unsubscribes.forEach((fn) => fn());
       this.#stack = [];
+      this.#meshStack = [];
       POINTERS_MAP.delete(`${this.id}-device`);
       POINTERS_MAP.delete(this.id);
       SDL.SDL_ReleaseWindowFromGPUDevice(this.#devicePtr, this.#winPtr);
       SDL.SDL_DestroyGPUDevice(this.#devicePtr);
       SDL.SDL_DestroyWindow(this.#winPtr);
     });
+
+    this.#stack = getChildrenStack(this, Node);
+    this.#meshStack = getChildrenStack(this, Mesh);
   }
 
   protected override _getType(): string {
     return 'Window';
+  }
+
+  get windowId() {
+    return SDL.SDL_GetWindowID(this.#winPtr);
   }
 
   get title() {
@@ -189,6 +235,15 @@ export class Window extends Node {
     SDL.SDL_SetWindowPosition(this.#winPtr, this.#x[0]!, this.#y[0]);
   }
 
+  get clearColor() {
+    return this.#clearColor;
+  }
+
+  set clearColor(value: Color) {
+    this.#clearColor = value;
+    this.#clearColor.markAsDirty();
+  }
+
   getCurrentDisplayFrameRate() {
     return Math.max(this.#displayMode.properties.refresh_rate, 24);
   }
@@ -201,13 +256,50 @@ export class Window extends Node {
   }
 
   override _afterProcess(deltaTime: number): void {
-    this.#processDelayCount += deltaTime;
+    this.#renderDelayCount += deltaTime;
     const rate = this.getCurrentDisplayFrameRate();
     const delay = 1000 / rate;
-    if (this.#processDelayCount >= delay) {
-      this.#callRenderStack(this.#processDelayCount);
-      this.#processDelayCount = 0;
+    if (this.#renderDelayCount >= delay) {
+      this.#callRenderStack(this.#renderDelayCount);
+      this.#renderDelayCount = 0;
     }
+  }
+
+  override _afterRender(_: number): void {
+    if (!this.#winPtr || !this.#devicePtr) return;
+
+    this.#currentCmd = SDL.SDL_AcquireGPUCommandBuffer(this.#devicePtr);
+    if (!this.#currentCmd) {
+      console.warn('SDL_AcquireGPUCommandBuffer failed');
+      return;
+    }
+
+    let success = SDL.SDL_AcquireGPUSwapchainTexture(
+      this.#currentCmd,
+      this.#winPtr,
+      this.#swapTexPtr,
+      this.#swapWidthPtr,
+      this.#swapHeightPtr,
+    );
+
+    if (
+      !success ||
+      !this.#swapTexPtr[0] ||
+      this.#swapWidthPtr[0] === 0 ||
+      this.#swapHeightPtr[0] === 0
+    ) {
+      SDL.SDL_SubmitGPUCommandBuffer(this.#currentCmd);
+      return;
+    }
+
+    this.#clearScreen();
+
+    // TODO: render children
+
+    SDL.SDL_SubmitGPUCommandBuffer(this.#currentCmd);
+    this.#currentCmd = null;
+    const err = SDL.SDL_GetError().toString();
+    if (err) console.log('[SDL ERROR]', err);
   }
 
   async #callRenderStack(delta: number) {
@@ -233,14 +325,27 @@ export class Window extends Node {
     this.#displayMode.copy(buffer);
   }
 
-  static #getFeaturesFlags(features: WindowsFeaturesOptions): number {
-    let flags = USING_VULKAN
-      ? SDL_WindowFlags.SDL_WINDOW_VULKAN
-      : SDL_WindowFlags.SDL_WINDOW_METAL;
-    for (const [key, value] of Object.entries(features)) {
-      flags |= value ? (WINDOW_FEATURES_MAP[key as WindowsFeature] ?? 0) : 0;
-    }
+  #clearScreen() {
+    const colorTarget = new SDL_GPUColorTargetInfo();
+    colorTarget.properties.texture = this.#swapTexPtr[0]!;
 
-    return flags;
+    if (this.clearColor.isDirty) {
+      this.#clearColorStruct.properties.r = this.#clearColor.r;
+      this.#clearColorStruct.properties.g = this.#clearColor.g;
+      this.#clearColorStruct.properties.b = this.#clearColor.b;
+      this.#clearColorStruct.properties.a = this.#clearColor.a;
+      this.clearColor.unmarkAsDirty();
+    }
+    colorTarget.properties.clear_color = this.#clearColorStruct;
+    colorTarget.properties.load_op = SDL_GPULoadOp.SDL_GPU_LOADOP_CLEAR;
+    colorTarget.properties.store_op = SDL_GPUStoreOp.SDL_GPU_STOREOP_STORE;
+
+    const pass = SDL.SDL_BeginGPURenderPass(
+      this.#currentCmd,
+      colorTarget.bunPointer,
+      1,
+      null,
+    );
+    SDL.SDL_EndGPURenderPass(pass);
   }
 }

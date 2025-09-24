@@ -5,6 +5,30 @@ export class Vector2 extends AbstractVector<2> {
   #x: number;
   #y: number;
 
+  static Zero(): Vector2 {
+    return new Vector2(0, 0);
+  }
+
+  static One(): Vector2 {
+    return new Vector2(1, 1);
+  }
+
+  static Up(): Vector2 {
+    return new Vector2(0, 1);
+  }
+
+  static Down(): Vector2 {
+    return new Vector2(0, -1);
+  }
+
+  static Left(): Vector2 {
+    return new Vector2(-1, 0);
+  }
+
+  static Right(): Vector2 {
+    return new Vector2(1, 0);
+  }
+
   constructor(x: number = 0, y: number = 0) {
     super();
     this.#x = x;

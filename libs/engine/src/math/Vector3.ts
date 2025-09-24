@@ -6,13 +6,6 @@ export class Vector3 extends AbstractVector<3> {
   #y: number;
   #z: number;
 
-  constructor(x: number = 0, y: number = 0, z: number = 0) {
-    super();
-    this.#x = x;
-    this.#y = y;
-    this.#z = z;
-  }
-
   static Zero(): Vector3 {
     return new Vector3(0, 0, 0);
   }
@@ -43,6 +36,13 @@ export class Vector3 extends AbstractVector<3> {
 
   static Backward(): Vector3 {
     return new Vector3(0, 0, -1);
+  }
+
+  constructor(x: number = 0, y: number = 0, z: number = 0) {
+    super();
+    this.#x = x;
+    this.#y = y;
+    this.#z = z;
   }
 
   get x() {

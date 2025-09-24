@@ -1,5 +1,5 @@
+import { DirtyState } from '@bunbox/utils';
 import { sha } from 'bun';
-import { Dirtyable } from '../abstract';
 
 /** Texture min/mag filter. */
 export type FilterMode = 'nearest' | 'linear';
@@ -63,7 +63,10 @@ export type SamplerDescriptor = {
   borderColor?: BorderColor;
 };
 
-export class Sampler extends Dirtyable {
+export class Sampler extends DirtyState {
+  // Global cache to deduplicate equivalent samplers (label is not part of the key)
+  static #cache: Map<string, Sampler> = new Map();
+
   #label = '';
 
   #minFilter: FilterMode = 'linear';
@@ -81,6 +84,75 @@ export class Sampler extends Dirtyable {
   #maxAnisotropy = 1;
   #normalizedCoordinates = true;
   #borderColor: BorderColor = 'opaque-black';
+
+  // ----------- Presets for plug & play -----------
+  /** Linear filtering with mipmaps, repeat wrap on all axes (common default). */
+  static linearRepeat(extra: SamplerDescriptor = {}): Sampler {
+    return new Sampler({
+      minFilter: 'linear',
+      magFilter: 'linear',
+      mipmapFilter: 'linear',
+      addressModeU: 'repeat',
+      addressModeV: 'repeat',
+      addressModeW: 'repeat',
+      ...extra,
+    });
+  }
+
+  /** Nearest filtering, repeat wrap on all axes (pixel-art). */
+  static nearestRepeat(extra: SamplerDescriptor = {}): Sampler {
+    return new Sampler({
+      minFilter: 'nearest',
+      magFilter: 'nearest',
+      mipmapFilter: 'nearest',
+      addressModeU: 'repeat',
+      addressModeV: 'repeat',
+      addressModeW: 'repeat',
+      ...extra,
+    });
+  }
+
+  /** Linear filtering with mipmaps, clamp to edge on all axes (UI/atlas borders). */
+  static linearClamp(extra: SamplerDescriptor = {}): Sampler {
+    return new Sampler({
+      minFilter: 'linear',
+      magFilter: 'linear',
+      mipmapFilter: 'linear',
+      addressModeU: 'clamp-to-edge',
+      addressModeV: 'clamp-to-edge',
+      addressModeW: 'clamp-to-edge',
+      ...extra,
+    });
+  }
+
+  /** Trilinear repeat with mild anisotropy (terrain/surfaces). */
+  static trilinearRepeat(extra: SamplerDescriptor = {}): Sampler {
+    return new Sampler({
+      minFilter: 'linear',
+      magFilter: 'linear',
+      mipmapFilter: 'linear',
+      maxAnisotropy: Math.max(2, extra.maxAnisotropy ?? 2),
+      addressModeU: 'repeat',
+      addressModeV: 'repeat',
+      addressModeW: 'repeat',
+      ...extra,
+    });
+  }
+
+  /** Depth compare sampler for shadow mapping. */
+  static shadowClamp(extra: SamplerDescriptor = {}): Sampler {
+    return new Sampler({
+      minFilter: 'linear',
+      magFilter: 'linear',
+      mipmapFilter: 'linear',
+      compare: extra.compare ?? 'less-equal',
+      addressModeU: 'clamp-to-edge',
+      addressModeV: 'clamp-to-edge',
+      addressModeW: 'clamp-to-edge',
+      normalizedCoordinates: extra.normalizedCoordinates ?? true,
+      ...extra,
+    });
+  }
 
   constructor(desc: SamplerDescriptor = {}) {
     super();
@@ -281,5 +353,24 @@ export class Sampler extends Dirtyable {
       normalizedCoordinates: this.#normalizedCoordinates,
       borderColor: this.#borderColor,
     });
+  }
+
+  /** Fast copy from another sampler (single dirty mark). */
+  copy(other: Sampler): this {
+    if (this.equals(other) && this.#label === other.#label) return this;
+    this.#label = other.#label;
+    this.#minFilter = other.#minFilter;
+    this.#magFilter = other.#magFilter;
+    this.#mipmapFilter = other.#mipmapFilter;
+    this.#addressModeU = other.#addressModeU;
+    this.#addressModeV = other.#addressModeV;
+    this.#addressModeW = other.#addressModeW;
+    this.#lodMinClamp = other.#lodMinClamp;
+    this.#lodMaxClamp = other.#lodMaxClamp;
+    this.#compare = other.#compare;
+    this.#maxAnisotropy = other.#maxAnisotropy;
+    this.#normalizedCoordinates = other.#normalizedCoordinates;
+    this.#borderColor = other.#borderColor;
+    return this.markAsDirty();
   }
 }

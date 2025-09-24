@@ -1,5 +1,5 @@
 import { SDL_Keycode } from '@bunbox/sdl3';
-import { App, Renderer, Window } from '.';
+import { App, Window } from '.';
 
 const app = new App();
 app.setLogPriority('verbose');
@@ -13,13 +13,9 @@ const win = new Window({
 });
 
 win.on('windowClose', (ev) => {
-  console.log(ev.type);
+  if (ev.windowId !== win.windowId) return;
   win.dispose();
   app.dispose();
-});
-
-win.on('quit', (ev) => {
-  console.log(ev.type);
 });
 
 win.on('keyDown', (ev) => {
@@ -29,14 +25,9 @@ win.on('keyDown', (ev) => {
   console.log(ev.type, ev.keyText);
 });
 
-win.width = 200;
-win.height = 200;
-
-const render = new Renderer();
-render.clearColor.set(1.0, 0.4, 0.0, 1);
+win.clearColor.set(1.0, 0.4, 0.0, 1);
 
 app.addChild(win);
-win.addChild(render);
 
 // const VS_WGSL = `
 // @vertex fn main(@builtin(vertex_index) i:u32) -> @builtin(position) vec4<f32> {

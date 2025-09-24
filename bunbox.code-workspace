@@ -30,6 +30,6 @@
     },
   ],
   "settings": {
-    "commentTranslate.targetLanguage": "pt"
+    "commentTranslate.targetLanguage": "pt",
   },
 }

@@ -127,8 +127,6 @@ export class App extends Node {
       this.#stack = getChildrenStack(this, Node);
     });
 
-    App.#singleAppInstance = this;
-
     this.on('dispose', () => {
       unsubAddChild();
       unsubRemoveChild();
@@ -141,6 +139,8 @@ export class App extends Node {
       this.dispose();
     });
 
+    App.#singleAppInstance = this;
+    this.#stack = getChildrenStack(this, Node);
     Object.defineProperty(globalThis, 'appInstance', {
       value: this,
       writable: false,
@@ -148,9 +148,11 @@ export class App extends Node {
       enumerable: true,
     });
 
-    this.#stack = getChildrenStack(this, Node);
-    this.#startEventLooper();
-    this.#startProcessLooper();
+    // Start the event loop and process loop on the next tick
+    setTimeout(() => {
+      this.#startEventLooper();
+      this.#startProcessLooper();
+    }, 0);
   }
 
   protected override _getType(): string {
@@ -264,7 +266,7 @@ export class App extends Node {
       } catch (error) {
         console.error('Error while polling events:', error);
       }
-      await promiseDelay(1);
+      await promiseDelay(0);
     }
   }
 
@@ -280,7 +282,7 @@ export class App extends Node {
       this.#callProcessStack(delta);
 
       prev = now;
-      await promiseDelay(1);
+      await promiseDelay(0);
     }
   }
 
