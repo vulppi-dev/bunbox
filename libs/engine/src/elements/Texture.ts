@@ -36,6 +36,8 @@ export type TextureDescriptor = {
    * @default TextureUsage.SAMPLED | TextureUsage.COPY_DST
    */
   usage?: number;
+  /** Optional raw pixel buffer (typically RGBA8). Length should be width*height*depthOrLayers*bytesPerPixel. */
+  data?: Uint8Array;
 };
 
 const SAMPLE_COUNTS = [1, 2, 4, 8, 16] as const;
@@ -60,6 +62,7 @@ export class Texture extends DirtyState {
   #mipLevels: number = 1;
   #sampleCount: SampleCount = 1;
   #usage: number = TextureUsage.SAMPLED | TextureUsage.COPY_DST;
+  #data?: Uint8Array;
 
   static computeMaxMipLevels(w: number, h: number, d: number = 1): number {
     const maxDim = Math.max(1, w | 0, h | 0, d | 0);
@@ -77,6 +80,7 @@ export class Texture extends DirtyState {
     this.mipLevels = Math.max(1, desc.mipLevels ?? 1);
     this.sampleCount = desc.sampleCount ?? 1;
     this.usage = desc.usage ?? TextureUsage.SAMPLED | TextureUsage.COPY_DST;
+    if (desc.data) this.data = desc.data;
   }
 
   get label() {
@@ -206,6 +210,16 @@ export class Texture extends DirtyState {
     const nv = v >>> 0;
     if (this.#usage === nv) return;
     this.#usage = nv;
+    this.markAsDirty();
+  }
+
+  /** Optional raw pixel buffer (usually RGBA8). Not part of the structural hash. */
+  get data(): Uint8Array | undefined {
+    return this.#data;
+  }
+  set data(v: Uint8Array | undefined) {
+    if (this.#data === v) return;
+    this.#data = v;
     this.markAsDirty();
   }
 
@@ -352,6 +366,7 @@ export class Texture extends DirtyState {
       mipLevels: this.#mipLevels,
       sampleCount: this.#sampleCount,
       usage: this.#usage,
+      data: this.#data ? new Uint8Array(this.#data) : undefined,
     });
   }
 
@@ -386,6 +401,7 @@ export class Texture extends DirtyState {
     );
     this.#sampleCount = other.#sampleCount;
     this.#usage = other.#usage >>> 0;
+    this.#data = other.#data ? new Uint8Array(other.#data) : undefined;
     return this.markAsDirty();
   }
 
@@ -406,5 +422,17 @@ export class Texture extends DirtyState {
   /** Depth for 3D textures, else 1. */
   get depth(): number {
     return this.#dimension === '3d' ? this.#depthOrLayers : 1;
+  }
+
+  /** Convenience: expected base-level byte length for current settings. */
+  get expectedBaseLevelByteLength(): number {
+    const bpp = this.bytesPerPixel();
+    return (
+      (this.#width *
+        this.#height *
+        (this.#dimension === '3d' ? this.depth : this.layerCount) *
+        bpp) >>>
+      0
+    );
   }
 }
