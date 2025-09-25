@@ -1,11 +1,15 @@
 // prettier-multiline-arrays-set-line-pattern: 4
 
 import { Vector2 } from '../math';
-import AbstractCamera from './AbstractCamera';
+import { AbstractCamera } from './AbstractCamera';
 
-export default class OrthographicCamera extends AbstractCamera {
+export class OrthographicCamera extends AbstractCamera {
   #horizontal: Vector2 = new Vector2(-1, 1);
   #vertical: Vector2 = new Vector2(-1, 1);
+
+  protected override _getType(): string {
+    return 'OrthographicCamera';
+  }
 
   get horizontal(): Vector2 {
     return this.#horizontal;
@@ -55,29 +59,40 @@ export default class OrthographicCamera extends AbstractCamera {
     this.markAsDirty();
   }
 
-  override _render(deltaTime: number): void {
-    super._render(deltaTime);
+  override _update(deltaTime: number): void {
+    super._update(deltaTime);
 
     if (this.#horizontal.isDirty || this.#vertical.isDirty) {
       this._updateProjectionMatrix();
     }
   }
 
-  override _updateProjectionMatrix() {
-    const dh = this.right - this.left;
-    const dv = this.top - this.bottom;
-    const [
-      n, f,
-    ] = [
-      this.near, this.far,
-    ];
-    const nf = n - f;
+  protected override _updateProjectionMatrix(): void {
+    // Right-handed orthographic, column-major, NDC Z in [0, 1]
+    const l = this.left;
+    const r = this.right;
+    const b = this.bottom;
+    const t = this.top;
+    const n = this.near;
+    const f = this.far;
+
+    let dh = r - l;
+    let dv = t - b;
+    // Avoid division by zero in degenerate frustums
+    if (dh === 0) dh = 1e-6;
+    if (dv === 0) dv = 1e-6;
+
+    const invNF = 1 / (n - f);
 
     this.projectionMatrix.set([
+      // col 0
       2 / dh, 0, 0, 0,
+      // col 1
       0, 2 / dv, 0, 0,
-      0, 0, 1 / nf, 0,
-      -(this.right + this.left) / dh, -(this.top + this.bottom) / dv, n / nf, 1,
+      // col 2 (maps z=-n -> 0, z=-f -> 1)
+      0, 0, 1 * invNF, 0,
+      // col 3 (translation)
+      -(r + l) / dh, -(t + b) / dv, n * invNF, 1,
     ]);
   }
 }

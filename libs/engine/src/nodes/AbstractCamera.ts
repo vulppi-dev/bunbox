@@ -4,7 +4,7 @@ import { Matrix, Quaternion, Vector3, VectorParser } from '../math';
 import { Rect } from '../math/Rect';
 import { Node3D } from './Node3D';
 
-export default abstract class AbstractCamera extends Node3D {
+export abstract class AbstractCamera extends Node3D {
   #near: number = 0.1;
   #far: number = 1000;
 
@@ -58,7 +58,7 @@ export default abstract class AbstractCamera extends Node3D {
     this.markAsDirty();
   }
 
-  override _render(deltaTime: number): void {
+  override _update(deltaTime: number): void {
     if (this.isDirty) {
       this._updateProjectionMatrix();
       this.#updateViewMatrix();

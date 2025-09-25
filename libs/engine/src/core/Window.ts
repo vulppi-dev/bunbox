@@ -255,7 +255,7 @@ export class Window extends Node {
     );
   }
 
-  override _afterProcess(deltaTime: number): void {
+  override _process(deltaTime: number): void {
     this.#renderDelayCount += deltaTime;
     const rate = this.getCurrentDisplayFrameRate();
     const delay = 1000 / rate;
@@ -265,7 +265,49 @@ export class Window extends Node {
     }
   }
 
-  override _afterRender(_: number): void {
+  #processDisplayMode() {
+    const displayId = SDL.SDL_GetDisplayForWindow(this.#winPtr);
+    const displayModePtr = SDL.SDL_GetCurrentDisplayMode(displayId);
+
+    if (!displayModePtr) {
+      throw new Error(`SDL: ${SDL.SDL_GetError()}`);
+    }
+    const buffer = pointerToBuffer(displayModePtr, this.#displayMode.size);
+    this.#displayMode.copy(buffer);
+  }
+
+  async #callRenderStack(delta: number) {
+    for (const node of this.#stack) {
+      node._update(delta);
+    }
+    this.#render();
+  }
+
+  #clearScreen() {
+    const colorTarget = new SDL_GPUColorTargetInfo();
+    colorTarget.properties.texture = this.#swapTexPtr[0]!;
+
+    if (this.clearColor.isDirty) {
+      this.#clearColorStruct.properties.r = this.#clearColor.r;
+      this.#clearColorStruct.properties.g = this.#clearColor.g;
+      this.#clearColorStruct.properties.b = this.#clearColor.b;
+      this.#clearColorStruct.properties.a = this.#clearColor.a;
+      this.clearColor.unmarkAsDirty();
+    }
+    colorTarget.properties.clear_color = this.#clearColorStruct;
+    colorTarget.properties.load_op = SDL_GPULoadOp.SDL_GPU_LOADOP_CLEAR;
+    colorTarget.properties.store_op = SDL_GPUStoreOp.SDL_GPU_STOREOP_STORE;
+
+    const pass = SDL.SDL_BeginGPURenderPass(
+      this.#currentCmd,
+      colorTarget.bunPointer,
+      1,
+      null,
+    );
+    SDL.SDL_EndGPURenderPass(pass);
+  }
+
+  #render(): void {
     if (!this.#winPtr || !this.#devicePtr) return;
 
     this.#currentCmd = SDL.SDL_AcquireGPUCommandBuffer(this.#devicePtr);
@@ -300,52 +342,5 @@ export class Window extends Node {
     this.#currentCmd = null;
     const err = SDL.SDL_GetError().toString();
     if (err) console.log('[SDL ERROR]', err);
-  }
-
-  async #callRenderStack(delta: number) {
-    for (const node of this.#stack) {
-      node._beforeRender(delta);
-    }
-    for (const node of this.#stack) {
-      node._render(delta);
-    }
-    for (const node of this.#stack) {
-      node._afterRender(delta);
-    }
-  }
-
-  #processDisplayMode() {
-    const displayId = SDL.SDL_GetDisplayForWindow(this.#winPtr);
-    const displayModePtr = SDL.SDL_GetCurrentDisplayMode(displayId);
-
-    if (!displayModePtr) {
-      throw new Error(`SDL: ${SDL.SDL_GetError()}`);
-    }
-    const buffer = pointerToBuffer(displayModePtr, this.#displayMode.size);
-    this.#displayMode.copy(buffer);
-  }
-
-  #clearScreen() {
-    const colorTarget = new SDL_GPUColorTargetInfo();
-    colorTarget.properties.texture = this.#swapTexPtr[0]!;
-
-    if (this.clearColor.isDirty) {
-      this.#clearColorStruct.properties.r = this.#clearColor.r;
-      this.#clearColorStruct.properties.g = this.#clearColor.g;
-      this.#clearColorStruct.properties.b = this.#clearColor.b;
-      this.#clearColorStruct.properties.a = this.#clearColor.a;
-      this.clearColor.unmarkAsDirty();
-    }
-    colorTarget.properties.clear_color = this.#clearColorStruct;
-    colorTarget.properties.load_op = SDL_GPULoadOp.SDL_GPU_LOADOP_CLEAR;
-    colorTarget.properties.store_op = SDL_GPUStoreOp.SDL_GPU_STOREOP_STORE;
-
-    const pass = SDL.SDL_BeginGPURenderPass(
-      this.#currentCmd,
-      colorTarget.bunPointer,
-      1,
-      null,
-    );
-    SDL.SDL_EndGPURenderPass(pass);
   }
 }

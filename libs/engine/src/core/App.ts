@@ -288,13 +288,7 @@ export class App extends Node {
 
   #callProcessStack(delta: number) {
     for (const node of this.#stack) {
-      node._beforeProcess(delta);
-    }
-    for (const node of this.#stack) {
       node._process(delta);
-    }
-    for (const node of this.#stack) {
-      node._afterProcess(delta);
     }
   }
 

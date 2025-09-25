@@ -11,27 +11,11 @@ export class Node<
     return 'Node';
   }
 
-  _beforeRender(deltaTime: number): void {
-    // Override in subclasses
-  }
-
-  _render(deltaTime: number): void {
-    // Override in subclasses
-  }
-
-  _afterRender(deltaTime: number): void {
-    // Override in subclasses
-  }
-
-  _beforeProcess(deltaTime: number): void {
+  _update(deltaTime: number): void {
     // Override in subclasses
   }
 
   _process(deltaTime: number): void {
-    // Override in subclasses
-  }
-
-  _afterProcess(deltaTime: number): void {
     // Override in subclasses
   }
 }

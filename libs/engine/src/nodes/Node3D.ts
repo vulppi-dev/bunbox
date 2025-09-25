@@ -1,7 +1,7 @@
 import type { EventMap } from '@bunbox/utils';
 import { Node } from '../core';
 import { Euler, Matrix, Quaternion, Vector3 } from '../math';
-import { Layer } from './Layer';
+import { Layer } from '../elements';
 
 export class Node3D<
   P extends Record<string, any> = Record<string, any>,
@@ -74,7 +74,7 @@ export class Node3D<
     return this.#layer;
   }
 
-  override _beforeRender(_: number): void {
+  override _update(_: number): void {
     if (
       this.#position.isDirty ||
       this.#scale.isDirty ||

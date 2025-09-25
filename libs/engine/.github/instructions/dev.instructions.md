@@ -27,3 +27,11 @@ A conversação com o usuário e explicações serão em português brasil.
 - Variáveis e métodos do tipo `protected` devem ser iniciadas com '\_';
 - Variáveis e métodos do tipo `private` devem ser iniciadas com '#';
 - Métodos estáticos devem ser criados antes do construtor;
+
+## Regras do game engine
+
+- A classe base de todas as classes do motor é a `Node`;
+- O padrão de orientação é o right-handed com NDC (Normalized Device Coordinates) de [0, 1] no eixo Z;
+- O padrão de rotação é o ZYX (Yaw, Pitch, Roll);
+- A unidade de medida padrão é o metro (m);
+- O sistema de matriz utilizado é o de coluna maior (column-major);

@@ -1,10 +1,14 @@
 // prettier-multiline-arrays-set-line-pattern: 4
 
-import AbstractCamera from './AbstractCamera';
+import { AbstractCamera } from './AbstractCamera';
 
-export default class PerspectiveCamera extends AbstractCamera {
+export class PerspectiveCamera extends AbstractCamera {
   #fov: number = Math.PI * 0.333;
   #aspect: number = 1;
+
+  protected override _getType(): string {
+    return 'PerspectiveCamera';
+  }
 
   get fov(): number {
     return this.#fov;
@@ -22,12 +26,16 @@ export default class PerspectiveCamera extends AbstractCamera {
     this.markAsDirty();
   }
 
-  override _updateProjectionMatrix() {
-    const a = this.#aspect;
+  protected override _updateProjectionMatrix(): void {
+    const a = this.#aspect || 1;
+    const n = this.near;
+    const fFar = this.far;
+
     const f = 1 / Math.tan(this.#fov * 0.5);
-    const nf = 1 / (this.near - this.far);
-    const A = (this.near + this.far) * nf;
-    const B = 2 * this.near * this.far * nf;
+
+    const invNF = 1 / (n - fFar);
+    const A = fFar * invNF;
+    const B = fFar * n * invNF;
 
     this.projectionMatrix.set([
       f / a, 0, 0, 0,

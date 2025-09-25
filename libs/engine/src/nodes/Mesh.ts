@@ -1,5 +1,4 @@
-import type { Geometry } from './Geometry';
-import type { Material } from './Material';
+import type { Geometry, Material } from '../elements';
 import { Node3D } from './Node3D';
 
 export class Mesh extends Node3D {
