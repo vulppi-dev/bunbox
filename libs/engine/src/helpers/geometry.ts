@@ -1,7 +1,7 @@
 // Geometry primitives helpers
 // All comments in English as per repository guidelines.
 
-import { Geometry } from '../elements/Geometry';
+import { Geometry } from '../elements';
 
 // Utility to create a Geometry and expose its internal typed arrays for bulk fill
 function createGeometry(vertexCount: number, indexCount: number, uvLayers = 1) {
