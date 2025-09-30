@@ -1,4 +1,6 @@
 declare global {
+  const __BUN_MODE__: 'compiled' | undefined;
+
   module '*.dylib' {
     const src: string;
     export default src;

@@ -1,6 +1,6 @@
 {
   "name": "@bunbox/sdl3",
-  "version": "0.0.6",
+  "version": "0.1.1",
   "description": "Implement SDL (Simple DirectMedia Layer) bindings",
   "author": {
     "name": "Renato Rodrigues",
@@ -28,6 +28,9 @@
   "main": "./src/index.ts",
   "module": "./src/index.ts",
   "types": "./src/index.ts",
+  "bin": {
+    "sdl3-build": "./bin/sdl3.ts"
+  },
   "scripts": {
     "dev": "tsc --watch --noEmit true --emitDeclarationOnly false",
     "pub": "npm publish --access=public --tag=latest",
@@ -35,10 +38,12 @@
   },
   "dependencies": {
     "@bunbox/naga": "^0.0.6",
-    "@bunbox/struct": "^1.0.9"
+    "@bunbox/struct": "^1.0.9",
+    "minimist": "^1.2.8"
   },
   "devDependencies": {
     "@types/bun": "^1.2.22",
+    "@types/minimist": "^1.2.5",
     "prettier": "^3.6.2",
     "typescript": "^5.9.2"
   },

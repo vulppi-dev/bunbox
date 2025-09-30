@@ -1,45 +1,44 @@
-import './SDL3/darwin/libiconv.dylib' with { type: 'file' };
-import './SDL3/linux/arm64/libiconv.so.2' with { type: 'file' };
-import './SDL3/linux/x64/libiconv.so.2' with { type: 'file' };
-
-import SDL3Darwin from './SDL3/darwin/libSDL3.dylib' with { type: 'file' };
-import SDL3LinuxArm64 from './SDL3/linux/arm64/libSDL3.so' with { type: 'file' };
-import SDL3LinuxX64 from './SDL3/linux/x64/libSDL3.so' with { type: 'file' };
-import SDL3Win32Arm64 from './SDL3/win32/arm64/SDL3.dll' with { type: 'file' };
-import SDL3Win32X64 from './SDL3/win32/x64/SDL3.dll' with { type: 'file' };
-
 import { dlopen } from 'bun:ffi';
-import * as functions from '../libs/functions';
-
-import { dirname, resolve } from 'path';
 import { existsSync } from 'fs';
-import { fileURLToPath } from 'url';
+import { join, resolve } from 'path';
+
+import { embeddedFiles } from 'bun';
+import { readdir } from 'fs/promises';
+import * as functions from '../libs/functions';
+import { findProjectRoot } from '../utils/path';
 
 export * from '@bunbox/naga';
 export { cstr } from '@bunbox/struct';
 export { CString, JSCallback, ptr } from 'bun:ffi';
 
+const MODULE_DIR = findProjectRoot(import.meta.url);
+
 const SDL_LIBS: Record<string, any> = {
   darwin: {
-    arm64: SDL3Darwin,
-    x64: SDL3Darwin,
+    arm64: 'assets/darwin/libSDL3.dylib',
+    x64: 'assets/darwin/libSDL3.dylib',
   },
   linux: {
-    arm64: SDL3LinuxArm64,
-    x64: SDL3LinuxX64,
+    arm64: 'assets/linux/arm64/libSDL3.so',
+    x64: 'assets/linux/x64/libSDL3.so',
   },
   win32: {
-    arm64: SDL3Win32Arm64,
-    x64: SDL3Win32X64,
+    arm64: 'assets/win32/arm64/SDL3.dll',
+    x64: 'assets/win32/x64/SDL3.dll',
   },
 };
 
-const SDL_PATH = ((path?: string) => {
+const SDL_PATH = await (async (path?: string) => {
   if (!path) return null;
-  if (existsSync(path)) return path;
-  const relative = resolve(dirname(fileURLToPath(import.meta.url)), path);
+  const relative = join('../..', path);
   if (existsSync(relative)) return relative;
-  return null;
+  const absolute = resolve(MODULE_DIR, path);
+  if (existsSync(absolute)) return absolute;
+  const url = new URL(join('../..', 'sdl3', path), import.meta.url);
+  console.debug(import.meta.url);
+  console.debug(url.toString());
+  console.debug(embeddedFiles);
+  return url;
 })(SDL_LIBS[process.platform]?.[process.arch]);
 
 if (!SDL_PATH) {
