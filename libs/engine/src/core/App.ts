@@ -22,7 +22,6 @@ import {
 import type { AppFeature, AppLogCategory, AppLogPriority } from '../types';
 import { Node } from './Node';
 import { promiseDelay } from '@vulppi/toolbelt';
-import { getChildrenStack } from '../utils/node';
 import {
   ClipboardEvent,
   DeviceEvent,
@@ -83,6 +82,7 @@ export class App extends Node {
   static #singleAppInstance: App | null = null;
 
   #stack: Node[] = [];
+  #scheduleDirty: boolean = true;
 
   #epochOffsetMs: number;
   #eventStruct: SDL_Event;
@@ -120,16 +120,20 @@ export class App extends Node {
     SDL.SDL_SetAppMetadata(cstr(name), cstr(version), cstr(identifier));
     SDL.SDL_SetHint(cstr('SDL_LOGGING'), cstr('test=verbose,*=info'));
 
-    const unsubAddChild = this.subscribe('add-child', () => {
-      this.#stack = getChildrenStack(this, Node);
-    });
-    const unsubRemoveChild = this.subscribe('remove-child', () => {
-      this.#stack = getChildrenStack(this, Node);
-    });
+    const unsubscribes = [
+      this.subscribe('add-child', () => {
+        this.#scheduleDirty = true;
+      }),
+      this.subscribe('remove-child', () => {
+        this.#scheduleDirty = true;
+      }),
+      this.subscribe('enabled-change', () => {
+        this.#scheduleDirty = true;
+      }),
+    ];
 
     this.on('dispose', () => {
-      unsubAddChild();
-      unsubRemoveChild();
+      unsubscribes.forEach((fn) => fn());
       this.#stack = [];
       SDL.SDL_Quit();
       App.#singleAppInstance = null;
@@ -140,7 +144,7 @@ export class App extends Node {
     });
 
     App.#singleAppInstance = this;
-    this.#stack = getChildrenStack(this, Node);
+  this.#rebuildStacks();
     Object.defineProperty(globalThis, 'appInstance', {
       value: this,
       writable: false,
@@ -287,9 +291,19 @@ export class App extends Node {
   }
 
   #callProcessStack(delta: number) {
+    if (this.#scheduleDirty) this.#rebuildStacks();
     for (const node of this.#stack) {
       node._process(delta);
     }
+  }
+
+  #rebuildStacks() {
+    const nextStack: Node[] = [];
+    this.traverse((n) => {
+      if (n !== this && n instanceof Node) nextStack.push(n);
+    });
+    this.#stack = nextStack;
+    this.#scheduleDirty = false;
   }
 
   #dispatchEvent() {

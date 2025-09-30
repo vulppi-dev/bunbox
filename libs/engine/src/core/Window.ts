@@ -13,12 +13,11 @@ import {
 import { type Pointer } from 'bun:ffi';
 import { USING_VULKAN, WINDOW_FEATURES_MAP } from '../constants';
 import { Color, Vector2 } from '../math';
+import { Mesh } from '../nodes/Mesh';
 import { POINTERS_MAP } from '../stores/global';
 import type { WindowsFeature, WindowsFeaturesOptions } from '../types';
 import { pointerToBuffer } from '../utils/buffer';
-import { getChildrenStack } from '../utils/node';
 import { Node } from './Node';
-import { Mesh } from '../nodes/Mesh';
 
 export type WindowOptions = {
   title: string;
