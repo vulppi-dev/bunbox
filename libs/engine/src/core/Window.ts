@@ -33,6 +33,7 @@ export class Window extends Node {
   #winPtr: Pointer;
   #devicePtr: Pointer;
   #winId: number;
+  #enableVSync: boolean = true;
   #background: 'vulkan' | 'metal' = 'vulkan';
   #swapFormat: number = 0;
   #viewportFactor: number;
@@ -41,6 +42,7 @@ export class Window extends Node {
   #stack: Node[] = [];
   #meshStack: Mesh[] = [];
   // #lightStack: Node[] = [];
+  #scheduleDirty: boolean = true;
 
   #displayMode: SDL_DisplayMode;
   #width: Int32Array;
@@ -133,12 +135,13 @@ export class Window extends Node {
 
     const unsubscribes = [
       this.subscribe('add-child', () => {
-        this.#stack = getChildrenStack(this, Node);
-        this.#meshStack = getChildrenStack(this, Mesh);
+        this.#scheduleDirty = true;
       }),
       this.subscribe('remove-child', () => {
-        this.#stack = getChildrenStack(this, Node);
-        this.#meshStack = getChildrenStack(this, Mesh);
+        this.#scheduleDirty = true;
+      }),
+      this.subscribe('enabled-change', () => {
+        this.#scheduleDirty = true;
       }),
       this.subscribe('orientation', () => {
         this.#processDisplayMode();
@@ -164,8 +167,7 @@ export class Window extends Node {
       SDL.SDL_DestroyWindow(this.#winPtr);
     });
 
-    this.#stack = getChildrenStack(this, Node);
-    this.#meshStack = getChildrenStack(this, Mesh);
+    this.#rebuildStacks();
   }
 
   protected override _getType(): string {
@@ -255,11 +257,25 @@ export class Window extends Node {
     );
   }
 
+  get isEnabledVSync() {
+    return this.#enableVSync;
+  }
+
+  set isEnabledVSync(value: boolean) {
+    this.#enableVSync = value;
+  }
+
   override _process(deltaTime: number): void {
     this.#renderDelayCount += deltaTime;
-    const rate = this.getCurrentDisplayFrameRate();
-    const delay = 1000 / rate;
-    if (this.#renderDelayCount >= delay) {
+
+    if (this.#enableVSync) {
+      const rate = this.getCurrentDisplayFrameRate();
+      const delay = 1000 / rate;
+      if (this.#renderDelayCount >= delay) {
+        this.#callRenderStack(this.#renderDelayCount);
+        this.#renderDelayCount = 0;
+      }
+    } else {
       this.#callRenderStack(this.#renderDelayCount);
       this.#renderDelayCount = 0;
     }
@@ -276,7 +292,29 @@ export class Window extends Node {
     this.#displayMode.copy(buffer);
   }
 
+  #rebuildStacks() {
+    const nextStack: Node[] = [];
+    const nextMeshStack: Mesh[] = [];
+
+    this.traverse((n) => {
+      if (n instanceof Node) {
+        nextStack.push(n);
+      }
+      if (n instanceof Mesh) {
+        nextMeshStack.push(n);
+      }
+    });
+
+    this.#stack = nextStack;
+    this.#meshStack = nextMeshStack;
+    this.#scheduleDirty = false;
+  }
+
   async #callRenderStack(delta: number) {
+    if (this.#scheduleDirty) {
+      this.#rebuildStacks();
+    }
+
     for (const node of this.#stack) {
       node._update(delta);
     }
@@ -337,6 +375,13 @@ export class Window extends Node {
     this.#clearScreen();
 
     // TODO: render children
+    for (const mesh of this.#meshStack) {
+      // TODO: Default material
+      const material = mesh.material;
+      if (!material) continue;
+    }
+
+    // TODO: post process
 
     SDL.SDL_SubmitGPUCommandBuffer(this.#currentCmd);
     this.#currentCmd = null;

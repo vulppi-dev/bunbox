@@ -1,6 +1,7 @@
 import { validate_wgsl } from '@bunbox/naga';
 import { DirtyState } from '@bunbox/utils';
 import { sha } from 'bun';
+import { Rasterizer } from './Rasterizer';
 
 export type MaterialOptions = {
   shader: string;
@@ -8,11 +9,17 @@ export type MaterialOptions = {
   params?: Record<string, any>;
 };
 
+export type MaterialPrimitive = 'triangles' | 'lines' | 'points';
+
 export class Material extends DirtyState {
   #label = '';
   #params: Record<string, any> = {};
 
+  #hash = '';
+
   #shader = '';
+  #primitive: MaterialPrimitive = 'triangles';
+  #rasterizer: Rasterizer = new Rasterizer();
 
   constructor({ shader, label = '', params = {} }: MaterialOptions) {
     super();
@@ -41,7 +48,32 @@ export class Material extends DirtyState {
       throw new Error('Invalid WGSL');
     }
     this.#shader = src;
+    this.#updateHash();
     this.markAsDirty();
+  }
+
+  get primitive() {
+    return this.#primitive;
+  }
+  set primitive(v: MaterialPrimitive) {
+    if (this.#primitive === v) return;
+    this.#primitive = v;
+    this.markAsDirty();
+  }
+
+  get hash(): string {
+    return this.#hash;
+  }
+
+  #updateHash() {
+    this.#hash = sha(
+      JSON.stringify({
+        shader: this.#shader,
+        primitive: this.#primitive,
+        rasterizer: this.#rasterizer.hash,
+      }),
+      'hex',
+    );
   }
 
   equals(other: Material): boolean {
@@ -77,9 +109,5 @@ export class Material extends DirtyState {
     });
     m.markAsDirty();
     return m;
-  }
-
-  get hash(): string {
-    return sha(this.#shader || '', 'hex');
   }
 }

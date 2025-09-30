@@ -1,7 +1,7 @@
 import type { EventMap } from '@bunbox/utils';
 import { Node } from '../core';
 import { Euler, Matrix, Quaternion, Vector3 } from '../math';
-import { Layer } from '../elements';
+import { MaskHelper } from '../elements';
 
 export class Node3D<
   P extends Record<string, any> = Record<string, any>,
@@ -14,7 +14,7 @@ export class Node3D<
   #rotation: Euler = new Euler(0, 0, 0, 'yzx');
   #rotationQ: Quaternion | null = null;
 
-  #layer: Layer = new Layer();
+  #layer: MaskHelper = new MaskHelper();
 
   protected override _getType(): string {
     return 'Node3D';
@@ -70,7 +70,7 @@ export class Node3D<
     this.#rotationQ?.markAsDirty();
   }
 
-  get layer(): Layer {
+  get layer(): MaskHelper {
     return this.#layer;
   }
 
