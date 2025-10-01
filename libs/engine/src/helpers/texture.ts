@@ -7,6 +7,7 @@ import { decode as decodeJpeg } from '@jsquash/jpeg';
 import { decode as decodeWebp } from '@jsquash/webp';
 import { decode as decodeAvif } from '@jsquash/avif';
 
+/** Result of decoding an image file/buffer. */
 export type DecodedImage = {
   data: Uint8Array | Uint16Array;
   width: number;
@@ -20,9 +21,8 @@ function extOf(path: string): string {
   return path.slice(dot + 1).toLowerCase();
 }
 
-/**
- * Decode an image buffer (PNG/JPEG/WEBP/AVIF) to raw image data.
- * By default returns 8-bit RGBA (Uint8Array). Some decoders can output 16-bit.
+/** Decode an image buffer (PNG/JPEG/WEBP/AVIF) to raw image data.
+ * By default returns 8-bit RGBA (Uint8Array). Some inputs may output 16-bit.
  */
 export async function decodeImage(
   buffer: ArrayBuffer,
@@ -111,8 +111,7 @@ export async function decodeImage(
   throw new Error('Unsupported or corrupt image input');
 }
 
-/**
- * Create a Texture from a file path on disk. Uses Bun.file to read.
+/** Create a Texture from a file path on disk (uses Bun.file).
  * Decodes to RGBA8 and stores pixels in Texture.data.
  */
 export async function textureFromFile(
@@ -136,9 +135,7 @@ export async function textureFromFile(
   return new Texture(desc);
 }
 
-/**
- * Create a Texture from an ArrayBuffer (file bytes). Optionally pass a hint for mime/ext.
- */
+/** Create a Texture from an ArrayBuffer (file bytes). Optionally pass a hint for mime/ext. */
 export async function textureFromArrayBuffer(
   buffer: ArrayBuffer,
   hint?: string,

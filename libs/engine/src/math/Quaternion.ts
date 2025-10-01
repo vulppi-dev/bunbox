@@ -2,9 +2,7 @@ import type { FixedArray } from '../types';
 import { AbstractVector } from './AbstractVector';
 import type { Vector3 } from './Vector3';
 
-/**
- * Represents a quaternion, a mathematical object used to represent rotations in 3D space.
- */
+/** Represents a rotation in 3D space. */
 export class Quaternion extends AbstractVector<4> {
   #w: number;
   #x: number;
@@ -19,6 +17,7 @@ export class Quaternion extends AbstractVector<4> {
     this.#z = z;
   }
 
+  /** Scalar component */
   get w() {
     return this.#w;
   }
@@ -27,6 +26,7 @@ export class Quaternion extends AbstractVector<4> {
     this.markAsDirty();
   }
 
+  /** X vector component */
   get x() {
     return this.#x;
   }
@@ -35,6 +35,7 @@ export class Quaternion extends AbstractVector<4> {
     this.markAsDirty();
   }
 
+  /** Y vector component */
   get y() {
     return this.#y;
   }
@@ -43,6 +44,7 @@ export class Quaternion extends AbstractVector<4> {
     this.markAsDirty();
   }
 
+  /** Z vector component */
   get z() {
     return this.#z;
   }
@@ -77,13 +79,7 @@ export class Quaternion extends AbstractVector<4> {
     return this.markAsDirty();
   }
 
-  /**
-   * Multiplies this quaternion by another quaternion.
-   * Using Hamilton product
-   *
-   * @param vector The quaternion to multiply.
-   * @returns This quaternion after multiplication.
-   */
+  /** Multiplies this quaternion by another (Hamilton product). */
   override mul(vector: this): this {
     const w1 = this.#w,
       x1 = this.#x,
@@ -100,11 +96,7 @@ export class Quaternion extends AbstractVector<4> {
     return this.markAsDirty();
   }
 
-  /**
-   * Divides this quaternion by another quaternion.
-   * @param vector The quaternion to divide by.
-   * @returns This quaternion after division.
-   */
+  /** Divides this quaternion by another quaternion. */
   override div(vector: this): this {
     const inv = vector.inverse();
     this.mul(inv);
@@ -152,10 +144,7 @@ export class Quaternion extends AbstractVector<4> {
     );
   }
 
-  /**
-   * Normalizes this quaternion.
-   * @returns This quaternion after normalization.
-   */
+  /** Normalizes this quaternion. */
   override normalize(): this {
     const n = this.length();
     if (n > 0) {
@@ -167,14 +156,7 @@ export class Quaternion extends AbstractVector<4> {
     return this.markAsDirty();
   }
 
-  /**
-   * Sets the components of this quaternion.
-   * @param w The new w component.
-   * @param x The new x component.
-   * @param y The new y component.
-   * @param z The new z component.
-   * @returns This quaternion after setting the components.
-   */
+  /** Sets quaternion components. */
   override set(w: number, x: number, y: number, z: number): this {
     this.#w = w;
     this.#x = x;
@@ -196,18 +178,12 @@ export class Quaternion extends AbstractVector<4> {
     return this.markAsDirty();
   }
 
-  /**
-   * Converts this quaternion to an array.
-   * @returns The array representation of the quaternion.
-   */
+  /** Returns [w, x, y, z] array. */
   override toArray(): FixedArray<number, 4> {
     return [this.#w, this.#x, this.#y, this.#z];
   }
 
-  /**
-   * Converts this quaternion to a buffer.
-   * @returns The buffer representation of the quaternion.
-   */
+  /** Returns Float32Array [w, x, y, z]. */
   override toBuffer(): Float32Array {
     return new Float32Array([this.#w, this.#x, this.#y, this.#z]);
   }
@@ -220,18 +196,12 @@ export class Quaternion extends AbstractVector<4> {
     return `Quaternion(w: ${this.#w}, x: ${this.#x}, y: ${this.#y}, z: ${this.#z})`;
   }
 
-  /**
-   * Computes the conjugate of this quaternion.
-   * @returns The conjugate quaternion.
-   */
+  /** Returns the conjugate quaternion. */
   conjugate(): this {
     return new Quaternion(this.#w, -this.#x, -this.#y, -this.#z) as this;
   }
 
-  /**
-   * Computes the inverse of this quaternion.
-   * @returns The inverse quaternion.
-   */
+  /** Returns the inverse quaternion. */
   inverse(): this {
     const normSq = this.dot(this);
     if (normSq === 0)
@@ -239,12 +209,7 @@ export class Quaternion extends AbstractVector<4> {
     return this.conjugate().divS(normSq);
   }
 
-  /**
-   * Rotates this quaternion by a given axis and angle.
-   * @param axis The axis to rotate around.
-   * @param rad The angle to rotate by, in radians.
-   * @returns This quaternion after rotation.
-   */
+  /** Rotate by axis-angle (radians). */
   rotate(axis: Vector3, rad: number): this {
     const len = Math.hypot(axis.x, axis.y, axis.z);
     if (len === 0) return this;
@@ -255,13 +220,7 @@ export class Quaternion extends AbstractVector<4> {
     return this.mul(q).normalize();
   }
 
-  /**
-   * Applies this quaternion to a vector, rotating it in-place.
-   * Rotate vector in-place: v' = q * v * q^{-1}
-   *
-   * @param v The vector to rotate.
-   * @returns The rotated vector.
-   */
+  /** Apply rotation to vector in-place: v' = q * v * q^{-1}. */
   applyToVector(v: Vector3): this {
     const vq = new Quaternion(0, v.x, v.y, v.z) as this;
     const resQ = this.clone().mul(vq).mul(this.clone().inverse());

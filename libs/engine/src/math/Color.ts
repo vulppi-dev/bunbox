@@ -1,6 +1,10 @@
 import type { FixedArray } from '../types';
 import { AbstractVector } from './AbstractVector';
 
+/**
+ * RGBA color utility with float channels in range [0..1].
+ * Commonly used for material base colors, clear colors, etc.
+ */
 export class Color extends AbstractVector<4> {
   #r: number;
   #g: number;
@@ -15,37 +19,45 @@ export class Color extends AbstractVector<4> {
     this.#a = a;
   }
 
+  /** Red channel [0..1] */
   get r() {
     return this.#r;
   }
 
+  /** Red channel [0..1] */
   set r(value) {
     this.#r = value;
     this.markAsDirty();
   }
 
+  /** Green channel [0..1] */
   get g() {
     return this.#g;
   }
 
+  /** Green channel [0..1] */
   set g(value) {
     this.#g = value;
     this.markAsDirty();
   }
 
+  /** Blue channel [0..1] */
   get b() {
     return this.#b;
   }
 
+  /** Blue channel [0..1] */
   set b(value) {
     this.#b = value;
     this.markAsDirty();
   }
 
+  /** Alpha channel [0..1] */
   get a() {
     return this.#a;
   }
 
+  /** Alpha channel [0..1] */
   set a(value) {
     this.#a = value;
     this.markAsDirty();
@@ -119,6 +131,9 @@ export class Color extends AbstractVector<4> {
     return this.markAsDirty();
   }
 
+  /**
+   * Sets the color from an RGB hex like 0xffcc00 and optional alpha.
+   */
   setHex(hex: number, alpha?: number): this {
     this.#r = ((hex >> 16) & 0xff) / 0xff;
     this.#g = ((hex >> 8) & 0xff) / 0xff;

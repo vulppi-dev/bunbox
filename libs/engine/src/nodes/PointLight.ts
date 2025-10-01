@@ -2,6 +2,7 @@
 
 import { AbstractLight } from './AbstractLight';
 
+/** Omnidirectional point light with inverse-square falloff (implementation-defined). */
 export class PointLight extends AbstractLight {
   #range: number = 10.0; // meters
 
@@ -9,6 +10,7 @@ export class PointLight extends AbstractLight {
     return 'PointLight';
   }
 
+  /** Effective radius where contribution becomes negligible (engine-dependent). */
   get range(): number {
     return this.#range;
   }

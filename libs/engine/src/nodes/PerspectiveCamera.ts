@@ -2,6 +2,10 @@
 
 import { AbstractCamera } from './AbstractCamera';
 
+/**
+ * Perspective camera with vertical field-of-view and aspect ratio.
+ * Fov is in radians.
+ */
 export class PerspectiveCamera extends AbstractCamera {
   #fov: number = Math.PI * 0.333;
   #aspect: number = 1;
@@ -10,6 +14,7 @@ export class PerspectiveCamera extends AbstractCamera {
     return 'PerspectiveCamera';
   }
 
+  /** Vertical field of view in radians. */
   get fov(): number {
     return this.#fov;
   }
@@ -18,6 +23,7 @@ export class PerspectiveCamera extends AbstractCamera {
     this.markAsDirty();
   }
 
+  /** Aspect ratio (width / height). */
   get aspect(): number {
     return this.#aspect;
   }
@@ -37,6 +43,7 @@ export class PerspectiveCamera extends AbstractCamera {
     const A = fFar * invNF;
     const B = fFar * n * invNF;
 
+    // Right-handed, column-major, maps z=-near -> 0 and z=-far -> 1
     this.projectionMatrix.set([
       f / a, 0, 0, 0,
       0, f, 0, 0,

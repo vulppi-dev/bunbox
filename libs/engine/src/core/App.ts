@@ -78,6 +78,10 @@ function getSensorType(sensor: SDL_SensorType) {
   }
 }
 
+/**
+ * Engine application entry point. Initializes SDL, owns the main event loop
+ * and a process loop. Add your scene graph under this node.
+ */
 export class App extends Node {
   static #singleAppInstance: App | null = null;
 
@@ -87,6 +91,7 @@ export class App extends Node {
   #epochOffsetMs: number;
   #eventStruct: SDL_Event;
 
+  /** Create a single App instance (only one allowed per process). */
   constructor(options?: AppOptions) {
     super();
 
@@ -144,7 +149,7 @@ export class App extends Node {
     });
 
     App.#singleAppInstance = this;
-  this.#rebuildStacks();
+    this.#rebuildStacks();
     Object.defineProperty(globalThis, 'appInstance', {
       value: this,
       writable: false,
@@ -163,19 +168,23 @@ export class App extends Node {
     return 'App';
   }
 
+  /** Milliseconds offset to convert SDL ticks into Date.now domain. */
   get epochOffsetMs() {
     return this.#epochOffsetMs;
   }
 
+  /** Current time in ms based on SDL_GetTicksNS plus epoch offset. */
   get now() {
     const time = Number(SDL.SDL_GetTicksNS() / 1_000_000n);
     return this.#epochOffsetMs + time;
   }
 
+  /** Set global SDL log priority. */
   setLogPriority(priority: AppLogPriority) {
     SDL.SDL_SetLogPriorities(APP_LOG_PRIORITY_MAP[priority]);
   }
 
+  /** Set SDL log priority for a specific category. */
   setCategoryLogPriority(category: AppLogCategory, priority: AppLogPriority) {
     SDL.SDL_SetLogPriority(
       APP_LOG_CATEGORY_MAP[category],
@@ -183,6 +192,7 @@ export class App extends Node {
     );
   }
 
+  /** System preferred locales (language and optional country). */
   getLocales() {
     const locales: SDL_Locale[] = [];
     const localeCount = new Int32Array(1);
@@ -209,6 +219,7 @@ export class App extends Node {
     }));
   }
 
+  /** System theme: 'light' | 'dark' | 'system'. */
   getTheme() {
     const theme = SDL.SDL_GetSystemTheme();
     return theme === SDL_SystemTheme.SDL_SYSTEM_THEME_DARK
@@ -218,6 +229,7 @@ export class App extends Node {
         : 'system';
   }
 
+  /** Current display orientation for the provided display id. */
   getDisplayOrientation(displayId: number): DisplayOrientation {
     const orientation = SDL.SDL_GetCurrentDisplayOrientation(displayId);
     switch (orientation) {
@@ -235,6 +247,7 @@ export class App extends Node {
     }
   }
 
+  /** Pixel bounds of a display (x, y, width, height). */
   getDisplayBoundRect(displayId: number) {
     const rect = new SDL_Rect();
     SDL.SDL_GetDisplayBounds(displayId, rect.bunPointer);
@@ -246,6 +259,7 @@ export class App extends Node {
     );
   }
 
+  /** Pixel bounds of a window (x, y, width, height). */
   getWindowBoundRect(windowId: number) {
     const window = SDL.SDL_GetWindowFromID(windowId);
     const x = new Int32Array(1);

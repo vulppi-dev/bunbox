@@ -6,6 +6,7 @@
 import { Material } from '../elements';
 import { Color } from '../math';
 
+/** Options for createSimpleMaterial helper. */
 export type SimpleMaterialOptions = {
   label?: string;
   color?: Color;
@@ -84,6 +85,9 @@ fn fs_main(input : VSOut) -> @location(0) vec4<f32> {
 }
 `;
 
+/**
+ * Create a simple forward-lit material with basic diffuse lighting.
+ */
 export function createSimpleMaterial(
   opts: SimpleMaterialOptions = {},
 ): Material {

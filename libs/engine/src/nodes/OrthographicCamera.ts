@@ -3,6 +3,10 @@
 import { Vector2 } from '../math';
 import { AbstractCamera } from './AbstractCamera';
 
+/**
+ * Orthographic camera with configurable horizontal/vertical extents.
+ * Right-handed, column-major, NDC Z in [0,1].
+ */
 export class OrthographicCamera extends AbstractCamera {
   #horizontal: Vector2 = new Vector2(-1, 1);
   #vertical: Vector2 = new Vector2(-1, 1);
@@ -11,6 +15,7 @@ export class OrthographicCamera extends AbstractCamera {
     return 'OrthographicCamera';
   }
 
+  /** Horizontal extents as [left, right]. */
   get horizontal(): Vector2 {
     return this.#horizontal;
   }
@@ -19,6 +24,7 @@ export class OrthographicCamera extends AbstractCamera {
     this.markAsDirty();
   }
 
+  /** Vertical extents as [bottom, top]. */
   get vertical(): Vector2 {
     return this.#vertical;
   }
@@ -27,6 +33,7 @@ export class OrthographicCamera extends AbstractCamera {
     this.markAsDirty();
   }
 
+  /** Top extent. */
   get top(): number {
     return this.#vertical.y;
   }
@@ -35,6 +42,7 @@ export class OrthographicCamera extends AbstractCamera {
     this.markAsDirty();
   }
 
+  /** Right extent. */
   get right(): number {
     return this.#horizontal.x;
   }
@@ -43,6 +51,7 @@ export class OrthographicCamera extends AbstractCamera {
     this.markAsDirty();
   }
 
+  /** Bottom extent. */
   get bottom(): number {
     return this.#vertical.x;
   }
@@ -51,6 +60,7 @@ export class OrthographicCamera extends AbstractCamera {
     this.markAsDirty();
   }
 
+  /** Left extent. */
   get left(): number {
     return this.#horizontal.y;
   }
@@ -84,6 +94,7 @@ export class OrthographicCamera extends AbstractCamera {
 
     const invNF = 1 / (n - f);
 
+    // Maps x in [l,r] to [-1,1], y in [b,t] to [-1,1], z in [-n,-f] to [0,1]
     this.projectionMatrix.set([
       // col 0
       2 / dh, 0, 0, 0,

@@ -3,6 +3,9 @@
 import { Vector3 } from '../math/Vector3';
 import { AbstractLight } from './AbstractLight';
 
+/**
+ * Light that emits parallel rays in a given direction (e.g., sunlight).
+ */
 export class DirectionalLight extends AbstractLight {
   #direction: Vector3 = new Vector3(0, -1, 0);
 
@@ -10,6 +13,7 @@ export class DirectionalLight extends AbstractLight {
     return 'DirectionalLight';
   }
 
+  /** Unit vector indicating light direction in world space. */
   get direction(): Vector3 {
     return this.#direction;
   }

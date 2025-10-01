@@ -13,6 +13,7 @@ function createGeometry(vertexCount: number, indexCount: number, uvLayers = 1) {
   return { g, pos, nrm, uv0, idx } as const;
 }
 
+/** Options for createBox primitive. */
 export type BoxOptions = {
   width?: number; // X size
   height?: number; // Y size
@@ -21,6 +22,7 @@ export type BoxOptions = {
   label?: string;
 };
 
+/** Create a box/cube geometry centered at origin. */
 export function createBox(options: BoxOptions = {}): Geometry {
   const w = (options.width ?? 1) / 2;
   const h = (options.height ?? 1) / 2;
@@ -148,6 +150,7 @@ export function createBox(options: BoxOptions = {}): Geometry {
   return g;
 }
 
+/** Options for createSphere primitive. */
 export type SphereOptions = {
   radius?: number;
   widthSegments?: number; // longitudinal segments (>=3)
@@ -155,6 +158,7 @@ export type SphereOptions = {
   label?: string;
 };
 
+/** Create a sphere geometry centered at origin. */
 export function createSphere(options: SphereOptions = {}): Geometry {
   const r = options.radius ?? 0.5;
   const ws = Math.max(3, options.widthSegments ?? 16);
@@ -217,6 +221,7 @@ export function createSphere(options: SphereOptions = {}): Geometry {
   return g;
 }
 
+/** Options for createTorus primitive. */
 export type TorusOptions = {
   radius?: number; // major radius (center of torus to tube center)
   tube?: number; // tube radius
@@ -225,6 +230,7 @@ export type TorusOptions = {
   arc?: number; // sweep angle (default 2PI)
 };
 
+/** Create a torus geometry centered at origin. */
 export function createTorus(options: TorusOptions = {}): Geometry {
   const R = options.radius ?? 0.5; // major
   const r = options.tube ?? R * 0.33; // minor
@@ -295,6 +301,7 @@ export function createTorus(options: TorusOptions = {}): Geometry {
   return g;
 }
 
+/** Options for createPlane primitive. */
 export type PlaneOptions = {
   width?: number;
   depth?: number;
@@ -303,6 +310,7 @@ export type PlaneOptions = {
   y?: number; // plane on XZ at this Y
 };
 
+/** Create a plane geometry on the XZ plane at Y (default 0). */
 export function createPlane(options: PlaneOptions = {}): Geometry {
   const w = options.width ?? 1;
   const d = options.depth ?? 1;
@@ -353,6 +361,7 @@ export function createPlane(options: PlaneOptions = {}): Geometry {
   return g;
 }
 
+/** Options for createCylinder primitive. */
 export type CylinderOptions = {
   radiusTop?: number;
   radiusBottom?: number;
@@ -362,6 +371,7 @@ export type CylinderOptions = {
   openEnded?: boolean; // if true, no caps
 };
 
+/** Create a cylinder geometry with optional caps. */
 export function createCylinder(options: CylinderOptions = {}): Geometry {
   const rt = Math.max(0, options.radiusTop ?? 0.5);
   const rb = Math.max(0, options.radiusBottom ?? 0.5);

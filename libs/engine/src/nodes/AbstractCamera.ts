@@ -4,6 +4,10 @@ import { Matrix, Quaternion, Vector3, VectorParser } from '../math';
 import { Rect } from '../math/Rect';
 import { Node3D } from './Node3D';
 
+/**
+ * Base camera node holding view/projection matrices and near/far planes.
+ * Subclasses implement `_updateProjectionMatrix()`.
+ */
 export abstract class AbstractCamera extends Node3D {
   #near: number = 0.1;
   #far: number = 1000;
@@ -12,6 +16,7 @@ export abstract class AbstractCamera extends Node3D {
   #viewMatrix: Matrix = new Matrix();
   #projectionMatrix: Matrix = new Matrix();
 
+  /** Near clipping plane distance (meters). */
   get near(): number {
     return this.#near;
   }
@@ -20,6 +25,7 @@ export abstract class AbstractCamera extends Node3D {
     this.markAsDirty();
   }
 
+  /** Far clipping plane distance (meters). */
   get far(): number {
     return this.#far;
   }
@@ -28,6 +34,7 @@ export abstract class AbstractCamera extends Node3D {
     this.markAsDirty();
   }
 
+  /** Camera viewport rectangle (in pixels or normalized units as defined by renderer). */
   get viewport(): Rect {
     return this.#viewport;
   }
@@ -36,13 +43,16 @@ export abstract class AbstractCamera extends Node3D {
     this.markAsDirty();
   }
 
+  /** View matrix (world-to-camera). */
   get viewMatrix(): Matrix {
     return this.#viewMatrix;
   }
+  /** Projection matrix (camera to clip/NDC). */
   get projectionMatrix(): Matrix {
     return this.#projectionMatrix;
   }
 
+  /** Point the camera towards a target in world space, preserving position. */
   lookAt(target: Vector3): void {
     const eye = this.position.clone();
     this.transform.lookAt(eye, target);
@@ -73,5 +83,6 @@ export abstract class AbstractCamera extends Node3D {
     this.#viewMatrix.copy(this.transform).invert();
   }
 
+  /** Update projection matrix according to subclass parameters. */
   protected abstract _updateProjectionMatrix(): void;
 }
