@@ -11,7 +11,11 @@ import {
   SDL_WindowFlags,
 } from '@bunbox/sdl3';
 import { type Pointer } from 'bun:ffi';
-import { USING_VULKAN, WINDOW_FEATURES_MAP } from '../constants';
+import {
+  POINTER_KEY_DEVICE,
+  USING_VULKAN,
+  WINDOW_FEATURES_MAP,
+} from '../constants';
 import { Color, Vector2 } from '../math';
 import { Viewport } from '../nodes';
 import { Mesh } from '../nodes/Mesh';
@@ -34,9 +38,7 @@ export class Window extends Viewport {
   #devicePtr: Pointer;
   #winId: number;
   #enableVSync: boolean = true;
-  #background: 'vulkan' | 'metal' = 'vulkan';
   #swapFormat: number = 0;
-  #viewportFactor: number;
 
   #features: WindowsFeaturesOptions;
   #stack: Node[] = [];
@@ -105,23 +107,12 @@ export class Window extends Viewport {
     this.#xPtr = new Int32Array(1);
     this.#yPtr = new Int32Array(1);
     this.#renderDelayCount = 0;
-
-    this.#background = USING_VULKAN ? 'vulkan' : 'metal';
-    this.#viewportFactor = USING_VULKAN ? -1 : 1;
-    const devicePtr = SDL.SDL_CreateGPUDevice(
-      USING_VULKAN
-        ? SDL_GPUShaderFormat.SDL_GPU_SHADERFORMAT_SPIRV
-        : SDL_GPUShaderFormat.SDL_GPU_SHADERFORMAT_METALLIB,
-      true,
-      cstr(this.#background),
-    );
+    const devicePtr = POINTERS_MAP.get(POINTER_KEY_DEVICE);
 
     if (!devicePtr) {
-      throw new Error(`SDL: ${SDL.SDL_GetError()}`);
+      throw new Error('Create App node instance before creating Window');
     }
     this.#devicePtr = devicePtr;
-    POINTERS_MAP.set(`${this.id}-device`, this.#devicePtr);
-
     if (!SDL.SDL_ClaimWindowForGPUDevice(this.#devicePtr, this.#winPtr)) {
       throw new Error(`SDL: ${SDL.SDL_GetError()}`);
     }
@@ -171,10 +162,8 @@ export class Window extends Viewport {
       unsubscribes.forEach((fn) => fn());
       this.#stack = [];
       this.#meshStack = [];
-      POINTERS_MAP.delete(`${this.id}-device`);
       POINTERS_MAP.delete(this.id);
       SDL.SDL_ReleaseWindowFromGPUDevice(this.#devicePtr, this.#winPtr);
-      SDL.SDL_DestroyGPUDevice(this.#devicePtr);
       SDL.SDL_DestroyWindow(this.#winPtr);
     });
 

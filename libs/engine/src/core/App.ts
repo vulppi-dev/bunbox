@@ -5,6 +5,7 @@ import {
   SDL_Event,
   SDL_EventType,
   SDL_GamepadAxis,
+  SDL_GPUShaderFormat,
   SDL_InitFlags,
   SDL_Keymod,
   SDL_Locale,
@@ -14,14 +15,16 @@ import {
   SDL_SensorType,
   SDL_SystemTheme,
 } from '@bunbox/sdl3';
+import { promiseDelay } from '@vulppi/toolbelt';
+import { CString, read, type Pointer } from 'bun:ffi';
 import {
   APP_FEATURES_MAP,
   APP_LOG_CATEGORY_MAP,
   APP_LOG_PRIORITY_MAP,
+  BACKGROUND_RENDERING,
+  POINTER_KEY_DEVICE,
+  USING_VULKAN,
 } from '../constants';
-import type { AppFeature, AppLogCategory, AppLogPriority } from '../types';
-import { Node } from './Node';
-import { promiseDelay } from '@vulppi/toolbelt';
 import {
   ClipboardEvent,
   DeviceEvent,
@@ -41,9 +44,11 @@ import {
   WindowEvent,
   type DisplayOrientation,
 } from '../events';
-import { CString, read, type Pointer } from 'bun:ffi';
-import { pointerToBuffer } from '../utils/buffer';
 import { Rect, Vector3 } from '../math';
+import { POINTERS_MAP } from '../stores/global';
+import type { AppFeature, AppLogCategory, AppLogPriority } from '../types';
+import { pointerToBuffer } from '../utils/buffer';
+import { Node } from './Node';
 
 export type AppOptions = {
   /**
@@ -125,6 +130,19 @@ export class App extends Node {
     SDL.SDL_SetAppMetadata(cstr(name), cstr(version), cstr(identifier));
     SDL.SDL_SetHint(cstr('SDL_LOGGING'), cstr('test=verbose,*=info'));
 
+    const devicePtr = SDL.SDL_CreateGPUDevice(
+      USING_VULKAN
+        ? SDL_GPUShaderFormat.SDL_GPU_SHADERFORMAT_SPIRV
+        : SDL_GPUShaderFormat.SDL_GPU_SHADERFORMAT_METALLIB,
+      true,
+      cstr(BACKGROUND_RENDERING),
+    );
+
+    if (!devicePtr) {
+      throw new Error(`SDL: ${SDL.SDL_GetError()}`);
+    }
+    POINTERS_MAP.set(POINTER_KEY_DEVICE, devicePtr);
+
     const unsubscribes = [
       this.subscribe('add-child', () => {
         this.#scheduleDirty = true;
@@ -139,7 +157,9 @@ export class App extends Node {
 
     this.on('dispose', () => {
       unsubscribes.forEach((fn) => fn());
+      POINTERS_MAP.delete(POINTER_KEY_DEVICE);
       this.#stack = [];
+      SDL.SDL_DestroyGPUDevice(devicePtr);
       SDL.SDL_Quit();
       App.#singleAppInstance = null;
     });

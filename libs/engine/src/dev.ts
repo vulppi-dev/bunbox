@@ -12,6 +12,19 @@ const win = new Window({
   },
 });
 
+const win2 = new Window({
+  title: 'Window2',
+  features: {
+    resizable: true,
+    highPixelDensity: true,
+  },
+});
+
+win2.x = 100 + win.width;
+win2.y = 100;
+win2.width = 200;
+win2.height = 200;
+
 win.on('windowClose', (ev) => {
   if (ev.windowId !== win.windowId) return;
   win.dispose();
@@ -26,8 +39,10 @@ win.on('keyDown', (ev) => {
 });
 
 win.clearColor.setHex(0x111111);
+win2.clearColor.setHex(0x220022);
 
 app.addChild(win);
+app.addChild(win2);
 
 // const VS_WGSL = `
 // @vertex fn main(@builtin(vertex_index) i:u32) -> @builtin(position) vec4<f32> {

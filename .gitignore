@@ -38,7 +38,7 @@ pkg/
 *temp/
 *tmp/
 *.env
-*env.*
+.env.*
 
 # test
 coverage/
