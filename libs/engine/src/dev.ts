@@ -5,7 +5,7 @@ const app = new App();
 app.setLogPriority('verbose');
 
 const win = new Window({
-  title: '2D Square',
+  title: 'Dev mode',
   features: {
     resizable: true,
     highPixelDensity: true,
@@ -25,7 +25,7 @@ win.on('keyDown', (ev) => {
   console.log(ev.type, ev.keyText);
 });
 
-win.clearColor.set(1.0, 0.4, 0.0, 1);
+win.clearColor.setHex(0x111111);
 
 app.addChild(win);
 

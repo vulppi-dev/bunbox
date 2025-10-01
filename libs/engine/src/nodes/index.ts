@@ -6,3 +6,4 @@ export * from './Node3D';
 export * from './OrthographicCamera';
 export * from './PerspectiveCamera';
 export * from './PointLight';
+export * from './Viewport';

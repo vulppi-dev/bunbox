@@ -13,6 +13,7 @@ import {
 import { type Pointer } from 'bun:ffi';
 import { USING_VULKAN, WINDOW_FEATURES_MAP } from '../constants';
 import { Color, Vector2 } from '../math';
+import { Viewport } from '../nodes';
 import { Mesh } from '../nodes/Mesh';
 import { POINTERS_MAP } from '../stores/global';
 import type { WindowsFeature, WindowsFeaturesOptions } from '../types';
@@ -28,7 +29,7 @@ export type WindowOptions = {
   features?: WindowsFeaturesOptions;
 };
 
-export class Window extends Node {
+export class Window extends Viewport {
   #winPtr: Pointer;
   #devicePtr: Pointer;
   #winId: number;
@@ -43,14 +44,15 @@ export class Window extends Node {
   // #lightStack: Node[] = [];
   #scheduleDirty: boolean = true;
 
-  #displayMode: SDL_DisplayMode;
-  #width: Int32Array;
-  #height: Int32Array;
-  #x: Int32Array;
-  #y: Int32Array;
   #clearColor = new Color();
 
   // Helpers
+  #displayMode: SDL_DisplayMode;
+  #widthPtr: Int32Array;
+  #heightPtr: Int32Array;
+  #xPtr: Int32Array;
+  #yPtr: Int32Array;
+
   #currentCmd: Pointer | null = null;
   #swapTexPtr = new BigUint64Array(1);
   #swapWidthPtr = new Uint32Array(1);
@@ -98,10 +100,10 @@ export class Window extends Node {
     POINTERS_MAP.set(this.id, this.#winPtr);
 
     this.#displayMode = new SDL_DisplayMode();
-    this.#width = new Int32Array(1);
-    this.#height = new Int32Array(1);
-    this.#x = new Int32Array(1);
-    this.#y = new Int32Array(1);
+    this.#widthPtr = new Int32Array(1);
+    this.#heightPtr = new Int32Array(1);
+    this.#xPtr = new Int32Array(1);
+    this.#yPtr = new Int32Array(1);
     this.#renderDelayCount = 0;
 
     this.#background = USING_VULKAN ? 'vulkan' : 'metal';
@@ -124,8 +126,18 @@ export class Window extends Node {
       throw new Error(`SDL: ${SDL.SDL_GetError()}`);
     }
 
-    SDL.SDL_GetWindowSizeInPixels(this.#winPtr, this.#width, this.#height);
-    SDL.SDL_GetWindowPosition(this.#winPtr, this.#x, this.#y);
+    SDL.SDL_GetWindowSizeInPixels(
+      this.#winPtr,
+      this.#widthPtr,
+      this.#heightPtr,
+    );
+    SDL.SDL_GetWindowPosition(this.#winPtr, this.#xPtr, this.#yPtr);
+    this.width = this.#widthPtr[0]!;
+    this.height = this.#heightPtr[0]!;
+    this.x = this.#xPtr[0]!;
+    this.y = this.#yPtr[0]!;
+    this.unmarkAsDirty();
+
     this.#processDisplayMode();
     this.#swapFormat = SDL.SDL_GetGPUSwapchainTextureFormat(
       this.#devicePtr,
@@ -188,54 +200,6 @@ export class Window extends Node {
     SDL.SDL_SetWindowTitle(this.#winPtr, cstr(value));
   }
 
-  get width() {
-    return this.#width[0]!;
-  }
-
-  set width(value: number) {
-    if (this.isDisposed) {
-      throw new Error('Window is disposed');
-    }
-    this.#width[0] = value;
-    SDL.SDL_SetWindowSize(this.#winPtr, this.#width[0], this.#height[0]!);
-  }
-
-  get height() {
-    return this.#height[0]!;
-  }
-
-  set height(value: number) {
-    if (this.isDisposed) {
-      throw new Error('Window is disposed');
-    }
-    this.#height[0] = value;
-    SDL.SDL_SetWindowSize(this.#winPtr, this.#width[0]!, this.#height[0]);
-  }
-
-  get x() {
-    return this.#x[0]!;
-  }
-
-  set x(value: number) {
-    if (this.isDisposed) {
-      throw new Error('Window is disposed');
-    }
-    this.#x[0] = value;
-    SDL.SDL_SetWindowPosition(this.#winPtr, this.#x[0], this.#y[0]!);
-  }
-
-  get y() {
-    return this.#y[0]!;
-  }
-
-  set y(value: number) {
-    if (this.isDisposed) {
-      throw new Error('Window is disposed');
-    }
-    this.#y[0] = value;
-    SDL.SDL_SetWindowPosition(this.#winPtr, this.#x[0]!, this.#y[0]);
-  }
-
   get clearColor() {
     return this.#clearColor;
   }
@@ -266,6 +230,22 @@ export class Window extends Node {
 
   override _process(deltaTime: number): void {
     this.#renderDelayCount += deltaTime;
+
+    if (this.isDirty) {
+      this.#widthPtr[0] = this.width;
+      this.#heightPtr[0] = this.height;
+      this.#xPtr[0] = this.x;
+      this.#yPtr[0] = this.y;
+
+      SDL.SDL_SetWindowSize(
+        this.#winPtr,
+        this.#widthPtr[0]!,
+        this.#heightPtr[0]!,
+      );
+      SDL.SDL_SetWindowPosition(this.#winPtr, this.#xPtr[0]!, this.#yPtr[0]!);
+
+      this.unmarkAsDirty();
+    }
 
     if (this.#enableVSync) {
       const rate = this.getCurrentDisplayFrameRate();

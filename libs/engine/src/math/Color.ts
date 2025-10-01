@@ -119,6 +119,14 @@ export class Color extends AbstractVector<4> {
     return this.markAsDirty();
   }
 
+  setHex(hex: number, alpha?: number): this {
+    this.#r = ((hex >> 16) & 0xff) / 0xff;
+    this.#g = ((hex >> 8) & 0xff) / 0xff;
+    this.#b = (hex & 0xff) / 0xff;
+    this.#a = alpha !== undefined ? alpha : this.#a;
+    return this.markAsDirty();
+  }
+
   override copy(vector: this): this {
     this.#r = vector.#r;
     this.#g = vector.#g;
