@@ -1,6 +1,6 @@
 import { AbstractNode } from '@bunbox/tree';
 import type { EventMap, MergeEventMaps } from '@bunbox/utils';
-import type { SDL_EventMap } from '../events';
+import type { SdlEventMap } from '../events';
 
 /**
  * Base scene-graph node.
@@ -13,17 +13,13 @@ export class Node<
   P extends Record<string, any> = Record<string, any>,
   M extends Record<string, any> = Record<string, any>,
   T extends EventMap = {},
-> extends AbstractNode<P, M, MergeEventMaps<SDL_EventMap, T>> {
-  protected override _getType(): string {
-    return 'Node';
-  }
-
+> extends AbstractNode<P, M, MergeEventMaps<SdlEventMap, T>> {
   /**
    * Per-frame update hook executed before rendering. Use for transform caches,
    * animations dependent on render pacing, or GPU resource preparation.
    * @param deltaTime Elapsed time since last frame in milliseconds.
    */
-  _update(deltaTime: number): void {
+  _update(_deltaTime: number): void {
     // Override in subclasses
   }
 
@@ -32,7 +28,11 @@ export class Node<
    * Use for input, AI, timers, etc.
    * @param deltaTime Elapsed time since last tick in milliseconds.
    */
-  _process(deltaTime: number): void {
+  _process(_deltaTime: number): void {
     // Override in subclasses
+  }
+
+  protected override _getType(): string {
+    return 'Node';
   }
 }

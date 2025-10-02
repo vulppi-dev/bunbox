@@ -571,32 +571,32 @@ export class Matrix extends DirtyState {
       sz = Math.sin(euler.z);
 
     // Column-major axis rotations (right-handed, column vectors)
-    const Rx = new Float32Array(16);
-    Rx[0] = 1;
-    Rx[5] = cx;
-    Rx[6] = sx;
-    Rx[9] = -sx;
-    Rx[10] = cx;
-    Rx[15] = 1;
+    const rX = new Float32Array(16);
+    rX[0] = 1;
+    rX[5] = cx;
+    rX[6] = sx;
+    rX[9] = -sx;
+    rX[10] = cx;
+    rX[15] = 1;
 
-    const Ry = new Float32Array(16);
-    Ry[0] = cy;
-    Ry[2] = -sy;
-    Ry[8] = sy;
-    Ry[10] = cy;
-    Ry[5] = 1;
-    Ry[15] = 1;
+    const rY = new Float32Array(16);
+    rY[0] = cy;
+    rY[2] = -sy;
+    rY[8] = sy;
+    rY[10] = cy;
+    rY[5] = 1;
+    rY[15] = 1;
 
-    const Rz = new Float32Array(16);
-    Rz[0] = cz;
-    Rz[1] = sz;
-    Rz[4] = -sz;
-    Rz[5] = cz;
-    Rz[10] = 1;
-    Rz[15] = 1;
+    const rZ = new Float32Array(16);
+    rZ[0] = cz;
+    rZ[1] = sz;
+    rZ[4] = -sz;
+    rZ[5] = cz;
+    rZ[10] = 1;
+    rZ[15] = 1;
 
     const order = euler.order;
-    const rotations: Record<string, Float32Array> = { x: Rx, y: Ry, z: Rz };
+    const rotations: Record<string, Float32Array> = { x: rX, y: rY, z: rZ };
 
     for (const a of order) {
       this.#rightMultiplyTo(R, rotations[a]!); // R = R * Ra

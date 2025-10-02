@@ -54,18 +54,15 @@ export class Vector2 extends AbstractVector<2> {
   get x() {
     return this.#x;
   }
-
+  /** Y component */
+  get y() {
+    return this.#y;
+  }
   /** X component */
   set x(value) {
     this.#x = value;
     this.markAsDirty();
   }
-
-  /** Y component */
-  get y() {
-    return this.#y;
-  }
-
   /** Y component */
   set y(value) {
     this.#y = value;

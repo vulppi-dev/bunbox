@@ -1,5 +1,4 @@
 import { Calculable } from '@bunbox/utils';
-import { Vector2 } from './Vector2';
 
 /**
  * Axis-aligned rectangle represented by x, y, width, height.
@@ -47,45 +46,40 @@ export class Rect extends Calculable<4> {
   get x(): number {
     return this.#x;
   }
-  /** X (left) position */
-  set x(value: number) {
-    this.#x = value;
-    this.markAsDirty();
-  }
 
   /** Y (top) position */
   get y(): number {
     return this.#y;
-  }
-  /** Y (top) position */
-  set y(value: number) {
-    this.#y = value;
-    this.markAsDirty();
   }
 
   /** Left edge (alias of x) */
   get left(): number {
     return this.#x;
   }
-  /** Set left edge (alias of x) */
-  set left(value: number) {
-    this.#x = value;
-    this.markAsDirty();
-  }
 
   /** Top edge (alias of y) */
   get top(): number {
     return this.#y;
   }
-  /** Set top edge (alias of y) */
-  set top(value: number) {
-    this.#y = value;
-    this.markAsDirty();
-  }
 
   /** Right edge (x + width) */
   get right(): number {
     return this.#x + this.#width;
+  }
+
+  /** Bottom edge (y + height) */
+  get bottom(): number {
+    return this.#y + this.#height;
+  }
+
+  /** Width (non-negative recommended) */
+  get width(): number {
+    return this.#width;
+  }
+
+  /** Height (non-negative recommended) */
+  get height(): number {
+    return this.#height;
   }
   /**
    * Set right edge. Adjusts width to keep the same x.
@@ -95,11 +89,6 @@ export class Rect extends Calculable<4> {
     this.#width = value - this.#x;
     this.markAsDirty();
   }
-
-  /** Bottom edge (y + height) */
-  get bottom(): number {
-    return this.#y + this.#height;
-  }
   /**
    * Set bottom edge. Adjusts height to keep the same y.
    * @param value New bottom edge coordinate
@@ -108,20 +97,30 @@ export class Rect extends Calculable<4> {
     this.#height = value - this.#y;
     this.markAsDirty();
   }
-
-  /** Width (non-negative recommended) */
-  get width(): number {
-    return this.#width;
+  /** X (left) position */
+  set x(value: number) {
+    this.#x = value;
+    this.markAsDirty();
+  }
+  /** Y (top) position */
+  set y(value: number) {
+    this.#y = value;
+    this.markAsDirty();
+  }
+  /** Set left edge (alias of x) */
+  set left(value: number) {
+    this.#x = value;
+    this.markAsDirty();
+  }
+  /** Set top edge (alias of y) */
+  set top(value: number) {
+    this.#y = value;
+    this.markAsDirty();
   }
   /** Width (non-negative recommended) */
   set width(value: number) {
     this.#width = value;
     this.markAsDirty();
-  }
-
-  /** Height (non-negative recommended) */
-  get height(): number {
-    return this.#height;
   }
   /** Height (non-negative recommended) */
   set height(value: number) {

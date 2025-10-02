@@ -184,10 +184,6 @@ export class App extends Node {
     }, 0);
   }
 
-  protected override _getType(): string {
-    return 'App';
-  }
-
   /** Milliseconds offset to convert SDL ticks into Date.now domain. */
   get epochOffsetMs() {
     return this.#epochOffsetMs;
@@ -288,7 +284,7 @@ export class App extends Node {
     const h = new Int32Array(1);
     SDL.SDL_GetWindowPosition(window, x, y);
     SDL.SDL_GetWindowSizeInPixels(window, w, h);
-    return new Rect(x[0]!, y[0]!, w[0]!, h[0]!);
+    return new Rect(x[0], y[0], w[0], h[0]);
   }
 
   #helperTimestampToDate(t: bigint) {
@@ -334,7 +330,7 @@ export class App extends Node {
   #rebuildStacks() {
     const nextStack: Node[] = [];
     this.traverse((n) => {
-      if (n !== this && n instanceof Node) nextStack.push(n);
+      if (n !== this && n instanceof Node) nextStack.push(n as Node);
     });
     this.#stack = nextStack;
     this.#scheduleDirty = false;
@@ -342,7 +338,6 @@ export class App extends Node {
 
   #dispatchEvent() {
     const type = this.#eventStruct.properties.type;
-    const now = this.epochOffsetMs;
 
     let event: Event | null = null;
     switch (type) {
@@ -1250,7 +1245,7 @@ export class App extends Node {
           reserved: evStruct.properties.reserved,
           timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           deviceId: evStruct.properties.which,
-          value: new Vector3(sensorData[0]!, sensorData[1]!, sensorData[2]!),
+          value: new Vector3(sensorData[0], sensorData[1], sensorData[2]),
           sensorType: getSensorType(evStruct.properties.sensor),
         });
         break;
@@ -1649,7 +1644,6 @@ export class App extends Node {
       }
       case SDL_EventType.SDL_EVENT_PEN_AXIS: {
         const evStruct = this.#eventStruct.properties.paxis;
-        evStruct.properties.value;
 
         event = new PointerEvent({
           type: 'pointerMove',
@@ -1728,5 +1722,9 @@ export class App extends Node {
       // @ts-ignore
       node.emit(event.type, event);
     }
+  }
+
+  protected override _getType(): string {
+    return 'App';
   }
 }

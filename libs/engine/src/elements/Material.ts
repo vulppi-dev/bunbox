@@ -31,14 +31,21 @@ export class Material extends DirtyState {
   get label() {
     return this.#label;
   }
+  get shader() {
+    return this.#shader;
+  }
+  get hash(): string {
+    return this.#hash;
+  }
+
+  get primitive() {
+    return this.#primitive;
+  }
+
   set label(v: string) {
     if (this.#label === v) return;
     this.#label = v;
     this.markAsDirty();
-  }
-
-  get shader() {
-    return this.#shader;
   }
   set shader(src: string) {
     if (this.#shader === src) return;
@@ -51,18 +58,10 @@ export class Material extends DirtyState {
     this.#updateHash();
     this.markAsDirty();
   }
-
-  get primitive() {
-    return this.#primitive;
-  }
   set primitive(v: MaterialPrimitive) {
     if (this.#primitive === v) return;
     this.#primitive = v;
     this.markAsDirty();
-  }
-
-  get hash(): string {
-    return this.#hash;
   }
 
   #updateHash() {

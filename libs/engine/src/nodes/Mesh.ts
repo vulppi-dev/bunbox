@@ -8,13 +8,14 @@ export class Mesh extends Node3D {
   #geometry: Geometry | null = null;
   #material: Material | null = null;
 
-  protected override _getType(): string {
-    return 'Mesh';
-  }
-
   /** Geometry to be rendered (vertex/index data). */
   get geometry(): Geometry | null {
     return this.#geometry;
+  }
+
+  /** Material/shader to render the geometry. */
+  get material(): Material | null {
+    return this.#material;
   }
 
   /** Set geometry; marks node as dirty. */
@@ -23,14 +24,13 @@ export class Mesh extends Node3D {
     this.markAsDirty();
   }
 
-  /** Material/shader to render the geometry. */
-  get material(): Material | null {
-    return this.#material;
-  }
-
   /** Set material; marks node as dirty. */
   set material(value: Material | null) {
     this.#material = value;
     this.markAsDirty();
+  }
+
+  protected override _getType(): string {
+    return 'Mesh';
   }
 }

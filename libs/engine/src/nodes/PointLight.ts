@@ -6,10 +6,6 @@ import { AbstractLight } from './AbstractLight';
 export class PointLight extends AbstractLight {
   #range: number = 10.0; // meters
 
-  protected override _getType(): string {
-    return 'PointLight';
-  }
-
   /** Effective radius where contribution becomes negligible (engine-dependent). */
   get range(): number {
     return this.#range;
@@ -18,5 +14,9 @@ export class PointLight extends AbstractLight {
   set range(value: number) {
     this.#range = value;
     this.markAsDirty();
+  }
+
+  protected override _getType(): string {
+    return 'PointLight';
   }
 }

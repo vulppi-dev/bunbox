@@ -1,6 +1,6 @@
 import type { EventMap } from '@bunbox/utils';
 import { Node } from '../core';
-import { Euler, Matrix, Quaternion, Vector3 } from '../math';
+import { Euler, Matrix, type Quaternion, Vector3 } from '../math';
 import { MaskHelper } from '../elements';
 
 /**
@@ -26,13 +26,34 @@ export class Node3D<
 
   #layer: MaskHelper = new MaskHelper();
 
-  protected override _getType(): string {
-    return 'Node3D';
-  }
-
   /** Local transform matrix (compose of position, scale, rotation). */
   get transform(): Matrix {
     return this.#matrix;
+  }
+
+  /** Local position (meters). */
+  get position(): Vector3 {
+    return this.#position;
+  }
+
+  /** Local non-uniform scale. */
+  get scale(): Vector3 {
+    return this.#scale;
+  }
+
+  /** Local Euler rotation (radians). */
+  get rotation(): Euler {
+    return this.#rotation;
+  }
+
+  /** Optional local Quaternion rotation (if set, overrides Euler on compose). */
+  get rotationQ(): Quaternion | null {
+    return this.#rotationQ;
+  }
+
+  /** Layer mask helper to include/exclude from specific render passes. */
+  get layer(): MaskHelper {
+    return this.#layer;
   }
 
   /** Replace the local transform matrix. Marks node and matrix dirty. */
@@ -42,21 +63,11 @@ export class Node3D<
     this.#matrix.markAsDirty();
   }
 
-  /** Local position (meters). */
-  get position(): Vector3 {
-    return this.#position;
-  }
-
   /** Set local position and mark as dirty. */
   set position(position: Vector3) {
     this.#position = position;
     this.markAsDirty();
     this.#position.markAsDirty();
-  }
-
-  /** Local non-uniform scale. */
-  get scale(): Vector3 {
-    return this.#scale;
   }
 
   /** Set local scale and mark as dirty. */
@@ -66,11 +77,6 @@ export class Node3D<
     this.#scale.markAsDirty();
   }
 
-  /** Local Euler rotation (radians). */
-  get rotation(): Euler {
-    return this.#rotation;
-  }
-
   /** Set local Euler rotation and mark as dirty. */
   set rotation(rotation: Euler) {
     this.#rotation = rotation;
@@ -78,21 +84,11 @@ export class Node3D<
     this.#rotation.markAsDirty();
   }
 
-  /** Optional local Quaternion rotation (if set, overrides Euler on compose). */
-  get rotationQ(): Quaternion | null {
-    return this.#rotationQ;
-  }
-
   /** Set local Quaternion rotation; passing null reverts to Euler. */
   set rotationQ(rotationQ: Quaternion | null) {
     this.#rotationQ = rotationQ;
     this.markAsDirty();
     this.#rotationQ?.markAsDirty();
-  }
-
-  /** Layer mask helper to include/exclude from specific render passes. */
-  get layer(): MaskHelper {
-    return this.#layer;
   }
 
   /** Recompose local transform if any component changed since last frame. */
@@ -114,5 +110,9 @@ export class Node3D<
       this.#rotation.unmarkAsDirty();
       this.#rotationQ?.unmarkAsDirty();
     }
+  }
+
+  protected override _getType(): string {
+    return 'Node3D';
   }
 }

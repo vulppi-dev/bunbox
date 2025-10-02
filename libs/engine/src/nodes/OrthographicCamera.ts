@@ -11,59 +11,61 @@ export class OrthographicCamera extends AbstractCamera {
   #horizontal: Vector2 = new Vector2(-1, 1);
   #vertical: Vector2 = new Vector2(-1, 1);
 
-  protected override _getType(): string {
-    return 'OrthographicCamera';
-  }
-
   /** Horizontal extents as [left, right]. */
   get horizontal(): Vector2 {
     return this.#horizontal;
-  }
-  set horizontal(value: Vector2) {
-    this.#horizontal = value;
-    this.markAsDirty();
   }
 
   /** Vertical extents as [bottom, top]. */
   get vertical(): Vector2 {
     return this.#vertical;
   }
-  set vertical(value: Vector2) {
-    this.#vertical = value;
-    this.markAsDirty();
-  }
 
   /** Top extent. */
   get top(): number {
     return this.#vertical.y;
-  }
-  set top(value: number) {
-    this.#vertical.y = value;
-    this.markAsDirty();
   }
 
   /** Right extent. */
   get right(): number {
     return this.#horizontal.x;
   }
-  set right(value: number) {
-    this.#horizontal.x = value;
-    this.markAsDirty();
-  }
 
   /** Bottom extent. */
   get bottom(): number {
     return this.#vertical.x;
-  }
-  set bottom(value: number) {
-    this.#vertical.x = value;
-    this.markAsDirty();
   }
 
   /** Left extent. */
   get left(): number {
     return this.#horizontal.y;
   }
+
+  set horizontal(value: Vector2) {
+    this.#horizontal = value;
+    this.markAsDirty();
+  }
+
+  set vertical(value: Vector2) {
+    this.#vertical = value;
+    this.markAsDirty();
+  }
+
+  set top(value: number) {
+    this.#vertical.y = value;
+    this.markAsDirty();
+  }
+
+  set right(value: number) {
+    this.#horizontal.x = value;
+    this.markAsDirty();
+  }
+
+  set bottom(value: number) {
+    this.#vertical.x = value;
+    this.markAsDirty();
+  }
+
   set left(value: number) {
     this.#horizontal.y = value;
     this.markAsDirty();
@@ -105,5 +107,9 @@ export class OrthographicCamera extends AbstractCamera {
       // col 3 (translation)
       -(r + l) / dh, -(t + b) / dv, n * invNF, 1,
     ]);
+  }
+
+  protected override _getType(): string {
+    return 'OrthographicCamera';
   }
 }

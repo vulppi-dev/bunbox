@@ -27,6 +27,18 @@ A conversação com o usuário e explicações serão em português brasil.
 - Variáveis e métodos do tipo `protected` devem ser iniciadas com '\_';
 - Variáveis e métodos do tipo `private` devem ser iniciadas com '#';
 - Métodos estáticos devem ser criados antes do construtor;
+- Não deve possuir variáveis públicas, apenas getters e setters;
+
+#### Ordenação de membros
+
+1. Variáveis estáticas e privadas;
+2. Métodos estáticos;
+3. Construtor;
+4. Getters e setters;
+5. Métodos públicos;
+6. Métodos protegidos;
+7. Métodos privados;
+8. Métodos abstratos;
 
 ## Regras do game engine
 

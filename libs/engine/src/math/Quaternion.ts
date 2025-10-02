@@ -21,32 +21,29 @@ export class Quaternion extends AbstractVector<4> {
   get w() {
     return this.#w;
   }
-  set w(value) {
-    this.#w = value;
-    this.markAsDirty();
-  }
-
   /** X vector component */
   get x() {
     return this.#x;
+  }
+  /** Y vector component */
+  get y() {
+    return this.#y;
+  }
+  /** Z vector component */
+  get z() {
+    return this.#z;
+  }
+  set w(value) {
+    this.#w = value;
+    this.markAsDirty();
   }
   set x(value) {
     this.#x = value;
     this.markAsDirty();
   }
-
-  /** Y vector component */
-  get y() {
-    return this.#y;
-  }
   set y(value) {
     this.#y = value;
     this.markAsDirty();
-  }
-
-  /** Z vector component */
-  get z() {
-    return this.#z;
   }
   set z(value) {
     this.#z = value;

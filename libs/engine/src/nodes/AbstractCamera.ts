@@ -1,6 +1,6 @@
 // prettier-multiline-arrays-set-line-pattern: 4
 
-import { Matrix, Quaternion, Vector3, VectorParser } from '../math';
+import { Matrix, Quaternion, type Vector3, VectorParser } from '../math';
 import { Rect } from '../math/Rect';
 import { Node3D } from './Node3D';
 
@@ -20,27 +20,14 @@ export abstract class AbstractCamera extends Node3D {
   get near(): number {
     return this.#near;
   }
-  set near(value: number) {
-    this.#near = value;
-    this.markAsDirty();
-  }
-
   /** Far clipping plane distance (meters). */
   get far(): number {
     return this.#far;
-  }
-  set far(value: number) {
-    this.#far = value;
-    this.markAsDirty();
   }
 
   /** Camera viewport rectangle (in pixels or normalized units as defined by renderer). */
   get viewport(): Rect {
     return this.#viewport;
-  }
-  set viewport(value: Rect) {
-    this.#viewport = value;
-    this.markAsDirty();
   }
 
   /** View matrix (world-to-camera). */
@@ -50,6 +37,19 @@ export abstract class AbstractCamera extends Node3D {
   /** Projection matrix (camera to clip/NDC). */
   get projectionMatrix(): Matrix {
     return this.#projectionMatrix;
+  }
+
+  set near(value: number) {
+    this.#near = value;
+    this.markAsDirty();
+  }
+  set far(value: number) {
+    this.#far = value;
+    this.markAsDirty();
+  }
+  set viewport(value: Rect) {
+    this.#viewport = value;
+    this.markAsDirty();
   }
 
   /** Point the camera towards a target in world space, preserving position. */
@@ -68,7 +68,7 @@ export abstract class AbstractCamera extends Node3D {
     this.markAsDirty();
   }
 
-  override _update(deltaTime: number): void {
+  override _update(_deltaTime: number): void {
     if (this.isDirty) {
       this._updateProjectionMatrix();
       this.#updateViewMatrix();

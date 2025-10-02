@@ -1,7 +1,8 @@
 // Image decoding and Texture creation helpers
 // All comments in English as per repository guidelines.
 
-import { Texture, type TextureDescriptor } from '../elements/Texture';
+import { TextureImage } from '../elements';
+import type { TextureImageDescriptor } from '../elements';
 import { decode as decodePng } from '@jsquash/png';
 import { decode as decodeJpeg } from '@jsquash/jpeg';
 import { decode as decodeWebp } from '@jsquash/webp';
@@ -43,7 +44,7 @@ export async function decodeImage(
         case 'png': {
           const img = await decodePng(buffer);
           return {
-            data: img.data as Uint8Array,
+            data: img.data,
             width: img.width,
             height: img.height,
             bitDepth: 8,
@@ -53,7 +54,7 @@ export async function decodeImage(
         case 'jpg': {
           const img = await decodeJpeg(buffer);
           return {
-            data: img.data as Uint8Array,
+            data: img.data,
             width: img.width,
             height: img.height,
             bitDepth: 8,
@@ -62,7 +63,7 @@ export async function decodeImage(
         case 'webp': {
           const img = await decodeWebp(buffer);
           return {
-            data: img.data as Uint8Array,
+            data: img.data,
             width: img.width,
             height: img.height,
             bitDepth: 8,
@@ -70,28 +71,19 @@ export async function decodeImage(
         }
         case 'avif': {
           const img = await decodeAvif(buffer);
-          // avif may optionally output 16-bit depending on source; normalize to Uint8Array if needed
-          if (img.data instanceof Uint16Array) {
-            // convert to 8-bit RGBA by shifting down
-            const out = new Uint8Array(img.data.length);
-            for (let i = 0; i < img.data.length; i++) out[i] = img.data[i] >> 8;
+
+          if (img) {
             return {
-              data: out,
+              data: img.data,
               width: img.width,
               height: img.height,
               bitDepth: 8,
             };
           }
-          return {
-            data: img.data as Uint8Array,
-            width: img.width,
-            height: img.height,
-            bitDepth: 8,
-          };
         }
       }
-    } catch {
-      // ignore and try next
+    } catch (err) {
+      console.warn(`Failed to decode as ${kind}:`, err);
     }
     return null;
   };
@@ -116,45 +108,51 @@ export async function decodeImage(
  */
 export async function textureFromFile(
   path: string,
-  overrides?: Partial<Omit<TextureDescriptor, 'width' | 'height'>>,
-): Promise<Texture> {
+  overrides?: Partial<
+    Omit<TextureImageDescriptor, 'width' | 'height' | 'data'>
+  >,
+): Promise<TextureImage> {
   const ab = await Bun.file(path).arrayBuffer();
   const decoded = await decodeImage(ab, extOf(path));
-  const desc: TextureDescriptor = {
+  const desc: TextureImageDescriptor = {
     label: overrides?.label ?? `Texture(${path})`,
     width: decoded.width,
     height: decoded.height,
-    depthOrLayers: overrides?.depthOrLayers ?? 1,
-    dimension: overrides?.dimension ?? '2d',
     format: overrides?.format ?? 'rgba8unorm',
     mipLevels: overrides?.mipLevels ?? 1,
     sampleCount: overrides?.sampleCount ?? 1,
     usage: overrides?.usage,
-    data: decoded.data as Uint8Array,
+    data:
+      decoded.data instanceof Uint8Array
+        ? decoded.data
+        : new Uint8Array(decoded.data.buffer),
   };
-  return new Texture(desc);
+  return new TextureImage(desc);
 }
 
 /** Create a Texture from an ArrayBuffer (file bytes). Optionally pass a hint for mime/ext. */
 export async function textureFromArrayBuffer(
   buffer: ArrayBuffer,
   hint?: string,
-  overrides?: Partial<Omit<TextureDescriptor, 'width' | 'height'>>,
-): Promise<Texture> {
+  overrides?: Partial<
+    Omit<TextureImageDescriptor, 'width' | 'height' | 'data'>
+  >,
+): Promise<TextureImage> {
   const decoded = await decodeImage(buffer, hint);
-  const desc: TextureDescriptor = {
+  const desc: TextureImageDescriptor = {
     label: overrides?.label ?? 'Texture(Buffer)',
     width: decoded.width,
     height: decoded.height,
-    depthOrLayers: overrides?.depthOrLayers ?? 1,
-    dimension: overrides?.dimension ?? '2d',
     format: overrides?.format ?? 'rgba8unorm',
     mipLevels: overrides?.mipLevels ?? 1,
     sampleCount: overrides?.sampleCount ?? 1,
     usage: overrides?.usage,
-    data: decoded.data as Uint8Array,
+    data:
+      decoded.data instanceof Uint8Array
+        ? decoded.data
+        : new Uint8Array(decoded.data.buffer),
   };
-  return new Texture(desc);
+  return new TextureImage(desc);
 }
 
 export default {

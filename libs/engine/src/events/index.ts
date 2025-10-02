@@ -32,7 +32,7 @@ export * from './ThemeEvent';
 export * from './WindowEvent';
 export * from './DropEvent';
 
-export type SDL_EventMap = {
+export type SdlEventMap = {
   quit: [QuitEvent];
   terminating: [Event];
   lowMemory: [Event];

@@ -84,29 +84,24 @@ export class Vector3 extends AbstractVector<3> {
   get x() {
     return this.#x;
   }
-
+  /** Y component */
+  get y() {
+    return this.#y;
+  }
+  /** Z component */
+  get z() {
+    return this.#z;
+  }
   /** X component */
   set x(value) {
     this.#x = value;
     this.markAsDirty();
   }
-
-  /** Y component */
-  get y() {
-    return this.#y;
-  }
-
   /** Y component */
   set y(value) {
     this.#y = value;
     this.markAsDirty();
   }
-
-  /** Z component */
-  get z() {
-    return this.#z;
-  }
-
   /** Z component */
   set z(value) {
     this.#z = value;

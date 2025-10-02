@@ -23,6 +23,11 @@ export class MaskHelper extends DirtyState {
       throw new Error('Mask value must be between 0 and 4294967295.');
   }
 
+  /** Stable content hash for caching/reuse (based on mask). */
+  get hash(): string {
+    return sha(JSON.stringify({ m: this.#value >>> 0 }), 'hex');
+  }
+
   // Bit queries
   has(index: number): boolean {
     this.#validateIndex(index);
@@ -105,11 +110,6 @@ export class MaskHelper extends DirtyState {
     return this.overlaps(layer);
   }
 
-  /** Stable content hash for caching/reuse (based on mask). */
-  get hash(): string {
-    return sha(JSON.stringify({ m: this.#value >>> 0 }), 'hex');
-  }
-
   hasAny(maskOrHelper: number | MaskHelper): boolean {
     const mask =
       typeof maskOrHelper === 'number'
@@ -128,7 +128,7 @@ export class MaskHelper extends DirtyState {
 
   toArray(): number[] {
     const out: number[] = [];
-    let m = this.#value >>> 0;
+    const m = this.#value >>> 0;
     for (let i = 0; i < 32; i++) if ((m & (1 << i)) !== 0) out.push(i);
     return out;
   }

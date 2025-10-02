@@ -36,29 +36,26 @@ export class Euler extends Calculable<3> {
   get x(): number {
     return this.#x;
   }
+  get y(): number {
+    return this.#y;
+  }
+  get z(): number {
+    return this.#z;
+  }
+  get order(): EulerOrder {
+    return this.#order;
+  }
   set x(val: number) {
     this.#x = val;
     this.markAsDirty();
-  }
-
-  get y(): number {
-    return this.#y;
   }
   set y(val: number) {
     this.#y = val;
     this.markAsDirty();
   }
-
-  get z(): number {
-    return this.#z;
-  }
   set z(val: number) {
     this.#z = val;
     this.markAsDirty();
-  }
-
-  get order(): EulerOrder {
-    return this.#order;
   }
   set order(val: EulerOrder) {
     if (!EULER_ORDERS.includes(val))

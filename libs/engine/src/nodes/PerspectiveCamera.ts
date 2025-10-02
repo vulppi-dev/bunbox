@@ -10,26 +10,28 @@ export class PerspectiveCamera extends AbstractCamera {
   #fov: number = Math.PI * 0.333;
   #aspect: number = 1;
 
-  protected override _getType(): string {
-    return 'PerspectiveCamera';
-  }
-
   /** Vertical field of view in radians. */
   get fov(): number {
     return this.#fov;
-  }
-  set fov(value: number) {
-    this.#fov = value;
-    this.markAsDirty();
   }
 
   /** Aspect ratio (width / height). */
   get aspect(): number {
     return this.#aspect;
   }
+
+  set fov(value: number) {
+    this.#fov = value;
+    this.markAsDirty();
+  }
+
   set aspect(value: number) {
     this.#aspect = value;
     this.markAsDirty();
+  }
+
+  protected override _getType(): string {
+    return 'PerspectiveCamera';
   }
 
   protected override _updateProjectionMatrix(): void {

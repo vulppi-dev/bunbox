@@ -23,18 +23,24 @@ export class Color extends AbstractVector<4> {
   get r() {
     return this.#r;
   }
+  /** Green channel [0..1] */
+  get g() {
+    return this.#g;
+  }
+  /** Blue channel [0..1] */
+  get b() {
+    return this.#b;
+  }
+  /** Alpha channel [0..1] */
+  get a() {
+    return this.#a;
+  }
 
   /** Red channel [0..1] */
   set r(value) {
     this.#r = value;
     this.markAsDirty();
   }
-
-  /** Green channel [0..1] */
-  get g() {
-    return this.#g;
-  }
-
   /** Green channel [0..1] */
   set g(value) {
     this.#g = value;
@@ -42,19 +48,9 @@ export class Color extends AbstractVector<4> {
   }
 
   /** Blue channel [0..1] */
-  get b() {
-    return this.#b;
-  }
-
-  /** Blue channel [0..1] */
   set b(value) {
     this.#b = value;
     this.markAsDirty();
-  }
-
-  /** Alpha channel [0..1] */
-  get a() {
-    return this.#a;
   }
 
   /** Alpha channel [0..1] */

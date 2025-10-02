@@ -24,24 +24,23 @@ export abstract class AbstractLight extends Node3D<LightProps> {
   get color(): Color {
     return this.#color;
   }
+  /** Scalar intensity multiplier. */
+  get intensity(): number {
+    return this.#intensity;
+  }
+  /** Whether the light participates in lighting calculations. */
+  get enabled(): boolean {
+    return this.#enabled;
+  }
+
   set color(value: Color) {
     this.#color = value;
     this.markAsDirty();
     this.#color.markAsDirty();
   }
-
-  /** Scalar intensity multiplier. */
-  get intensity(): number {
-    return this.#intensity;
-  }
   set intensity(value: number) {
     this.#intensity = value;
     this.markAsDirty();
-  }
-
-  /** Whether the light participates in lighting calculations. */
-  get enabled(): boolean {
-    return this.#enabled;
   }
   set enabled(value: boolean) {
     this.#enabled = value;

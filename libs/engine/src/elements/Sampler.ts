@@ -178,68 +178,96 @@ export class Sampler extends DirtyState {
   get label() {
     return this.#label;
   }
+  get minFilter() {
+    return this.#minFilter;
+  }
+  get magFilter() {
+    return this.#magFilter;
+  }
+  get mipmapFilter() {
+    return this.#mipmapFilter;
+  }
+  get addressModeU() {
+    return this.#addressModeU;
+  }
+  get addressModeV() {
+    return this.#addressModeV;
+  }
+  get addressModeW() {
+    return this.#addressModeW;
+  }
+  get lodMinClamp() {
+    return this.#lodMinClamp;
+  }
+  get lodMaxClamp() {
+    return this.#lodMaxClamp;
+  }
+  get compare() {
+    return this.#compare;
+  }
+  get maxAnisotropy() {
+    return this.#maxAnisotropy;
+  }
+  get normalizedCoordinates() {
+    return this.#normalizedCoordinates;
+  }
+  get borderColor() {
+    return this.#borderColor;
+  }
+
+  /** Stable string key to deduplicate/cachelize samplers. */
+  get hash(): string {
+    const key = {
+      min: this.#minFilter,
+      mag: this.#magFilter,
+      mip: this.#mipmapFilter,
+      wrapU: this.#addressModeU,
+      wrapV: this.#addressModeV,
+      wrapW: this.#addressModeW,
+      lodMin: this.#lodMinClamp,
+      lodMax: this.#lodMaxClamp,
+      cmp: this.#compare ?? 'none',
+      aniso: this.#maxAnisotropy,
+      norm: this.#normalizedCoordinates ? 1 : 0,
+      border: this.#borderColor,
+    };
+    return sha(JSON.stringify(key), 'hex');
+  }
+
   set label(v: string) {
     if (this.#label === v) return;
     this.#label = v;
     this.markAsDirty();
-  }
-
-  get minFilter() {
-    return this.#minFilter;
   }
   set minFilter(v: FilterMode) {
     if (this.#minFilter === v) return;
     this.#minFilter = v;
     this.markAsDirty();
   }
-
-  get magFilter() {
-    return this.#magFilter;
-  }
   set magFilter(v: FilterMode) {
     if (this.#magFilter === v) return;
     this.#magFilter = v;
     this.markAsDirty();
-  }
-
-  get mipmapFilter() {
-    return this.#mipmapFilter;
   }
   set mipmapFilter(v: MipmapFilter) {
     if (this.#mipmapFilter === v) return;
     this.#mipmapFilter = v;
     this.markAsDirty();
   }
-
-  get addressModeU() {
-    return this.#addressModeU;
-  }
   set addressModeU(v: AddressMode) {
     if (this.#addressModeU === v) return;
     this.#addressModeU = v;
     this.markAsDirty();
-  }
-
-  get addressModeV() {
-    return this.#addressModeV;
   }
   set addressModeV(v: AddressMode) {
     if (this.#addressModeV === v) return;
     this.#addressModeV = v;
     this.markAsDirty();
   }
-
-  get addressModeW() {
-    return this.#addressModeW;
-  }
   set addressModeW(v: AddressMode) {
     if (this.#addressModeW === v) return;
     this.#addressModeW = v;
     this.markAsDirty();
-  }
-
-  get lodMinClamp() {
-    return this.#lodMinClamp;
   }
   set lodMinClamp(v: number) {
     const nv = Math.max(0, v);
@@ -250,10 +278,6 @@ export class Sampler extends DirtyState {
     }
     this.markAsDirty();
   }
-
-  get lodMaxClamp() {
-    return this.#lodMaxClamp;
-  }
   set lodMaxClamp(v: number) {
     const nv = Math.max(0, v);
     if (this.#lodMaxClamp === nv) return;
@@ -263,18 +287,10 @@ export class Sampler extends DirtyState {
     }
     this.markAsDirty();
   }
-
-  get compare() {
-    return this.#compare;
-  }
   set compare(v: CompareFunction) {
     if (this.#compare === v) return;
     this.#compare = v;
     this.markAsDirty();
-  }
-
-  get maxAnisotropy() {
-    return this.#maxAnisotropy;
   }
   set maxAnisotropy(v: number) {
     const nv = Math.min(16, Math.max(1, Math.floor(v)));
@@ -282,18 +298,10 @@ export class Sampler extends DirtyState {
     this.#maxAnisotropy = nv;
     this.markAsDirty();
   }
-
-  get normalizedCoordinates() {
-    return this.#normalizedCoordinates;
-  }
   set normalizedCoordinates(v: boolean) {
     if (this.#normalizedCoordinates === v) return;
     this.#normalizedCoordinates = v;
     this.markAsDirty();
-  }
-
-  get borderColor() {
-    return this.#borderColor;
   }
   set borderColor(v: BorderColor) {
     if (this.#borderColor === v) return;
@@ -316,25 +324,6 @@ export class Sampler extends DirtyState {
       this.#normalizedCoordinates === other.#normalizedCoordinates &&
       this.#borderColor === other.#borderColor
     );
-  }
-
-  /** Stable string key to deduplicate/cachelize samplers. */
-  get hash(): string {
-    const key = {
-      min: this.#minFilter,
-      mag: this.#magFilter,
-      mip: this.#mipmapFilter,
-      wrapU: this.#addressModeU,
-      wrapV: this.#addressModeV,
-      wrapW: this.#addressModeW,
-      lodMin: this.#lodMinClamp,
-      lodMax: this.#lodMaxClamp,
-      cmp: this.#compare ?? 'none',
-      aniso: this.#maxAnisotropy,
-      norm: this.#normalizedCoordinates ? 1 : 0,
-      border: this.#borderColor,
-    };
-    return sha(JSON.stringify(key), 'hex');
   }
 
   clone(): Sampler {

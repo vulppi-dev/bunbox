@@ -42,6 +42,35 @@ export class Geometry extends DirtyState {
     this.#indices = new Uint32Array(indexLength);
   }
 
+  /** Compute a stable content hash combining positions, normals, uvs and indices. */
+  get hash(): string {
+    // Mix numeric contents quickly then stabilize with sha hex
+    const mixArray = (h: number, arr: ArrayLike<number>): number => {
+      let x = h >>> 0;
+      const n = (arr as { length: number }).length;
+      for (let i = 0; i < n; i++) {
+        let v = (arr as { [k: number]: number })[i]!;
+        v = Math.imul((v * 2654435761) | 0, 1597334677) >>> 0;
+        x ^= v;
+        x = Math.imul(x, 2246822519) >>> 0;
+      }
+      return x >>> 0;
+    };
+
+    let h = 0x811c9dc5; // FNV-like seed
+    h = mixArray(h, this.#vertex);
+    h = mixArray(h, this.#normal);
+    for (const uv of this.#uvs) h = mixArray(h, uv);
+    h = mixArray(h, this.#indices);
+
+    const meta = {
+      vc: this.#vertexCount,
+      ic: this.#indexCount,
+      u: this.#uvs.length,
+    };
+    return sha(JSON.stringify({ h, meta }), 'hex');
+  }
+
   /** Vertex positions buffer (mutate then call markAsDirty). */
   get vertex(): Float32Array {
     return this.#vertex;
@@ -217,7 +246,7 @@ export class Geometry extends DirtyState {
           `Index ${v} out of vertex range [0, ${this.#vertexCount - 1}]`,
         );
     }
-    this.#indices.set(data as ArrayLike<number>, offsetIndex);
+    this.#indices.set(data, offsetIndex);
     return this.markAsDirty();
   }
 
@@ -351,7 +380,6 @@ export class Geometry extends DirtyState {
     g.markAsDirty();
     return g as this;
   }
-
   #resize(vertexCount?: number, indexCount?: number, uvLayers?: number): this {
     const newV = vertexCount ?? this.#vertexCount;
     const newI = indexCount ?? this.#indexCount;
@@ -412,34 +440,5 @@ export class Geometry extends DirtyState {
     this.#indexCount = newI;
 
     return changed ? this.markAsDirty() : this;
-  }
-
-  /** Compute a stable content hash combining positions, normals, uvs and indices. */
-  get hash(): string {
-    // Mix numeric contents quickly then stabilize with sha hex
-    const mixArray = (h: number, arr: ArrayLike<number>): number => {
-      let x = h >>> 0;
-      const n = (arr as any).length as number;
-      for (let i = 0; i < n; i++) {
-        let v = (arr as any)[i] as number;
-        v = Math.imul((v * 2654435761) | 0, 1597334677) >>> 0;
-        x ^= v;
-        x = Math.imul(x, 2246822519) >>> 0;
-      }
-      return x >>> 0;
-    };
-
-    let h = 0x811c9dc5; // FNV-like seed
-    h = mixArray(h, this.#vertex);
-    h = mixArray(h, this.#normal);
-    for (const uv of this.#uvs) h = mixArray(h, uv);
-    h = mixArray(h, this.#indices);
-
-    const meta = {
-      vc: this.#vertexCount,
-      ic: this.#indexCount,
-      u: this.#uvs.length,
-    };
-    return sha(JSON.stringify({ h, meta }), 'hex');
   }
 }

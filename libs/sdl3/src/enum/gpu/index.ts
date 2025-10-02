@@ -20,6 +20,7 @@ export * from './SDL_GPUStoreOp';
 export * from './SDL_GPUSwapchainComposition';
 export * from './SDL_GPUTextureFormat';
 export * from './SDL_GPUTextureType';
+export * from './SDL_GPUTextureUsageFlags';
 export * from './SDL_GPUTransferBufferUsage';
 export * from './SDL_GPUVertexElementFormat';
 export * from './SDL_GPUVertexInputRate';

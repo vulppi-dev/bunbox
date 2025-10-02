@@ -29,73 +29,7 @@ export function createBox(options: BoxOptions = {}): Geometry {
   const d = (options.depth ?? 1) / 2;
   // 6 faces * 4 verts, 6 faces * 2 tris * 3 idx = 36
   const { g, pos, nrm, uv0, idx } = createGeometry(24, 36);
-  // face definitions: [nx,ny,nz], [tangentX,tangentY,tangentZ] not needed, we map UVs straightforwardly
-  // Order faces: +X, -X, +Y, -Y, +Z, -Z
-  const faces = [
-    {
-      n: [1, 0, 0] as const,
-      u: [0, 0, -1] as const,
-      v: [0, 1, 0] as const,
-      base: [w, -h, d] as const,
-    }, // +X
-    {
-      n: [-1, 0, 0] as const,
-      u: [0, 0, 1] as const,
-      v: [0, 1, 0] as const,
-      base: [-w, -h, -d] as const,
-    }, // -X
-    {
-      n: [0, 1, 0] as const,
-      u: [1, 0, 0] as const,
-      v: [0, 0, -1] as const,
-      base: [-w, h, d] as const,
-    }, // +Y
-    {
-      n: [0, -1, 0] as const,
-      u: [1, 0, 0] as const,
-      v: [0, 0, 1] as const,
-      base: [-w, -h, -d] as const,
-    }, // -Y
-    {
-      n: [0, 0, 1] as const,
-      u: [1, 0, 0] as const,
-      v: [0, 1, 0] as const,
-      base: [-w, -h, d] as const,
-    }, // +Z
-    {
-      n: [0, 0, -1] as const,
-      u: [-1, 0, 0] as const,
-      v: [0, 1, 0] as const,
-      base: [w, -h, -d] as const,
-    }, // -Z
-  ];
-
-  let vi = 0;
-  let ti = 0;
-  for (let f = 0; f < 6; f++) {
-    const { n, u, v, base } = faces[f]!;
-    // Four corners in UV space (0,0)->(1,1); positions built from base + u/v scaled
-    const cornersUV: [number, number][] = [
-      [0, 0],
-      [1, 0],
-      [1, 1],
-      [0, 1],
-    ];
-    // Corner offsets in object space (map 0..1 to edge extents)
-    for (let c = 0; c < 4; c++) {
-      const uMul = c === 0 || c === 3 ? 0 : 1;
-      const vMul = c <= 1 ? 0 : 1;
-      const x =
-        base[0] +
-        u[0] *
-          (2 * w * (u[0] !== 0 ? 0 : 1) +
-            (u[0] === 0 ? (c === 1 || c === 2 ? 2 * w : 0) : 0));
-      // Instead of overcomplicating, construct positions explicitly per face using width/height/depth
-      // We'll handle positions by switch on face for clarity
-    }
-  }
-
-  // Re-implement per face explicitly for clarity and correctness
+  // Explicitly build each face for clarity and correctness
   const setQuad = (
     p0: [number, number, number],
     p1: [number, number, number],
@@ -132,8 +66,6 @@ export function createBox(options: BoxOptions = {}): Geometry {
     const a = baseIndex + 0;
     const b = baseIndex + 1;
     const c = baseIndex + 2;
-    const d0 = baseIndex + 0;
-    const d1 = baseIndex + 2;
     const d2 = baseIndex + 3;
     idx.set([a, b, c, a, c, d2], qi);
   };

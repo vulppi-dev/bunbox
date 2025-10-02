@@ -5,7 +5,6 @@ import {
   SDL_FColor,
   SDL_GPUColorTargetInfo,
   SDL_GPULoadOp,
-  SDL_GPUShaderFormat,
   SDL_GPUStoreOp,
   SDL_InitFlags,
   SDL_WindowFlags,
@@ -170,16 +169,20 @@ export class Window extends Viewport {
     this.#rebuildStacks();
   }
 
-  protected override _getType(): string {
-    return 'Window';
-  }
-
   get windowId() {
     return SDL.SDL_GetWindowID(this.#winPtr);
   }
 
   get title() {
     return SDL.SDL_GetWindowTitle(this.#winPtr).toString();
+  }
+
+  get clearColor() {
+    return this.#clearColor;
+  }
+
+  get isEnabledVSync() {
+    return this.#enableVSync;
   }
 
   set title(value: string) {
@@ -189,13 +192,13 @@ export class Window extends Viewport {
     SDL.SDL_SetWindowTitle(this.#winPtr, cstr(value));
   }
 
-  get clearColor() {
-    return this.#clearColor;
-  }
-
   set clearColor(value: Color) {
     this.#clearColor = value;
     this.#clearColor.markAsDirty();
+  }
+
+  set isEnabledVSync(value: boolean) {
+    this.#enableVSync = value;
   }
 
   getCurrentDisplayFrameRate() {
@@ -209,14 +212,6 @@ export class Window extends Viewport {
     );
   }
 
-  get isEnabledVSync() {
-    return this.#enableVSync;
-  }
-
-  set isEnabledVSync(value: boolean) {
-    this.#enableVSync = value;
-  }
-
   override _process(deltaTime: number): void {
     this.#renderDelayCount += deltaTime;
 
@@ -228,10 +223,10 @@ export class Window extends Viewport {
 
       SDL.SDL_SetWindowSize(
         this.#winPtr,
-        this.#widthPtr[0]!,
-        this.#heightPtr[0]!,
+        this.#widthPtr[0],
+        this.#heightPtr[0],
       );
-      SDL.SDL_SetWindowPosition(this.#winPtr, this.#xPtr[0]!, this.#yPtr[0]!);
+      SDL.SDL_SetWindowPosition(this.#winPtr, this.#xPtr[0], this.#yPtr[0]);
 
       this.unmarkAsDirty();
     }
@@ -278,14 +273,12 @@ export class Window extends Viewport {
     this.#scheduleDirty = false;
   }
 
-  async #callRenderStack(delta: number) {
+  #callRenderStack(delta: number) {
     if (this.#scheduleDirty) {
       this.#rebuildStacks();
     }
 
-    for (const node of this.#stack) {
-      node._update(delta);
-    }
+    for (const node of this.#stack) node._update(delta);
     this.#render();
   }
 
@@ -322,7 +315,7 @@ export class Window extends Viewport {
       return;
     }
 
-    let success = SDL.SDL_AcquireGPUSwapchainTexture(
+    const success = SDL.SDL_AcquireGPUSwapchainTexture(
       this.#currentCmd,
       this.#winPtr,
       this.#swapTexPtr,
@@ -355,5 +348,9 @@ export class Window extends Viewport {
     this.#currentCmd = null;
     const err = SDL.SDL_GetError().toString();
     if (err) console.log('[SDL ERROR]', err);
+  }
+
+  protected override _getType(): string {
+    return 'Window';
   }
 }
