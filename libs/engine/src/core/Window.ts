@@ -87,10 +87,18 @@ export class Window extends Viewport {
 
   #textureTouch: Set<Pointer> = new Set();
   #textureMap: Map<string, Pointer> = new Map();
+  #resolveTextureMap: Map<string, Pointer> = new Map();
   #textureMetaMap: Map<
     string,
-    { width: number; height: number; hash: string }
+    { width: number; height: number; hash: string; sampleCount: number }
   > = new Map();
+  #viewportCompositionQueue: Set<{
+    texture: Pointer;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }> = new Set();
 
   static #getFeaturesFlags(features: WindowsFeaturesOptions): number {
     let flags = USING_VULKAN
@@ -348,6 +356,8 @@ export class Window extends Viewport {
       return;
     }
 
+    this.#textureTouch.clear();
+    this.#viewportCompositionQueue.clear();
     this.#clearScreen();
 
     const cameraData = this.#cameraStack.map((cam) => {
@@ -391,6 +401,16 @@ export class Window extends Viewport {
     // TODO: post process
 
     SDL.SDL_SubmitGPUCommandBuffer(this.#currentCmd);
+
+    const textures = Array.from(this.#textureMap.entries());
+    for (const [key, tex] of textures) {
+      if (!this.#textureTouch.has(tex)) {
+        SDL.SDL_ReleaseGPUTexture(this.#devicePtr, tex);
+        this.#textureMap.delete(key);
+        this.#textureMetaMap.delete(key);
+      }
+    }
+
     this.#currentCmd = null;
     const err = SDL.SDL_GetError().toString();
     if (err) console.log('[SDL ERROR]', err);
@@ -421,12 +441,18 @@ export class Window extends Viewport {
   }
 
   #renderScene(sceneData: SceneRenderData) {
-    const viewportTexture = this.#getViewportTexture(sceneData.viewport);
+    const { texture: viewportTexture, resolveTexture } =
+      this.#getViewportTexture(sceneData.viewport);
 
     const colorTarget = new SDL_GPUColorTargetInfo();
     colorTarget.properties.texture = viewportTexture;
     colorTarget.properties.load_op = SDL_GPULoadOp.SDL_GPU_LOADOP_LOAD;
     colorTarget.properties.store_op = SDL_GPUStoreOp.SDL_GPU_STOREOP_STORE;
+
+    // Set resolve texture if MSAA is enabled
+    if (resolveTexture) {
+      colorTarget.properties.resolve_texture = resolveTexture;
+    }
 
     const pass = SDL.SDL_BeginGPURenderPass(
       this.#currentCmd,
@@ -470,7 +496,10 @@ export class Window extends Viewport {
     return layerFlag >>> 0;
   }
 
-  #getViewportTexture(viewport: Viewport): bigint {
+  #getViewportTexture(viewport: Viewport): {
+    texture: bigint;
+    resolveTexture: bigint | null;
+  } {
     // Case 1: Viewport has a target (TextureImage)
     if (viewport.target) {
       const target = viewport.target;
@@ -482,16 +511,22 @@ export class Window extends Viewport {
         !existingMeta ||
         existingMeta.width !== target.width ||
         existingMeta.height !== target.height ||
-        existingMeta.hash !== targetHash;
+        existingMeta.hash !== targetHash ||
+        existingMeta.sampleCount !== target.sampleCount;
 
       if (needsRecreate) {
-        // Destroy old texture if exists
+        // Destroy old textures if exist
         const oldTexture = this.#textureMap.get(target.id);
         if (oldTexture) {
           SDL.SDL_ReleaseGPUTexture(this.#devicePtr, oldTexture);
         }
 
-        // Create new texture based on target specifications
+        const oldResolveTexture = this.#resolveTextureMap.get(target.id);
+        if (oldResolveTexture) {
+          SDL.SDL_ReleaseGPUTexture(this.#devicePtr, oldResolveTexture);
+        }
+
+        // Create main texture based on target specifications
         const texInfo = new SDL_GPUTextureCreateInfo();
         texInfo.properties.type = parseTextureType(target);
         texInfo.properties.format = parseTextureFormat(target.format);
@@ -512,23 +547,71 @@ export class Window extends Viewport {
           console.warn(
             `Failed to create GPU texture for target ${target.id}: ${SDL.SDL_GetError()}`,
           );
-          return 0n;
+          return { texture: 0n, resolveTexture: null };
         }
 
         this.#textureMap.set(target.id, newTexture);
+        this.#textureTouch.add(newTexture);
+
+        // Create resolve texture if MSAA is enabled (sampleCount > 1)
+        let resolveTexture: Pointer | null = null;
+
+        if (target.sampleCount > 1) {
+          const resolveInfo = new SDL_GPUTextureCreateInfo();
+          resolveInfo.properties.type = parseTextureType(target);
+          resolveInfo.properties.format = parseTextureFormat(target.format);
+          resolveInfo.properties.usage = parseTextureUsage(target.usage);
+          resolveInfo.properties.width = target.width;
+          resolveInfo.properties.height = target.height;
+          resolveInfo.properties.layer_count_or_depth = target.depth;
+          resolveInfo.properties.num_levels = target.layerCount;
+          resolveInfo.properties.sample_count =
+            SDL_GPUSampleCount.SDL_GPU_SAMPLECOUNT_1; // Resolve texture always has sampleCount=1
+          resolveInfo.properties.props = 0n;
+
+          resolveTexture = SDL.SDL_CreateGPUTexture(
+            this.#devicePtr,
+            resolveInfo.bunPointer,
+          );
+
+          if (!resolveTexture) {
+            console.warn(
+              `Failed to create resolve texture for target ${target.id}: ${SDL.SDL_GetError()}`,
+            );
+            // Continue without resolve texture
+          } else {
+            this.#resolveTextureMap.set(target.id, resolveTexture);
+            this.#textureTouch.add(resolveTexture);
+          }
+        }
+
+        // Update metadata
         this.#textureMetaMap.set(target.id, {
           width: target.width,
           height: target.height,
           hash: targetHash,
+          sampleCount: target.sampleCount,
         });
 
-        this.#textureTouch.add(newTexture);
-        return BigInt(newTexture);
+        return {
+          texture: BigInt(newTexture),
+          resolveTexture: resolveTexture ? BigInt(resolveTexture) : null,
+        };
       }
 
+      // Use existing textures
       const tPtr = this.#textureMap.get(target.id)!;
       this.#textureTouch.add(tPtr);
-      return BigInt(tPtr);
+
+      const rPtr = this.#resolveTextureMap.get(target.id);
+      if (rPtr) {
+        this.#textureTouch.add(rPtr);
+      }
+
+      return {
+        texture: BigInt(tPtr),
+        resolveTexture: rPtr ? BigInt(rPtr) : null,
+      };
     }
 
     // Case 2: No target - create texture based on viewport dimensions (proportional to swapchain)
@@ -579,7 +662,7 @@ export class Window extends Viewport {
         console.warn(
           `Failed to create GPU texture for viewport ${viewport.id}: ${SDL.SDL_GetError()}`,
         );
-        return 0n;
+        return { texture: 0n, resolveTexture: null };
       }
 
       this.#textureMap.set(viewport.id, newTexture);
@@ -587,12 +670,36 @@ export class Window extends Viewport {
         width: texWidth,
         height: texHeight,
         hash: '', // No hash for viewport-only textures
+        sampleCount: 1,
       });
 
-      return BigInt(newTexture);
+      this.#textureTouch.add(newTexture);
+
+      // Add to composition queue for final blit to swapchain
+      this.#viewportCompositionQueue.add({
+        texture: newTexture,
+        x: Math.floor(swapWidth * viewport.x),
+        y: Math.floor(swapHeight * viewport.y),
+        width: texWidth,
+        height: texHeight,
+      });
+
+      return { texture: BigInt(newTexture), resolveTexture: null };
     }
 
-    return BigInt(this.#textureMap.get(viewport.id)!);
+    const tPtr = this.#textureMap.get(viewport.id)!;
+    this.#textureTouch.add(tPtr);
+
+    // Add to composition queue for final blit to swapchain
+    this.#viewportCompositionQueue.add({
+      texture: tPtr,
+      x: Math.floor(swapWidth * viewport.x),
+      y: Math.floor(swapHeight * viewport.y),
+      width: texWidth,
+      height: texHeight,
+    });
+
+    return { texture: BigInt(tPtr), resolveTexture: null };
   }
 
   protected override _getType(): string {
