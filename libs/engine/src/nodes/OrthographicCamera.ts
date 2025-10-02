@@ -43,11 +43,13 @@ export class OrthographicCamera extends AbstractCamera {
 
   set horizontal(value: Vector2) {
     this.#horizontal = value;
+    this.#horizontal.markAsDirty();
     this.markAsDirty();
   }
 
   set vertical(value: Vector2) {
     this.#vertical = value;
+    this.#vertical.markAsDirty();
     this.markAsDirty();
   }
 
@@ -72,11 +74,13 @@ export class OrthographicCamera extends AbstractCamera {
   }
 
   override _update(deltaTime: number): void {
-    super._update(deltaTime);
-
     if (this.#horizontal.isDirty || this.#vertical.isDirty) {
       this._updateProjectionMatrix();
+      this.#horizontal.unmarkAsDirty();
+      this.#vertical.unmarkAsDirty();
     }
+
+    super._update(deltaTime);
   }
 
   protected override _updateProjectionMatrix(): void {

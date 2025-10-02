@@ -1,6 +1,6 @@
 import { DirtyState } from '@bunbox/utils';
 import { sha } from 'bun';
-import { SDL_GPUTextureUsageFlags } from '@bunbox/sdl3';
+import { ulid } from 'ulid';
 
 export type TextureFormat =
   | 'rgba8unorm'
@@ -16,7 +16,7 @@ export type TextureFormat =
   | 'depth32float'
   | (string & {});
 
-export type SampleCount = 1 | 2 | 4 | 8 | 16;
+export type SampleCount = 1 | 2 | 4 | 8;
 
 // Stringly-typed usage for clarity across APIs
 export type TextureUsage =
@@ -26,10 +26,7 @@ export type TextureUsage =
   | 'graphics-storage-read'
   | 'compute-storage-read'
   | 'compute-storage-write'
-  | 'compute-storage-rw'
-  | 'copy-src'
-  | 'copy-dst'
-  | 'generate-mips';
+  | 'compute-storage-rw';
 
 export interface TextureBaseDescriptor {
   label?: string;
@@ -44,31 +41,29 @@ export interface TextureBaseDescriptor {
   /**
    * Bitmask defining allowed usages of the texture.
    * Represented as string usages for clarity.
-   * @default ['sampler', 'copy-dst']
+   * @default ['sampler', 'color-target']
    */
   usage?: TextureUsage[];
 }
 
 export abstract class TextureBase extends DirtyState {
-  // 1. Static/private vars already declared in imports
-  // 2. Static methods
   static computeMaxMipLevels(w: number, h: number, d: number = 1): number {
     const maxDim = Math.max(1, w | 0, h | 0, d | 0);
     return Math.floor(Math.log2(maxDim)) + 1;
   }
 
-  // 1. Private instance fields
   #label: string = '';
+  #id: string = '';
   #width: number = 1;
   #height: number = 1;
   #mipLevels: number = 1;
   #sampleCount: SampleCount = 1;
   #format: TextureFormat = 'rgba8unorm';
-  #usage: TextureUsage[] = ['sampler', 'copy-dst'];
+  #usage: TextureUsage[] = ['sampler', 'color-target'];
 
-  // 3. Constructor
   protected constructor(desc: TextureBaseDescriptor) {
     super();
+    this.#id = ulid();
     this.#label = desc.label ?? '';
     this.#width = Math.max(1, desc.width | 0);
     this.#height = Math.max(1, desc.height | 0);
@@ -77,9 +72,12 @@ export abstract class TextureBase extends DirtyState {
     this.#sampleCount = desc.sampleCount ?? 1;
     this.#usage = Array.isArray(desc.usage)
       ? [...new Set(desc.usage)]
-      : ['sampler', 'copy-dst'];
+      : ['sampler', 'color-target'];
   }
 
+  get id() {
+    return this.#id;
+  }
   get label() {
     return this.#label;
   }
@@ -101,12 +99,6 @@ export abstract class TextureBase extends DirtyState {
   // Usage as string array + numeric mapper
   get usage(): readonly TextureUsage[] {
     return Object.freeze(this.#usage.slice());
-  }
-  // Numeric bitmask for backend (SDL)
-  get usageIndex(): number {
-    let mask = 0 >>> 0;
-    for (const u of this.#usage) mask |= mapUsageToSDL(u);
-    return mask >>> 0;
   }
   get isDepthFormat(): boolean {
     return this.#format.startsWith('depth');
@@ -172,7 +164,7 @@ export abstract class TextureBase extends DirtyState {
     this.markAsDirty();
   }
   set sampleCount(v: SampleCount) {
-    const allowed: SampleCount[] = [1, 2, 4, 8, 16];
+    const allowed: SampleCount[] = [1, 2, 4, 8];
     const nv = allowed.includes(v) ? v : 1;
     if (this.#sampleCount === nv) return;
     this.#sampleCount = nv;
@@ -264,34 +256,4 @@ export abstract class TextureBase extends DirtyState {
     return undefined;
   }
   protected abstract _kind(): '2d' | 'cube' | '3d';
-}
-
-// Internal map from string usage to SDL flags bit
-function mapUsageToSDL(u: TextureUsage): number {
-  // Alias local constants to avoid error-typed access from imported enums in some TS setups
-  const U = SDL_GPUTextureUsageFlags as unknown as Record<string, number>;
-  switch (u) {
-    case 'sampler':
-      return (U.SDL_GPU_TEXTUREUSAGE_SAMPLER ?? 0) >>> 0;
-    case 'color-target':
-      return (U.SDL_GPU_TEXTUREUSAGE_COLOR_TARGET ?? 0) >>> 0;
-    case 'depth-stencil-target':
-      return (U.SDL_GPU_TEXTUREUSAGE_DEPTH_STENCIL_TARGET ?? 0) >>> 0;
-    case 'graphics-storage-read':
-      return (U.SDL_GPU_TEXTUREUSAGE_GRAPHICS_STORAGE_READ ?? 0) >>> 0;
-    case 'compute-storage-read':
-      return (U.SDL_GPU_TEXTUREUSAGE_COMPUTE_STORAGE_READ ?? 0) >>> 0;
-    case 'compute-storage-write':
-      return (U.SDL_GPU_TEXTUREUSAGE_COMPUTE_STORAGE_WRITE ?? 0) >>> 0;
-    case 'compute-storage-rw': {
-      const rw =
-        U.SDL_GPU_TEXTUREUSAGE_COMPUTE_STORAGE_SIMULTANEOUS_READ_WRITE ?? 0;
-      return rw >>> 0;
-    }
-    case 'copy-src':
-    case 'copy-dst':
-    case 'generate-mips':
-    default:
-      return 0;
-  }
 }

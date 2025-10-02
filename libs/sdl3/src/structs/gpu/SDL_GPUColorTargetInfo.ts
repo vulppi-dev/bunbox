@@ -6,8 +6,7 @@ import { SDL_GPUTextureCreateInfo } from './SDL_GPUTextureCreateInfo';
 const SDL_GPUColorTargetInfoSchema = {
   texture: {
     order: 0,
-    type: 'struct',
-    schema: SDL_GPUTextureCreateInfo,
+    type: 'void',
   } /**< The texture that will be used as a color target by a render pass. */,
   mip_level: {
     order: 1,
@@ -35,8 +34,7 @@ const SDL_GPUColorTargetInfoSchema = {
   } /**< What is done with the results of the render pass. */,
   resolve_texture: {
     order: 6,
-    type: 'struct',
-    schema: SDL_GPUTextureCreateInfo,
+    type: 'void',
   } /**< The texture that will receive the results of a multisample resolve operation. Ignored if a RESOLVE* store_op is not used. */,
   resolve_mip_level: {
     order: 7,

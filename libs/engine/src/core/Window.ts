@@ -6,8 +6,12 @@ import {
   SDL_GPUColorTargetInfo,
   SDL_GPULoadOp,
   SDL_GPUStoreOp,
+  SDL_GPUTextureCreateInfo,
+  SDL_GPUTextureType,
+  SDL_GPUSampleCount,
   SDL_InitFlags,
   SDL_WindowFlags,
+  SDL_GPUTextureUsageFlags,
 } from '@bunbox/sdl3';
 import { type Pointer } from 'bun:ffi';
 import {
@@ -15,13 +19,20 @@ import {
   USING_VULKAN,
   WINDOW_FEATURES_MAP,
 } from '../constants';
-import { Color, Vector2 } from '../math';
-import { Viewport } from '../nodes';
+import { Color, type Matrix, Vector2 } from '../math';
+import { AbstractCamera, AbstractLight, Node3D, Viewport } from '../nodes';
 import { Mesh } from '../nodes/Mesh';
 import { POINTERS_MAP } from '../stores/global';
 import type { WindowsFeature, WindowsFeaturesOptions } from '../types';
 import { pointerToBuffer } from '../utils/buffer';
 import { Node } from './Node';
+import type { Geometry, Material } from '../elements';
+import {
+  parseSampleCount,
+  parseTextureFormat,
+  parseTextureType,
+  parseTextureUsage,
+} from './sdl-helper';
 
 export type WindowOptions = {
   title: string;
@@ -30,6 +41,15 @@ export type WindowOptions = {
   /** @default 600 */
   height?: number;
   features?: WindowsFeaturesOptions;
+};
+
+type SceneRenderData = {
+  geometry: Geometry;
+  modelMatrix: Matrix;
+  viewMatrix: Matrix;
+  projectionMatrix: Matrix;
+  viewport: Viewport;
+  material: Material;
 };
 
 export class Window extends Viewport {
@@ -42,12 +62,16 @@ export class Window extends Viewport {
   #features: WindowsFeaturesOptions;
   #stack: Node[] = [];
   #meshStack: Mesh[] = [];
-  // #lightStack: Node[] = [];
+  #lightStack: AbstractLight[] = [];
+  #cameraStack: AbstractCamera[] = [];
   #scheduleDirty: boolean = true;
 
   #clearColor = new Color();
 
   // Helpers
+  #renderDelayCount: number;
+
+  // Pointers & Structs
   #displayMode: SDL_DisplayMode;
   #widthPtr: Int32Array;
   #heightPtr: Int32Array;
@@ -61,7 +85,12 @@ export class Window extends Viewport {
 
   #clearColorStruct = new SDL_FColor();
 
-  #renderDelayCount: number;
+  #textureTouch: Set<Pointer> = new Set();
+  #textureMap: Map<string, Pointer> = new Map();
+  #textureMetaMap: Map<
+    string,
+    { width: number; height: number; hash: string }
+  > = new Map();
 
   static #getFeaturesFlags(features: WindowsFeaturesOptions): number {
     let flags = USING_VULKAN
@@ -258,6 +287,8 @@ export class Window extends Viewport {
   #rebuildStacks() {
     const nextStack: Node[] = [];
     const nextMeshStack: Mesh[] = [];
+    const nextLightStack: AbstractLight[] = [];
+    const nextCameraStack: AbstractCamera[] = [];
 
     this.traverse((n) => {
       if (n instanceof Node) {
@@ -266,10 +297,18 @@ export class Window extends Viewport {
       if (n instanceof Mesh) {
         nextMeshStack.push(n);
       }
+      if (n instanceof AbstractLight) {
+        nextLightStack.push(n);
+      }
+      if (n instanceof AbstractCamera) {
+        nextCameraStack.push(n);
+      }
     });
 
     this.#stack = nextStack;
     this.#meshStack = nextMeshStack;
+    this.#lightStack = nextLightStack;
+    this.#cameraStack = nextCameraStack;
     this.#scheduleDirty = false;
   }
 
@@ -280,30 +319,6 @@ export class Window extends Viewport {
 
     for (const node of this.#stack) node._update(delta);
     this.#render();
-  }
-
-  #clearScreen() {
-    const colorTarget = new SDL_GPUColorTargetInfo();
-    colorTarget.properties.texture = this.#swapTexPtr[0]!;
-
-    if (this.clearColor.isDirty) {
-      this.#clearColorStruct.properties.r = this.#clearColor.r;
-      this.#clearColorStruct.properties.g = this.#clearColor.g;
-      this.#clearColorStruct.properties.b = this.#clearColor.b;
-      this.#clearColorStruct.properties.a = this.#clearColor.a;
-      this.clearColor.unmarkAsDirty();
-    }
-    colorTarget.properties.clear_color = this.#clearColorStruct;
-    colorTarget.properties.load_op = SDL_GPULoadOp.SDL_GPU_LOADOP_CLEAR;
-    colorTarget.properties.store_op = SDL_GPUStoreOp.SDL_GPU_STOREOP_STORE;
-
-    const pass = SDL.SDL_BeginGPURenderPass(
-      this.#currentCmd,
-      colorTarget.bunPointer,
-      1,
-      null,
-    );
-    SDL.SDL_EndGPURenderPass(pass);
   }
 
   #render(): void {
@@ -335,11 +350,42 @@ export class Window extends Viewport {
 
     this.#clearScreen();
 
-    // TODO: render children
+    const cameraData = this.#cameraStack.map((cam) => {
+      const viewMatrix = this.#processModelMatrix(cam);
+      const projectionMatrix = cam.projectionMatrix;
+      let viewport: Viewport | null = null;
+      let parent = cam.parent;
+      while (parent) {
+        if (parent instanceof Viewport) {
+          viewport = parent;
+        }
+        parent = parent.parent;
+      }
+
+      return { viewMatrix, projectionMatrix, layer: cam.layer.get(), viewport };
+    });
+
     for (const mesh of this.#meshStack) {
       // TODO: Default material
       const material = mesh.material;
       if (!material) continue;
+
+      const modelMatrix = this.#processModelMatrix(mesh);
+      const modelLayer = this.#processModelLayer(mesh);
+
+      for (const cd of cameraData) {
+        if (!mesh.geometry || cd.layer === 0 || (cd.layer & modelLayer) === 0)
+          continue;
+
+        this.#renderScene({
+          geometry: mesh.geometry,
+          modelMatrix,
+          viewMatrix: cd.viewMatrix,
+          projectionMatrix: cd.projectionMatrix,
+          viewport: cd.viewport || this,
+          material,
+        });
+      }
     }
 
     // TODO: post process
@@ -348,6 +394,205 @@ export class Window extends Viewport {
     this.#currentCmd = null;
     const err = SDL.SDL_GetError().toString();
     if (err) console.log('[SDL ERROR]', err);
+  }
+
+  #clearScreen() {
+    const colorTarget = new SDL_GPUColorTargetInfo();
+    colorTarget.properties.texture = this.#swapTexPtr[0]!;
+
+    if (this.clearColor.isDirty) {
+      this.#clearColorStruct.properties.r = this.#clearColor.r;
+      this.#clearColorStruct.properties.g = this.#clearColor.g;
+      this.#clearColorStruct.properties.b = this.#clearColor.b;
+      this.#clearColorStruct.properties.a = this.#clearColor.a;
+      this.clearColor.unmarkAsDirty();
+    }
+    colorTarget.properties.clear_color = this.#clearColorStruct;
+    colorTarget.properties.load_op = SDL_GPULoadOp.SDL_GPU_LOADOP_CLEAR;
+    colorTarget.properties.store_op = SDL_GPUStoreOp.SDL_GPU_STOREOP_STORE;
+
+    const pass = SDL.SDL_BeginGPURenderPass(
+      this.#currentCmd,
+      colorTarget.bunPointer,
+      1,
+      null,
+    );
+    SDL.SDL_EndGPURenderPass(pass);
+  }
+
+  #renderScene(sceneData: SceneRenderData) {
+    const viewportTexture = this.#getViewportTexture(sceneData.viewport);
+
+    const colorTarget = new SDL_GPUColorTargetInfo();
+    colorTarget.properties.texture = viewportTexture;
+    colorTarget.properties.load_op = SDL_GPULoadOp.SDL_GPU_LOADOP_LOAD;
+    colorTarget.properties.store_op = SDL_GPUStoreOp.SDL_GPU_STOREOP_STORE;
+
+    const pass = SDL.SDL_BeginGPURenderPass(
+      this.#currentCmd,
+      colorTarget.bunPointer,
+      1,
+      null,
+    );
+
+    SDL.SDL_EndGPURenderPass(pass);
+  }
+
+  #processModelMatrix(node: Node3D): Matrix {
+    const root = node.transform.clone();
+    let parent = node.parent;
+    while (parent) {
+      if (parent === this) break;
+
+      if (parent instanceof Node3D) {
+        root.mulR(parent.transform);
+      }
+
+      parent = parent.parent;
+    }
+
+    return root;
+  }
+
+  #processModelLayer(node: Node3D): number {
+    let layerFlag = node.layer.get();
+    let parent = node.parent;
+    while (parent) {
+      if (parent === this) break;
+
+      if (parent instanceof Node3D) {
+        layerFlag &= parent.layer.get();
+      }
+
+      parent = parent.parent;
+    }
+
+    return layerFlag >>> 0;
+  }
+
+  #getViewportTexture(viewport: Viewport): bigint {
+    // Case 1: Viewport has a target (TextureImage)
+    if (viewport.target) {
+      const target = viewport.target;
+      const targetHash = target.hash;
+      const existingMeta = this.#textureMetaMap.get(target.id);
+
+      // Check if we need to recreate the texture
+      const needsRecreate =
+        !existingMeta ||
+        existingMeta.width !== target.width ||
+        existingMeta.height !== target.height ||
+        existingMeta.hash !== targetHash;
+
+      if (needsRecreate) {
+        // Destroy old texture if exists
+        const oldTexture = this.#textureMap.get(target.id);
+        if (oldTexture) {
+          SDL.SDL_ReleaseGPUTexture(this.#devicePtr, oldTexture);
+        }
+
+        // Create new texture based on target specifications
+        const texInfo = new SDL_GPUTextureCreateInfo();
+        texInfo.properties.type = parseTextureType(target);
+        texInfo.properties.format = parseTextureFormat(target.format);
+        texInfo.properties.usage = parseTextureUsage(target.usage);
+        texInfo.properties.width = target.width;
+        texInfo.properties.height = target.height;
+        texInfo.properties.layer_count_or_depth = target.depth;
+        texInfo.properties.num_levels = target.layerCount;
+        texInfo.properties.sample_count = parseSampleCount(target.sampleCount);
+        texInfo.properties.props = 0n;
+
+        const newTexture = SDL.SDL_CreateGPUTexture(
+          this.#devicePtr,
+          texInfo.bunPointer,
+        );
+
+        if (!newTexture) {
+          console.warn(
+            `Failed to create GPU texture for target ${target.id}: ${SDL.SDL_GetError()}`,
+          );
+          return 0n;
+        }
+
+        this.#textureMap.set(target.id, newTexture);
+        this.#textureMetaMap.set(target.id, {
+          width: target.width,
+          height: target.height,
+          hash: targetHash,
+        });
+
+        this.#textureTouch.add(newTexture);
+        return BigInt(newTexture);
+      }
+
+      const tPtr = this.#textureMap.get(target.id)!;
+      this.#textureTouch.add(tPtr);
+      return BigInt(tPtr);
+    }
+
+    // Case 2: No target - create texture based on viewport dimensions (proportional to swapchain)
+    const swapWidth = this.#swapWidthPtr[0]!;
+    const swapHeight = this.#swapHeightPtr[0]!;
+
+    // Viewport dimensions are [0..1] proportions of swapchain
+    const texWidth = Math.max(1, Math.floor(swapWidth * viewport.width));
+    const texHeight = Math.max(1, Math.floor(swapHeight * viewport.height));
+
+    const existingMeta = this.#textureMetaMap.get(viewport.id);
+
+    // Check if we need to recreate (swapchain or viewport dimensions changed)
+    const needsRecreate =
+      !existingMeta ||
+      existingMeta.width !== texWidth ||
+      existingMeta.height !== texHeight;
+
+    if (needsRecreate) {
+      // Destroy old texture if exists
+      const oldTexture = this.#textureMap.get(viewport.id);
+      if (oldTexture) {
+        SDL.SDL_ReleaseGPUTexture(this.#devicePtr, oldTexture);
+      }
+
+      // Create new texture
+      const texInfo = new SDL_GPUTextureCreateInfo();
+      texInfo.properties.type = SDL_GPUTextureType.SDL_GPU_TEXTURETYPE_2D;
+      texInfo.properties.format = this.#swapFormat;
+      texInfo.properties.usage =
+        (SDL_GPUTextureUsageFlags.SDL_GPU_TEXTUREUSAGE_COLOR_TARGET |
+          SDL_GPUTextureUsageFlags.SDL_GPU_TEXTUREUSAGE_SAMPLER) >>>
+        0;
+      texInfo.properties.width = texWidth;
+      texInfo.properties.height = texHeight;
+      texInfo.properties.layer_count_or_depth = 1;
+      texInfo.properties.num_levels = 1;
+      texInfo.properties.sample_count =
+        SDL_GPUSampleCount.SDL_GPU_SAMPLECOUNT_1;
+      texInfo.properties.props = 0n;
+
+      const newTexture = SDL.SDL_CreateGPUTexture(
+        this.#devicePtr,
+        texInfo.bunPointer,
+      );
+
+      if (!newTexture) {
+        console.warn(
+          `Failed to create GPU texture for viewport ${viewport.id}: ${SDL.SDL_GetError()}`,
+        );
+        return 0n;
+      }
+
+      this.#textureMap.set(viewport.id, newTexture);
+      this.#textureMetaMap.set(viewport.id, {
+        width: texWidth,
+        height: texHeight,
+        hash: '', // No hash for viewport-only textures
+      });
+
+      return BigInt(newTexture);
+    }
+
+    return BigInt(this.#textureMap.get(viewport.id)!);
   }
 
   protected override _getType(): string {

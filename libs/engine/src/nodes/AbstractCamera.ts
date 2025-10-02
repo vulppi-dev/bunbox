@@ -1,7 +1,6 @@
 // prettier-multiline-arrays-set-line-pattern: 4
 
 import { Matrix, Quaternion, type Vector3, VectorParser } from '../math';
-import { Rect } from '../math/Rect';
 import { Node3D } from './Node3D';
 
 /**
@@ -12,8 +11,6 @@ export abstract class AbstractCamera extends Node3D {
   #near: number = 0.1;
   #far: number = 1000;
 
-  #viewport: Rect = new Rect();
-  #viewMatrix: Matrix = new Matrix();
   #projectionMatrix: Matrix = new Matrix();
 
   /** Near clipping plane distance (meters). */
@@ -23,16 +20,6 @@ export abstract class AbstractCamera extends Node3D {
   /** Far clipping plane distance (meters). */
   get far(): number {
     return this.#far;
-  }
-
-  /** Camera viewport rectangle (in pixels or normalized units as defined by renderer). */
-  get viewport(): Rect {
-    return this.#viewport;
-  }
-
-  /** View matrix (world-to-camera). */
-  get viewMatrix(): Matrix {
-    return this.#viewMatrix;
   }
   /** Projection matrix (camera to clip/NDC). */
   get projectionMatrix(): Matrix {
@@ -45,10 +32,6 @@ export abstract class AbstractCamera extends Node3D {
   }
   set far(value: number) {
     this.#far = value;
-    this.markAsDirty();
-  }
-  set viewport(value: Rect) {
-    this.#viewport = value;
     this.markAsDirty();
   }
 
@@ -69,18 +52,11 @@ export abstract class AbstractCamera extends Node3D {
   }
 
   override _update(_deltaTime: number): void {
-    if (this.isDirty) {
+    if (this.isDirty || this.transform.isDirty) {
       this._updateProjectionMatrix();
-      this.#updateViewMatrix();
-    } else if (this.transform.isDirty) {
-      this.#updateViewMatrix();
+      this.transform.unmarkAsDirty();
+      this.unmarkAsDirty();
     }
-
-    this.transform.unmarkAsDirty();
-  }
-
-  #updateViewMatrix() {
-    this.#viewMatrix.copy(this.transform).invert();
   }
 
   /** Update projection matrix according to subclass parameters. */
