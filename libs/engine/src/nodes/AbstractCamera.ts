@@ -1,6 +1,13 @@
 // prettier-multiline-arrays-set-line-pattern: 4
 
-import { Matrix, Quaternion, type Vector3, VectorParser } from '../math';
+import {
+  Frustum,
+  Matrix,
+  Plane,
+  Quaternion,
+  Vector3,
+  VectorParser,
+} from '../math';
 import { Node3D } from './Node3D';
 
 /**
@@ -12,6 +19,7 @@ export abstract class AbstractCamera extends Node3D {
   #far: number = 1000;
 
   #projectionMatrix: Matrix = new Matrix();
+  #frustum: Frustum | null = null;
 
   /** Near clipping plane distance (meters). */
   get near(): number {
@@ -51,12 +59,97 @@ export abstract class AbstractCamera extends Node3D {
     this.markAsDirty();
   }
 
+  /**
+   * Get the view frustum for this camera.
+   * The frustum is computed from view and projection matrices.
+   * @param viewMatrix The view matrix (world to camera space)
+   * @returns Frustum for culling
+   */
+  getFrustum(viewMatrix: Matrix): Frustum {
+    // Recompute frustum if dirty or not yet created
+    if (!this.#frustum || this.isDirty || this.transform.isDirty) {
+      this._updateFrustum(viewMatrix);
+    }
+    return this.#frustum!;
+  }
+
   override _update(_deltaTime: number): void {
     if (this.isDirty || this.transform.isDirty) {
       this._updateProjectionMatrix();
+      this.#frustum = null; // Invalidate frustum cache
       this.transform.unmarkAsDirty();
       this.unmarkAsDirty();
     }
+  }
+
+  /**
+   * Update frustum planes from view and projection matrices.
+   * Extracts the 6 frustum planes from the view-projection matrix.
+   */
+  protected _updateFrustum(viewMatrix: Matrix): void {
+    // Compute view-projection matrix
+    const vp = this.#projectionMatrix.clone().mulL(viewMatrix);
+    const m = vp.toArray();
+
+    // Create frustum if needed
+    if (!this.#frustum) {
+      this.#frustum = new Frustum();
+    }
+
+    // Extract frustum planes from view-projection matrix
+    // Left plane: m3 + m0, m7 + m4, m11 + m8, m15 + m12
+    this.#frustum.setPlane(
+      0,
+      new Plane(
+        new Vector3(m[3] + m[0], m[7] + m[4], m[11] + m[8]),
+        m[15] + m[12],
+      ).normalize(),
+    );
+
+    // Right plane: m3 - m0, m7 - m4, m11 - m8, m15 - m12
+    this.#frustum.setPlane(
+      1,
+      new Plane(
+        new Vector3(m[3] - m[0], m[7] - m[4], m[11] - m[8]),
+        m[15] - m[12],
+      ).normalize(),
+    );
+
+    // Bottom plane: m3 + m1, m7 + m5, m11 + m9, m15 + m13
+    this.#frustum.setPlane(
+      2,
+      new Plane(
+        new Vector3(m[3] + m[1], m[7] + m[5], m[11] + m[9]),
+        m[15] + m[13],
+      ).normalize(),
+    );
+
+    // Top plane: m3 - m1, m7 - m5, m11 - m9, m15 - m13
+    this.#frustum.setPlane(
+      3,
+      new Plane(
+        new Vector3(m[3] - m[1], m[7] - m[5], m[11] - m[9]),
+        m[15] - m[13],
+      ).normalize(),
+    );
+
+    // Near plane: m3 + m2, m7 + m6, m11 + m10, m15 + m14
+    this.#frustum.setPlane(
+      4,
+      new Plane(
+        new Vector3(m[3] + m[2], m[7] + m[6], m[11] + m[10]),
+        m[15] + m[14],
+      ).normalize(),
+    );
+
+    // Far plane: m3 - m2, m7 - m6, m11 - m10, m15 - m14
+    this.#frustum.setPlane(
+      5,
+      new Plane(
+        new Vector3(m[3] - m[2], m[7] - m[6], m[11] - m[10]),
+        m[15] - m[14],
+      ).normalize(),
+    );
   }
 
   /** Update projection matrix according to subclass parameters. */

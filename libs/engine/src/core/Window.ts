@@ -19,7 +19,7 @@ import {
   USING_VULKAN,
   WINDOW_FEATURES_MAP,
 } from '../constants';
-import { Color, type Matrix, Vector2 } from '../math';
+import { Color, type Matrix, Vector2, Vector3 } from '../math';
 import { AbstractCamera, AbstractLight, Node3D, Viewport } from '../nodes';
 import { Mesh } from '../nodes/Mesh';
 import { POINTERS_MAP } from '../stores/global';
@@ -360,43 +360,50 @@ export class Window extends Viewport {
     this.#viewportCompositionQueue.clear();
     this.#clearScreen();
 
-    const cameraData = this.#cameraStack.map((cam) => {
-      const viewMatrix = this.#processModelMatrix(cam);
-      const projectionMatrix = cam.projectionMatrix;
+    // Render each camera with its visible meshes
+    for (const camera of this.#cameraStack) {
+      const viewMatrix = this.#processModelMatrix(camera).invert();
+      const projectionMatrix = camera.projectionMatrix;
+      const cameraLayer = this.#processModelLayer(camera);
+
+      // Find viewport for this camera
       let viewport: Viewport | null = null;
-      let parent = cam.parent;
+      let parent = camera.parent;
       while (parent) {
         if (parent instanceof Viewport) {
           viewport = parent;
+          break;
         }
         parent = parent.parent;
       }
+      const finalViewport = viewport || this;
 
-      return { viewMatrix, projectionMatrix, layer: cam.layer.get(), viewport };
-    });
+      // Perform frustum culling for this camera
+      const visibleMeshes = this.#frustumCulling(camera);
 
-    for (const mesh of this.#meshStack) {
-      // TODO: Default material
-      const material = mesh.material;
-      if (!material) continue;
+      // Render all visible meshes for this camera
+      for (const mesh of visibleMeshes) {
+        const material = mesh.material;
+        if (!material || !mesh.geometry) continue;
 
-      const modelMatrix = this.#processModelMatrix(mesh);
-      const modelLayer = this.#processModelLayer(mesh);
+        const modelMatrix = this.#processModelMatrix(mesh);
+        const modelLayer = this.#processModelLayer(mesh);
 
-      for (const cd of cameraData) {
-        if (!mesh.geometry || cd.layer === 0 || (cd.layer & modelLayer) === 0)
-          continue;
+        // Check layer mask
+        if (cameraLayer === 0 || (cameraLayer & modelLayer) === 0) continue;
 
         this.#renderScene({
           geometry: mesh.geometry,
           modelMatrix,
-          viewMatrix: cd.viewMatrix,
-          projectionMatrix: cd.projectionMatrix,
-          viewport: cd.viewport || this,
+          viewMatrix,
+          projectionMatrix,
+          viewport: finalViewport,
           material,
         });
       }
     }
+
+    // TODO: composition
 
     // TODO: post process
 
@@ -496,6 +503,39 @@ export class Window extends Viewport {
     return layerFlag >>> 0;
   }
 
+  #frustumCulling(camera: AbstractCamera): Set<Mesh> {
+    const visibleMeshes = new Set<Mesh>();
+
+    // Get camera's view matrix
+    const viewMatrix = this.#processModelMatrix(camera).invert();
+
+    // Get frustum for this camera
+    const frustum = camera.getFrustum(viewMatrix);
+
+    // Test each mesh against frustum
+    for (const mesh of this.#meshStack) {
+      if (!mesh.geometry) continue;
+
+      // Get mesh world position from transform matrix
+      const meshMatrix = this.#processModelMatrix(mesh);
+      const m = meshMatrix.toArray();
+
+      // Extract position from matrix (last column)
+      const meshPosition = new Vector3(m[12], m[13], m[14]);
+
+      // Get bounding sphere radius from geometry
+      // For now, use a simple approximation based on geometry bounds
+      // TODO: Add proper bounding sphere calculation to Geometry class
+      const boundingRadius = 10; // Default radius, should be computed from geometry
+
+      // Perform sphere-frustum intersection test
+      if (frustum.intersectsSphere(meshPosition, boundingRadius)) {
+        visibleMeshes.add(mesh);
+      }
+    }
+
+    return visibleMeshes;
+  }
   #getViewportTexture(viewport: Viewport): {
     texture: bigint;
     resolveTexture: bigint | null;
