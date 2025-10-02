@@ -362,8 +362,9 @@ export class Window extends Viewport {
 
     // Render each camera with its visible meshes
     for (const camera of this.#cameraStack) {
-      const viewMatrix = this.#processModelMatrix(camera).invert();
       const projectionMatrix = camera.projectionMatrix;
+      const viewMatrix = this.#processModelMatrix(camera).invert();
+      const frustum = camera.getFrustum(viewMatrix);
       const cameraLayer = this.#processModelLayer(camera);
 
       // Find viewport for this camera
@@ -378,29 +379,66 @@ export class Window extends Viewport {
       }
       const finalViewport = viewport || this;
 
-      // Perform frustum culling for this camera
-      const visibleMeshes = this.#frustumCulling(camera);
+      const meshesData = this.#meshStack
+        .map((m) => {
+          if (!m.geometry) return null;
+          const materialHash = m.material ? m.material.hash : 'no-material';
+          const modelMatrix = this.#processModelMatrix(m);
+          const layer = this.#processModelLayer(m);
 
-      // Render all visible meshes for this camera
-      for (const mesh of visibleMeshes) {
-        const material = mesh.material;
-        if (!material || !mesh.geometry) continue;
+          return {
+            mesh: m,
+            layer,
+            materialHash,
+            modelMatrix,
+          };
+        })
+        .filter((data) => {
+          if (!data) return false;
+          if (cameraLayer === 0 || (cameraLayer & data.layer) === 0)
+            return false;
 
-        const modelMatrix = this.#processModelMatrix(mesh);
-        const modelLayer = this.#processModelLayer(mesh);
-
-        // Check layer mask
-        if (cameraLayer === 0 || (cameraLayer & modelLayer) === 0) continue;
-
-        this.#renderScene({
-          geometry: mesh.geometry,
-          modelMatrix,
-          viewMatrix,
-          projectionMatrix,
-          viewport: finalViewport,
-          material,
+          const pos = new Vector3();
+          data.modelMatrix.decomposePosition(pos);
+          return frustum.intersectsSphere(pos, 10);
         });
+
+      const meshGroups = meshesData.reduce((acc, data) => {
+        if (!data) return acc;
+        if (!acc.has(data.materialHash)) {
+          acc.set(data.materialHash, []);
+        }
+        acc.get(data.materialHash)!.push([data.modelMatrix, data.mesh]);
+        return acc;
+      }, new Map<string, [Matrix, Mesh][]>());
+
+      // Begin draw call
+      const { texture: viewportTexture, resolveTexture } =
+        this.#getViewportTexture(finalViewport);
+
+      const colorTarget = new SDL_GPUColorTargetInfo();
+      colorTarget.properties.texture = viewportTexture;
+      colorTarget.properties.load_op = SDL_GPULoadOp.SDL_GPU_LOADOP_LOAD;
+      colorTarget.properties.store_op = SDL_GPUStoreOp.SDL_GPU_STOREOP_STORE;
+
+      // Set resolve texture if MSAA is enabled
+      if (resolveTexture) {
+        colorTarget.properties.resolve_texture = resolveTexture;
       }
+
+      const pass = SDL.SDL_BeginGPURenderPass(
+        this.#currentCmd,
+        colorTarget.bunPointer,
+        1,
+        null,
+      );
+
+      for (const meshes of meshGroups.values()) {
+        for (const [modelMatrix, mesh] of meshes) {
+          // TODO:
+        }
+      }
+      SDL.SDL_EndGPURenderPass(pass);
     }
 
     // TODO: composition
@@ -447,30 +485,6 @@ export class Window extends Viewport {
     SDL.SDL_EndGPURenderPass(pass);
   }
 
-  #renderScene(sceneData: SceneRenderData) {
-    const { texture: viewportTexture, resolveTexture } =
-      this.#getViewportTexture(sceneData.viewport);
-
-    const colorTarget = new SDL_GPUColorTargetInfo();
-    colorTarget.properties.texture = viewportTexture;
-    colorTarget.properties.load_op = SDL_GPULoadOp.SDL_GPU_LOADOP_LOAD;
-    colorTarget.properties.store_op = SDL_GPUStoreOp.SDL_GPU_STOREOP_STORE;
-
-    // Set resolve texture if MSAA is enabled
-    if (resolveTexture) {
-      colorTarget.properties.resolve_texture = resolveTexture;
-    }
-
-    const pass = SDL.SDL_BeginGPURenderPass(
-      this.#currentCmd,
-      colorTarget.bunPointer,
-      1,
-      null,
-    );
-
-    SDL.SDL_EndGPURenderPass(pass);
-  }
-
   #processModelMatrix(node: Node3D): Matrix {
     const root = node.transform.clone();
     let parent = node.parent;
@@ -503,39 +517,6 @@ export class Window extends Viewport {
     return layerFlag >>> 0;
   }
 
-  #frustumCulling(camera: AbstractCamera): Set<Mesh> {
-    const visibleMeshes = new Set<Mesh>();
-
-    // Get camera's view matrix
-    const viewMatrix = this.#processModelMatrix(camera).invert();
-
-    // Get frustum for this camera
-    const frustum = camera.getFrustum(viewMatrix);
-
-    // Test each mesh against frustum
-    for (const mesh of this.#meshStack) {
-      if (!mesh.geometry) continue;
-
-      // Get mesh world position from transform matrix
-      const meshMatrix = this.#processModelMatrix(mesh);
-      const m = meshMatrix.toArray();
-
-      // Extract position from matrix (last column)
-      const meshPosition = new Vector3(m[12], m[13], m[14]);
-
-      // Get bounding sphere radius from geometry
-      // For now, use a simple approximation based on geometry bounds
-      // TODO: Add proper bounding sphere calculation to Geometry class
-      const boundingRadius = 10; // Default radius, should be computed from geometry
-
-      // Perform sphere-frustum intersection test
-      if (frustum.intersectsSphere(meshPosition, boundingRadius)) {
-        visibleMeshes.add(mesh);
-      }
-    }
-
-    return visibleMeshes;
-  }
   #getViewportTexture(viewport: Viewport): {
     texture: bigint;
     resolveTexture: bigint | null;
