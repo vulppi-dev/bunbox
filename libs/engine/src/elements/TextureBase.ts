@@ -3,18 +3,53 @@ import { sha } from 'bun';
 import { ulid } from 'ulid';
 
 export type TextureFormat =
-  | 'rgba8unorm'
-  | 'bgra8unorm'
-  | 'rgba16float'
-  | 'r16float'
-  | 'r8unorm'
-  | 'rgba8uint'
-  | 'rgba8snorm'
-  | 'rgba32float'
-  | 'depth24plus'
-  | 'depth24plus-stencil8'
-  | 'depth32float'
-  | (string & {});
+  // Color Formats - 8-bit normalized
+  | 'rgba8unorm' // Standard 8-bit RGBA (most common)
+  | 'rgba8unorm-srgb' // SRGB color space (for diffuse/albedo textures)
+  | 'bgra8unorm' // Platform-specific (Windows/Metal prefer BGRA)
+  | 'bgra8unorm-srgb' // SRGB BGRA variant
+  | 'rgba8snorm' // Signed normalized (for normal maps)
+
+  // Color Formats - 16-bit float (HDR)
+  | 'rgba16float' // HDR color, good balance
+  | 'r16float' // Single channel HDR (shadows, height maps)
+  | 'rg16float' // Two channel HDR (normal maps, flow maps)
+
+  // Color Formats - 32-bit float (high precision)
+  | 'rgba32float' // Maximum precision, compute buffers
+  | 'r32float' // Single channel high precision
+
+  // Color Formats - packed/compressed
+  | 'rgb10a2unorm' // 10-bit color, 2-bit alpha (HDR displays)
+  | 'rg11b10float' // Packed HDR without alpha
+
+  // Single/Dual Channel
+  | 'r8unorm' // Grayscale, masks
+  | 'rg8unorm' // Dual channel (2D vectors, flow)
+
+  // Compressed Formats - BC (DirectX/Vulkan)
+  | 'bc1-rgba-unorm' // DXT1 - Color, 1-bit alpha (6:1 compression)
+  | 'bc1-rgba-unorm-srgb' // DXT1 SRGB
+  | 'bc3-rgba-unorm' // DXT5 - Color + alpha (4:1 compression)
+  | 'bc3-rgba-unorm-srgb' // DXT5 SRGB
+  | 'bc4-r-unorm' // Single channel (height, roughness)
+  | 'bc5-rg-unorm' // Two channel (normal maps)
+  | 'bc7-rgba-unorm' // High quality RGB/RGBA (4:1)
+  | 'bc7-rgba-unorm-srgb' // BC7 SRGB
+  | 'bc6h-rgb-ufloat' // HDR compressed
+
+  // Compressed Formats - ASTC (Mobile/Vulkan)
+  | 'astc-4x4-unorm' // High quality (8:1)
+  | 'astc-4x4-unorm-srgb' // ASTC SRGB
+  | 'astc-6x6-unorm' // Medium quality (11.1:1)
+  | 'astc-8x8-unorm' // Lower quality (16:1)
+
+  // Depth/Stencil Formats
+  | 'depth16unorm' // Basic depth (mobile friendly)
+  | 'depth24plus' // 24-bit depth (standard)
+  | 'depth32float' // High precision depth (shadows)
+  | 'depth24plus-stencil8' // Depth + stencil
+  | 'depth32float-stencil8'; // High precision depth + stencil
 
 export type SampleCount = 1 | 2 | 4 | 8;
 
@@ -117,7 +152,6 @@ export abstract class TextureBase extends DirtyState {
     };
     return sha(JSON.stringify(key), 'hex');
   }
-
   // Subclass-provided getters (place before setters to satisfy ordering)
   // Must be provided by subclasses (getters before protected methods)
   get layerCount(): number {
@@ -186,6 +220,7 @@ export abstract class TextureBase extends DirtyState {
     this.#usage = nv;
     this.markAsDirty();
   }
+
   addUsage(flag: TextureUsage): this {
     if (!this.#usage.includes(flag)) {
       this.#usage.push(flag);
@@ -193,62 +228,16 @@ export abstract class TextureBase extends DirtyState {
     }
     return this;
   }
+
   removeUsage(flag: TextureUsage): this {
     const before = this.#usage.length;
     this.#usage = this.#usage.filter((u) => u !== flag);
     if (this.#usage.length !== before) this.markAsDirty();
     return this;
   }
+
   hasUsage(flag: TextureUsage): boolean {
     return this.#usage.includes(flag);
-  }
-
-  bytesPerPixel(): number {
-    switch (this.#format) {
-      case 'r8unorm':
-        return 1;
-      case 'rgba8unorm':
-      case 'bgra8unorm':
-        return 4;
-      case 'r16float':
-        return 2;
-      case 'rgba16float':
-        return 8;
-      case 'rgba32float':
-        return 16; // heuristic
-      case 'depth24plus':
-      case 'depth24plus-stencil8':
-      case 'depth32float':
-        return 4;
-      default:
-        return 4;
-    }
-  }
-
-  approximateByteSize(): number {
-    const bpp = this.bytesPerPixel();
-    let total = 0;
-    for (let i = 0; i < this.#mipLevels; i++) {
-      const sz = this.mipSize(i);
-      total += sz.width * sz.height * sz.depthOrLayers * bpp;
-    }
-    if (this.#sampleCount > 1 && this.hasUsage('color-target')) {
-      total *= this.#sampleCount;
-    }
-    return total >>> 0;
-  }
-
-  mipSize(level: number): {
-    width: number;
-    height: number;
-    depthOrLayers: number;
-  } {
-    return {
-      width: Math.max(1, this.#width >> level),
-      height: Math.max(1, this.#height >> level),
-      depthOrLayers:
-        this._kind() === '3d' ? this.depth >> level : this.layerCount,
-    };
   }
 
   // Protected hooks: non-abstract before abstract to satisfy ordering
