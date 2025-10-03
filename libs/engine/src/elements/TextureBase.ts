@@ -252,7 +252,7 @@ export abstract class TextureBase extends DirtyState {
   }
 
   // Protected hooks: non-abstract before abstract to satisfy ordering
-  protected _extraHashKey(): unknown {
+  protected _extraHashKey(): string | undefined {
     return undefined;
   }
   protected abstract _kind(): '2d' | 'cube' | '3d';
