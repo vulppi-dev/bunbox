@@ -78,13 +78,7 @@ export class Frustum {
       const pz = plane.normal.z >= 0 ? max.z : min.z;
 
       // If positive vertex is outside (behind) the plane, box is outside frustum
-      if (
-        plane.normal.x * px +
-          plane.normal.y * py +
-          plane.normal.z * pz +
-          plane.distance <
-        0
-      ) {
+      if (plane.normal.x * px + plane.normal.y * py + plane.normal.z * pz + plane.distance < 0) {
         return false;
       }
     }

@@ -8,11 +8,7 @@ export type FilterMode = 'nearest' | 'linear';
 export type MipmapFilter = 'nearest' | 'linear';
 
 /** Addressing (wrap) mode per axis. */
-export type AddressMode =
-  | 'repeat'
-  | 'mirror-repeat'
-  | 'clamp-to-edge'
-  | 'clamp-to-border';
+export type AddressMode = 'repeat' | 'mirror-repeat' | 'clamp-to-edge' | 'clamp-to-border';
 
 /** Optional depth-compare function (null means no comparison). */
 export type CompareFunction =

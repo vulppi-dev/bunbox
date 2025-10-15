@@ -36,10 +36,7 @@ export type DepthStencilFaceState = {
   passOp: StencilOperation;
 };
 
-export type DepthStencilFormat =
-  | 'depth24plus'
-  | 'depth24plus-stencil8'
-  | 'depth32float';
+export type DepthStencilFormat = 'depth24plus' | 'depth24plus-stencil8' | 'depth32float';
 
 export type DepthStencilState = {
   format: DepthStencilFormat;
@@ -77,12 +74,7 @@ export type BlendFactor =
   | 'constant'
   | 'one-minus-constant';
 
-export type BlendOperation =
-  | 'add'
-  | 'subtract'
-  | 'reverse-subtract'
-  | 'min'
-  | 'max';
+export type BlendOperation = 'add' | 'subtract' | 'reverse-subtract' | 'min' | 'max';
 
 export type BlendComponent = {
   srcFactor: BlendFactor;

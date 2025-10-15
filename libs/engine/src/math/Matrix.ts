@@ -200,11 +200,7 @@ export class Matrix extends DirtyState {
    * @param rotation The rotation quaternion or Euler angles.
    * @returns This matrix after composition.
    */
-  compose(
-    position: Vector3,
-    scale: Vector3,
-    rotation: Quaternion | Euler,
-  ): this {
+  compose(position: Vector3, scale: Vector3, rotation: Quaternion | Euler): this {
     if (
       !(position instanceof Vector3) ||
       !(scale instanceof Vector3) ||
@@ -419,17 +415,10 @@ export class Matrix extends DirtyState {
    * @param up The up direction of the camera.
    * @returns This matrix after creating the view matrix.
    */
-  lookAt(
-    eye: Vector3,
-    target: Vector3,
-    up: Vector3 = Vector3.Up(),
-    invert: boolean = false,
-  ): this {
+  lookAt(eye: Vector3, target: Vector3, up: Vector3 = Vector3.Up(), invert: boolean = false): this {
     const u = new Vector3(up.y, up.x, up.z); // swap x and y for right-handed system
 
-    const z = invert
-      ? target.clone().sub(eye).normalize()
-      : eye.clone().sub(target).normalize(); // forward
+    const z = invert ? target.clone().sub(eye).normalize() : eye.clone().sub(target).normalize(); // forward
     const x = z.clone().cross(u).normalize(); // right
     if (x.length() === 0) {
       x.x = 1.0;
@@ -617,10 +606,7 @@ export class Matrix extends DirtyState {
       for (let i = 0; i < 4; i++) {
         // rows
         tmp[j * 4 + i] =
-          mat[0 * 4 + i]! * b0 +
-          mat[1 * 4 + i]! * b1 +
-          mat[2 * 4 + i]! * b2 +
-          mat[3 * 4 + i]! * b3;
+          mat[0 * 4 + i]! * b0 + mat[1 * 4 + i]! * b1 + mat[2 * 4 + i]! * b2 + mat[3 * 4 + i]! * b3;
       }
     }
     target.set(tmp);

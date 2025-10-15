@@ -133,12 +133,7 @@ export class Quaternion extends AbstractVector<4> {
    * @returns The dot product.
    */
   override dot(vector: this): number {
-    return (
-      this.#w * vector.w +
-      this.#x * vector.x +
-      this.#y * vector.y +
-      this.#z * vector.z
-    );
+    return this.#w * vector.w + this.#x * vector.x + this.#y * vector.y + this.#z * vector.z;
   }
 
   /** Normalizes this quaternion. */
@@ -201,8 +196,7 @@ export class Quaternion extends AbstractVector<4> {
   /** Returns the inverse quaternion. */
   inverse(): this {
     const normSq = this.dot(this);
-    if (normSq === 0)
-      throw new Error('Cannot invert a quaternion with zero norm');
+    if (normSq === 0) throw new Error('Cannot invert a quaternion with zero norm');
     return this.conjugate().divS(normSq);
   }
 

@@ -111,12 +111,7 @@ export class Color extends AbstractVector<4> {
   }
 
   override dot(vector: this): number {
-    return (
-      this.r * vector.r +
-      this.g * vector.g +
-      this.b * vector.b +
-      this.a * vector.a
-    );
+    return this.r * vector.r + this.g * vector.g + this.b * vector.b + this.a * vector.a;
   }
 
   override set(r: number, g: number, b: number, a: number): this {

@@ -188,10 +188,7 @@ export abstract class TextureBase extends DirtyState {
   }
   set mipLevels(v: number) {
     const nv = Math.max(1, v | 0);
-    const maxAllowed = TextureBase.computeMaxMipLevels(
-      this.#width,
-      this.#height,
-    );
+    const maxAllowed = TextureBase.computeMaxMipLevels(this.#width, this.#height);
     const clamped = Math.min(nv, maxAllowed);
     if (this.#mipLevels === clamped) return;
     this.#mipLevels = clamped;
@@ -212,11 +209,7 @@ export abstract class TextureBase extends DirtyState {
   set usage(v: TextureUsage[]) {
     const nv = [...new Set(v)];
     // Shallow equality check
-    if (
-      nv.length === this.#usage.length &&
-      nv.every((u, i) => u === this.#usage[i])
-    )
-      return;
+    if (nv.length === this.#usage.length && nv.every((u, i) => u === this.#usage[i])) return;
     this.#usage = nv;
     this.markAsDirty();
   }

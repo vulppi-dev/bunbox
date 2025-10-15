@@ -42,6 +42,14 @@ export class Material extends DirtyState {
     return this.#primitive;
   }
 
+  get params() {
+    return this.#params;
+  }
+
+  get rasterizer() {
+    return this.#rasterizer;
+  }
+
   set label(v: string) {
     if (this.#label === v) return;
     this.#label = v;

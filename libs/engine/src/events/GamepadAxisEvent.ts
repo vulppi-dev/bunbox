@@ -1,11 +1,6 @@
 import { Event, type EventOptions } from './Event';
 
-export type GamepadAxisType =
-  | 'x'
-  | 'y'
-  | 'leftTrigger'
-  | 'rightTrigger'
-  | 'unknown';
+export type GamepadAxisType = 'x' | 'y' | 'leftTrigger' | 'rightTrigger' | 'unknown';
 
 export type GamepadAxisEventOptions = {
   deviceId: number;

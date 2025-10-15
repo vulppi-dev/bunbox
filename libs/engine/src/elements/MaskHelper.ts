@@ -11,10 +11,8 @@ export class MaskHelper extends DirtyState {
 
   // Validation helpers
   #validateIndex(index: number): void {
-    if (!Number.isInteger(index))
-      throw new Error('Mask index must be an integer.');
-    if (index < 0 || index > 31)
-      throw new Error('Mask index must be between 0 and 31.');
+    if (!Number.isInteger(index)) throw new Error('Mask index must be an integer.');
+    if (index < 0 || index > 31) throw new Error('Mask index must be between 0 and 31.');
   }
   #validateMask(mask: number): void {
     if (!Number.isFinite(mask) || !Number.isInteger(mask))
@@ -111,18 +109,12 @@ export class MaskHelper extends DirtyState {
   }
 
   hasAny(maskOrHelper: number | MaskHelper): boolean {
-    const mask =
-      typeof maskOrHelper === 'number'
-        ? maskOrHelper >>> 0
-        : maskOrHelper.#value >>> 0;
+    const mask = typeof maskOrHelper === 'number' ? maskOrHelper >>> 0 : maskOrHelper.#value >>> 0;
     return (this.#value & mask) !== 0;
   }
 
   hasAll(maskOrHelper: number | MaskHelper): boolean {
-    const mask =
-      typeof maskOrHelper === 'number'
-        ? maskOrHelper >>> 0
-        : maskOrHelper.#value >>> 0;
+    const mask = typeof maskOrHelper === 'number' ? maskOrHelper >>> 0 : maskOrHelper.#value >>> 0;
     return (this.#value & mask) === mask >>> 0;
   }
 

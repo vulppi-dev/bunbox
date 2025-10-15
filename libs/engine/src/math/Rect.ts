@@ -29,12 +29,7 @@ export class Rect extends Calculable<4> {
    * @param width Width (non-negative recommended)
    * @param height Height (non-negative recommended)
    */
-  constructor(
-    x: number = 0,
-    y: number = 0,
-    width: number = 1,
-    height: number = 1,
-  ) {
+  constructor(x: number = 0, y: number = 0, width: number = 1, height: number = 1) {
     super();
     this.#x = x;
     this.#y = y;

@@ -13,9 +13,7 @@ export function getChildrenStack<C extends NodeCtor>(
 
   for (const child of node.children) {
     stack.push(
-      ...getChildrenStack(child, filter).filter((n) =>
-        filter ? n instanceof filter : true,
-      ),
+      ...getChildrenStack(child, filter).filter((n) => (filter ? n instanceof filter : true)),
     );
   }
   return stack;

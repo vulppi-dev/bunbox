@@ -64,7 +64,8 @@
     "chroma-js": "^3.1.2",
     "fontkit": "^2.0.4",
     "glob": "^11.0.3",
-    "ulid": "^3.0.1"
+    "ulid": "^3.0.1",
+    "wgsl_reflect": "^1.2.3"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
