@@ -170,6 +170,9 @@ jobs:
       - name: vcpkg install (glfw3 & bgfx) [Windows]
         if: runner.os == 'Windows'
         shell: pwsh
+        env:
+          # Force bgfx shared library on Windows
+          VCPKG_CMAKE_CONFIGURE_OPTIONS: -DBGFX_BUILD_SHARED_LIBS=ON
         run: |
           $triplet = '${{ matrix.triplet }}'
           $ports   = @("glfw3:$triplet", "bgfx:$triplet")
@@ -211,13 +214,26 @@ jobs:
         run: |
           $Triplet = '${{ matrix.triplet }}'
           $Root    = "external/vcpkg/installed/$Triplet"
-          $Bin     = Join-Path $Root "bin"
           $Dst     = "dist-libs/win32/${{ matrix.arch }}"
           New-Item -ItemType Directory -Force -Path $Dst | Out-Null
-          Copy-Item "$Bin\*glfw*.dll" $Dst -ErrorAction SilentlyContinue
-          Copy-Item "$Bin\*bgfx*.dll" $Dst -ErrorAction SilentlyContinue
-          Copy-Item "$Bin\*bimg*.dll" $Dst -ErrorAction SilentlyContinue
-          Copy-Item "$Bin\*bx*.dll"   $Dst -ErrorAction SilentlyContinue
+
+          $Dirs = @(
+            (Join-Path $Root "bin"),
+            (Join-Path $Root "debug\bin")
+          )
+
+          foreach ($Dir in $Dirs) {
+            if (Test-Path $Dir) {
+              Copy-Item (Join-Path $Dir "*glfw*.dll") $Dst -ErrorAction SilentlyContinue
+              Copy-Item (Join-Path $Dir "bgfx-shared-lib*.dll") $Dst -ErrorAction SilentlyContinue
+              Copy-Item (Join-Path $Dir "*bgfx*.dll") $Dst -ErrorAction SilentlyContinue
+              Copy-Item (Join-Path $Dir "*bimg*.dll") $Dst -ErrorAction SilentlyContinue
+              Copy-Item (Join-Path $Dir "*bx*.dll")   $Dst -ErrorAction SilentlyContinue
+            }
+          }
+
+          Write-Host "=== Dist contents (Windows) ==="
+          Get-ChildItem $Dst | Format-Table -AutoSize
 
       - name: Copy shared libraries to dist [Linux/macOS]
         if: runner.os != 'Windows'
