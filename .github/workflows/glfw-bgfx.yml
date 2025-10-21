@@ -29,7 +29,7 @@ jobs:
             platform: linux
             arch: x64
             triplet: x64-linux-dynamic
-          - os: ubuntu-latest
+          - os: ubuntu-24.04-arm
             platform: linux
             arch: arm64
             triplet: arm64-linux-dynamic
