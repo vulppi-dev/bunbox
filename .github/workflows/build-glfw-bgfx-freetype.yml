@@ -254,11 +254,9 @@ jobs:
       - name: Prepare artifacts
         run: |
           mkdir -p artifacts/macos/${{matrix.ARCH}}
-          cp glfw/build/src/libglfw*.dylib artifacts/macos/${{matrix.ARCH}}/
-          mv artifacts/macos/${{matrix.ARCH}}/libglfw*.dylib artifacts/macos/${{matrix.ARCH}}/libglfw.dylib
+          find glfw/build/src -name "libglfw*.dylib" -exec cp {} artifacts/macos/${{matrix.ARCH}}/libglfw.dylib \;
           cp bgfx/.build/${{matrix.PLATFORM}}/bin/libbgfx-shared-libRelease.dylib artifacts/macos/${{matrix.ARCH}}/libbgfx.dylib
-          cp freetype/build/libfreetype*.dylib artifacts/macos/${{matrix.ARCH}}/
-          mv artifacts/macos/${{matrix.ARCH}}/libfreetype*.dylib artifacts/macos/${{matrix.ARCH}}/libfreetype.dylib
+          find freetype/build -name "libfreetype*.dylib" -exec cp {} artifacts/macos/${{matrix.ARCH}}/libfreetype.dylib \;
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -300,7 +298,7 @@ jobs:
           git clone --depth 1 https://github.com/bkaradzic/bgfx.git bgfx
           cd bgfx
           ..\bx\tools\bin\windows\genie --with-shared-lib vs2022 --platform x64
-          msbuild .build\projects\vs2022\bgfx.sln /p:Configuration=Release /p:Platform=x64 /t:bgfx-shared-lib /p:PreferredToolArchitecture=x64 /p:DefineConstants="BGFX_CONFIG_RENDERER_DIRECT3D12=1;BGFX_CONFIG_RENDERER_VULKAN=1;BGFX_CONFIG_RENDERER_DIRECT3D9=0;BGFX_CONFIG_RENDERER_DIRECT3D11=0;BGFX_CONFIG_RENDERER_OPENGL=0;BGFX_CONFIG_RENDERER_METAL=0"
+          msbuild .build\projects\vs2022\bgfx-shared-lib.vcxproj /p:Configuration=Release /p:Platform=x64
 
       # Build FreeType
       - name: Clone and build FreeType
