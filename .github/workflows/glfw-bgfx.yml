@@ -1,0 +1,235 @@
+name: Build GLFW & bgfx (vcpkg) and package artifacts
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/glfw-bgfx.yml'
+
+concurrency:
+  group: glfw-bgfx-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: build-${{ matrix.platform }}-${{ matrix.arch }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Windows (x64 only)
+          - os: windows-latest
+            platform: win32
+            arch: x64
+            triplet: x64-windows
+
+          # Linux (x64 + arm64 via cross)
+          - os: ubuntu-latest
+            platform: linux
+            arch: x64
+            triplet: x64-linux-dynamic
+          - os: ubuntu-latest
+            platform: linux
+            arch: arm64
+            triplet: arm64-linux-dynamic
+
+          # macOS (x64 + arm64)
+          - os: macos-latest
+            platform: mac
+            arch: x64
+            triplet: x64-osx-dynamic
+          - os: macos-latest
+            platform: mac
+            arch: arm64
+            triplet: arm64-osx-dynamic
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # --------------------- Prereqs ---------------------
+      - name: Install prerequisites (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential git cmake ninja-build pkg-config \
+            curl zip unzip tar
+          # cross toolchain for arm64
+          if [ "${{ matrix.arch }}" = "arm64" ]; then
+            sudo apt-get install -y g++-aarch64-linux-gnu pkg-config-aarch64-linux-gnu
+          fi
+
+      - name: Install prerequisites (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew update || true
+          brew install cmake ninja || true
+
+      # Windows runners já têm MSVC/CMake/Ninja. Nada a fazer.
+
+      # --------------------- vcpkg -----------------------
+      - name: Clone/Update vcpkg
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p external
+          if [ ! -d external/vcpkg/.git ]; then
+            git clone --depth=1 https://github.com/microsoft/vcpkg.git external/vcpkg
+          else
+            git -C external/vcpkg pull --ff-only
+          fi
+
+      - name: Bootstrap vcpkg
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            cmd.exe /c "external\\vcpkg\\bootstrap-vcpkg.bat"
+          else
+            bash external/vcpkg/bootstrap-vcpkg.sh
+          fi
+
+      - name: Create overlay triplets (Linux/macOS)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p vcpkg-triplets
+          cat > vcpkg-triplets/x64-linux-dynamic.cmake <<'EOF'
+          set(VCPKG_TARGET_ARCHITECTURE x64)
+          set(VCPKG_LIBRARY_LINKAGE dynamic)
+          set(VCPKG_CRT_LINKAGE dynamic)
+          set(VCPKG_CMAKE_SYSTEM_NAME Linux)
+          EOF
+          cat > vcpkg-triplets/arm64-linux-dynamic.cmake <<'EOF'
+          set(VCPKG_TARGET_ARCHITECTURE arm64)
+          set(VCPKG_LIBRARY_LINKAGE dynamic)
+          set(VCPKG_CRT_LINKAGE dynamic)
+          set(VCPKG_CMAKE_SYSTEM_NAME Linux)
+          EOF
+          cat > vcpkg-triplets/x64-osx-dynamic.cmake <<'EOF'
+          set(VCPKG_TARGET_ARCHITECTURE x64)
+          set(VCPKG_OSX_ARCHITECTURES "x86_64")
+          set(VCPKG_LIBRARY_LINKAGE dynamic)
+          set(VCPKG_CRT_LINKAGE dynamic)
+          set(VCPKG_CMAKE_SYSTEM_NAME Darwin)
+          EOF
+          cat > vcpkg-triplets/arm64-osx-dynamic.cmake <<'EOF'
+          set(VCPKG_TARGET_ARCHITECTURE arm64)
+          set(VCPKG_OSX_ARCHITECTURES "arm64")
+          set(VCPKG_LIBRARY_LINKAGE dynamic)
+          set(VCPKG_CRT_LINKAGE dynamic)
+          set(VCPKG_CMAKE_SYSTEM_NAME Darwin)
+          EOF
+
+      - name: Compute vcpkg commit
+        id: vcpkg_rev
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "hash=$(git -C external/vcpkg rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache vcpkg artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            external/vcpkg/installed
+            external/vcpkg/packages
+          key: v1-${{ runner.os }}-${{ matrix.triplet }}-${{ steps.vcpkg_rev.outputs.hash }}
+
+      # --------------------- Build via vcpkg -------------
+      - name: vcpkg install (glfw3 & bgfx)
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXTRA=""
+          if [ "${{ runner.os }}" != "Windows" ]; then
+            EXTRA="--overlay-triplets=$(pwd)/vcpkg-triplets"
+          fi
+          external/vcpkg/vcpkg install glfw3:${{ matrix.triplet }} bgfx:${{ matrix.triplet }} $EXTRA --clean-after-build
+
+      # --------------------- Collect libs ----------------
+      - name: Prepare dist tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist-libs/win32/x64 dist-libs/linux/x64 dist-libs/linux/arm64 dist-libs/mac/x64 dist-libs/mac/arm64
+
+      - name: Copy shared libraries to dist
+        shell: bash
+        run: |
+          set -euo pipefail
+          TRIPLET="${{ matrix.triplet }}"
+          ROOT="external/vcpkg/installed/${TRIPLET}"
+          BIN="${ROOT}/bin"
+          LIB="${ROOT}/lib"
+
+          case "${{ matrix.platform }}" in
+            win32)
+              DST="dist-libs/win32/${{ matrix.arch }}"
+              mkdir -p "$DST"
+              cp -a ${BIN}/*glfw*.dll   "$DST" 2>/dev/null || true
+              cp -a ${BIN}/*bgfx*.dll   "$DST" 2>/dev/null || true
+              cp -a ${BIN}/*bimg*.dll   "$DST" 2>/dev/null || true
+              cp -a ${BIN}/*bx*.dll     "$DST" 2>/dev/null || true
+              ;;
+            linux)
+              DST="dist-libs/linux/${{ matrix.arch }}"
+              mkdir -p "$DST"
+              cp -a ${LIB}/libglfw*.so* "$DST" 2>/dev/null || true
+              cp -a ${LIB}/libbgfx*.so* "$DST" 2>/dev/null || true
+              cp -a ${LIB}/libbimg*.so* "$DST" 2>/dev/null || true
+              cp -a ${LIB}/libbx*.so*   "$DST" 2>/dev/null || true
+              ;;
+            mac)
+              DST="dist-libs/mac/${{ matrix.arch }}"
+              mkdir -p "$DST"
+              cp -a ${LIB}/libglfw*.dylib "$DST" 2>/dev/null || true
+              cp -a ${LIB}/libbgfx*.dylib "$DST" 2>/dev/null || true
+              cp -a ${LIB}/libbimg*.dylib "$DST" 2>/dev/null || true
+              cp -a ${LIB}/libbx*.dylib   "$DST" 2>/dev/null || true
+              ;;
+          esac
+
+          echo "Contents of $DST:"
+          ls -la "$DST" || true
+
+      - name: Upload artifact (per-target)
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.platform }}-${{ matrix.arch }}
+          path: dist-libs/${{ matrix.platform }}/${{ matrix.arch }}
+          if-no-files-found: error
+          retention-days: 7
+
+  gather:
+    name: bundle-all-artifacts
+    runs-on: ubuntu-latest
+    needs: [build]
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: dist-*
+          merge-multiple: true
+          path: .
+
+      - name: Show merged tree
+        run: |
+          set -euo pipefail
+          find dist-libs -maxdepth 3 -type f | sort || true
+
+      - name: Zip everything
+        run: |
+          set -euo pipefail
+          zip -r dist-libs-all.zip dist-libs
+
+      - name: Upload combined artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-libs-all
+          path: dist-libs-all.zip
+          retention-days: 7
