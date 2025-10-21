@@ -178,6 +178,37 @@ jobs:
           $ports   = @("glfw3:$triplet", "bgfx:$triplet")
           & .\external\vcpkg\vcpkg.exe install $ports --clean-after-build
 
+      - name: Build bgfx-shared-lib (Windows via bgfx.cmake)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          git clone --depth=1 https://github.com/bkaradzic/bgfx.cmake.git external\bgfx.cmake
+
+          $buildDir = "external\bgfx.cmake\build"
+          New-Item -ItemType Directory -Force -Path $buildDir | Out-Null
+
+          # Prefer Ninja if available; fallback to VS generator
+          $gen = (Get-Command ninja -ErrorAction SilentlyContinue) ? "Ninja" : "Visual Studio 17 2022"
+
+          cmake -S external\bgfx.cmake -B $buildDir -G "$gen" `
+            -DBGFX_BUILD_SHARED_LIBS=ON `
+            -DBGFX_BUILD_EXAMPLES=OFF `
+            -DBGFX_BUILD_TOOLS=OFF `
+            -DBGFX_CONFIG_MULTITHREADED=ON `
+            -DCMAKE_BUILD_TYPE=Release
+
+          if ($gen -eq "Ninja") {
+            cmake --build $buildDir --config Release --target bgfx-shared-lib -- -v
+          } else {
+            cmake --build $buildDir --config Release --target bgfx-shared-lib
+          }
+
+          # Drop outputs into dist
+          $dst = "dist-libs\win32\${{ matrix.arch }}"
+          New-Item -ItemType Directory -Force -Path $dst | Out-Null
+          Get-ChildItem -Recurse $buildDir -Filter "bgfx-shared-lib*.dll" | ForEach-Object { Copy-Item $_.FullName $dst -Force }
+          Get-ChildItem -Recurse $buildDir -Include "bgfx-shared-lib*.pdb","bgfx-shared-lib*.lib" | ForEach-Object { Copy-Item $_.FullName $dst -Force }
+
       - name: vcpkg install (glfw3 & bgfx) [Linux/macOS]
         if: runner.os != 'Windows'
         shell: bash
@@ -225,15 +256,19 @@ jobs:
           foreach ($Dir in $Dirs) {
             if (Test-Path $Dir) {
               Copy-Item (Join-Path $Dir "*glfw*.dll") $Dst -ErrorAction SilentlyContinue
-              Copy-Item (Join-Path $Dir "bgfx-shared-lib*.dll") $Dst -ErrorAction SilentlyContinue
-              Copy-Item (Join-Path $Dir "*bgfx*.dll") $Dst -ErrorAction SilentlyContinue
               Copy-Item (Join-Path $Dir "*bimg*.dll") $Dst -ErrorAction SilentlyContinue
               Copy-Item (Join-Path $Dir "*bx*.dll")   $Dst -ErrorAction SilentlyContinue
+              # Caso o port do vcpkg tenha gerado algum bgfx.dll, isso também traz
+              Copy-Item (Join-Path $Dir "*bgfx*.dll") $Dst -ErrorAction SilentlyContinue
             }
           }
 
-          Write-Host "=== Dist contents (Windows) ==="
-          Get-ChildItem $Dst | Format-Table -AutoSize
+          # Verificação útil: falha se o bgfx não existir
+          if (-not (Get-ChildItem $Dst -Filter "bgfx*.dll" -ErrorAction SilentlyContinue)) {
+            Write-Host "Conteúdo do dist:"
+            Get-ChildItem $Dst | Format-Table -AutoSize
+            Throw "bgfx DLL not found. The step 'Build bgfx-shared-lib' should have produced it."
+          }
 
       - name: Copy shared libraries to dist [Linux/macOS]
         if: runner.os != 'Windows'
