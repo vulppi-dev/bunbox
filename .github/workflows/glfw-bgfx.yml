@@ -182,12 +182,15 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          git clone --depth=1 https://github.com/bkaradzic/bgfx.cmake.git external\bgfx.cmake
+          git config --global core.longpaths true
+          git clone --depth=1 --recurse-submodules https://github.com/bkaradzic/bgfx.cmake.git external\bgfx.cmake
+          # Garante submódulos com clone raso
+          git -C external\bgfx.cmake submodule update --init --recursive --depth 1
 
           $buildDir = "external\bgfx.cmake\build"
           New-Item -ItemType Directory -Force -Path $buildDir | Out-Null
 
-          # Prefer Ninja if available; fallback to VS generator
+          # Mantém sua lógica atual de gerador
           $gen = (Get-Command ninja -ErrorAction SilentlyContinue) ? "Ninja" : "Visual Studio 17 2022"
 
           cmake -S external\bgfx.cmake -B $buildDir -G "$gen" `
@@ -203,7 +206,6 @@ jobs:
             cmake --build $buildDir --config Release --target bgfx-shared-lib
           }
 
-          # Drop outputs into dist
           $dst = "dist-libs\win32\${{ matrix.arch }}"
           New-Item -ItemType Directory -Force -Path $dst | Out-Null
           Get-ChildItem -Recurse $buildDir -Filter "bgfx-shared-lib*.dll" | ForEach-Object { Copy-Item $_.FullName $dst -Force }
