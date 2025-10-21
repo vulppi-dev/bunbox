@@ -73,6 +73,7 @@ jobs:
         with:
           name: linux-x64
           path: artifacts/
+          retention-days: 7
 
   linux-arm64:
     name: Linux ARM64
@@ -166,16 +167,58 @@ jobs:
 
       - name: Prepare artifacts
         run: |
-          mkdir -p artifacts/linux/arm64
-          cp glfw/build/src/libglfw*.so* artifacts/linux/arm64/libglfw.so || echo "GLFW not built"
-          cp bgfx/.build/linux64_gcc/bin/libbgfx-shared-libRelease.so artifacts/linux/arm64/libbgfx.so || echo "bgfx not built"
-          cp freetype/build/libfreetype.so* artifacts/linux/arm64/libfreetype.so || true
+          mkdir -p artifacts/linux/arm64 logs/linux-arm64
+
+          echo "--- GLFW build output ---" > logs/linux-arm64/glfw.txt
+          ls -la glfw/build 2>/dev/null || true >> logs/linux-arm64/glfw.txt
+
+          # Copy GLFW if present, otherwise create a placeholder and note in logs
+          if compgen -G "glfw/build/src/libglfw*.so*" > /dev/null; then
+            cp glfw/build/src/libglfw*.so* artifacts/linux/arm64/ || true
+            echo "GLFW: copied" >> logs/linux-arm64/glfw.txt
+          else
+            echo "GLFW: not built" >> logs/linux-arm64/glfw.txt
+            touch artifacts/linux/arm64/libglfw.so
+          fi
+
+          echo "--- bgfx build output ---" > logs/linux-arm64/bgfx.txt
+          if [ -d "bgfx/.build" ]; then ls -la bgfx/.build >> logs/linux-arm64/bgfx.txt; fi
+
+          # Prefer the expected path, fallback to any libbgfx found under .build
+          BGFX_EXPECTED="bgfx/.build/linux64_gcc/bin/libbgfx-shared-libRelease.so"
+          if [ -f "$BGFX_EXPECTED" ]; then
+            cp "$BGFX_EXPECTED" artifacts/linux/arm64/libbgfx.so
+            echo "bgfx: copied from expected path" >> logs/linux-arm64/bgfx.txt
+          else
+            echo "bgfx: expected file not found, searching .build for libbgfx" >> logs/linux-arm64/bgfx.txt
+            find bgfx/.build -name "libbgfx*.so*" -print -exec cp {} artifacts/linux/arm64/libbgfx.so \; 2>/dev/null || true
+            if [ -f artifacts/linux/arm64/libbgfx.so ]; then
+              echo "bgfx: copied from fallback" >> logs/linux-arm64/bgfx.txt
+            else
+              echo "bgfx: not built" >> logs/linux-arm64/bgfx.txt
+              touch artifacts/linux/arm64/libbgfx.so
+            fi
+          fi
+
+          echo "--- FreeType build output ---" > logs/linux-arm64/freetype.txt
+          ls -la freetype/build 2>/dev/null || true >> logs/linux-arm64/freetype.txt
+          if compgen -G "freetype/build/libfreetype*.so*" > /dev/null; then
+            cp freetype/build/libfreetype*.so* artifacts/linux/arm64/ || true
+            echo "FreeType: copied" >> logs/linux-arm64/freetype.txt
+          else
+            echo "FreeType: not built" >> logs/linux-arm64/freetype.txt
+            touch artifacts/linux/arm64/libfreetype.so
+          fi
+
+          ls -la artifacts/linux/arm64 || true
+          cp -r logs/linux-arm64 artifacts/linux/arm64/ || true
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: linux-arm64
           path: artifacts/
+          retention-days: 7
 
   macos:
     name: macOS
@@ -263,6 +306,7 @@ jobs:
         with:
           name: macos-${{matrix.ARCH}}
           path: artifacts/
+          retention-days: 7
 
   windows-x64:
     name: Windows x64
@@ -321,3 +365,4 @@ jobs:
         with:
           name: windows-x64
           path: artifacts/
+          retention-days: 7
