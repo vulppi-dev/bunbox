@@ -122,7 +122,12 @@ export class Vector4 extends AbstractVector<4> {
 
   /** Dot product. */
   override dot(vector: this): number {
-    return this.x * vector.x + this.y * vector.y + this.z * vector.z + this.w * vector.w;
+    return (
+      this.x * vector.x +
+      this.y * vector.y +
+      this.z * vector.z +
+      this.w * vector.w
+    );
   }
 
   /** Set all components. */

@@ -1,3 +1,4 @@
+import { wgsl_to_msl_bin, wgsl_to_spirv_bin } from '@bunbox/naga';
 import {
   cstr,
   SDL,
@@ -5,32 +6,49 @@ import {
   SDL_FColor,
   SDL_GPUBlendFactor,
   SDL_GPUBlendOp,
+  SDL_GPUBlitInfo,
+  SDL_GPUBlitRegion,
+  SDL_GPUBufferBinding,
+  SDL_GPUBufferCreateInfo,
+  SDL_GPUBufferRegion,
+  SDL_GPUBufferUsageFlags,
   SDL_GPUColorTargetDescription,
   SDL_GPUColorTargetInfo,
   SDL_GPUCompareOp,
   SDL_GPUCullMode,
+  SDL_GPUDepthStencilState,
   SDL_GPUFillMode,
+  SDL_GPUFilter,
   SDL_GPUFrontFace,
   SDL_GPUGraphicsPipelineCreateInfo,
+  SDL_GPUGraphicsPipelineTargetInfo,
+  SDL_GPUIndexElementSize,
   SDL_GPULoadOp,
+  SDL_GPUMultisampleState,
   SDL_GPUPrimitiveType,
+  SDL_GPURasterizerState,
   SDL_GPUSampleCount,
   SDL_GPUShaderCreateInfo,
   SDL_GPUShaderFormat,
   SDL_GPUShaderStage,
   SDL_GPUStencilOp,
+  SDL_GPUStencilOpState,
   SDL_GPUStoreOp,
   SDL_GPUTextureCreateInfo,
+  SDL_GPUTextureFormat,
   SDL_GPUTextureType,
   SDL_GPUTextureUsageFlags,
+  SDL_GPUTransferBufferCreateInfo,
+  SDL_GPUTransferBufferLocation,
+  SDL_GPUTransferBufferUsage,
   SDL_GPUVertexAttribute,
   SDL_GPUVertexBufferDescription,
   SDL_GPUVertexElementFormat,
   SDL_GPUVertexInputRate,
+  SDL_GPUVertexInputState,
   SDL_InitFlags,
   SDL_WindowFlags,
 } from '@bunbox/sdl3';
-import { wgsl_to_msl_bin, wgsl_to_spirv_bin } from '@bunbox/naga';
 import { type Pointer } from 'bun:ffi';
 import { type FunctionInfo, ResourceType, WgslReflect } from 'wgsl_reflect';
 import {
@@ -41,6 +59,10 @@ import {
   CULL_MODE_MAP,
   FILL_MODE_MAP,
   FRONT_FACE_MAP,
+  parseSampleCount,
+  parseTextureFormat,
+  parseTextureType,
+  parseTextureUsage,
   POINTER_KEY_DEVICE,
   PRIMITIVE_TYPE_MAP,
   STENCIL_OPERATION_MAP,
@@ -55,12 +77,6 @@ import { POINTERS_MAP } from '../stores/global';
 import type { WindowsFeature, WindowsFeaturesOptions } from '../types';
 import { pointerToBuffer } from '../utils/buffer';
 import { Node } from './Node';
-import {
-  parseSampleCount,
-  parseTextureFormat,
-  parseTextureType,
-  parseTextureUsage,
-} from './sdl-helper';
 
 export type WindowOptions = {
   title: string;
@@ -124,8 +140,14 @@ export class Window extends Viewport {
   #shaderCache: Map<string, Pointer> = new Map();
   #reflectionCache: Map<string, WgslReflect> = new Map();
 
+  // Geometry buffer cache
+  #vertexBufferCache: Map<string, Pointer> = new Map();
+  #indexBufferCache: Map<string, Pointer> = new Map();
+
   static #getFeaturesFlags(features: WindowsFeaturesOptions): number {
-    let flags = USING_VULKAN ? SDL_WindowFlags.SDL_WINDOW_VULKAN : SDL_WindowFlags.SDL_WINDOW_METAL;
+    let flags = USING_VULKAN
+      ? SDL_WindowFlags.SDL_WINDOW_VULKAN
+      : SDL_WindowFlags.SDL_WINDOW_METAL;
     for (const [key, value] of Object.entries(features)) {
       flags |= value ? (WINDOW_FEATURES_MAP[key as WindowsFeature] ?? 0) : 0;
     }
@@ -175,7 +197,11 @@ export class Window extends Viewport {
       throw new Error(`SDL: ${SDL.SDL_GetError()}`);
     }
 
-    SDL.SDL_GetWindowSizeInPixels(this.#winPtr, this.#widthPtr, this.#heightPtr);
+    SDL.SDL_GetWindowSizeInPixels(
+      this.#winPtr,
+      this.#widthPtr,
+      this.#heightPtr,
+    );
     SDL.SDL_GetWindowPosition(this.#winPtr, this.#xPtr, this.#yPtr);
     this.width = this.#widthPtr[0]!;
     this.height = this.#heightPtr[0]!;
@@ -184,7 +210,20 @@ export class Window extends Viewport {
     this.unmarkAsDirty();
 
     this.#processDisplayMode();
-    this.#swapFormat = SDL.SDL_GetGPUSwapchainTextureFormat(this.#devicePtr, this.#winPtr);
+    this.#swapFormat = SDL.SDL_GetGPUSwapchainTextureFormat(
+      this.#devicePtr,
+      this.#winPtr,
+    );
+
+    // If swapchain format is not available yet, use a common default
+    if (this.#swapFormat === 0) {
+      // Use BGRA8_UNORM (without SRGB) which is more widely supported
+      this.#swapFormat =
+        SDL_GPUTextureFormat.SDL_GPU_TEXTUREFORMAT_B8G8R8A8_UNORM;
+      console.warn(
+        `[Window] Swapchain format not available yet, using default: ${this.#swapFormat}`,
+      );
+    }
 
     const unsubscribes = [
       this.subscribe('add-child', () => {
@@ -224,6 +263,16 @@ export class Window extends Viewport {
       }
       this.#shaderCache.clear();
       this.#reflectionCache.clear();
+
+      for (const buffer of this.#vertexBufferCache.values()) {
+        SDL.SDL_ReleaseGPUBuffer(this.#devicePtr, buffer);
+      }
+      this.#vertexBufferCache.clear();
+
+      for (const buffer of this.#indexBufferCache.values()) {
+        SDL.SDL_ReleaseGPUBuffer(this.#devicePtr, buffer);
+      }
+      this.#indexBufferCache.clear();
 
       for (const texture of this.#textureMap.values()) {
         SDL.SDL_ReleaseGPUTexture(this.#devicePtr, texture);
@@ -280,7 +329,10 @@ export class Window extends Viewport {
   }
 
   getCurrentDisplaySize() {
-    return new Vector2(this.#displayMode.properties.w, this.#displayMode.properties.h);
+    return new Vector2(
+      this.#displayMode.properties.w,
+      this.#displayMode.properties.h,
+    );
   }
 
   override _process(deltaTime: number): void {
@@ -292,7 +344,11 @@ export class Window extends Viewport {
       this.#xPtr[0] = this.x;
       this.#yPtr[0] = this.y;
 
-      SDL.SDL_SetWindowSize(this.#winPtr, this.#widthPtr[0], this.#heightPtr[0]);
+      SDL.SDL_SetWindowSize(
+        this.#winPtr,
+        this.#widthPtr[0],
+        this.#heightPtr[0],
+      );
       SDL.SDL_SetWindowPosition(this.#winPtr, this.#xPtr[0], this.#yPtr[0]);
 
       this.unmarkAsDirty();
@@ -413,11 +469,27 @@ export class Window extends Viewport {
 
     try {
       if (BACKGROUND_RENDERING === 'vulkan') {
-        fragmentData = wgsl_to_spirv_bin(material.shader, 'fragment', fragmentEntry.name);
-        vertexData = wgsl_to_spirv_bin(material.shader, 'vertex', vertexEntry.name);
+        fragmentData = wgsl_to_spirv_bin(
+          material.shader,
+          'fragment',
+          fragmentEntry.name,
+        );
+        vertexData = wgsl_to_spirv_bin(
+          material.shader,
+          'vertex',
+          vertexEntry.name,
+        );
       } else {
-        fragmentData = wgsl_to_msl_bin(material.shader, 'fragment', fragmentEntry.name);
-        vertexData = wgsl_to_msl_bin(material.shader, 'vertex', vertexEntry.name);
+        fragmentData = wgsl_to_msl_bin(
+          material.shader,
+          'fragment',
+          fragmentEntry.name,
+        );
+        vertexData = wgsl_to_msl_bin(
+          material.shader,
+          'vertex',
+          vertexEntry.name,
+        );
       }
     } catch (err) {
       console.error(`Failed to compile shader: ${err}`);
@@ -458,7 +530,8 @@ export class Window extends Viewport {
         // Check if it's a storage texture
         if (
           typeName.includes('storage') &&
-          (typeName.includes('texture') || typeName.startsWith('texture_storage'))
+          (typeName.includes('texture') ||
+            typeName.startsWith('texture_storage'))
         ) {
           storageTextures++;
           continue;
@@ -504,14 +577,21 @@ export class Window extends Viewport {
     vertexShaderInfo.properties.code_size = BigInt(vertexData.byteLength);
     vertexShaderInfo.properties.entrypoint = vertexEntry.name;
     vertexShaderInfo.properties.format = shaderFormat;
-    vertexShaderInfo.properties.stage = SDL_GPUShaderStage.SDL_GPU_SHADERSTAGE_VERTEX;
+    vertexShaderInfo.properties.stage =
+      SDL_GPUShaderStage.SDL_GPU_SHADERSTAGE_VERTEX;
     vertexShaderInfo.properties.num_samplers = vertexResources.samplers;
-    vertexShaderInfo.properties.num_storage_textures = vertexResources.storageTextures;
-    vertexShaderInfo.properties.num_storage_buffers = vertexResources.storageBuffers;
-    vertexShaderInfo.properties.num_uniform_buffers = vertexResources.uniformBuffers;
+    vertexShaderInfo.properties.num_storage_textures =
+      vertexResources.storageTextures;
+    vertexShaderInfo.properties.num_storage_buffers =
+      vertexResources.storageBuffers;
+    vertexShaderInfo.properties.num_uniform_buffers =
+      vertexResources.uniformBuffers;
     vertexShaderInfo.properties.props = 0n;
 
-    const vertexShader = SDL.SDL_CreateGPUShader(this.#devicePtr, vertexShaderInfo.bunPointer);
+    const vertexShader = SDL.SDL_CreateGPUShader(
+      this.#devicePtr,
+      vertexShaderInfo.bunPointer,
+    );
     if (!vertexShader) {
       console.error(`Failed to create vertex shader: ${SDL.SDL_GetError()}`);
       return null;
@@ -523,14 +603,21 @@ export class Window extends Viewport {
     fragmentShaderInfo.properties.code_size = BigInt(fragmentData.byteLength);
     fragmentShaderInfo.properties.entrypoint = fragmentEntry.name;
     fragmentShaderInfo.properties.format = shaderFormat;
-    fragmentShaderInfo.properties.stage = SDL_GPUShaderStage.SDL_GPU_SHADERSTAGE_FRAGMENT;
+    fragmentShaderInfo.properties.stage =
+      SDL_GPUShaderStage.SDL_GPU_SHADERSTAGE_FRAGMENT;
     fragmentShaderInfo.properties.num_samplers = fragmentResources.samplers;
-    fragmentShaderInfo.properties.num_storage_textures = fragmentResources.storageTextures;
-    fragmentShaderInfo.properties.num_storage_buffers = fragmentResources.storageBuffers;
-    fragmentShaderInfo.properties.num_uniform_buffers = fragmentResources.uniformBuffers;
+    fragmentShaderInfo.properties.num_storage_textures =
+      fragmentResources.storageTextures;
+    fragmentShaderInfo.properties.num_storage_buffers =
+      fragmentResources.storageBuffers;
+    fragmentShaderInfo.properties.num_uniform_buffers =
+      fragmentResources.uniformBuffers;
     fragmentShaderInfo.properties.props = 0n;
 
-    const fragmentShader = SDL.SDL_CreateGPUShader(this.#devicePtr, fragmentShaderInfo.bunPointer);
+    const fragmentShader = SDL.SDL_CreateGPUShader(
+      this.#devicePtr,
+      fragmentShaderInfo.bunPointer,
+    );
     if (!fragmentShader) {
       console.error(`Failed to create fragment shader: ${SDL.SDL_GetError()}`);
       SDL.SDL_ReleaseGPUShader(this.#devicePtr, vertexShader);
@@ -542,7 +629,8 @@ export class Window extends Viewport {
     const vertexInputs = vertexEntry.inputs || [];
 
     for (const input of vertexInputs) {
-      if (input.location === undefined || typeof input.location === 'string') continue;
+      if (input.location === undefined || typeof input.location === 'string')
+        continue;
 
       const attr = new SDL_GPUVertexAttribute();
       attr.properties.location = input.location;
@@ -551,14 +639,24 @@ export class Window extends Viewport {
 
       // Map WGSL types to SDL vertex formats
       const formatMap: Record<string, number> = {
-        'vec2<f32>': SDL_GPUVertexElementFormat.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2,
-        'vec3<f32>': SDL_GPUVertexElementFormat.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3,
-        'vec4<f32>': SDL_GPUVertexElementFormat.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
+        'vec2<f32>':
+          SDL_GPUVertexElementFormat.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2,
+        'vec3<f32>':
+          SDL_GPUVertexElementFormat.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3,
+        'vec4<f32>':
+          SDL_GPUVertexElementFormat.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
         f32: SDL_GPUVertexElementFormat.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT,
-        'vec2<i32>': SDL_GPUVertexElementFormat.SDL_GPU_VERTEXELEMENTFORMAT_INT2,
-        'vec3<i32>': SDL_GPUVertexElementFormat.SDL_GPU_VERTEXELEMENTFORMAT_INT3,
-        'vec4<i32>': SDL_GPUVertexElementFormat.SDL_GPU_VERTEXELEMENTFORMAT_INT4,
+        'vec2<i32>':
+          SDL_GPUVertexElementFormat.SDL_GPU_VERTEXELEMENTFORMAT_INT2,
+        'vec3<i32>':
+          SDL_GPUVertexElementFormat.SDL_GPU_VERTEXELEMENTFORMAT_INT3,
+        'vec4<i32>':
+          SDL_GPUVertexElementFormat.SDL_GPU_VERTEXELEMENTFORMAT_INT4,
         i32: SDL_GPUVertexElementFormat.SDL_GPU_VERTEXELEMENTFORMAT_INT,
+        // Fallback for wgsl_reflect shorthand types (without type parameters)
+        vec2: SDL_GPUVertexElementFormat.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT2,
+        vec3: SDL_GPUVertexElementFormat.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT3,
+        vec4: SDL_GPUVertexElementFormat.SDL_GPU_VERTEXELEMENTFORMAT_FLOAT4,
       };
 
       const format = formatMap[input.type?.name || ''];
@@ -568,89 +666,121 @@ export class Window extends Viewport {
       }
 
       attr.properties.format = format;
+      // offset will be calculated after we know all attribute sizes
       vertexAttributes.push(attr);
+    }
+
+    // Calculate offsets and stride (pitch) for interleaved vertex attributes
+    // Assume 4 bytes per component (f32/i32)
+    const getComponentCount = (typeName?: string) => {
+      if (!typeName) return 0;
+      if (typeName.includes('vec4')) return 4;
+      if (typeName.includes('vec3')) return 3;
+      if (typeName.includes('vec2')) return 2;
+      if (typeName.includes('f32') || typeName === 'f32') return 1;
+      if (typeName.includes('i32') || typeName === 'i32') return 1;
+      return 0;
+    };
+
+    let strideBytes = 0;
+    for (let i = 0; i < vertexAttributes.length; i++) {
+      const attr = vertexAttributes[i]!;
+      const input = vertexInputs[i]!;
+      const comps = getComponentCount(input.type?.name);
+      attr.properties.offset = strideBytes;
+      attr.properties.buffer_slot = 0;
+      // Each component is 4 bytes
+      strideBytes += comps * 4;
     }
 
     // Create vertex buffer description (single interleaved buffer)
     const vertexBufferDesc = new SDL_GPUVertexBufferDescription();
     vertexBufferDesc.properties.slot = 0;
-    vertexBufferDesc.properties.pitch = 0; // Calculated from attributes
-    vertexBufferDesc.properties.input_rate = SDL_GPUVertexInputRate.SDL_GPU_VERTEXINPUTRATE_VERTEX;
+    vertexBufferDesc.properties.pitch = strideBytes; // Calculated from attributes
+    vertexBufferDesc.properties.input_rate =
+      SDL_GPUVertexInputRate.SDL_GPU_VERTEXINPUTRATE_VERTEX;
     vertexBufferDesc.properties.instance_step_rate = 0;
 
     // Step 7: Configure color target description
     const rasterizer = material.rasterizer;
     const blend = rasterizer.blend;
 
+    const colorTargetDescs: SDL_GPUColorTargetDescription[] = [];
     const colorTargetDesc = new SDL_GPUColorTargetDescription();
-    colorTargetDesc.properties.format = this.#swapFormat;
 
-    // Configure blend state from material
-    colorTargetDesc.properties.blend_state.properties.enable_blend = blend.enabled;
+    colorTargetDesc.properties.format = parseTextureFormat('rgba8unorm');
     colorTargetDesc.properties.blend_state.properties.src_color_blendfactor =
-      BLEND_FACTOR_MAP[blend.color.srcFactor] ?? SDL_GPUBlendFactor.SDL_GPU_BLENDFACTOR_ONE;
+      BLEND_FACTOR_MAP[blend.color.srcFactor] ??
+      SDL_GPUBlendFactor.SDL_GPU_BLENDFACTOR_ONE;
     colorTargetDesc.properties.blend_state.properties.dst_color_blendfactor =
-      BLEND_FACTOR_MAP[blend.color.dstFactor] ?? SDL_GPUBlendFactor.SDL_GPU_BLENDFACTOR_ZERO;
-    colorTargetDesc.properties.blend_state.properties.color_blend_op =
-      BLEND_OPERATION_MAP[blend.color.operation] ?? SDL_GPUBlendOp.SDL_GPU_BLENDOP_ADD;
+      BLEND_FACTOR_MAP[blend.color.dstFactor] ??
+      SDL_GPUBlendFactor.SDL_GPU_BLENDFACTOR_ZERO;
     colorTargetDesc.properties.blend_state.properties.src_alpha_blendfactor =
-      BLEND_FACTOR_MAP[blend.alpha.srcFactor] ?? SDL_GPUBlendFactor.SDL_GPU_BLENDFACTOR_ONE;
+      BLEND_FACTOR_MAP[blend.alpha.srcFactor] ??
+      SDL_GPUBlendFactor.SDL_GPU_BLENDFACTOR_ONE;
     colorTargetDesc.properties.blend_state.properties.dst_alpha_blendfactor =
-      BLEND_FACTOR_MAP[blend.alpha.dstFactor] ?? SDL_GPUBlendFactor.SDL_GPU_BLENDFACTOR_ZERO;
+      BLEND_FACTOR_MAP[blend.alpha.dstFactor] ??
+      SDL_GPUBlendFactor.SDL_GPU_BLENDFACTOR_ZERO;
+    colorTargetDesc.properties.blend_state.properties.color_blend_op =
+      BLEND_OPERATION_MAP[blend.color.operation] ??
+      SDL_GPUBlendOp.SDL_GPU_BLENDOP_ADD;
     colorTargetDesc.properties.blend_state.properties.alpha_blend_op =
-      BLEND_OPERATION_MAP[blend.alpha.operation] ?? SDL_GPUBlendOp.SDL_GPU_BLENDOP_ADD;
-    colorTargetDesc.properties.blend_state.properties.color_write_mask = blend.writeMask.get();
+      BLEND_OPERATION_MAP[blend.alpha.operation] ??
+      SDL_GPUBlendOp.SDL_GPU_BLENDOP_ADD;
+    colorTargetDesc.properties.blend_state.properties.color_write_mask =
+      blend.writeMask.get();
+    colorTargetDesc.properties.blend_state.properties.enable_blend =
+      blend.enabled;
     colorTargetDesc.properties.blend_state.properties.enable_color_write_mask = true;
-    colorTargetDesc.properties.blend_state.properties.padding1 = 0;
-    colorTargetDesc.properties.blend_state.properties.padding2 = 0;
+
+    colorTargetDescs.push(colorTargetDesc);
 
     // Step 8: Map material primitive type to SDL primitive type
     const primitiveType =
       PRIMITIVE_TYPE_MAP[material.primitive] ??
       SDL_GPUPrimitiveType.SDL_GPU_PRIMITIVETYPE_TRIANGLELIST;
 
-    // Step 9: Create graphics pipeline
-    const pipelineInfo = new SDL_GPUGraphicsPipelineCreateInfo();
-    pipelineInfo.properties.vertex_shader = BigInt(vertexShader);
-    pipelineInfo.properties.fragment_shader = BigInt(fragmentShader);
-    pipelineInfo.properties.primitive_type = primitiveType;
-
-    // Vertex input state (if we have vertex attributes)
+    // Vertex input state
+    const vertexInputState = new SDL_GPUVertexInputState();
     if (vertexAttributes.length > 0) {
-      pipelineInfo.properties.vertex_input_state.properties.vertex_buffer_descriptions = BigInt(
-        vertexBufferDesc.bunPointer,
+      vertexInputState.properties.vertex_buffer_descriptions =
+        new BigUint64Array([BigInt(vertexBufferDesc.bunPointer)]);
+      vertexInputState.properties.num_vertex_buffers = 1;
+      vertexInputState.properties.vertex_attributes = new BigUint64Array(
+        vertexAttributes.map((attr) => BigInt(attr.bunPointer)),
       );
-      pipelineInfo.properties.vertex_input_state.properties.num_vertex_buffers = 1;
-      pipelineInfo.properties.vertex_input_state.properties.vertex_attributes = BigInt(
-        vertexAttributes[0]!.bunPointer,
-      );
-      pipelineInfo.properties.vertex_input_state.properties.num_vertex_attributes =
+      vertexInputState.properties.num_vertex_attributes =
         vertexAttributes.length;
     } else {
-      pipelineInfo.properties.vertex_input_state.properties.num_vertex_buffers = 0;
-      pipelineInfo.properties.vertex_input_state.properties.num_vertex_attributes = 0;
+      vertexInputState.properties.num_vertex_buffers = 0;
+      vertexInputState.properties.num_vertex_attributes = 0;
     }
 
     // Rasterizer state
-    pipelineInfo.properties.rasterizer_state.properties.fill_mode =
-      FILL_MODE_MAP[rasterizer.fillMode] ?? SDL_GPUFillMode.SDL_GPU_FILLMODE_FILL;
-    pipelineInfo.properties.rasterizer_state.properties.cull_mode =
-      CULL_MODE_MAP[rasterizer.cull] ?? SDL_GPUCullMode.SDL_GPU_CULLMODE_NONE;
-    pipelineInfo.properties.rasterizer_state.properties.front_face =
-      FRONT_FACE_MAP[rasterizer.frontFace] ?? SDL_GPUFrontFace.SDL_GPU_FRONTFACE_CLOCKWISE;
-    pipelineInfo.properties.rasterizer_state.properties.depth_bias_constant_factor =
-      rasterizer.depthStencil.depthBias;
-    pipelineInfo.properties.rasterizer_state.properties.depth_bias_clamp =
-      rasterizer.depthStencil.depthBiasClamp;
-    pipelineInfo.properties.rasterizer_state.properties.depth_bias_slope_factor =
-      rasterizer.depthStencil.depthBiasSlopeScale;
-    pipelineInfo.properties.rasterizer_state.properties.enable_depth_bias =
-      rasterizer.depthStencil.depthBias !== 0 || rasterizer.depthStencil.depthBiasSlopeScale !== 0;
-    pipelineInfo.properties.rasterizer_state.properties.enable_depth_clip = false;
-    pipelineInfo.properties.rasterizer_state.properties.padding1 = 0;
-    pipelineInfo.properties.rasterizer_state.properties.padding2 = 0;
+    const rasterizerState = new SDL_GPURasterizerState();
 
-    // Multisample state from material
+    rasterizerState.properties.fill_mode =
+      FILL_MODE_MAP[rasterizer.fillMode] ??
+      SDL_GPUFillMode.SDL_GPU_FILLMODE_FILL;
+    rasterizerState.properties.cull_mode =
+      CULL_MODE_MAP[rasterizer.cull] ?? SDL_GPUCullMode.SDL_GPU_CULLMODE_NONE;
+    rasterizerState.properties.front_face =
+      FRONT_FACE_MAP[rasterizer.frontFace] ??
+      SDL_GPUFrontFace.SDL_GPU_FRONTFACE_CLOCKWISE;
+    rasterizerState.properties.depth_bias_constant_factor =
+      rasterizer.depthStencil.depthBias;
+    rasterizerState.properties.depth_bias_clamp =
+      rasterizer.depthStencil.depthBiasClamp;
+    rasterizerState.properties.depth_bias_slope_factor =
+      rasterizer.depthStencil.depthBiasSlopeScale;
+    rasterizerState.properties.enable_depth_bias =
+      rasterizer.depthStencil.depthBias !== 0 ||
+      rasterizer.depthStencil.depthBiasSlopeScale !== 0;
+    rasterizerState.properties.enable_depth_clip = false;
+    rasterizerState.properties.padding1 = 0;
+    rasterizerState.properties.padding2 = 0;
+
+    // Multisample state
     const multisample = rasterizer.multisample;
     const sampleCountMap: Record<number, number> = {
       1: SDL_GPUSampleCount.SDL_GPU_SAMPLECOUNT_1,
@@ -659,47 +789,57 @@ export class Window extends Viewport {
       8: SDL_GPUSampleCount.SDL_GPU_SAMPLECOUNT_8,
     };
 
-    pipelineInfo.properties.multisample_state.properties.sample_count =
-      sampleCountMap[multisample.count] ?? SDL_GPUSampleCount.SDL_GPU_SAMPLECOUNT_1;
-    pipelineInfo.properties.multisample_state.properties.sample_mask = multisample.mask.get();
-    pipelineInfo.properties.multisample_state.properties.enable_mask = true;
-    pipelineInfo.properties.multisample_state.properties.enable_alpha_to_coverage =
+    const multisampleState = new SDL_GPUMultisampleState();
+
+    multisampleState.properties.sample_count =
+      sampleCountMap[multisample.count] ??
+      SDL_GPUSampleCount.SDL_GPU_SAMPLECOUNT_1;
+    multisampleState.properties.sample_mask = multisample.mask.get();
+    multisampleState.properties.enable_mask = true;
+    multisampleState.properties.enable_alpha_to_coverage =
       multisample.alphaToCoverageEnabled;
-    pipelineInfo.properties.multisample_state.properties.padding2 = 0;
-    pipelineInfo.properties.multisample_state.properties.padding3 = 0;
+    multisampleState.properties.padding2 = 0;
+    multisampleState.properties.padding3 = 0;
 
-    // Depth/stencil state from material
+    // Depth/stencil state
     const depthStencil = rasterizer.depthStencil;
+    const depthStencilState = new SDL_GPUDepthStencilState();
 
-    pipelineInfo.properties.depth_stencil_state.properties.compare_op =
-      COMPARE_FUNCTION_MAP[depthStencil.depthCompare] ?? SDL_GPUCompareOp.SDL_GPU_COMPAREOP_ALWAYS;
-    pipelineInfo.properties.depth_stencil_state.properties.back_stencil_state.properties.compare_op =
+    depthStencilState.properties.compare_op =
+      COMPARE_FUNCTION_MAP[depthStencil.depthCompare] ??
+      SDL_GPUCompareOp.SDL_GPU_COMPAREOP_ALWAYS;
+    const backStencilState = new SDL_GPUStencilOpState();
+    backStencilState.properties.compare_op =
       COMPARE_FUNCTION_MAP[depthStencil.stencilBack.compare] ??
       SDL_GPUCompareOp.SDL_GPU_COMPAREOP_ALWAYS;
-    pipelineInfo.properties.depth_stencil_state.properties.back_stencil_state.properties.fail_op =
+    backStencilState.properties.fail_op =
       STENCIL_OPERATION_MAP[depthStencil.stencilBack.failOp] ??
       SDL_GPUStencilOp.SDL_GPU_STENCILOP_KEEP;
-    pipelineInfo.properties.depth_stencil_state.properties.back_stencil_state.properties.pass_op =
+    backStencilState.properties.pass_op =
       STENCIL_OPERATION_MAP[depthStencil.stencilBack.passOp] ??
       SDL_GPUStencilOp.SDL_GPU_STENCILOP_KEEP;
-    pipelineInfo.properties.depth_stencil_state.properties.back_stencil_state.properties.depth_fail_op =
+    backStencilState.properties.depth_fail_op =
       STENCIL_OPERATION_MAP[depthStencil.stencilBack.depthFailOp] ??
       SDL_GPUStencilOp.SDL_GPU_STENCILOP_KEEP;
-    pipelineInfo.properties.depth_stencil_state.properties.front_stencil_state.properties.compare_op =
+    depthStencilState.properties.back_stencil_state = backStencilState;
+
+    const frontStencilState = new SDL_GPUStencilOpState();
+    frontStencilState.properties.compare_op =
       COMPARE_FUNCTION_MAP[depthStencil.stencilFront.compare] ??
       SDL_GPUCompareOp.SDL_GPU_COMPAREOP_ALWAYS;
-    pipelineInfo.properties.depth_stencil_state.properties.front_stencil_state.properties.fail_op =
+    frontStencilState.properties.fail_op =
       STENCIL_OPERATION_MAP[depthStencil.stencilFront.failOp] ??
       SDL_GPUStencilOp.SDL_GPU_STENCILOP_KEEP;
-    pipelineInfo.properties.depth_stencil_state.properties.front_stencil_state.properties.pass_op =
+    frontStencilState.properties.pass_op =
       STENCIL_OPERATION_MAP[depthStencil.stencilFront.passOp] ??
       SDL_GPUStencilOp.SDL_GPU_STENCILOP_KEEP;
-    pipelineInfo.properties.depth_stencil_state.properties.front_stencil_state.properties.depth_fail_op =
+    frontStencilState.properties.depth_fail_op =
       STENCIL_OPERATION_MAP[depthStencil.stencilFront.depthFailOp] ??
       SDL_GPUStencilOp.SDL_GPU_STENCILOP_KEEP;
-    pipelineInfo.properties.depth_stencil_state.properties.enable_depth_test =
+    depthStencilState.properties.front_stencil_state = frontStencilState;
+    depthStencilState.properties.enable_depth_test =
       depthStencil.depthWriteEnabled;
-    pipelineInfo.properties.depth_stencil_state.properties.enable_depth_write =
+    depthStencilState.properties.enable_depth_write =
       depthStencil.depthWriteEnabled;
 
     // Detect if stencil is actually used based on material configuration
@@ -717,31 +857,51 @@ export class Window extends Viewport {
 
     const usesStencil = hasActiveStencilOps && hasActiveStencilCompare;
 
-    pipelineInfo.properties.depth_stencil_state.properties.enable_stencil_test = usesStencil;
-    pipelineInfo.properties.depth_stencil_state.properties.compare_mask =
+    depthStencilState.properties.enable_stencil_test = usesStencil;
+    depthStencilState.properties.compare_mask =
       depthStencil.stencilReadMask.get();
-    pipelineInfo.properties.depth_stencil_state.properties.write_mask =
+    depthStencilState.properties.write_mask =
       depthStencil.stencilWriteMask.get();
-    pipelineInfo.properties.depth_stencil_state.properties.padding1 = 0;
-    pipelineInfo.properties.depth_stencil_state.properties.padding2 = 0;
 
     // Target info
-    pipelineInfo.properties.target_info.properties.color_target_descriptions = BigInt(
-      colorTargetDesc.bunPointer,
+    const targetInfo = new SDL_GPUGraphicsPipelineTargetInfo();
+    targetInfo.properties.color_target_descriptions = new BigUint64Array(
+      colorTargetDescs.map((desc) => BigInt(desc.bunPointer)),
     );
-    pipelineInfo.properties.target_info.properties.num_color_targets = 1;
-    pipelineInfo.properties.target_info.properties.depth_stencil_format = 0; // No depth buffer
-    pipelineInfo.properties.target_info.properties.has_depth_stencil_target = false;
-    pipelineInfo.properties.target_info.properties.padding1 = 0;
-    pipelineInfo.properties.target_info.properties.padding2 = 0;
-    pipelineInfo.properties.target_info.properties.padding3 = 0;
+    targetInfo.properties.num_color_targets = colorTargetDescs.length;
+    targetInfo.properties.depth_stencil_format = 0;
+    targetInfo.properties.has_depth_stencil_target = false;
+    targetInfo.properties.padding1 = 0;
+    targetInfo.properties.padding2 = 0;
+    targetInfo.properties.padding3 = 0;
 
-    pipelineInfo.properties.props = 0;
+    // Create pipeline info and assign all pointers
+    const pipelineInfo = new SDL_GPUGraphicsPipelineCreateInfo();
+    pipelineInfo.properties.vertex_shader = BigInt(vertexShader);
+    pipelineInfo.properties.fragment_shader = BigInt(fragmentShader);
+    pipelineInfo.properties.primitive_type = primitiveType;
+    pipelineInfo.properties.vertex_input_state = vertexInputState;
+    pipelineInfo.properties.rasterizer_state = rasterizerState;
+    pipelineInfo.properties.multisample_state = multisampleState;
+    pipelineInfo.properties.depth_stencil_state = depthStencilState;
+    pipelineInfo.properties.target_info = targetInfo;
 
-    const pipeline = SDL.SDL_CreateGPUGraphicsPipeline(this.#devicePtr, pipelineInfo.bunPointer);
+    console.log('vertexInputState:', vertexInputState.buffer);
+    console.log('rasterizerState:', rasterizerState.buffer);
+    console.log('multisampleState:', multisampleState.buffer);
+    console.log('depthStencilState:', depthStencilState.buffer);
+    console.log('targetInfo:', targetInfo.buffer);
+    console.log('pipelineInfo:', pipelineInfo.buffer);
+
+    const pipeline = SDL.SDL_CreateGPUGraphicsPipeline(
+      this.#devicePtr,
+      pipelineInfo.bunPointer,
+    );
 
     if (!pipeline) {
-      console.error(`Failed to create graphics pipeline: ${SDL.SDL_GetError()}`);
+      console.error(
+        `Failed to create graphics pipeline: ${SDL.SDL_GetError()}`,
+      );
       SDL.SDL_ReleaseGPUShader(this.#devicePtr, vertexShader);
       SDL.SDL_ReleaseGPUShader(this.#devicePtr, fragmentShader);
       return null;
@@ -778,7 +938,9 @@ export class Window extends Viewport {
     const reflection = this.#getOrCreateReflection(material);
 
     if (!reflection) {
-      console.warn('Failed to get shader reflection, skipping material bindings');
+      console.warn(
+        'Failed to get shader reflection, skipping material bindings',
+      );
       return;
     }
 
@@ -829,7 +991,12 @@ export class Window extends Viewport {
       // For now, assuming material params contain a color (vec4<f32>)
       // TODO: Use reflection to dynamically determine uniform layout
       const color = params.color ?? { r: 1, g: 1, b: 1, a: 1 };
-      const materialData = new Float32Array([color.r, color.g, color.b, color.a]);
+      const materialData = new Float32Array([
+        color.r,
+        color.g,
+        color.b,
+        color.a,
+      ]);
 
       // Push to fragment uniform slot 0
       SDL.SDL_PushGPUFragmentUniformData(
@@ -867,34 +1034,249 @@ export class Window extends Viewport {
 
   /**
    * Bind geometry vertex and index buffers to the render pass.
+   * Creates GPU buffers on-demand and caches them for reuse.
    */
-  #bindGeometry(_pass: Pointer, geometry: Geometry): void {
-    // Get vertex data (for future buffer creation)
-    // const positions = geometry.vertex; // Float32Array, 3 components per vertex
-    // const normals = geometry.normal; // Float32Array, 3 components per vertex
-    // const uvs = geometry.uvs[0]; // Float32Array, 2 components per vertex (layer 0)
-    // const indices = geometry.indices; // Uint32Array
+  #bindGeometry(pass: Pointer, geometry: Geometry): void {
+    const geomId = geometry.hash;
 
-    // TODO: Create/update GPU buffers for vertex attributes
-    // - Position buffer: @location(0)
-    // - Normal buffer: @location(1)
-    // - UV buffer: @location(2)
-    // - Index buffer
+    // Get or create vertex buffer
+    let vertexBuffer = this.#vertexBufferCache.get(geomId);
+    if (!vertexBuffer || geometry.isDirty) {
+      // Release old buffer if exists
+      if (vertexBuffer) {
+        SDL.SDL_ReleaseGPUBuffer(this.#devicePtr, vertexBuffer);
+      }
 
-    // TODO: Bind vertex buffers
-    // SDL.SDL_BindGPUVertexBuffers(pass, first_slot, buffers, count);
+      // Calculate vertex data size (interleaved: position(3) + normal(3) + uv(2) = 8 floats per vertex)
+      const vertexCount = geometry.vertexCount;
+      const vertexStride = 8; // floats per vertex
+      const vertexData = new Float32Array(vertexCount * vertexStride);
 
-    // TODO: Bind index buffer
-    // SDL.SDL_BindGPUIndexBuffer(pass, buffer, offset, index_format);
+      // Interleave vertex attributes
+      const positions = geometry.vertex;
+      const normals = geometry.normal;
+      const uvs = geometry.uvs[0] ?? new Float32Array(vertexCount * 2); // Fallback to zeros
 
-    // For now, just log what we would bind
-    console.log(
-      'Would bind geometry:',
-      geometry.vertexCount,
-      'vertices,',
-      geometry.indexCount,
-      'indices',
-    );
+      for (let i = 0; i < vertexCount; i++) {
+        const offset = i * vertexStride;
+        // Position (3 floats)
+        vertexData[offset + 0] = positions[i * 3 + 0] ?? 0;
+        vertexData[offset + 1] = positions[i * 3 + 1] ?? 0;
+        vertexData[offset + 2] = positions[i * 3 + 2] ?? 0;
+        // Normal (3 floats)
+        vertexData[offset + 3] = normals[i * 3 + 0] ?? 0;
+        vertexData[offset + 4] = normals[i * 3 + 1] ?? 0;
+        vertexData[offset + 5] = normals[i * 3 + 2] ?? 0;
+        // UV (2 floats)
+        vertexData[offset + 6] = uvs[i * 2 + 0] ?? 0;
+        vertexData[offset + 7] = uvs[i * 2 + 1] ?? 0;
+      }
+
+      // Create GPU buffer for vertices
+      const bufferInfo = new SDL_GPUBufferCreateInfo();
+      bufferInfo.properties.usage =
+        SDL_GPUBufferUsageFlags.SDL_GPU_BUFFERUSAGE_VERTEX;
+      bufferInfo.properties.size = vertexData.byteLength;
+      bufferInfo.properties.props = 0;
+
+      const createdVertexBuffer = SDL.SDL_CreateGPUBuffer(
+        this.#devicePtr,
+        bufferInfo.bunPointer,
+      );
+      if (!createdVertexBuffer) {
+        console.error(`Failed to create vertex buffer: ${SDL.SDL_GetError()}`);
+        return;
+      }
+      vertexBuffer = createdVertexBuffer;
+
+      // Upload vertex data using transfer buffer
+      const transferInfo = new SDL_GPUTransferBufferCreateInfo();
+      transferInfo.properties.usage =
+        SDL_GPUTransferBufferUsage.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
+      transferInfo.properties.size = vertexData.byteLength;
+      transferInfo.properties.props = 0n;
+
+      const transferBuffer = SDL.SDL_CreateGPUTransferBuffer(
+        this.#devicePtr,
+        transferInfo.bunPointer,
+      );
+      if (!transferBuffer) {
+        console.error(
+          `Failed to create transfer buffer: ${SDL.SDL_GetError()}`,
+        );
+        SDL.SDL_ReleaseGPUBuffer(this.#devicePtr, vertexBuffer);
+        return;
+      }
+
+      // Map transfer buffer and copy data
+      const mappedPtr = SDL.SDL_MapGPUTransferBuffer(
+        this.#devicePtr,
+        transferBuffer,
+        false,
+      );
+      if (!mappedPtr) {
+        console.error(`Failed to map transfer buffer: ${SDL.SDL_GetError()}`);
+        SDL.SDL_ReleaseGPUTransferBuffer(this.#devicePtr, transferBuffer);
+        SDL.SDL_ReleaseGPUBuffer(this.#devicePtr, vertexBuffer);
+        return;
+      }
+
+      // Copy vertex data to mapped memory using ptr + memcpy
+      const sourceBytes = new Uint8Array(vertexData.buffer);
+      const destPtr = new Uint8Array(
+        pointerToBuffer(mappedPtr, vertexData.byteLength),
+      );
+      destPtr.set(sourceBytes);
+      SDL.SDL_UnmapGPUTransferBuffer(this.#devicePtr, transferBuffer);
+
+      // Upload to GPU buffer via copy pass
+      const copyPass = SDL.SDL_BeginGPUCopyPass(this.#currentCmd);
+      const transferLoc = new SDL_GPUTransferBufferLocation();
+      transferLoc.properties.transfer_buffer = BigInt(transferBuffer);
+      transferLoc.properties.offset = 0;
+
+      const bufferRegion = new SDL_GPUBufferRegion();
+      bufferRegion.properties.buffer = BigInt(vertexBuffer);
+      bufferRegion.properties.offset = 0;
+      bufferRegion.properties.size = vertexData.byteLength;
+
+      SDL.SDL_UploadToGPUBuffer(
+        copyPass,
+        transferLoc.bunPointer,
+        bufferRegion.bunPointer,
+        false,
+      );
+      SDL.SDL_EndGPUCopyPass(copyPass);
+
+      // Release transfer buffer
+      SDL.SDL_ReleaseGPUTransferBuffer(this.#devicePtr, transferBuffer);
+
+      // Cache vertex buffer
+      this.#vertexBufferCache.set(geomId, vertexBuffer);
+      geometry.unmarkAsDirty();
+    }
+
+    // Get or create index buffer if geometry has indices
+    let indexBuffer: Pointer | null = null;
+    if (geometry.indexCount > 0) {
+      indexBuffer = this.#indexBufferCache.get(geomId) ?? null;
+      if (!indexBuffer || geometry.isDirty) {
+        // Release old buffer if exists
+        if (indexBuffer) {
+          SDL.SDL_ReleaseGPUBuffer(this.#devicePtr, indexBuffer);
+        }
+
+        const indices = geometry.indices;
+
+        // Create GPU buffer for indices
+        const indexBufferInfo = new SDL_GPUBufferCreateInfo();
+        indexBufferInfo.properties.usage =
+          SDL_GPUBufferUsageFlags.SDL_GPU_BUFFERUSAGE_INDEX;
+        indexBufferInfo.properties.size = indices.byteLength;
+        indexBufferInfo.properties.props = 0;
+
+        const createdIndexBuffer = SDL.SDL_CreateGPUBuffer(
+          this.#devicePtr,
+          indexBufferInfo.bunPointer,
+        );
+        if (!createdIndexBuffer) {
+          console.error(`Failed to create index buffer: ${SDL.SDL_GetError()}`);
+          return;
+        }
+        indexBuffer = createdIndexBuffer;
+
+        // Upload index data using transfer buffer
+        const indexTransferInfo = new SDL_GPUTransferBufferCreateInfo();
+        indexTransferInfo.properties.usage =
+          SDL_GPUTransferBufferUsage.SDL_GPU_TRANSFERBUFFERUSAGE_UPLOAD;
+        indexTransferInfo.properties.size = indices.byteLength;
+        indexTransferInfo.properties.props = 0n;
+
+        const indexTransferBuffer = SDL.SDL_CreateGPUTransferBuffer(
+          this.#devicePtr,
+          indexTransferInfo.bunPointer,
+        );
+        if (!indexTransferBuffer) {
+          console.error(
+            `Failed to create index transfer buffer: ${SDL.SDL_GetError()}`,
+          );
+          SDL.SDL_ReleaseGPUBuffer(this.#devicePtr, indexBuffer);
+          return;
+        }
+
+        // Map transfer buffer and copy index data
+        const indexMappedPtr = SDL.SDL_MapGPUTransferBuffer(
+          this.#devicePtr,
+          indexTransferBuffer,
+          false,
+        );
+        if (!indexMappedPtr) {
+          console.error(
+            `Failed to map index transfer buffer: ${SDL.SDL_GetError()}`,
+          );
+          SDL.SDL_ReleaseGPUTransferBuffer(
+            this.#devicePtr,
+            indexTransferBuffer,
+          );
+          SDL.SDL_ReleaseGPUBuffer(this.#devicePtr, indexBuffer);
+          return;
+        }
+
+        // Copy index data to mapped memory using ptr + memcpy
+        const indexSourceBytes = new Uint8Array(indices.buffer);
+        const indexDestPtr = new Uint8Array(
+          pointerToBuffer(indexMappedPtr, indices.byteLength),
+        );
+        indexDestPtr.set(indexSourceBytes);
+        SDL.SDL_UnmapGPUTransferBuffer(this.#devicePtr, indexTransferBuffer);
+
+        // Upload to GPU buffer via copy pass
+        const indexCopyPass = SDL.SDL_BeginGPUCopyPass(this.#currentCmd);
+        const indexTransferLoc = new SDL_GPUTransferBufferLocation();
+        indexTransferLoc.properties.transfer_buffer =
+          BigInt(indexTransferBuffer);
+        indexTransferLoc.properties.offset = 0;
+
+        const indexBufferRegion = new SDL_GPUBufferRegion();
+        indexBufferRegion.properties.buffer = BigInt(indexBuffer);
+        indexBufferRegion.properties.offset = 0;
+        indexBufferRegion.properties.size = indices.byteLength;
+
+        SDL.SDL_UploadToGPUBuffer(
+          indexCopyPass,
+          indexTransferLoc.bunPointer,
+          indexBufferRegion.bunPointer,
+          false,
+        );
+        SDL.SDL_EndGPUCopyPass(indexCopyPass);
+
+        // Release transfer buffer
+        SDL.SDL_ReleaseGPUTransferBuffer(this.#devicePtr, indexTransferBuffer);
+
+        // Cache index buffer
+        this.#indexBufferCache.set(geomId, indexBuffer);
+      }
+    }
+
+    // Bind vertex buffer to render pass
+    const vertexBinding = new SDL_GPUBufferBinding();
+    vertexBinding.properties.buffer = BigInt(vertexBuffer);
+    vertexBinding.properties.offset = 0;
+
+    SDL.SDL_BindGPUVertexBuffers(pass, 0, vertexBinding.bunPointer, 1);
+
+    // Bind index buffer if present
+    if (indexBuffer) {
+      const indexBinding = new SDL_GPUBufferBinding();
+      indexBinding.properties.buffer = BigInt(indexBuffer);
+      indexBinding.properties.offset = 0;
+
+      SDL.SDL_BindGPUIndexBuffer(
+        pass,
+        indexBinding.bunPointer,
+        SDL_GPUIndexElementSize.SDL_GPU_INDEXELEMENTSIZE_32BIT,
+      );
+    }
   }
 
   #render(): void {
@@ -963,7 +1345,8 @@ export class Window extends Viewport {
         })
         .filter((data) => {
           if (!data) return false;
-          if (cameraLayer === 0 || (cameraLayer & data.layer) === 0) return false;
+          if (cameraLayer === 0 || (cameraLayer & data.layer) === 0)
+            return false;
 
           const pos = new Vector3();
           data.modelMatrix.decomposePosition(pos);
@@ -980,7 +1363,8 @@ export class Window extends Viewport {
       }, new Map<string, [Matrix, Mesh][]>());
 
       // Begin draw call
-      const { texture: viewportTexture, resolveTexture } = this.#getViewportTexture(finalViewport);
+      const { texture: viewportTexture, resolveTexture } =
+        this.#getViewportTexture(finalViewport);
 
       const colorTarget = new SDL_GPUColorTargetInfo();
       colorTarget.properties.texture = viewportTexture;
@@ -991,7 +1375,12 @@ export class Window extends Viewport {
       if (resolveTexture) {
         colorTarget.properties.resolve_texture = resolveTexture;
       }
-      const pass = SDL.SDL_BeginGPURenderPass(this.#currentCmd, colorTarget.bunPointer, 1, null);
+      const pass = SDL.SDL_BeginGPURenderPass(
+        this.#currentCmd,
+        colorTarget.bunPointer,
+        1,
+        null,
+      );
       if (!pass) {
         console.warn('SDL_BeginGPURenderPass failed');
         continue;
@@ -999,7 +1388,11 @@ export class Window extends Viewport {
 
       for (const [materialHash, meshes] of meshGroups.entries()) {
         for (const [modelMatrix, mesh] of meshes) {
-          if (!mesh.geometry || !(mesh.material || materialHash === 'no-material')) continue;
+          if (
+            !mesh.geometry ||
+            !(mesh.material || materialHash === 'no-material')
+          )
+            continue;
           // TODO: If don't gave material use a fallback material
           if (materialHash === 'no-material') continue;
 
@@ -1007,7 +1400,9 @@ export class Window extends Viewport {
 
           const pipeline = this.#getOrCreatePipeline(material);
           if (!pipeline) {
-            console.warn(`Failed to get pipeline for material ${material.label}`);
+            console.warn(
+              `Failed to get pipeline for material ${material.label}`,
+            );
             continue;
           }
           SDL.SDL_BindGPUGraphicsPipeline(pass, pipeline);
@@ -1032,9 +1427,51 @@ export class Window extends Viewport {
       SDL.SDL_EndGPURenderPass(pass);
     }
 
-    // TODO: composition
+    // Composition: Blit viewport textures to swapchain
+    if (this.#viewportCompositionQueue.size > 0) {
+      for (const item of this.#viewportCompositionQueue) {
+        const blitInfo = new SDL_GPUBlitInfo();
 
-    // TODO: post process
+        // Source region (viewport texture)
+        const srcRegion = new SDL_GPUBlitRegion();
+        srcRegion.properties.texture = BigInt(item.texture);
+        srcRegion.properties.x = 0;
+        srcRegion.properties.y = 0;
+        srcRegion.properties.w = item.width;
+        srcRegion.properties.h = item.height;
+        srcRegion.properties.mip_level = 0;
+        srcRegion.properties.layer_or_depth_plane = 0;
+
+        blitInfo.properties.source = srcRegion;
+
+        // Destination region (swapchain texture)
+        const dstRegion = new SDL_GPUBlitRegion();
+        dstRegion.properties.texture = this.#swapTexPtr[0]!;
+        dstRegion.properties.x = item.x;
+        dstRegion.properties.y = item.y;
+        dstRegion.properties.w = item.width;
+        dstRegion.properties.h = item.height;
+        dstRegion.properties.mip_level = 0;
+        dstRegion.properties.layer_or_depth_plane = 0;
+
+        blitInfo.properties.destination = dstRegion;
+
+        // Use linear filtering for smooth blits
+        blitInfo.properties.filter = SDL_GPUFilter.SDL_GPU_FILTER_LINEAR;
+        blitInfo.properties.flip_mode = 0; // No flip
+        blitInfo.properties.load_op = SDL_GPULoadOp.SDL_GPU_LOADOP_LOAD;
+        blitInfo.properties.clear_color = this.#clearColorStruct;
+        blitInfo.properties.cycle = false;
+        blitInfo.properties.padding1 = 0;
+        blitInfo.properties.padding2 = 0;
+        blitInfo.properties.padding3 = 0;
+
+        SDL.SDL_BlitGPUTexture(this.#currentCmd, blitInfo.bunPointer);
+      }
+    }
+
+    // TODO: Post-processing effects
+    // Apply effects like bloom, tone mapping, color grading here
 
     SDL.SDL_SubmitGPUCommandBuffer(this.#currentCmd);
 
@@ -1049,7 +1486,7 @@ export class Window extends Viewport {
 
     this.#currentCmd = null;
     const err = SDL.SDL_GetError().toString();
-    if (err) console.log('[SDL ERROR]', err);
+    if (err) console.error('[SDL ERROR]', err);
   }
 
   #clearScreen() {
@@ -1067,7 +1504,12 @@ export class Window extends Viewport {
     colorTarget.properties.load_op = SDL_GPULoadOp.SDL_GPU_LOADOP_CLEAR;
     colorTarget.properties.store_op = SDL_GPUStoreOp.SDL_GPU_STOREOP_STORE;
 
-    const pass = SDL.SDL_BeginGPURenderPass(this.#currentCmd, colorTarget.bunPointer, 1, null);
+    const pass = SDL.SDL_BeginGPURenderPass(
+      this.#currentCmd,
+      colorTarget.bunPointer,
+      1,
+      null,
+    );
     SDL.SDL_EndGPURenderPass(pass);
   }
 
@@ -1145,7 +1587,10 @@ export class Window extends Viewport {
         texInfo.properties.sample_count = parseSampleCount(target.sampleCount);
         texInfo.properties.props = 0n;
 
-        const newTexture = SDL.SDL_CreateGPUTexture(this.#devicePtr, texInfo.bunPointer);
+        const newTexture = SDL.SDL_CreateGPUTexture(
+          this.#devicePtr,
+          texInfo.bunPointer,
+        );
 
         if (!newTexture) {
           console.warn(
@@ -1169,10 +1614,14 @@ export class Window extends Viewport {
           resolveInfo.properties.height = target.height;
           resolveInfo.properties.layer_count_or_depth = target.depth;
           resolveInfo.properties.num_levels = target.layerCount;
-          resolveInfo.properties.sample_count = SDL_GPUSampleCount.SDL_GPU_SAMPLECOUNT_1; // Resolve texture always has sampleCount=1
+          resolveInfo.properties.sample_count =
+            SDL_GPUSampleCount.SDL_GPU_SAMPLECOUNT_1; // Resolve texture always has sampleCount=1
           resolveInfo.properties.props = 0n;
 
-          resolveTexture = SDL.SDL_CreateGPUTexture(this.#devicePtr, resolveInfo.bunPointer);
+          resolveTexture = SDL.SDL_CreateGPUTexture(
+            this.#devicePtr,
+            resolveInfo.bunPointer,
+          );
 
           if (!resolveTexture) {
             console.warn(
@@ -1218,15 +1667,28 @@ export class Window extends Viewport {
     const swapWidth = this.#swapWidthPtr[0]!;
     const swapHeight = this.#swapHeightPtr[0]!;
 
-    // Viewport dimensions are [0..1] proportions of swapchain
-    const texWidth = Math.max(1, Math.floor(swapWidth * viewport.width));
-    const texHeight = Math.max(1, Math.floor(swapHeight * viewport.height));
+    // For Window (root viewport), use full swapchain dimensions
+    // For child viewports, use proportional dimensions [0..1]
+    let texWidth: number;
+    let texHeight: number;
+
+    if (viewport === this) {
+      // Root window viewport - use full swapchain size
+      texWidth = swapWidth;
+      texHeight = swapHeight;
+    } else {
+      // Child viewport - use proportions (assuming width/height are [0..1])
+      texWidth = Math.max(1, Math.floor(swapWidth * viewport.width));
+      texHeight = Math.max(1, Math.floor(swapHeight * viewport.height));
+    }
 
     const existingMeta = this.#textureMetaMap.get(viewport.id);
 
     // Check if we need to recreate (swapchain or viewport dimensions changed)
     const needsRecreate =
-      !existingMeta || existingMeta.width !== texWidth || existingMeta.height !== texHeight;
+      !existingMeta ||
+      existingMeta.width !== texWidth ||
+      existingMeta.height !== texHeight;
 
     if (needsRecreate) {
       // Destroy old texture if exists
@@ -1247,10 +1709,14 @@ export class Window extends Viewport {
       texInfo.properties.height = texHeight;
       texInfo.properties.layer_count_or_depth = 1;
       texInfo.properties.num_levels = 1;
-      texInfo.properties.sample_count = SDL_GPUSampleCount.SDL_GPU_SAMPLECOUNT_1;
+      texInfo.properties.sample_count =
+        SDL_GPUSampleCount.SDL_GPU_SAMPLECOUNT_1;
       texInfo.properties.props = 0n;
 
-      const newTexture = SDL.SDL_CreateGPUTexture(this.#devicePtr, texInfo.bunPointer);
+      const newTexture = SDL.SDL_CreateGPUTexture(
+        this.#devicePtr,
+        texInfo.bunPointer,
+      );
 
       if (!newTexture) {
         console.warn(

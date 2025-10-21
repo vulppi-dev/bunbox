@@ -12,20 +12,10 @@ export type SimpleMaterialOptions = {
   color?: Color;
 };
 
-// Minimal, self-contained WGSL shader that validates and can be used by a simple forward pass
+// Minimal, self-contained WGSL shader compatible with SDL GPU push-uniforms
+// Note: WGSL doesn't have explicit push_constant syntax, but we use simple
+// uniforms that match the push-uniform data layout expected by Window.ts
 const SIMPLE_WGSL = /* wgsl */ `
-struct Matrices {
-	projection : mat4x4<f32>,
-	world      : mat4x4<f32>,
-	model      : mat4x4<f32>,
-};
-@group(0) @binding(0) var<uniform> matrices : Matrices;
-
-struct MaterialParams {
-	color : vec4<f32>,
-};
-@group(0) @binding(1) var<uniform> material : MaterialParams;
-
 struct VertexIn {
 	@location(0) position : vec3<f32>,
 	@location(1) normal   : vec3<f32>,
@@ -38,28 +28,44 @@ struct VSOut {
 	@location(1) vUV     : vec2<f32>,
 };
 
+// Vertex uniforms: projection(16) + view(16) + model(16) = 48 floats
+struct VertexUniforms {
+	projection : mat4x4<f32>,
+	view : mat4x4<f32>,
+	model : mat4x4<f32>,
+};
+@group(0) @binding(0) var<uniform> vu : VertexUniforms;
+
+// Fragment uniforms: color(4) = 4 floats
+struct FragmentUniforms {
+	color : vec4<f32>,
+};
+@group(0) @binding(0) var<uniform> fu : FragmentUniforms;
+
 @vertex
 fn vs_main(input : VertexIn) -> VSOut {
 	var out : VSOut;
-	let worldModel = matrices.world * matrices.model;
-	let worldPos = worldModel * vec4<f32>(input.position, 1.0);
-	out.Position = matrices.projection * worldPos;
+	let worldPos = vu.model * vec4<f32>(input.position, 1.0);
+	let viewPos = vu.view * worldPos;
+	out.Position = vu.projection * viewPos;
 	// Approximate normal transform (ignores non-uniform scale)
-	out.vNormal = normalize((worldModel * vec4<f32>(input.normal, 0.0)).xyz);
+	out.vNormal = normalize((vu.model * vec4<f32>(input.normal, 0.0)).xyz);
 	out.vUV = input.uv;
 	return out;
 }
 
 @fragment
 fn fs_main(input : VSOut) -> @location(0) vec4<f32> {
-	return material.color;
+	return fu.color;
 }
 `;
 
 /**
  * Create a simple material with flat color (no lighting).
  */
-export function createSimpleMaterial(opts: SimpleMaterialOptions = {}): Material {
+export function createSimpleMaterial(
+  opts: SimpleMaterialOptions = {},
+): Material {
   const m = new Material({
     shader: SIMPLE_WGSL,
     label: opts.label ?? 'SimpleMaterial',

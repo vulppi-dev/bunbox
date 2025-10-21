@@ -1,6 +1,13 @@
 // prettier-multiline-arrays-set-line-pattern: 4
 
-import { Frustum, Matrix, Plane, Quaternion, Vector3, VectorParser } from '../math';
+import {
+  Frustum,
+  Matrix,
+  Plane,
+  Quaternion,
+  Vector3,
+  VectorParser,
+} from '../math';
 import { Node3D } from './Node3D';
 
 /**
@@ -93,37 +100,55 @@ export abstract class AbstractCamera extends Node3D {
     // Left plane: m3 + m0, m7 + m4, m11 + m8, m15 + m12
     this.#frustum.setPlane(
       0,
-      new Plane(new Vector3(m[3] + m[0], m[7] + m[4], m[11] + m[8]), m[15] + m[12]).normalize(),
+      new Plane(
+        new Vector3(m[3] + m[0], m[7] + m[4], m[11] + m[8]),
+        m[15] + m[12],
+      ).normalize(),
     );
 
     // Right plane: m3 - m0, m7 - m4, m11 - m8, m15 - m12
     this.#frustum.setPlane(
       1,
-      new Plane(new Vector3(m[3] - m[0], m[7] - m[4], m[11] - m[8]), m[15] - m[12]).normalize(),
+      new Plane(
+        new Vector3(m[3] - m[0], m[7] - m[4], m[11] - m[8]),
+        m[15] - m[12],
+      ).normalize(),
     );
 
     // Bottom plane: m3 + m1, m7 + m5, m11 + m9, m15 + m13
     this.#frustum.setPlane(
       2,
-      new Plane(new Vector3(m[3] + m[1], m[7] + m[5], m[11] + m[9]), m[15] + m[13]).normalize(),
+      new Plane(
+        new Vector3(m[3] + m[1], m[7] + m[5], m[11] + m[9]),
+        m[15] + m[13],
+      ).normalize(),
     );
 
     // Top plane: m3 - m1, m7 - m5, m11 - m9, m15 - m13
     this.#frustum.setPlane(
       3,
-      new Plane(new Vector3(m[3] - m[1], m[7] - m[5], m[11] - m[9]), m[15] - m[13]).normalize(),
+      new Plane(
+        new Vector3(m[3] - m[1], m[7] - m[5], m[11] - m[9]),
+        m[15] - m[13],
+      ).normalize(),
     );
 
     // Near plane: m3 + m2, m7 + m6, m11 + m10, m15 + m14
     this.#frustum.setPlane(
       4,
-      new Plane(new Vector3(m[3] + m[2], m[7] + m[6], m[11] + m[10]), m[15] + m[14]).normalize(),
+      new Plane(
+        new Vector3(m[3] + m[2], m[7] + m[6], m[11] + m[10]),
+        m[15] + m[14],
+      ).normalize(),
     );
 
     // Far plane: m3 - m2, m7 - m6, m11 - m10, m15 - m14
     this.#frustum.setPlane(
       5,
-      new Plane(new Vector3(m[3] - m[2], m[7] - m[6], m[11] - m[10]), m[15] - m[14]).normalize(),
+      new Plane(
+        new Vector3(m[3] - m[2], m[7] - m[6], m[11] - m[10]),
+        m[15] - m[14],
+      ).normalize(),
     );
   }
 

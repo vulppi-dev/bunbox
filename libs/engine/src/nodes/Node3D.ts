@@ -99,7 +99,11 @@ export class Node3D<
       this.#rotation.isDirty ||
       this.#rotationQ?.isDirty
     ) {
-      this.#matrix.compose(this.#position, this.#scale, this.#rotationQ || this.#rotation);
+      this.#matrix.compose(
+        this.#position,
+        this.#scale,
+        this.#rotationQ || this.#rotation,
+      );
 
       this.#position.unmarkAsDirty();
       this.#scale.unmarkAsDirty();

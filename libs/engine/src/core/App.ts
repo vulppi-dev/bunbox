@@ -101,7 +101,9 @@ export class App extends Node {
     super();
 
     if (App.#singleAppInstance) {
-      throw new Error('App instance already exists. Only one instance is allowed.');
+      throw new Error(
+        'App instance already exists. Only one instance is allowed.',
+      );
     }
 
     const {
@@ -121,7 +123,8 @@ export class App extends Node {
     if (!result) {
       throw new Error(`SDL: ${SDL.SDL_GetError()}`);
     }
-    this.#epochOffsetMs = Date.now() - Number(SDL.SDL_GetTicksNS() / 1_000_000n);
+    this.#epochOffsetMs =
+      Date.now() - Number(SDL.SDL_GetTicksNS() / 1_000_000n);
     this.#eventStruct = new SDL_Event();
 
     SDL.SDL_SetAppMetadata(cstr(name), cstr(version), cstr(identifier));
@@ -199,7 +202,10 @@ export class App extends Node {
 
   /** Set SDL log priority for a specific category. */
   setCategoryLogPriority(category: AppLogCategory, priority: AppLogPriority) {
-    SDL.SDL_SetLogPriority(APP_LOG_CATEGORY_MAP[category], APP_LOG_PRIORITY_MAP[priority]);
+    SDL.SDL_SetLogPriority(
+      APP_LOG_CATEGORY_MAP[category],
+      APP_LOG_PRIORITY_MAP[priority],
+    );
   }
 
   /** System preferred locales (language and optional country). */
@@ -261,7 +267,12 @@ export class App extends Node {
   getDisplayBoundRect(displayId: number) {
     const rect = new SDL_Rect();
     SDL.SDL_GetDisplayBounds(displayId, rect.bunPointer);
-    return new Rect(rect.properties.x, rect.properties.y, rect.properties.w, rect.properties.h);
+    return new Rect(
+      rect.properties.x,
+      rect.properties.y,
+      rect.properties.w,
+      rect.properties.h,
+    );
   }
 
   /** Pixel bounds of a window (x, y, width, height). */
@@ -407,7 +418,9 @@ export class App extends Node {
           reserved: evStruct.properties.reserved,
           timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           displayId: evStruct.properties.displayID,
-          orientation: this.getDisplayOrientation(evStruct.properties.displayID),
+          orientation: this.getDisplayOrientation(
+            evStruct.properties.displayID,
+          ),
           x: rect.x,
           y: rect.y,
           width: rect.width,
@@ -424,7 +437,9 @@ export class App extends Node {
           reserved: evStruct.properties.reserved,
           timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           displayId: evStruct.properties.displayID,
-          orientation: this.getDisplayOrientation(evStruct.properties.displayID),
+          orientation: this.getDisplayOrientation(
+            evStruct.properties.displayID,
+          ),
           x: rect.x,
           y: rect.y,
           width: rect.width,
@@ -457,7 +472,9 @@ export class App extends Node {
           reserved: evStruct.properties.reserved,
           timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           displayId: evStruct.properties.displayID,
-          orientation: this.getDisplayOrientation(evStruct.properties.displayID),
+          orientation: this.getDisplayOrientation(
+            evStruct.properties.displayID,
+          ),
           x: rect.x,
           y: rect.y,
           width: rect.width,
@@ -476,7 +493,9 @@ export class App extends Node {
           reserved: evStruct.properties.reserved,
           timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
           displayId: evStruct.properties.displayID,
-          orientation: this.getDisplayOrientation(evStruct.properties.displayID),
+          orientation: this.getDisplayOrientation(
+            evStruct.properties.displayID,
+          ),
           x: rect.x,
           y: rect.y,
           width: rect.width,
@@ -983,7 +1002,10 @@ export class App extends Node {
       case SDL_EventType.SDL_EVENT_MOUSE_WHEEL: {
         const evStruct = this.#eventStruct.properties.wheel;
         const dir =
-          evStruct.properties.direction === SDL_MouseWheelDirection.SDL_MOUSEWHEEL_NORMAL ? 1 : -1;
+          evStruct.properties.direction ===
+          SDL_MouseWheelDirection.SDL_MOUSEWHEEL_NORMAL
+            ? 1
+            : -1;
 
         event = new PointerEvent({
           type: 'pointerWheel',
@@ -1035,7 +1057,9 @@ export class App extends Node {
           type: 'deviceAdded',
           reserved: evStruct.properties.reserved,
           timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
-          deviceType: SDL.SDL_IsGamepad(evStruct.properties.which) ? 'gamepad' : 'joystick',
+          deviceType: SDL.SDL_IsGamepad(evStruct.properties.which)
+            ? 'gamepad'
+            : 'joystick',
           deviceId: evStruct.properties.which,
         });
         break;
@@ -1047,7 +1071,9 @@ export class App extends Node {
           type: 'deviceRemoved',
           reserved: evStruct.properties.reserved,
           timestamp: this.#helperTimestampToDate(evStruct.properties.timestamp),
-          deviceType: SDL.SDL_IsGamepad(evStruct.properties.which) ? 'gamepad' : 'joystick',
+          deviceType: SDL.SDL_IsGamepad(evStruct.properties.which)
+            ? 'gamepad'
+            : 'joystick',
           deviceId: evStruct.properties.which,
         });
         break;

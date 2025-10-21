@@ -1,5 +1,6 @@
 export * from './SDL_GPUBlendFactor';
 export * from './SDL_GPUBlendOp';
+export * from './SDL_GPUBufferUsageFlags';
 export * from './SDL_GPUCompareOp';
 export * from './SDL_GPUCubeMapFace';
 export * from './SDL_GPUCullMode';

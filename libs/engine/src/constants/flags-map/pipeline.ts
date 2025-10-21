@@ -64,14 +64,18 @@ export const BLEND_FACTOR_MAP: Record<BlendFactor, number> = {
   src: SDL_GPUBlendFactor.SDL_GPU_BLENDFACTOR_SRC_COLOR,
   'one-minus-src': SDL_GPUBlendFactor.SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_COLOR,
   'src-alpha': SDL_GPUBlendFactor.SDL_GPU_BLENDFACTOR_SRC_ALPHA,
-  'one-minus-src-alpha': SDL_GPUBlendFactor.SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
+  'one-minus-src-alpha':
+    SDL_GPUBlendFactor.SDL_GPU_BLENDFACTOR_ONE_MINUS_SRC_ALPHA,
   dst: SDL_GPUBlendFactor.SDL_GPU_BLENDFACTOR_DST_COLOR,
   'one-minus-dst': SDL_GPUBlendFactor.SDL_GPU_BLENDFACTOR_ONE_MINUS_DST_COLOR,
   'dst-alpha': SDL_GPUBlendFactor.SDL_GPU_BLENDFACTOR_DST_ALPHA,
-  'one-minus-dst-alpha': SDL_GPUBlendFactor.SDL_GPU_BLENDFACTOR_ONE_MINUS_DST_ALPHA,
-  'src-alpha-saturated': SDL_GPUBlendFactor.SDL_GPU_BLENDFACTOR_SRC_ALPHA_SATURATE,
+  'one-minus-dst-alpha':
+    SDL_GPUBlendFactor.SDL_GPU_BLENDFACTOR_ONE_MINUS_DST_ALPHA,
+  'src-alpha-saturated':
+    SDL_GPUBlendFactor.SDL_GPU_BLENDFACTOR_SRC_ALPHA_SATURATE,
   constant: SDL_GPUBlendFactor.SDL_GPU_BLENDFACTOR_CONSTANT_COLOR,
-  'one-minus-constant': SDL_GPUBlendFactor.SDL_GPU_BLENDFACTOR_ONE_MINUS_CONSTANT_COLOR,
+  'one-minus-constant':
+    SDL_GPUBlendFactor.SDL_GPU_BLENDFACTOR_ONE_MINUS_CONSTANT_COLOR,
 };
 
 /**

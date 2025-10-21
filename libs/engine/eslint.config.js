@@ -129,17 +129,20 @@ export default [
             'Public class fields are not allowed. Use getters/setters, protected _name, or #private.',
         },
         {
-          selector: "PropertyDefinition[key.type='Identifier']:not([accessibility='protected'])",
+          selector:
+            "PropertyDefinition[key.type='Identifier']:not([accessibility='protected'])",
           message:
             'Public class fields are not allowed. Use getters/setters, protected _name, or #private.',
         },
         {
           selector: "PropertyDefinition[accessibility='private']",
-          message: 'Use JS private fields (#name) instead of TypeScript private accessibility.',
+          message:
+            'Use JS private fields (#name) instead of TypeScript private accessibility.',
         },
         {
           selector: "MethodDefinition[accessibility='private']",
-          message: 'Use JS private methods (#method) instead of TypeScript private accessibility.',
+          message:
+            'Use JS private methods (#method) instead of TypeScript private accessibility.',
         },
       ],
     },

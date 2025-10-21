@@ -1,17 +1,9 @@
 {
-  "exclude": [
-    "node_modules",
-    "dist",
-    "example"
-  ],
-  "include": [
-    "src/**/*.ts",
-  ],
+  "exclude": ["node_modules", "dist", "example"],
+  "include": ["src/**/*.ts"],
   "compilerOptions": {
     // Environment setup & latest features
-    "lib": [
-      "ESNext"
-    ],
+    "lib": ["ESNext"],
     "target": "ESNext",
     "module": "Preserve",
     "moduleDetection": "force",
@@ -35,6 +27,6 @@
     "emitDeclarationOnly": true,
     "rootDir": "./src",
     "outDir": "./dist",
-    "declarationDir": "./dist",
+    "declarationDir": "./dist"
   }
 }

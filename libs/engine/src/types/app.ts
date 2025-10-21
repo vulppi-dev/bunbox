@@ -1,6 +1,19 @@
-export type AppFeature = 'audio' | 'joystick' | 'haptic' | 'gamepad' | 'sensor' | 'camera';
+export type AppFeature =
+  | 'audio'
+  | 'joystick'
+  | 'haptic'
+  | 'gamepad'
+  | 'sensor'
+  | 'camera';
 
-export type AppLogPriority = 'trace' | 'verbose' | 'debug' | 'info' | 'warn' | 'error' | 'critical';
+export type AppLogPriority =
+  | 'trace'
+  | 'verbose'
+  | 'debug'
+  | 'info'
+  | 'warn'
+  | 'error'
+  | 'critical';
 
 export type AppLogCategory =
   | 'application'

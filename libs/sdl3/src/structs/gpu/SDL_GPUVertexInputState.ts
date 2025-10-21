@@ -1,12 +1,10 @@
 import { BunStruct, type StructSchema } from '../_struct';
-import { SDL_GPUVertexAttribute } from './SDL_GPUVertexAttribute';
-import { SDL_GPUVertexBufferDescription } from './SDL_GPUVertexBufferDescription';
 
 const SDL_GPUVertexInputStateSchema = {
   vertex_buffer_descriptions: {
     order: 0,
-    type: 'struct',
-    schema: SDL_GPUVertexBufferDescription,
+    type: 'array',
+    to: 'void',
   } /**< A pointer to an array of vertex buffer descriptions. */,
   num_vertex_buffers: {
     order: 1,
@@ -14,8 +12,8 @@ const SDL_GPUVertexInputStateSchema = {
   } /**< The number of vertex buffer descriptions in the above array. */,
   vertex_attributes: {
     order: 2,
-    type: 'struct',
-    schema: SDL_GPUVertexAttribute,
+    type: 'array',
+    to: 'void',
   } /**< A pointer to an array of vertex attribute descriptions. */,
   num_vertex_attributes: {
     order: 3,

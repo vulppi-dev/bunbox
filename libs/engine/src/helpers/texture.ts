@@ -25,7 +25,10 @@ function extOf(path: string): string {
 /** Decode an image buffer (PNG/JPEG/WEBP/AVIF) to raw image data.
  * By default returns 8-bit RGBA (Uint8Array). Some inputs may output 16-bit.
  */
-export async function decodeImage(buffer: ArrayBuffer, mimeOrExt?: string): Promise<DecodedImage> {
+export async function decodeImage(
+  buffer: ArrayBuffer,
+  mimeOrExt?: string,
+): Promise<DecodedImage> {
   const key = (mimeOrExt ?? '').toLowerCase();
   const tryOrder: Array<'png' | 'jpeg' | 'jpg' | 'webp' | 'avif'> = [
     'png',
@@ -105,7 +108,9 @@ export async function decodeImage(buffer: ArrayBuffer, mimeOrExt?: string): Prom
  */
 export async function textureFromFile(
   path: string,
-  overrides?: Partial<Omit<TextureImageDescriptor, 'width' | 'height' | 'data'>>,
+  overrides?: Partial<
+    Omit<TextureImageDescriptor, 'width' | 'height' | 'data'>
+  >,
 ): Promise<TextureImage> {
   const ab = await Bun.file(path).arrayBuffer();
   const decoded = await decodeImage(ab, extOf(path));
@@ -117,7 +122,10 @@ export async function textureFromFile(
     mipLevels: overrides?.mipLevels ?? 1,
     sampleCount: overrides?.sampleCount ?? 1,
     usage: overrides?.usage,
-    data: decoded.data instanceof Uint8Array ? decoded.data : new Uint8Array(decoded.data.buffer),
+    data:
+      decoded.data instanceof Uint8Array
+        ? decoded.data
+        : new Uint8Array(decoded.data.buffer),
   };
   return new TextureImage(desc);
 }
@@ -126,7 +134,9 @@ export async function textureFromFile(
 export async function textureFromArrayBuffer(
   buffer: ArrayBuffer,
   hint?: string,
-  overrides?: Partial<Omit<TextureImageDescriptor, 'width' | 'height' | 'data'>>,
+  overrides?: Partial<
+    Omit<TextureImageDescriptor, 'width' | 'height' | 'data'>
+  >,
 ): Promise<TextureImage> {
   const decoded = await decodeImage(buffer, hint);
   const desc: TextureImageDescriptor = {
@@ -137,7 +147,10 @@ export async function textureFromArrayBuffer(
     mipLevels: overrides?.mipLevels ?? 1,
     sampleCount: overrides?.sampleCount ?? 1,
     usage: overrides?.usage,
-    data: decoded.data instanceof Uint8Array ? decoded.data : new Uint8Array(decoded.data.buffer),
+    data:
+      decoded.data instanceof Uint8Array
+        ? decoded.data
+        : new Uint8Array(decoded.data.buffer),
   };
   return new TextureImage(desc);
 }
