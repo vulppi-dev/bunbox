@@ -7,7 +7,7 @@ on:
       - '.github/workflows/glfw-bgfx.yml'
 
 concurrency:
-  group: glfw-bgfx-${{ github.ref }}
+  group: build-libs-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -252,33 +252,4 @@ jobs:
           name: dist-${{ matrix.platform }}-${{ matrix.arch }}
           path: dist-libs/${{ matrix.platform }}/${{ matrix.arch }}
           if-no-files-found: error
-          retention-days: 7
-
-  gather:
-    name: bundle-all-artifacts
-    runs-on: ubuntu-latest
-    needs: [build]
-    steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          pattern: dist-*
-          merge-multiple: true
-          path: .
-
-      - name: Show merged tree
-        run: |
-          set -euo pipefail
-          find dist-libs -maxdepth 3 -type f | sort || true
-
-      - name: Zip everything
-        run: |
-          set -euo pipefail
-          zip -r dist-libs-all.zip dist-libs
-
-      - name: Upload combined artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist-libs-all
-          path: dist-libs-all.zip
           retention-days: 7
