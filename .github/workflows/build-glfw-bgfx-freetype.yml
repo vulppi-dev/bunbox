@@ -10,8 +10,10 @@ concurrency:
   group: build-libs-${{ github.ref }}
   cancel-in-progress: false
 
+# ==========================================================
+# WINDOWS (x64) — MSVC antes do vcpkg; bgfx via GENie
+# ==========================================================
 jobs:
-  # ----------------------- WINDOWS (x64) -----------------------
   windows:
     name: windows-x64
     runs-on: windows-latest
@@ -19,12 +21,19 @@ jobs:
       run:
         shell: pwsh
     env:
+      DIST_ARCH: x64
       TRIPLET: x64-windows-dynamic
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # vcpkg for GLFW + FreeType (dynamic)
+      # 1) Ativa MSVC antes do vcpkg (corrige detect_compiler)
+      - name: MSVC env
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: amd64
+
+      # 2) vcpkg (GLFW + FreeType dinâmicos)
       - name: Clone/Bootstrap vcpkg
         run: |
           mkdir -Force external | Out-Null
@@ -32,7 +41,7 @@ jobs:
             git clone --depth=1 https://github.com/microsoft/vcpkg.git external/vcpkg
           }
           .\external\vcpkg\bootstrap-vcpkg.bat
-      - name: Overlay triplet (dynamic CRT/dll)
+      - name: Overlay triplet (dynamic)
         run: |
           New-Item -ItemType Directory -Force -Path vcpkg-triplets | Out-Null
           @"
@@ -41,85 +50,84 @@ jobs:
           set(VCPKG_CRT_LINKAGE dynamic)
           set(VCPKG_CMAKE_SYSTEM_NAME Windows)
           "@ | Set-Content vcpkg-triplets\x64-windows-dynamic.cmake -Encoding ascii
-      - name: Cache vcpkg packages
+      - name: Cache vcpkg
         uses: actions/cache@v4
         with:
           path: |
             external/vcpkg/installed
             external/vcpkg/packages
-          key: v1-${{ runner.os }}-${{ env.TRIPLET }}-${{ hashFiles('vcpkg-triplets/*.cmake') }}
+          key: v2-${{ runner.os }}-${{ env.TRIPLET }}-${{ hashFiles('vcpkg-triplets/*.cmake') }}
       - name: vcpkg install glfw & freetype (dynamic)
         env:
           VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}/vcpkg-triplets
         run: |
           .\external\vcpkg\vcpkg.exe install glfw3:${{ env.TRIPLET }} freetype:${{ env.TRIPLET }} --clean-after-build
 
-      # bgfx via GENie (DLL)
-      - name: Setup MSVC env
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: amd64
+      # 3) bgfx via GENie (gera DLL bgfx)
       - name: Clone bgfx + bx + bimg
         run: |
-          mkdir -Force external | Out-Null
           git clone --depth=1 https://github.com/bkaradzic/bgfx.git external/bgfx
           git clone --depth=1 https://github.com/bkaradzic/bx.git   external/bx
           git clone --depth=1 https://github.com/bkaradzic/bimg.git external/bimg
-      - name: Generate VS2022 solution (GENie)
+      - name: Generate VS2022 projects (GENie)
         run: |
           Set-Location external/bgfx
           ..\bx\tools\bin\windows\genie --with-shared-lib vs2022 --platform x64
       - name: Build bgfx-shared-lib (Release x64)
         run: |
-          msbuild .build\projects\vs2022\bgfx.sln /m /p:Configuration=Release /p:Platform=x64 /t:bgfx-shared-lib
+          msbuild external/bgfx/.build/projects/vs2022/bgfx.sln /m /p:Configuration=Release /p:Platform=x64 /t:bgfx-shared-lib
 
-      # Collect to dist
-      - name: Prepare dist tree
+      # 4) Dist
+      - name: Prepare dist
         run: |
-          New-Item -ItemType Directory -Force -Path dist/windows/x64/bin | Out-Null
-          New-Item -ItemType Directory -Force -Path dist/windows/x64/lib | Out-Null
-      - name: Copy bgfx DLL
+          New-Item -ItemType Directory -Force -Path dist/windows/${{ env.DIST_ARCH }}/bin | Out-Null
+          New-Item -ItemType Directory -Force -Path dist/windows/${{ env.DIST_ARCH }}/lib | Out-Null
+      - name: Copy bgfx.dll
         run: |
-          Copy-Item external/bgfx/.build/win64_vs2022/bin/bgfx-shared-libRelease.dll dist/windows/x64/bin/bgfx.dll -Force
-      - name: Copy GLFW/FreeType from vcpkg
+          Copy-Item external/bgfx/.build/win64_vs2022/bin/bgfx-shared-libRelease.dll dist/windows/${{ env.DIST_ARCH }}/bin/bgfx.dll -Force
+      - name: Copy GLFW/FreeType DLLs & LIBs
         run: |
           $root = "external/vcpkg/installed/${{ env.TRIPLET }}"
-          Copy-Item "$root/bin/*glfw*.dll"     dist/windows/x64/bin -ErrorAction SilentlyContinue
-          Copy-Item "$root/bin/*freetype*.dll" dist/windows/x64/bin -ErrorAction SilentlyContinue
-          # import libs
-          Copy-Item "$root/lib/*glfw*.lib"     dist/windows/x64/lib -ErrorAction SilentlyContinue
-          Copy-Item "$root/lib/*freetype*.lib" dist/windows/x64/lib -ErrorAction SilentlyContinue
+          Copy-Item "$root/bin/*glfw*.dll"     dist/windows/${{ env.DIST_ARCH }}/bin -ErrorAction SilentlyContinue
+          Copy-Item "$root/bin/*freetype*.dll" dist/windows/${{ env.DIST_ARCH }}/bin -ErrorAction SilentlyContinue
+          Copy-Item "$root/lib/*glfw*.lib"     dist/windows/${{ env.DIST_ARCH }}/lib -ErrorAction SilentlyContinue
+          Copy-Item "$root/lib/*freetype*.lib" dist/windows/${{ env.DIST_ARCH }}/lib -ErrorAction SilentlyContinue
+          # (Opcional) copiar outras deps do vcpkg/bin (brotli, zlib, etc.)
       - name: Upload artifact (windows-x64)
         uses: actions/upload-artifact@v4
         with:
           name: libs-windows-x64
-          path: dist/windows/x64
+          path: dist/windows/${{ env.DIST_ARCH }}
 
-  # ----------------------- LINUX (x64 + arm64) -----------------------
+  # ==========================================================
+  # LINUX (x64 + arm64) — compila GENie local; evita env ARCH
+  # ==========================================================
   linux:
-    name: linux-${{ matrix.arch }}
+    name: linux-${{ matrix.dist_arch }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - arch: x64
+          - dist_arch: x64
             os: ubuntu-latest
             triplet: x64-linux-dynamic
-          - arch: arm64
+            gcc_flavor: linux-gcc
+          - dist_arch: arm64
             os: ubuntu-24.04-arm
             triplet: arm64-linux-dynamic
+            gcc_flavor: linux-gcc
     env:
-      ARCH: ${{ matrix.arch }}
+      DIST_ARCH: ${{ matrix.dist_arch }}
       TRIPLET: ${{ matrix.triplet }}
+      GCC_FLAVOR: ${{ matrix.gcc_flavor }}
     defaults:
       run:
         shell: bash
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Install prerequisites (toolchain + X11/GL/EGL)
+      - name: System deps (toolchain + X11/GL/EGL/DRM)
         run: |
           set -euo pipefail
           sudo apt-get update
@@ -129,14 +137,14 @@ jobs:
           sudo apt-get install -y libegl1-mesa-dev libgles2-mesa-dev
           sudo apt-get install -y libdrm-dev
 
-      # vcpkg for GLFW + FreeType (dynamic)
+      # vcpkg (GLFW + FreeType dinâmicos)
       - name: Clone/Bootstrap vcpkg
         run: |
           set -euo pipefail
           mkdir -p external
           if [ ! -d external/vcpkg/.git ]; then git clone --depth=1 https://github.com/microsoft/vcpkg.git external/vcpkg; fi
           bash external/vcpkg/bootstrap-vcpkg.sh
-      - name: Overlay triplets (dynamic)
+      - name: Overlay triplets
         run: |
           set -euo pipefail
           mkdir -p vcpkg-triplets
@@ -152,13 +160,13 @@ jobs:
           set(VCPKG_CRT_LINKAGE dynamic)
           set(VCPKG_CMAKE_SYSTEM_NAME Linux)
           EOF
-      - name: Cache vcpkg packages
+      - name: Cache vcpkg
         uses: actions/cache@v4
         with:
           path: |
             external/vcpkg/installed
             external/vcpkg/packages
-          key: v1-${{ runner.os }}-${{ env.TRIPLET }}-${{ hashFiles('vcpkg-triplets/*.cmake') }}
+          key: v2-${{ runner.os }}-${{ env.TRIPLET }}-${{ hashFiles('vcpkg-triplets/*.cmake') }}
       - name: vcpkg install glfw & freetype (dynamic)
         env:
           VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}/vcpkg-triplets
@@ -166,7 +174,7 @@ jobs:
           set -euo pipefail
           external/vcpkg/vcpkg install glfw3:${{ env.TRIPLET }} freetype:${{ env.TRIPLET }} --clean-after-build
 
-      # bgfx via GENie (.so)
+      # bgfx via GENie (.so) — compila GENie local!
       - name: Clone bgfx + bx + bimg + GENie
         run: |
           set -euo pipefail
@@ -175,66 +183,69 @@ jobs:
           git clone --depth=1 https://github.com/bkaradzic/bx.git   external/bx
           git clone --depth=1 https://github.com/bkaradzic/bimg.git external/bimg
           git clone --depth=1 https://github.com/bkaradzic/GENie.git external/GENie
+      - name: Build GENie (local)
+        run: |
+          set -euo pipefail
           make -C external/GENie
-      - name: Generate gmake projects (GENie)
+      - name: Generate gmake (GENie)
         working-directory: external/bgfx
         run: |
           set -euo pipefail
-          ../GENie/bin/linux/genie --with-shared-lib --gcc=linux-gcc gmake
+          ../GENie/bin/linux/genie --with-shared-lib --gcc=${GCC_FLAVOR} gmake
       - name: Build bgfx shared
         working-directory: external/bgfx
         run: |
           set -euo pipefail
-          make -R -C .build/projects/gmake-linux-gcc config=release64 bgfx-shared-lib
-      - name: Prepare dist + copy libs
+          make -R -C .build/projects/gmake-${GCC_FLAVOR} config=release64 bgfx-shared-lib
+      - name: Dist (copy libs)
         run: |
           set -euo pipefail
-          mkdir -p dist/linux/${ARCH}/bin dist/linux/${ARCH}/lib
-          # bgfx .so (find the produced file robustly)
+          mkdir -p dist/linux/${DIST_ARCH}/lib
           BGFX_SO=$(find external/bgfx/.build -name 'libbgfx-shared-libRelease.so' -type f | head -n1)
-          cp -a "$BGFX_SO" dist/linux/${ARCH}/lib/libbgfx.so
+          cp -a "$BGFX_SO" dist/linux/${DIST_ARCH}/lib/libbgfx.so
 
           ROOT="external/vcpkg/installed/${TRIPLET}"
-          cp -a ${ROOT}/lib/libglfw*.so*     dist/linux/${ARCH}/lib/ 2>/dev/null || true
-          cp -a ${ROOT}/lib/libfreetype*.so* dist/linux/${ARCH}/lib/ 2>/dev/null || true
-      - name: Upload artifact (linux-${{ matrix.arch }})
+          cp -a ${ROOT}/lib/libglfw*.so*     dist/linux/${DIST_ARCH}/lib/ 2>/dev/null || true
+          cp -a ${ROOT}/lib/libfreetype*.so* dist/linux/${DIST_ARCH}/lib/ 2>/dev/null || true
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: libs-linux-${{ matrix.arch }}
-          path: dist/linux/${{ matrix.arch }}
+          name: libs-linux-${{ env.DIST_ARCH }}
+          path: dist/linux/${{ env.DIST_ARCH }}
 
-  # ----------------------- macOS (x64 + arm64) -----------------------
+  # ==========================================================
+  # macOS (x64 + arm64) — compila GENie local; nada de bin pré-compilado
+  # ==========================================================
   macos:
-    name: macos-${{ matrix.arch }}
+    name: macos-${{ matrix.dist_arch }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
-          - arch: x64
+          - dist_arch: x64
             os: macos-13
             triplet: x64-osx-dynamic
             platform: osx-x64
-          - arch: arm64
+          - dist_arch: arm64
             os: macos-latest
             triplet: arm64-osx-dynamic
             platform: osx-arm64
     env:
-      ARCH: ${{ matrix.arch }}
+      DIST_ARCH: ${{ matrix.dist_arch }}
       TRIPLET: ${{ matrix.triplet }}
       PLATFORM: ${{ matrix.platform }}
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # vcpkg for GLFW + FreeType (dynamic)
+      # vcpkg (GLFW + FreeType dinâmicos)
       - name: Clone/Bootstrap vcpkg
         run: |
           set -euo pipefail
           mkdir -p external
           if [ ! -d external/vcpkg/.git ]; then git clone --depth=1 https://github.com/microsoft/vcpkg.git external/vcpkg; fi
           bash external/vcpkg/bootstrap-vcpkg.sh
-      - name: Overlay triplets (dynamic)
+      - name: Overlay triplets
         run: |
           set -euo pipefail
           mkdir -p vcpkg-triplets
@@ -252,13 +263,13 @@ jobs:
           set(VCPKG_CRT_LINKAGE dynamic)
           set(VCPKG_CMAKE_SYSTEM_NAME Darwin)
           EOF
-      - name: Cache vcpkg packages
+      - name: Cache vcpkg
         uses: actions/cache@v4
         with:
           path: |
             external/vcpkg/installed
             external/vcpkg/packages
-          key: v1-${{ runner.os }}-${{ env.TRIPLET }}-${{ hashFiles('vcpkg-triplets/*.cmake') }}
+          key: v2-${{ runner.os }}-${{ env.TRIPLET }}-${{ hashFiles('vcpkg-triplets/*.cmake') }}
       - name: vcpkg install glfw & freetype (dynamic)
         env:
           VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}/vcpkg-triplets
@@ -266,36 +277,40 @@ jobs:
           set -euo pipefail
           external/vcpkg/vcpkg install glfw3:${TRIPLET} freetype:${TRIPLET} --clean-after-build
 
-      # bgfx via GENie (.dylib)
-      - name: Clone bgfx + bx + bimg
+      # bgfx via GENie (.dylib) — compila GENie local!
+      - name: Clone bgfx + bx + bimg + GENie
         run: |
           set -euo pipefail
-          mkdir -p external
           git clone --depth=1 https://github.com/bkaradzic/bgfx.git external/bgfx
           git clone --depth=1 https://github.com/bkaradzic/bx.git   external/bx
           git clone --depth=1 https://github.com/bkaradzic/bimg.git external/bimg
+          git clone --depth=1 https://github.com/bkaradzic/GENie.git external/GENie
+      - name: Build GENie (local)
+        run: |
+          set -euo pipefail
+          make -C external/GENie
       - name: Generate gmake (GENie)
         working-directory: external/bgfx
         run: |
           set -euo pipefail
-          ../bx/tools/bin/darwin/genie --with-shared-lib --gcc=${PLATFORM} gmake
+          ../GENie/bin/darwin/genie --with-shared-lib --gcc=${PLATFORM} gmake
       - name: Build bgfx shared
         working-directory: external/bgfx
         run: |
           set -euo pipefail
           make -R -C .build/projects/gmake-${PLATFORM} config=release64 bgfx-shared-lib
-      - name: Prepare dist + copy libs
+      - name: Dist (copy libs)
         run: |
           set -euo pipefail
-          mkdir -p dist/macos/${ARCH}/lib
+          mkdir -p dist/macos/${DIST_ARCH}/lib
           BGFX_DYLIB=$(find external/bgfx/.build -name 'libbgfx-shared-libRelease.dylib' -type f | head -n1)
-          cp -a "$BGFX_DYLIB" dist/macos/${ARCH}/lib/libbgfx.dylib
+          cp -a "$BGFX_DYLIB" dist/macos/${DIST_ARCH}/lib/libbgfx.dylib
 
           ROOT="external/vcpkg/installed/${TRIPLET}"
-          cp -a ${ROOT}/lib/libglfw*.dylib     dist/macos/${ARCH}/lib/ 2>/dev/null || true
-          cp -a ${ROOT}/lib/libfreetype*.dylib dist/macos/${ARCH}/lib/ 2>/dev/null || true
-      - name: Upload artifact (macos-${{ matrix.arch }})
+          cp -a ${ROOT}/lib/libglfw*.dylib     dist/macos/${DIST_ARCH}/lib/ 2>/dev/null || true
+          cp -a ${ROOT}/lib/libfreetype*.dylib dist/macos/${DIST_ARCH}/lib/ 2>/dev/null || true
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: libs-macos-${{ matrix.arch }}
-          path: dist/macos/${{ matrix.arch }}
+          name: libs-macos-${{ env.DIST_ARCH }}
+          path: dist/macos/${{ env.DIST_ARCH }}
