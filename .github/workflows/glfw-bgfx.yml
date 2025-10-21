@@ -76,9 +76,11 @@ jobs:
           sudo apt-get install -y \
             libwayland-dev wayland-protocols libxkbcommon-dev
 
-          # cross toolchain for arm64 (apenas quando o job é arm64)
+          # Cross toolchain para arm64 (Ubuntu 24.04: usar pkgconf em vez de pkg-config-aarch64-*)
           if [ "${{ matrix.arch }}" = "arm64" ]; then
-            sudo apt-get install -y g++-aarch64-linux-gnu pkg-config-aarch64-linux-gnu
+            sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu pkgconf
+            # (Opcional) ajudar pkg-config multi-arch; se diretórios não existirem, tudo bem.
+            echo "PKG_CONFIG_LIBDIR=/usr/aarch64-linux-gnu/lib/pkgconfig:/usr/lib/aarch64-linux-gnu/pkgconfig:/usr/share/pkgconfig" >> "$GITHUB_ENV" || true
           fi
 
       - name: Install prerequisites (macOS)
