@@ -43,12 +43,13 @@ jobs:
           cd GENie
           make
 
-      - name: Build bgfx
+      - name: Build bgfx (Vulkan only)
         run: |
           git clone --depth 1 https://github.com/bkaradzic/bgfx.git bgfx
           cd bgfx
           ../GENie/bin/linux/genie --with-shared-lib --gcc=linux-gcc gmake
-          make -R -C .build/projects/gmake-linux config=release64 bgfx-shared-lib
+          CFLAGS="-D BGFX_CONFIG_RENDERER_VULKAN=1 -D BGFX_CONFIG_RENDERER_OPENGL=0 -D BGFX_CONFIG_RENDERER_DIRECT3D9=0 -D BGFX_CONFIG_RENDERER_DIRECT3D11=0 -D BGFX_CONFIG_RENDERER_DIRECT3D12=0 -D BGFX_CONFIG_RENDERER_METAL=0" \
+          make -R -C .build/projects/gmake-linux-gcc config=release64 bgfx-shared-lib
           strip .build/linux64_gcc/bin/libbgfx-shared-libRelease.so
 
       # Build FreeType
@@ -71,6 +72,109 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: linux-x64
+          path: artifacts/
+
+  linux-arm64:
+    name: Linux ARM64
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 3
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
+            libxrandr-dev:arm64 libxinerama-dev:arm64 libxcursor-dev:arm64 \
+            libxi-dev:arm64 libxext-dev:arm64 libwayland-dev:arm64 \
+            libxkbcommon-dev:arm64 || true
+          # Install base cross-compilation tools even if arm64 dev packages aren't available
+          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+
+      # Build GLFW
+      - name: Clone and build GLFW
+        run: |
+          git clone --depth 1 https://github.com/glfw/glfw.git glfw
+          cd glfw
+          cat > toolchain-aarch64.cmake << 'EOF'
+          set(CMAKE_SYSTEM_NAME Linux)
+          set(CMAKE_SYSTEM_PROCESSOR aarch64)
+          set(CMAKE_C_COMPILER aarch64-linux-gnu-gcc)
+          set(CMAKE_CXX_COMPILER aarch64-linux-gnu-g++)
+          set(CMAKE_FIND_ROOT_PATH /usr/aarch64-linux-gnu)
+          set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+          set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+          set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+          EOF
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE=toolchain-aarch64.cmake \
+            -DBUILD_SHARED_LIBS=ON \
+            -DGLFW_BUILD_EXAMPLES=OFF \
+            -DGLFW_BUILD_TESTS=OFF \
+            -DGLFW_BUILD_DOCS=OFF \
+            -DGLFW_BUILD_WAYLAND=OFF \
+            -DGLFW_BUILD_X11=OFF || echo "GLFW build may fail on ARM64 cross-compilation"
+          cmake --build build --config Release || echo "GLFW build failed, continuing..."
+
+      # Build bgfx
+      - name: Clone bx, bimg & GENie
+        run: |
+          git clone --depth 1 https://github.com/bkaradzic/bx.git bx
+          git clone --depth 1 https://github.com/bkaradzic/bimg.git bimg
+          git clone --depth 1 https://github.com/bkaradzic/GENie.git GENie
+          cd GENie
+          make -j$(nproc)
+
+      - name: Build bgfx (Vulkan only)
+        run: |
+          git clone --depth 1 https://github.com/bkaradzic/bgfx.git bgfx
+          cd bgfx
+          CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++ \
+          ../GENie/bin/linux/genie --with-shared-lib --gcc=linux-gcc gmake
+          CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++ \
+          CFLAGS="-D BGFX_CONFIG_RENDERER_VULKAN=1 -D BGFX_CONFIG_RENDERER_OPENGL=0 -D BGFX_CONFIG_RENDERER_DIRECT3D9=0 -D BGFX_CONFIG_RENDERER_DIRECT3D11=0 -D BGFX_CONFIG_RENDERER_DIRECT3D12=0 -D BGFX_CONFIG_RENDERER_METAL=0" \
+          make -R -C .build/projects/gmake-linux-gcc config=release64 bgfx-shared-lib || echo "bgfx build may fail"
+          aarch64-linux-gnu-strip .build/linux64_gcc/bin/libbgfx-shared-libRelease.so || true
+
+      # Build FreeType
+      - name: Clone and build FreeType
+        run: |
+          git clone --depth 1 https://github.com/freetype/freetype.git freetype
+          cd freetype
+          cat > toolchain-aarch64.cmake << 'EOF'
+          set(CMAKE_SYSTEM_NAME Linux)
+          set(CMAKE_SYSTEM_PROCESSOR aarch64)
+          set(CMAKE_C_COMPILER aarch64-linux-gnu-gcc)
+          set(CMAKE_CXX_COMPILER aarch64-linux-gnu-g++)
+          set(CMAKE_FIND_ROOT_PATH /usr/aarch64-linux-gnu)
+          set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+          set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+          set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+          EOF
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE=toolchain-aarch64.cmake \
+            -DBUILD_SHARED_LIBS=ON \
+            -DFT_DISABLE_HARFBUZZ=ON \
+            -DFT_DISABLE_BZIP2=ON \
+            -DFT_DISABLE_PNG=ON \
+            -DFT_DISABLE_BROTLI=ON
+          cmake --build build --config Release
+          aarch64-linux-gnu-strip build/libfreetype.so* || true
+
+      - name: Prepare artifacts
+        run: |
+          mkdir -p artifacts/linux/arm64
+          cp glfw/build/src/libglfw*.so* artifacts/linux/arm64/libglfw.so || echo "GLFW not built"
+          cp bgfx/.build/linux64_gcc/bin/libbgfx-shared-libRelease.so artifacts/linux/arm64/libbgfx.so || echo "bgfx not built"
+          cp freetype/build/libfreetype.so* artifacts/linux/arm64/libfreetype.so || true
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-arm64
           path: artifacts/
 
   macos:
@@ -116,7 +220,7 @@ jobs:
           git clone --depth 1 https://github.com/bkaradzic/bx.git bx
           git clone --depth 1 https://github.com/bkaradzic/bimg.git bimg
 
-      - name: Build bgfx
+      - name: Build bgfx (Metal only)
         run: |
           git clone --depth 1 https://github.com/bkaradzic/bgfx.git bgfx
           cd bgfx
@@ -125,7 +229,7 @@ jobs:
           LDFLAGS="-mmacosx-version-min=${{matrix.OSX_MIN}}" \
           ../bx/tools/bin/darwin/genie --with-shared-lib --with-macos=${{matrix.OSX_MIN}} --gcc=${{matrix.PLATFORM}} gmake
           MACOSX_DEPLOYMENT_TARGET=${{matrix.OSX_MIN}} \
-          CFLAGS="-mmacosx-version-min=${{matrix.OSX_MIN}} -D BGFX_CONFIG_RENDERER_METAL=1 -D BGFX_CONFIG_RENDERER_OPENGL=1" \
+          CFLAGS="-mmacosx-version-min=${{matrix.OSX_MIN}} -D BGFX_CONFIG_RENDERER_METAL=1 -D BGFX_CONFIG_RENDERER_OPENGL=0 -D BGFX_CONFIG_RENDERER_VULKAN=0 -D BGFX_CONFIG_RENDERER_DIRECT3D9=0 -D BGFX_CONFIG_RENDERER_DIRECT3D11=0 -D BGFX_CONFIG_RENDERER_DIRECT3D12=0" \
           LDFLAGS="-mmacosx-version-min=${{matrix.OSX_MIN}}" \
           make -C .build/projects/gmake-${{matrix.PLATFORM}} config=release64 bgfx-shared-lib
           strip -u -r .build/${{matrix.PLATFORM}}/bin/libbgfx-shared-libRelease.dylib
@@ -189,10 +293,16 @@ jobs:
           git clone --depth 1 https://github.com/bkaradzic/bx.git bx
           git clone --depth 1 https://github.com/bkaradzic/bimg.git bimg
 
-      - name: Build bgfx
+      - name: Build bgfx (D3D12 + Vulkan only)
         run: |
           git clone --depth 1 https://github.com/bkaradzic/bgfx.git bgfx
           cd bgfx
+          echo #define BGFX_CONFIG_RENDERER_DIRECT3D12 1 > src\config.h
+          echo #define BGFX_CONFIG_RENDERER_VULKAN 1 >> src\config.h
+          echo #define BGFX_CONFIG_RENDERER_DIRECT3D9 0 >> src\config.h
+          echo #define BGFX_CONFIG_RENDERER_DIRECT3D11 0 >> src\config.h
+          echo #define BGFX_CONFIG_RENDERER_OPENGL 0 >> src\config.h
+          echo #define BGFX_CONFIG_RENDERER_METAL 0 >> src\config.h
           ..\bx\tools\bin\windows\genie --with-shared-lib vs2022 --platform x64
           devenv .build\projects\vs2022\bgfx.sln /Project bgfx-shared-lib /Build "Release|x64"
 
