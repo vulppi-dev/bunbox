@@ -12,7 +12,7 @@ export type InferField<D extends AllFields> = D extends { type: 'struct' }
   ? { [K in keyof D['fields']]: InferField<D['fields'][K]> }
   : D extends { type: 'array'; to: infer P }
     ? P extends AllFields
-      ? InferField<P>[]
+      ? (InferField<P> | bigint)[] | bigint
       : never
     : D extends {
           type: 'u8' | 'u16' | 'u32' | 'i8' | 'i16' | 'i32' | 'f32' | 'f64';
@@ -23,7 +23,7 @@ export type InferField<D extends AllFields> = D extends { type: 'struct' }
         : D extends { type: 'bool' }
           ? boolean
           : D extends { type: 'string' }
-            ? string
+            ? string | bigint
             : D extends { type: 'void' }
               ? bigint
               : never;
@@ -45,11 +45,13 @@ export type AllFields =
   | ArrayField<any>
   | StructField<any>;
 
+export type FieldType = AllFields['type'];
+
 /*** FIELDS ***/
 
 export type Uint8Field = {
   type: 'u8';
-  meta?: FieldOptions<number>;
+  meta?: any;
 };
 
 export function u8<O extends FieldOptions<number>>(options?: O) {
@@ -61,7 +63,7 @@ export function u8<O extends FieldOptions<number>>(options?: O) {
 
 export type Uint16Field = {
   type: 'u16';
-  meta?: FieldOptions<number>;
+  meta?: any;
 };
 
 export function u16<O extends FieldOptions<number>>(options?: O) {
@@ -73,7 +75,7 @@ export function u16<O extends FieldOptions<number>>(options?: O) {
 
 export type Uint32Field = {
   type: 'u32';
-  meta?: FieldOptions<number>;
+  meta?: any;
 };
 
 export function u32<O extends FieldOptions<number>>(options?: O) {
@@ -85,7 +87,7 @@ export function u32<O extends FieldOptions<number>>(options?: O) {
 
 export type Uint64Field = {
   type: 'u64';
-  meta?: FieldOptions<bigint>;
+  meta?: any;
 };
 
 export function u64<O extends FieldOptions<bigint>>(options?: O) {
@@ -97,7 +99,7 @@ export function u64<O extends FieldOptions<bigint>>(options?: O) {
 
 export type Int8Field = {
   type: 'i8';
-  meta?: FieldOptions<number>;
+  meta?: any;
 };
 
 export function i8<O extends FieldOptions<number>>(options?: O) {
@@ -109,7 +111,7 @@ export function i8<O extends FieldOptions<number>>(options?: O) {
 
 export type Int16Field = {
   type: 'i16';
-  meta?: FieldOptions<number>;
+  meta?: any;
 };
 
 export function i16<O extends FieldOptions<number>>(options?: O) {
@@ -121,7 +123,7 @@ export function i16<O extends FieldOptions<number>>(options?: O) {
 
 export type Int32Field = {
   type: 'i32';
-  meta?: FieldOptions<number>;
+  meta?: any;
 };
 
 export function i32<O extends FieldOptions<number>>(options?: O) {
@@ -133,7 +135,7 @@ export function i32<O extends FieldOptions<number>>(options?: O) {
 
 export type Int64Field = {
   type: 'i64';
-  meta?: FieldOptions<bigint>;
+  meta?: any;
 };
 
 export function i64<O extends FieldOptions<bigint>>(options?: O) {
@@ -145,7 +147,7 @@ export function i64<O extends FieldOptions<bigint>>(options?: O) {
 
 export type Float32Field = {
   type: 'f32';
-  meta?: FieldOptions<number>;
+  meta?: any;
 };
 
 export function f32<O extends FieldOptions<number>>(options?: O) {
@@ -157,7 +159,7 @@ export function f32<O extends FieldOptions<number>>(options?: O) {
 
 export type Float64Field = {
   type: 'f64';
-  meta?: FieldOptions<number>;
+  meta?: any;
 };
 
 export function f64<O extends FieldOptions<number>>(options?: O) {
@@ -169,7 +171,7 @@ export function f64<O extends FieldOptions<number>>(options?: O) {
 
 export type BoolField = {
   type: 'bool';
-  meta?: FieldOptions<boolean>;
+  meta?: any;
 };
 
 export function bool<O extends FieldOptions<boolean>>(options?: O) {
@@ -181,7 +183,7 @@ export function bool<O extends FieldOptions<boolean>>(options?: O) {
 
 export type StringField = {
   type: 'string';
-  meta?: FieldOptions<string>;
+  meta?: any;
 };
 
 export function string<O extends FieldOptions<string>>(options?: O) {
@@ -193,7 +195,7 @@ export function string<O extends FieldOptions<string>>(options?: O) {
 
 export type PointerAnyField = {
   type: 'void';
-  meta?: FieldOptions<bigint>;
+  meta?: any;
 };
 
 export function ptrAny<O extends FieldOptions<bigint>>(options?: O) {
@@ -206,17 +208,25 @@ export function ptrAny<O extends FieldOptions<bigint>>(options?: O) {
 export type ArrayField<P extends AllFields> = {
   type: 'array';
   to: P;
-  meta?: FieldOptions<InferField<P>[]>;
+  meta?: any;
+  length?: number;
 };
 
 export function array<
   P extends AllFields,
-  O extends FieldOptions<InferField<P>[]>,
+  O extends FieldOptions<InferField<P>[]> & { length?: number },
 >(to: P, options?: O) {
+  if (options?.isPointer && typeof options.length === 'number') {
+    throw new Error(
+      'Array field cannot be a pointer and have an inline length.',
+    );
+  }
+
   return {
     type: 'array',
     to,
     meta: options,
+    length: options?.length,
   } satisfies ArrayField<P>;
 }
 
@@ -227,14 +237,14 @@ export type StructDesc = {
 export type StructField<D extends StructDesc> = {
   type: 'struct';
   fields: StructDesc;
-  meta?: FieldOptions<InferField<{ type: 'struct'; fields: D }>>;
+  meta?: any;
   isUnion?: boolean;
 };
 
 export function struct<
   D extends StructDesc,
-  O extends FieldOptions<InferField<{ type: 'struct'; fields: D }>>,
->(desc: D, options: O) {
+  O extends FieldOptions<InferField<{ type: 'struct'; fields: D }>> | undefined,
+>(desc: D, options?: O) {
   return {
     type: 'struct',
     fields: desc,
@@ -245,8 +255,8 @@ export function struct<
 
 export function union<
   D extends StructDesc,
-  O extends FieldOptions<InferField<{ type: 'struct'; fields: D }>>,
->(desc: D, options: O) {
+  O extends FieldOptions<InferField<{ type: 'struct'; fields: D }>> | undefined,
+>(desc: D, options?: O) {
   return {
     type: 'struct',
     fields: desc,
