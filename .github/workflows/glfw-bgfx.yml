@@ -52,10 +52,12 @@ jobs:
       - name: Install prerequisites (Ubuntu)
         if: runner.os == 'Linux'
         run: |
+          set -euo pipefail
           sudo apt-get update
           sudo apt-get install -y \
             build-essential git cmake ninja-build pkg-config \
-            curl zip unzip tar
+            curl zip unzip tar \
+            xorg-dev mesa-common-dev libgl1-mesa-dev
           # cross toolchain for arm64
           if [ "${{ matrix.arch }}" = "arm64" ]; then
             sudo apt-get install -y g++-aarch64-linux-gnu pkg-config-aarch64-linux-gnu
@@ -64,10 +66,11 @@ jobs:
       - name: Install prerequisites (macOS)
         if: runner.os == 'macOS'
         run: |
+          set -euo pipefail
           brew update || true
           brew install cmake ninja || true
 
-      # Windows runners já têm MSVC/CMake/Ninja. Nada a fazer.
+      # Windows runners já têm MSVC/CMake/Ninja.
 
       # --------------------- vcpkg -----------------------
       - name: Clone/Update vcpkg
@@ -81,15 +84,21 @@ jobs:
             git -C external/vcpkg pull --ff-only
           fi
 
-      - name: Bootstrap vcpkg
+      - name: Bootstrap vcpkg (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          & .\external\vcpkg\bootstrap-vcpkg.bat
+          if (-not (Test-Path .\external\vcpkg\vcpkg.exe)) {
+            Throw "vcpkg.exe not found after bootstrap"
+          }
+
+      - name: Bootstrap vcpkg (Linux/macOS)
+        if: runner.os != 'Windows'
         shell: bash
         run: |
           set -euo pipefail
-          if [ "${{ runner.os }}" = "Windows" ]; then
-            cmd.exe /c "external\\vcpkg\\bootstrap-vcpkg.bat"
-          else
-            bash external/vcpkg/bootstrap-vcpkg.sh
-          fi
+          bash external/vcpkg/bootstrap-vcpkg.sh
 
       - name: Create overlay triplets (Linux/macOS)
         if: runner.os != 'Windows'
@@ -140,15 +149,22 @@ jobs:
           key: v1-${{ runner.os }}-${{ matrix.triplet }}-${{ steps.vcpkg_rev.outputs.hash }}
 
       # --------------------- Build via vcpkg -------------
-      - name: vcpkg install (glfw3 & bgfx)
+      - name: vcpkg install (glfw3 & bgfx) [Windows]
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $triplet = '${{ matrix.triplet }}'
+          $ports   = @("glfw3:$triplet", "bgfx:$triplet")
+          & .\external\vcpkg\vcpkg.exe install $ports --clean-after-build
+
+      - name: vcpkg install (glfw3 & bgfx) [Linux/macOS]
+        if: runner.os != 'Windows'
         shell: bash
+        env:
+          VCPKG_OVERLAY_TRIPLETS: ${{ github.workspace }}/vcpkg-triplets
         run: |
           set -euo pipefail
-          EXTRA=""
-          if [ "${{ runner.os }}" != "Windows" ]; then
-            EXTRA="--overlay-triplets=$(pwd)/vcpkg-triplets"
-          fi
-          external/vcpkg/vcpkg install glfw3:${{ matrix.triplet }} bgfx:${{ matrix.triplet }} $EXTRA --clean-after-build
+          external/vcpkg/vcpkg install glfw3:${{ matrix.triplet }} bgfx:${{ matrix.triplet }} --clean-after-build
 
       # --------------------- Collect libs ----------------
       - name: Prepare dist tree
@@ -157,7 +173,23 @@ jobs:
           set -euo pipefail
           mkdir -p dist-libs/win32/x64 dist-libs/linux/x64 dist-libs/linux/arm64 dist-libs/mac/x64 dist-libs/mac/arm64
 
-      - name: Copy shared libraries to dist
+      - name: Copy shared libraries to dist [Windows]
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $Triplet = '${{ matrix.triplet }}'
+          $Root    = "external/vcpkg/installed/$Triplet"
+          $Bin     = Join-Path $Root "bin"
+          $Dst     = "dist-libs/win32/${{ matrix.arch }}"
+          New-Item -ItemType Directory -Force -Path $Dst | Out-Null
+          Copy-Item "$Bin\*glfw*.dll" $Dst -ErrorAction SilentlyContinue
+          Copy-Item "$Bin\*bgfx*.dll" $Dst -ErrorAction SilentlyContinue
+          Copy-Item "$Bin\*bimg*.dll" $Dst -ErrorAction SilentlyContinue
+          Copy-Item "$Bin\*bx*.dll"   $Dst -ErrorAction SilentlyContinue
+          Get-ChildItem -Force $Dst | Format-List -Property Name,Length
+
+      - name: Copy shared libraries to dist [Linux/macOS]
+        if: runner.os != 'Windows'
         shell: bash
         run: |
           set -euo pipefail
@@ -167,14 +199,6 @@ jobs:
           LIB="${ROOT}/lib"
 
           case "${{ matrix.platform }}" in
-            win32)
-              DST="dist-libs/win32/${{ matrix.arch }}"
-              mkdir -p "$DST"
-              cp -a ${BIN}/*glfw*.dll   "$DST" 2>/dev/null || true
-              cp -a ${BIN}/*bgfx*.dll   "$DST" 2>/dev/null || true
-              cp -a ${BIN}/*bimg*.dll   "$DST" 2>/dev/null || true
-              cp -a ${BIN}/*bx*.dll     "$DST" 2>/dev/null || true
-              ;;
             linux)
               DST="dist-libs/linux/${{ matrix.arch }}"
               mkdir -p "$DST"
