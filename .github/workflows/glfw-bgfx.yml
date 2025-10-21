@@ -54,11 +54,29 @@ jobs:
         run: |
           set -euo pipefail
           sudo apt-get update
+          # Base toolchain + cache tools
           sudo apt-get install -y \
             build-essential git cmake ninja-build pkg-config \
-            curl zip unzip tar \
-            xorg-dev mesa-common-dev libgl1-mesa-dev
-          # cross toolchain for arm64
+            curl zip unzip tar
+
+          # X11 + GL (GLVND/GLX) + extras que glfw/bgfx detectam no Linux
+          sudo apt-get install -y \
+            xorg-dev libx11-dev libxrandr-dev libxi-dev libxinerama-dev libxcursor-dev libxxf86vm-dev \
+            libglvnd-dev libgl1-mesa-dev mesa-common-dev
+
+          # EGL / GLES (bgfx/GLFW habilitam se presentes)
+          sudo apt-get install -y \
+            libegl1-mesa-dev libgles2-mesa-dev
+
+          # DRM (às vezes detectado por bgfx)
+          sudo apt-get install -y \
+            libdrm-dev
+
+          # Wayland (GLFW/bgfx detectam e usam se existir)
+          sudo apt-get install -y \
+            libwayland-dev wayland-protocols libxkbcommon-dev
+
+          # cross toolchain for arm64 (apenas quando o job é arm64)
           if [ "${{ matrix.arch }}" = "arm64" ]; then
             sudo apt-get install -y g++-aarch64-linux-gnu pkg-config-aarch64-linux-gnu
           fi
@@ -69,8 +87,6 @@ jobs:
           set -euo pipefail
           brew update || true
           brew install cmake ninja || true
-
-      # Windows runners já têm MSVC/CMake/Ninja.
 
       # --------------------- vcpkg -----------------------
       - name: Clone/Update vcpkg
@@ -166,6 +182,20 @@ jobs:
           set -euo pipefail
           external/vcpkg/vcpkg install glfw3:${{ matrix.triplet }} bgfx:${{ matrix.triplet }} --clean-after-build
 
+      # --- Coletar logs se falhar (Linux) ---------------
+      - name: Upload bgfx build logs (on failure)
+        if: failure() && runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-linux-bgfx
+          path: |
+            external/vcpkg/buildtrees/bgfx/*.log
+            external/vcpkg/buildtrees/bgfx/*/*.log
+            external/vcpkg/buildtrees/*/config-*.log
+            external/vcpkg/buildtrees/*/*-out.log
+          if-no-files-found: warn
+          retention-days: 7
+
       # --------------------- Collect libs ----------------
       - name: Prepare dist tree
         shell: bash
@@ -186,7 +216,6 @@ jobs:
           Copy-Item "$Bin\*bgfx*.dll" $Dst -ErrorAction SilentlyContinue
           Copy-Item "$Bin\*bimg*.dll" $Dst -ErrorAction SilentlyContinue
           Copy-Item "$Bin\*bx*.dll"   $Dst -ErrorAction SilentlyContinue
-          Get-ChildItem -Force $Dst | Format-List -Property Name,Length
 
       - name: Copy shared libraries to dist [Linux/macOS]
         if: runner.os != 'Windows'
@@ -195,9 +224,7 @@ jobs:
           set -euo pipefail
           TRIPLET="${{ matrix.triplet }}"
           ROOT="external/vcpkg/installed/${TRIPLET}"
-          BIN="${ROOT}/bin"
           LIB="${ROOT}/lib"
-
           case "${{ matrix.platform }}" in
             linux)
               DST="dist-libs/linux/${{ matrix.arch }}"
@@ -217,9 +244,6 @@ jobs:
               ;;
           esac
 
-          echo "Contents of $DST:"
-          ls -la "$DST" || true
-
       - name: Upload artifact (per-target)
         uses: actions/upload-artifact@v4
         with:
@@ -232,7 +256,6 @@ jobs:
     name: bundle-all-artifacts
     runs-on: ubuntu-latest
     needs: [build]
-
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
