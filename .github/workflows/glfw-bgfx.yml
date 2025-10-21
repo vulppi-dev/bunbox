@@ -178,38 +178,42 @@ jobs:
           $ports   = @("glfw3:$triplet", "bgfx:$triplet")
           & .\external\vcpkg\vcpkg.exe install $ports --clean-after-build
 
-      - name: Build bgfx-shared-lib (Windows via bgfx.cmake)
+      - name: Build bgfx (Windows via bgfx.cmake)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           git config --global core.longpaths true
           git clone --depth=1 --recurse-submodules https://github.com/bkaradzic/bgfx.cmake.git external\bgfx.cmake
-          # Garante submódulos com clone raso
           git -C external\bgfx.cmake submodule update --init --recursive --depth 1
 
           $buildDir = "external\bgfx.cmake\build"
           New-Item -ItemType Directory -Force -Path $buildDir | Out-Null
 
-          # Mantém sua lógica atual de gerador
-          $gen = (Get-Command ninja -ErrorAction SilentlyContinue) ? "Ninja" : "Visual Studio 17 2022"
-
-          cmake -S external\bgfx.cmake -B $buildDir -G "$gen" `
-            -DBGFX_BUILD_SHARED_LIBS=ON `
+          # Use sempre MSVC (VS 2022) e x64 para evitar o MinGW do runner
+          cmake -S external\bgfx.cmake -B $buildDir -G "Visual Studio 17 2022" -A x64 `
+            -DBUILD_SHARED_LIBS=ON `
             -DBGFX_BUILD_EXAMPLES=OFF `
             -DBGFX_BUILD_TOOLS=OFF `
             -DBGFX_CONFIG_MULTITHREADED=ON `
             -DCMAKE_BUILD_TYPE=Release
 
-          if ($gen -eq "Ninja") {
-            cmake --build $buildDir --config Release --target bgfx-shared-lib -- -v
-          } else {
-            cmake --build $buildDir --config Release --target bgfx-shared-lib
-          }
+          # Compila e instala num prefix isolado
+          cmake --build $buildDir --config Release
+          cmake --install $buildDir --config Release --prefix "$buildDir\_install"
 
+          # Copia artefatos (DLL/IMPLIB/PDB) para a pasta dist
           $dst = "dist-libs\win32\${{ matrix.arch }}"
           New-Item -ItemType Directory -Force -Path $dst | Out-Null
-          Get-ChildItem -Recurse $buildDir -Filter "bgfx-shared-lib*.dll" | ForEach-Object { Copy-Item $_.FullName $dst -Force }
-          Get-ChildItem -Recurse $buildDir -Include "bgfx-shared-lib*.pdb","bgfx-shared-lib*.lib" | ForEach-Object { Copy-Item $_.FullName $dst -Force }
+          Copy-Item "$buildDir\_install\bin\bgfx*.dll" $dst -Force -ErrorAction SilentlyContinue
+          Copy-Item "$buildDir\_install\lib\bgfx*.lib" $dst -Force -ErrorAction SilentlyContinue
+          Copy-Item "$buildDir\_install\bin\bgfx*.pdb" $dst -Force -ErrorAction SilentlyContinue
+
+          # Falha se não saiu DLL
+          if (-not (Get-ChildItem $dst -Filter "bgfx*.dll" -ErrorAction SilentlyContinue)) {
+            Write-Host "Conteúdo do buildDir:"
+            Get-ChildItem -Recurse $buildDir | Where-Object { $_.Name -like "bgfx*.dll" } | Format-Table -AutoSize
+            Throw "bgfx DLL not found after build+install."
+          }
 
       - name: vcpkg install (glfw3 & bgfx) [Linux/macOS]
         if: runner.os != 'Windows'
