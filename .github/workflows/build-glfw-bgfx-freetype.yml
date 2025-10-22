@@ -132,11 +132,20 @@ jobs:
         run: |
           git clone --depth 1 https://github.com/bkaradzic/bgfx.git bgfx
           cd bgfx
-          CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++ \
+          export CC=aarch64-linux-gnu-gcc
+          export CXX=aarch64-linux-gnu-g++
+          export AR=aarch64-linux-gnu-ar
+          export LD=aarch64-linux-gnu-ld
+          export STRIP=aarch64-linux-gnu-strip
           ../GENie/bin/linux/genie --with-shared-lib --gcc=linux-gcc gmake
-          CC=aarch64-linux-gnu-gcc CXX=aarch64-linux-gnu-g++ \
+          if [ ! -d ".build/projects/gmake-linux-gcc" ]; then
+            echo "bgfx: GENie gmake project was not generated" >&2
+            exit 1
+          fi
+          find .build/projects/gmake-linux-gcc -type f -name "*.make" -print0 | xargs -0 sed -i 's/-m64//g'
+          find .build/projects/gmake-linux-gcc -type f -name "*.make" -print0 | xargs -0 sed -i 's/-m32//g'
           CFLAGS="-D BGFX_CONFIG_RENDERER_VULKAN=1 -D BGFX_CONFIG_RENDERER_OPENGL=0 -D BGFX_CONFIG_RENDERER_DIRECT3D9=0 -D BGFX_CONFIG_RENDERER_DIRECT3D11=0 -D BGFX_CONFIG_RENDERER_DIRECT3D12=0 -D BGFX_CONFIG_RENDERER_METAL=0" \
-          make -R -C .build/projects/gmake-linux-gcc config=release64 bgfx-shared-lib || echo "bgfx build may fail"
+          make -R -C .build/projects/gmake-linux-gcc config=release64 bgfx-shared-lib
           aarch64-linux-gnu-strip .build/linux64_gcc/bin/libbgfx-shared-libRelease.so || true
 
       # Build FreeType
@@ -191,13 +200,18 @@ jobs:
             echo "bgfx: copied from expected path" >> logs/linux-arm64/bgfx.txt
           else
             echo "bgfx: expected file not found, searching .build for libbgfx" >> logs/linux-arm64/bgfx.txt
-            find bgfx/.build -name "libbgfx*.so*" -print -exec cp {} artifacts/linux/arm64/libbgfx.so \; 2>/dev/null || true
+            find bgfx/.build -name "libbgfx*.so*" -print -exec cp {} artifacts/linux/arm64/libbgfx.so \; -quit 2>/dev/null || true
             if [ -f artifacts/linux/arm64/libbgfx.so ]; then
               echo "bgfx: copied from fallback" >> logs/linux-arm64/bgfx.txt
             else
               echo "bgfx: not built" >> logs/linux-arm64/bgfx.txt
-              touch artifacts/linux/arm64/libbgfx.so
+              exit 1
             fi
+          fi
+
+          if [ ! -s artifacts/linux/arm64/libbgfx.so ]; then
+            echo "bgfx: artifact is empty" >> logs/linux-arm64/bgfx.txt
+            exit 1
           fi
 
           echo "--- FreeType build output ---" > logs/linux-arm64/freetype.txt
