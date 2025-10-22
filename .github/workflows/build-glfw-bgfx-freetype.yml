@@ -110,6 +110,11 @@ jobs:
             libx11-xcb-dev:arm64 \
             -o Dpkg::Options::="--force-overwrite" || echo "Some packages may not be available"
 
+          # Debug: Check where xcb headers are installed
+          echo "=== Checking for XCB headers ==="
+          find /usr -name "xcb.h" 2>/dev/null || echo "xcb.h not found"
+          dpkg -L libxcb1-dev:arm64 | grep xcb.h || echo "Not in libxcb1-dev:arm64"
+
       # Build GLFW
       - name: Clone and build GLFW
         run: |
@@ -155,12 +160,15 @@ jobs:
 
           ../GENie/bin/linux/genie --with-shared-lib --gcc=linux-arm-gcc gmake
 
+          # Set PKG_CONFIG_PATH for cross-compilation
+          export PKG_CONFIG_PATH=/usr/lib/aarch64-linux-gnu/pkgconfig
+
           make -R -C .build/projects/gmake-linux-arm-gcc config=release \
             CXX="aarch64-linux-gnu-g++" \
             CC="aarch64-linux-gnu-gcc" \
             AR="aarch64-linux-gnu-ar" \
-            CFLAGS="-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0 -I/usr/aarch64-linux-gnu/include -D BGFX_CONFIG_RENDERER_VULKAN=1 -D BGFX_CONFIG_RENDERER_OPENGL=0 -D BGFX_CONFIG_RENDERER_DIRECT3D9=0 -D BGFX_CONFIG_RENDERER_DIRECT3D11=0 -D BGFX_CONFIG_RENDERER_DIRECT3D12=0 -D BGFX_CONFIG_RENDERER_METAL=0" \
-            CXXFLAGS="-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0 -I/usr/aarch64-linux-gnu/include -D BGFX_CONFIG_RENDERER_VULKAN=1 -D BGFX_CONFIG_RENDERER_OPENGL=0 -D BGFX_CONFIG_RENDERER_DIRECT3D9=0 -D BGFX_CONFIG_RENDERER_DIRECT3D11=0 -D BGFX_CONFIG_RENDERER_DIRECT3D12=0 -D BGFX_CONFIG_RENDERER_METAL=0" \
+            CFLAGS="-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0 -I/usr/include/aarch64-linux-gnu -D BGFX_CONFIG_RENDERER_VULKAN=1 -D BGFX_CONFIG_RENDERER_OPENGL=0 -D BGFX_CONFIG_RENDERER_DIRECT3D9=0 -D BGFX_CONFIG_RENDERER_DIRECT3D11=0 -D BGFX_CONFIG_RENDERER_DIRECT3D12=0 -D BGFX_CONFIG_RENDERER_METAL=0" \
+            CXXFLAGS="-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0 -I/usr/include/aarch64-linux-gnu -D BGFX_CONFIG_RENDERER_VULKAN=1 -D BGFX_CONFIG_RENDERER_OPENGL=0 -D BGFX_CONFIG_RENDERER_DIRECT3D9=0 -D BGFX_CONFIG_RENDERER_DIRECT3D11=0 -D BGFX_CONFIG_RENDERER_DIRECT3D12=0 -D BGFX_CONFIG_RENDERER_METAL=0" \
             bgfx-shared-lib
 
           aarch64-linux-gnu-strip .build/linux32_arm_gcc/bin/libbgfx-shared-libRelease.so
