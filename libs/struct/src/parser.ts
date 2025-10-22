@@ -97,7 +97,7 @@ export function prepareObject<F extends AllFields>(field: F): InferField<F> {
   }
 }
 
-export function objToBuffer<F extends AllFields>(
+export function objectToBuffer<F extends AllFields>(
   field: F,
   value: InferField<F>,
 ): Uint8Array<ArrayBufferLike> {

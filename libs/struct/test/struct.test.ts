@@ -11,7 +11,12 @@ import {
   u8,
   type InferField,
 } from '../src/fields';
-import { toBuffer, toObject } from '../src/parser';
+import {
+  prepareObject,
+  setupStruct,
+  bufferToObject,
+  objectToBuffer,
+} from '../src/parser';
 
 function createStringCodec() {
   const byValue = new Map<string, bigint>();
@@ -58,21 +63,26 @@ function createStringCodec() {
 }
 
 describe('struct parser', () => {
+  const codec = createStringCodec();
+  setupStruct({
+    pack: 8,
+    stringToPointer: codec.handlers.stringToPointer,
+    pointerToString: codec.handlers.pointerToString,
+  });
+
   it('encodes and decodes primitives with string fields', () => {
-    const codec = createStringCodec();
     const person = struct({
       name: string(),
       age: u8(),
       active: bool(),
     });
 
-    const payload: InferField<typeof person> = {
-      name: 'Alice',
-      age: 42,
-      active: true,
-    };
+    const payload = prepareObject(person);
+    payload.name = 'Alice';
+    payload.age = 42;
+    payload.active = true;
 
-    const buffer = toBuffer(person, payload, codec.handlers);
+    const buffer = objectToBuffer(person, payload);
 
     const view = new DataView(
       buffer.buffer,
@@ -84,18 +94,20 @@ describe('struct parser', () => {
     expect(view.getUint8(8)).toBe(42);
     expect(view.getUint8(9)).toBe(1);
 
-    const decoded = toObject(person, buffer, codec.handlers);
+    const decoded = bufferToObject(person, buffer);
     expect(decoded).toEqual(payload);
   });
 
   it('falls back to default string pointer when value missing', () => {
-    const codec = createStringCodec();
     const header = struct({
       title: string(),
       flag: u8(),
     });
 
-    const buffer = toBuffer(header, { flag: 7 }, codec.handlers);
+    const payload = prepareObject(header);
+    payload.flag = 7;
+
+    const buffer = objectToBuffer(header, payload);
     const view = new DataView(
       buffer.buffer,
       buffer.byteOffset,
@@ -105,12 +117,11 @@ describe('struct parser', () => {
     expect(view.getBigUint64(0, true)).toBe(0n);
     expect(view.getUint8(8)).toBe(7);
 
-    const decoded = toObject(header, buffer, codec.handlers);
+    const decoded = bufferToObject(header, buffer);
     expect(decoded).toEqual({ title: '', flag: 7 });
   });
 
   it('handles inline arrays and nested structs', () => {
-    const codec = createStringCodec();
     const payloadStruct = struct({
       values: array(u16(), { length: 3 }),
       meta: struct({
@@ -124,13 +135,12 @@ describe('struct parser', () => {
       meta: { label: 'payload', count: 2 },
     };
 
-    const buffer = toBuffer(payloadStruct, payload, codec.handlers);
-    const decoded = toObject(payloadStruct, buffer, codec.handlers);
+    const buffer = objectToBuffer(payloadStruct, payload);
+    const decoded = bufferToObject(payloadStruct, buffer);
     expect(decoded).toEqual(payload);
   });
 
   it('serializes inline string arrays', () => {
-    const codec = createStringCodec();
     const tagsStruct = struct({
       tags: array(string(), { length: 2 }),
     });
@@ -139,13 +149,12 @@ describe('struct parser', () => {
       tags: ['alpha', 'beta'],
     };
 
-    const buffer = toBuffer(tagsStruct, payload, codec.handlers);
-    const decoded = toObject(tagsStruct, buffer, codec.handlers);
+    const buffer = objectToBuffer(tagsStruct, payload);
+    const decoded = bufferToObject(tagsStruct, buffer);
     expect(decoded).toEqual(payload);
   });
 
   it('preserves externally allocated string pointers', () => {
-    const codec = createStringCodec();
     const message = struct({
       body: string(),
     });
@@ -157,7 +166,7 @@ describe('struct parser', () => {
       body: existingPointer,
     };
 
-    const buffer = toBuffer(message, payload, codec.handlers);
+    const buffer = objectToBuffer(message, payload);
 
     const view = new DataView(
       buffer.buffer,
@@ -167,12 +176,11 @@ describe('struct parser', () => {
 
     expect(view.getBigUint64(0, true)).toBe(existingPointer);
 
-    const decoded = toObject(message, buffer, codec.handlers);
+    const decoded = bufferToObject(message, buffer);
     expect(decoded).toEqual({ body: 'external' });
   });
 
   it('keeps pointer value for dynamic arrays without inline length', () => {
-    const codec = createStringCodec();
     const pointerArray = struct({
       buffer: array(u8()),
       label: string(),
@@ -184,7 +192,7 @@ describe('struct parser', () => {
       label: 'ptr',
     } as const;
 
-    const buffer = toBuffer(pointerArray, payload, codec.handlers);
+    const buffer = objectToBuffer(pointerArray, payload);
 
     const view = new DataView(
       buffer.buffer,
@@ -194,7 +202,7 @@ describe('struct parser', () => {
 
     expect(view.getBigUint64(0, true)).toBe(pointer);
 
-    const decoded = toObject(pointerArray, buffer, codec.handlers);
+    const decoded = bufferToObject(pointerArray, buffer);
     expect(decoded).toEqual({ buffer: pointer, label: 'ptr' });
   });
 });
