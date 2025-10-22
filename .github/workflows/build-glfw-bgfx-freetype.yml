@@ -33,7 +33,7 @@ jobs:
 
       # Build bgfx
       - name: Install bgfx dependencies
-        run: sudo apt-get install -y mesa-libGL-devel xorg-x11-proto-devel libX11-devel || sudo apt-get install -y libgl1-mesa-dev x11proto-dev libx11-dev
+        run: sudo apt-get install -y libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev x11proto-dev libx11-dev
 
       - name: Clone bx, bimg & GENie
         run: |
@@ -43,12 +43,11 @@ jobs:
           cd GENie
           make
 
-      - name: Build bgfx (Vulkan only)
+      - name: Build bgfx
         run: |
           git clone --depth 1 https://github.com/bkaradzic/bgfx.git bgfx
           cd bgfx
           ../GENie/bin/linux/genie --with-shared-lib --gcc=linux-gcc gmake
-          CFLAGS="-D BGFX_CONFIG_RENDERER_VULKAN=1 -D BGFX_CONFIG_RENDERER_OPENGL=0 -D BGFX_CONFIG_RENDERER_DIRECT3D9=0 -D BGFX_CONFIG_RENDERER_DIRECT3D11=0 -D BGFX_CONFIG_RENDERER_DIRECT3D12=0 -D BGFX_CONFIG_RENDERER_METAL=0" \
           make -R -C .build/projects/gmake-linux-gcc config=release64 bgfx-shared-lib
           strip .build/linux64_gcc/bin/libbgfx-shared-libRelease.so
 
@@ -100,20 +99,11 @@ jobs:
         run: |
           sudo apt-get -yq --allow-unauthenticated install \
             libgl1-mesa-dev:arm64 \
+            libgles2-mesa-dev:arm64 \
+            libegl1-mesa-dev:arm64 \
             x11proto-dev:arm64 \
             libx11-dev:arm64 \
-            libxcb1-dev:arm64 \
-            libxcb-randr0-dev:arm64 \
-            libxcb-xfixes0-dev:arm64 \
-            libxcb-shape0-dev:arm64 \
-            libxcb-sync-dev:arm64 \
-            libx11-xcb-dev:arm64 \
-            -o Dpkg::Options::="--force-overwrite" || echo "Some packages may not be available"
-
-          # Debug: Check where xcb headers are installed
-          echo "=== Checking for XCB headers ==="
-          find /usr -name "xcb.h" 2>/dev/null || echo "xcb.h not found"
-          dpkg -L libxcb1-dev:arm64 | grep xcb.h || echo "Not in libxcb1-dev:arm64"
+            -o Dpkg::Options::="--force-overwrite"
 
       # Build GLFW
       - name: Clone and build GLFW
@@ -378,7 +368,7 @@ jobs:
           git clone --depth 1 https://github.com/bkaradzic/bx.git bx
           git clone --depth 1 https://github.com/bkaradzic/bimg.git bimg
 
-      - name: Build bgfx (D3D12 + Vulkan only)
+      - name: Build bgfx
         run: |
           git clone --depth 1 https://github.com/bkaradzic/bgfx.git bgfx
           cd bgfx
