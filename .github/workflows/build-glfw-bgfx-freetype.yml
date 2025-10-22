@@ -85,13 +85,24 @@ jobs:
 
       - name: Install dependencies
         run: |
+          sudo dpkg --add-architecture arm64
           sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
+          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+
+          # Install ARM64 development libraries for Vulkan/XCB
+          sudo apt-get install -y \
+            libxcb1-dev:arm64 \
+            libxcb-randr0-dev:arm64 \
+            libxcb-xfixes0-dev:arm64 \
+            libxcb-shape0-dev:arm64 \
+            libxcb-sync-dev:arm64 \
+            libx11-xcb-dev:arm64 || echo "Some XCB packages may not be available"
+
+          # Try to install optional GLFW dependencies
+          sudo apt-get install -y \
             libxrandr-dev:arm64 libxinerama-dev:arm64 libxcursor-dev:arm64 \
             libxi-dev:arm64 libxext-dev:arm64 libwayland-dev:arm64 \
-            libxkbcommon-dev:arm64 libxcb1-dev:arm64 || true
-          # Install base cross-compilation tools even if arm64 dev packages aren't available
-          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+            libxkbcommon-dev:arm64 || echo "Some GLFW dependencies may not be available"
 
       # Build GLFW
       - name: Clone and build GLFW
