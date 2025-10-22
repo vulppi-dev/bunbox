@@ -85,41 +85,30 @@ jobs:
 
       - name: Install dependencies
         run: |
-          # Add arm64 architecture
-          sudo dpkg --add-architecture arm64
+          DEBIAN_FRONTEND=noninteractive sudo apt-get -yq update
+          DEBIAN_FRONTEND=noninteractive sudo apt-get -yq install cmake gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libc6-dev-arm64-cross
 
-          # Configure sources to use ports.ubuntu.com for arm64
-          # Update main sources.list
+      - name: Prepare cross-compilation for arm64
+        run: |
+          sudo grep 'deb ' /etc/apt/sources.list | sudo tee /etc/apt/sources.list.d/ports.list
           sudo sed -i 's/^deb /deb [arch=amd64] /' /etc/apt/sources.list
-          sudo sed -i 's/^deb-src /deb-src [arch=amd64] /' /etc/apt/sources.list
+          sudo sed -i 's#^deb [^ ]\+#deb [arch=arm64] https://ports.ubuntu.com/ubuntu-ports/#' /etc/apt/sources.list.d/ports.list
+          sudo dpkg --add-architecture arm64
+          sudo apt-get update || true
 
-          # Update sources in sources.list.d
-          sudo sed -i 's/^deb http/deb [arch=amd64] http/' /etc/apt/sources.list.d/*.list || true
-          sudo sed -i 's/^deb https/deb [arch=amd64] https/' /etc/apt/sources.list.d/*.list || true
-
-          # Add arm64 repositories
-          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports $(lsb_release -sc) main universe restricted multiverse" | sudo tee -a /etc/apt/sources.list
-          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports $(lsb_release -sc)-updates main universe restricted multiverse" | sudo tee -a /etc/apt/sources.list
-          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports $(lsb_release -sc)-backports main universe restricted multiverse" | sudo tee -a /etc/apt/sources.list
-          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports $(lsb_release -sc)-security main universe restricted multiverse" | sudo tee -a /etc/apt/sources.list
-
-          sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
-
-          # Install ARM64 development libraries for Vulkan/XCB
-          sudo apt-get install -y \
+      - name: Install cross-compilation dependencies
+        run: |
+          sudo apt-get -yq --allow-unauthenticated install \
+            libgl1-mesa-dev:arm64 \
+            x11proto-dev:arm64 \
+            libx11-dev:arm64 \
             libxcb1-dev:arm64 \
             libxcb-randr0-dev:arm64 \
             libxcb-xfixes0-dev:arm64 \
             libxcb-shape0-dev:arm64 \
             libxcb-sync-dev:arm64 \
-            libx11-xcb-dev:arm64 || echo "Some XCB packages may not be available"
-
-          # Try to install optional GLFW dependencies
-          sudo apt-get install -y \
-            libxrandr-dev:arm64 libxinerama-dev:arm64 libxcursor-dev:arm64 \
-            libxi-dev:arm64 libxext-dev:arm64 libwayland-dev:arm64 \
-            libxkbcommon-dev:arm64 || echo "Some GLFW dependencies may not be available"
+            libx11-xcb-dev:arm64 \
+            -o Dpkg::Options::="--force-overwrite" || echo "Some packages may not be available"
 
       # Build GLFW
       - name: Clone and build GLFW
@@ -160,21 +149,20 @@ jobs:
         run: |
           git clone --depth 1 https://github.com/bkaradzic/bgfx.git bgfx
           cd bgfx
-          export CC=aarch64-linux-gnu-gcc
-          export CXX=aarch64-linux-gnu-g++
-          export AR=aarch64-linux-gnu-ar
-          export LD=aarch64-linux-gnu-ld
-          export STRIP=aarch64-linux-gnu-strip
-          ../GENie/bin/linux/genie --with-shared-lib --gcc=linux-gcc gmake
-          if [ ! -d ".build/projects/gmake-linux-gcc" ]; then
-            echo "bgfx: GENie gmake project was not generated" >&2
-            exit 1
-          fi
-          find .build/projects/gmake-linux-gcc -type f -name "*.make" -print0 | xargs -0 sed -i 's/-m64//g'
-          find .build/projects/gmake-linux-gcc -type f -name "*.make" -print0 | xargs -0 sed -i 's/-m32//g'
-          CFLAGS="-D BGFX_CONFIG_RENDERER_VULKAN=1 -D BGFX_CONFIG_RENDERER_OPENGL=0 -D BGFX_CONFIG_RENDERER_DIRECT3D9=0 -D BGFX_CONFIG_RENDERER_DIRECT3D11=0 -D BGFX_CONFIG_RENDERER_DIRECT3D12=0 -D BGFX_CONFIG_RENDERER_METAL=0" \
-          make -R -C .build/projects/gmake-linux-gcc config=release64 bgfx-shared-lib
-          aarch64-linux-gnu-strip .build/linux64_gcc/bin/libbgfx-shared-libRelease.so || true
+
+          # Modify toolchain.lua to use correct strip command
+          sed -i 's/strip -s/aarch64-linux-gnu-strip/' ../bx/scripts/toolchain.lua
+
+          ../GENie/bin/linux/genie --with-shared-lib --gcc=linux-arm-gcc gmake
+
+          make -R -C .build/projects/gmake-linux-arm-gcc config=release \
+            CXX="aarch64-linux-gnu-g++" \
+            CC="aarch64-linux-gnu-gcc" \
+            AR="aarch64-linux-gnu-ar" \
+            CFLAGS="-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0 -D BGFX_CONFIG_RENDERER_VULKAN=1 -D BGFX_CONFIG_RENDERER_OPENGL=0 -D BGFX_CONFIG_RENDERER_DIRECT3D9=0 -D BGFX_CONFIG_RENDERER_DIRECT3D11=0 -D BGFX_CONFIG_RENDERER_DIRECT3D12=0 -D BGFX_CONFIG_RENDERER_METAL=0" \
+            bgfx-shared-lib
+
+          aarch64-linux-gnu-strip .build/linux_arm_gcc/bin/libbgfx-shared-libRelease.so
 
       # Build FreeType
       - name: Clone and build FreeType
@@ -222,7 +210,7 @@ jobs:
           if [ -d "bgfx/.build" ]; then ls -la bgfx/.build >> logs/linux-arm64/bgfx.txt; fi
 
           # Prefer the expected path, fallback to any libbgfx found under .build
-          BGFX_EXPECTED="bgfx/.build/linux64_gcc/bin/libbgfx-shared-libRelease.so"
+          BGFX_EXPECTED="bgfx/.build/linux_arm_gcc/bin/libbgfx-shared-libRelease.so"
           if [ -f "$BGFX_EXPECTED" ]; then
             cp "$BGFX_EXPECTED" artifacts/linux/arm64/libbgfx.so
             echo "bgfx: copied from expected path" >> logs/linux-arm64/bgfx.txt
