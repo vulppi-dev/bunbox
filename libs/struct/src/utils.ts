@@ -39,12 +39,12 @@ function getFieldAlignment(alignment: number, pack?: Bytes): number {
 
 export type StructOffsets = Array<[number, number]>;
 
-export type WriteOptions = {
+type WriteOptions = {
   pack?: Bytes;
   stringToPointer: (value: string) => bigint;
 };
 
-export type ReadOptions = {
+type ReadOptions = {
   pack?: Bytes;
   pointerToString: (pointer: bigint) => string;
 };
