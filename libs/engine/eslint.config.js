@@ -98,6 +98,13 @@ export default [
         // Default variables/functions: camelCase
         { selector: 'variable', format: ['camelCase', 'UPPER_CASE'] },
         { selector: 'function', format: ['camelCase'] },
+        // Exported consts (global constants functions): camelCase
+        {
+          selector: 'variable',
+          modifiers: ['const', 'exported', 'function'],
+          format: ['camelCase'],
+          leadingUnderscore: 'forbid',
+        },
         // Exported consts (global constants): UPPER_CASE
         {
           selector: 'variable',

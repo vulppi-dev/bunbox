@@ -64,6 +64,7 @@
     "chroma-js": "^3.1.2",
     "fontkit": "^2.0.4",
     "glob": "^11.0.3",
+    "minimist": "^1.2.8",
     "ulid": "^3.0.1",
     "wgsl_reflect": "^1.2.3"
   },
@@ -71,6 +72,7 @@
     "@eslint/js": "^9.36.0",
     "@types/bun": "^1.2.23",
     "@types/fontkit": "^2.0.8",
+    "@types/minimist": "^1.2.5",
     "@typescript-eslint/eslint-plugin": "^8.45.0",
     "@typescript-eslint/parser": "^8.45.0",
     "eslint": "^9.36.0",
