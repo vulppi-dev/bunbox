@@ -89,7 +89,7 @@ jobs:
           sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
             libxrandr-dev:arm64 libxinerama-dev:arm64 libxcursor-dev:arm64 \
             libxi-dev:arm64 libxext-dev:arm64 libwayland-dev:arm64 \
-            libxkbcommon-dev:arm64 || true
+            libxkbcommon-dev:arm64 libxcb1-dev:arm64 || true
           # Install base cross-compilation tools even if arm64 dev packages aren't available
           sudo apt-get install -y gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
 
@@ -245,7 +245,7 @@ jobs:
           - ARCH: x64
             PLATFORM: osx-x64
             CMAKE_ARCH: x86_64
-            OSX_MIN: '10.15'
+            OSX_MIN: '10.15.4'
           - ARCH: arm64
             PLATFORM: osx-arm64
             CMAKE_ARCH: arm64
@@ -285,6 +285,12 @@ jobs:
           CFLAGS="-mmacosx-version-min=${{matrix.OSX_MIN}}" \
           LDFLAGS="-mmacosx-version-min=${{matrix.OSX_MIN}}" \
           ../bx/tools/bin/darwin/genie --with-shared-lib --with-macos=${{matrix.OSX_MIN}} --gcc=${{matrix.PLATFORM}} gmake
+
+          # Fix syntax error in renderer_mtl.mm if present
+          if grep -q "MTL_RELEASE(m_screenshotBlitRenderPipelineState)$" src/renderer_mtl.mm 2>/dev/null; then
+            sed -i '' 's/MTL_RELEASE(m_screenshotBlitRenderPipelineState)$/MTL_RELEASE(m_screenshotBlitRenderPipelineState);/g' src/renderer_mtl.mm
+          fi
+
           MACOSX_DEPLOYMENT_TARGET=${{matrix.OSX_MIN}} \
           CFLAGS="-mmacosx-version-min=${{matrix.OSX_MIN}} -D BGFX_CONFIG_RENDERER_METAL=1 -D BGFX_CONFIG_RENDERER_OPENGL=0 -D BGFX_CONFIG_RENDERER_VULKAN=0 -D BGFX_CONFIG_RENDERER_DIRECT3D9=0 -D BGFX_CONFIG_RENDERER_DIRECT3D11=0 -D BGFX_CONFIG_RENDERER_DIRECT3D12=0" \
           LDFLAGS="-mmacosx-version-min=${{matrix.OSX_MIN}}" \
