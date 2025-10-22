@@ -8,6 +8,7 @@ node_modules
 .ref/
 .old/
 src/
+test/
 
 # code coverage
 coverage
