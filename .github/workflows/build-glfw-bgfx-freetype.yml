@@ -159,10 +159,10 @@ jobs:
             CXX="aarch64-linux-gnu-g++" \
             CC="aarch64-linux-gnu-gcc" \
             AR="aarch64-linux-gnu-ar" \
-            CFLAGS="-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0 -D BGFX_CONFIG_RENDERER_VULKAN=1 -D BGFX_CONFIG_RENDERER_OPENGL=0 -D BGFX_CONFIG_RENDERER_DIRECT3D9=0 -D BGFX_CONFIG_RENDERER_DIRECT3D11=0 -D BGFX_CONFIG_RENDERER_DIRECT3D12=0 -D BGFX_CONFIG_RENDERER_METAL=0" \
+            CFLAGS="-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0 -I/usr/aarch64-linux-gnu/include -D BGFX_CONFIG_RENDERER_VULKAN=1 -D BGFX_CONFIG_RENDERER_OPENGL=0 -D BGFX_CONFIG_RENDERER_DIRECT3D9=0 -D BGFX_CONFIG_RENDERER_DIRECT3D11=0 -D BGFX_CONFIG_RENDERER_DIRECT3D12=0 -D BGFX_CONFIG_RENDERER_METAL=0" \
             bgfx-shared-lib
 
-          aarch64-linux-gnu-strip .build/linux_arm_gcc/bin/libbgfx-shared-libRelease.so
+          aarch64-linux-gnu-strip .build/linux32_arm_gcc/bin/libbgfx-shared-libRelease.so
 
       # Build FreeType
       - name: Clone and build FreeType
@@ -210,7 +210,7 @@ jobs:
           if [ -d "bgfx/.build" ]; then ls -la bgfx/.build >> logs/linux-arm64/bgfx.txt; fi
 
           # Prefer the expected path, fallback to any libbgfx found under .build
-          BGFX_EXPECTED="bgfx/.build/linux_arm_gcc/bin/libbgfx-shared-libRelease.so"
+          BGFX_EXPECTED="bgfx/.build/linux32_arm_gcc/bin/libbgfx-shared-libRelease.so"
           if [ -f "$BGFX_EXPECTED" ]; then
             cp "$BGFX_EXPECTED" artifacts/linux/arm64/libbgfx.so
             echo "bgfx: copied from expected path" >> logs/linux-arm64/bgfx.txt
