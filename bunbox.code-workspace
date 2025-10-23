@@ -5,20 +5,16 @@
       "path": "./libs/struct"
     },
     {
-      "name": "engine",
-      "path": "./libs/engine"
+      "name": "utils",
+      "path": "./libs/utils"
     },
     {
       "name": "tree",
       "path": "./libs/tree"
     },
     {
-      "name": "utils",
-      "path": "./libs/utils"
-    },
-    {
-      "name": "naga",
-      "path": "./libs/naga"
+      "name": "engine",
+      "path": "./libs/engine"
     },
     {
       "name": "root",

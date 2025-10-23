@@ -1,6 +1,6 @@
 {
   "name": "@bunbox/utils",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Utility functions for Bunbox",
   "author": {
     "name": "Renato Rodrigues",
@@ -32,9 +32,9 @@
   },
   "dependencies": {},
   "devDependencies": {
-    "@types/node": "^24.5.2",
+    "@types/node": "^24.9.1",
     "prettier": "^3.6.2",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.3"
   },
   "engines": {
     "node": ">=20.0.0",
