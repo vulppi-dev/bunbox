@@ -12,6 +12,8 @@ import {
   toBuffer,
 } from '@bunbox/struct';
 
+// Crie a janela com GLFW_CLIENT_API = GLFW_NO_API, passe o native handle ao bgfx e, no glfwSetFramebufferSizeCallback, chame bgfx::reset(novoW, novoH, flags). Isso cobre HiDPI e resize corretamente.
+
 const writeHandler = {
   stringToPointer(value: string) {
     return BigInt(ptr(cstr(value)));

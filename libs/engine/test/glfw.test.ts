@@ -1,40 +1,41 @@
 import { ptr, type Pointer } from 'bun:ffi';
-import { GLFW } from '../src/dynamic-libs/loader';
+import { GLFW } from '../src/dynamic-libs';
 import { describe, expect, it, afterAll } from 'bun:test';
+import { cstr } from '../src/dynamic-libs';
 
 describe('GLFW window test', () => {
   let initialized = false;
   let windowHandle: Pointer | null = null;
 
-  it('open window 2 seconds', async () => {
-    const titleBuffer = Buffer.from('Bunbox GLFW Window\0', 'utf8');
-    const titlePointer = ptr(titleBuffer);
-
+  it('open window 4 seconds', async () => {
     expect(GLFW.glfwInit(), 'GLFW initialization failed').toBe(1);
     if (GLFW.glfwInit() === 0) return;
 
     initialized = true;
     const version = GLFW.glfwGetVersionString();
     console.log(`[GLFW] Running with version: ${version}`);
-    const window = GLFW.glfwCreateWindow(800, 600, titlePointer, null, null);
+    const window = GLFW.glfwCreateWindow(
+      800,
+      600,
+      cstr('Bunbox GLFW Window'),
+      null,
+      null,
+    );
 
     expect(window, 'GLFW window creation failed').not.toBeNull();
     if (!window) return;
     windowHandle = window;
 
-    GLFW.glfwMakeContextCurrent(windowHandle);
-    GLFW.glfwSwapInterval(1);
     console.log(
-      '[GLFW] Window opened for 2 seconds. Close it manually or wait...',
+      '[GLFW] Window opened for 4 seconds. Close it manually or wait...',
     );
     const start = performance.now();
 
-    while (GLFW.glfwWindowShouldClose(windowHandle) === 0) {
+    while (GLFW.glfwWindowShouldClose(window) === 0) {
       GLFW.glfwPollEvents();
-      GLFW.glfwSwapBuffers(windowHandle);
 
-      if (performance.now() - start > 2000) {
-        console.log('[GLFW] Auto-closing window after 2 seconds.');
+      if (performance.now() - start > 10000) {
+        console.log('[GLFW] Auto-closing window after 4 seconds.');
         break;
       }
 
