@@ -1,7 +1,6 @@
-import { ptr, type Pointer } from 'bun:ffi';
-import { GLFW } from '../src/dynamic-libs';
-import { describe, expect, it, afterAll } from 'bun:test';
-import { cstr } from '../src/dynamic-libs';
+import { type Pointer } from 'bun:ffi';
+import { afterAll, describe, expect, it } from 'bun:test';
+import { cstr, GLFW } from '../src/dynamic-libs';
 
 describe('GLFW window test', () => {
   let initialized = false;
@@ -34,7 +33,7 @@ describe('GLFW window test', () => {
     while (GLFW.glfwWindowShouldClose(window) === 0) {
       GLFW.glfwPollEvents();
 
-      if (performance.now() - start > 10000) {
+      if (performance.now() - start > 4000) {
         console.log('[GLFW] Auto-closing window after 4 seconds.');
         break;
       }

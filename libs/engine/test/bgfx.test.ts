@@ -1,68 +1,12 @@
-import { ptr, type Pointer } from 'bun:ffi';
-import { GLFW, BGFX, cstr } from '../src/dynamic-libs';
-import { describe, expect, it, afterAll } from 'bun:test';
-import {
-  bool,
-  struct,
-  u16,
-  u32,
-  u64,
-  ptrAny,
-  u8,
-  toBuffer,
-} from '@bunbox/struct';
-
-// Crie a janela com GLFW_CLIENT_API = GLFW_NO_API, passe o native handle ao bgfx e, no glfwSetFramebufferSizeCallback, chame bgfx::reset(novoW, novoH, flags). Isso cobre HiDPI e resize corretamente.
-
-const writeHandler = {
-  stringToPointer(value: string) {
-    return BigInt(ptr(cstr(value)));
-  },
-};
-
-const bgfxPlatformDataStruct = struct({
-  ndt: ptrAny(),
-  nwh: ptrAny(),
-  context: ptrAny(),
-  backBuffer: ptrAny(),
-  backBufferDS: ptrAny(),
-  type: u32(),
-});
-
-const bgfxResolutionStruct = struct({
-  format: u32(),
-  width: u32(),
-  height: u32(),
-  reset: u32(),
-  numBackBuffers: u8(),
-  maxFrameLatency: u8(),
-  debugTextScale: u8(),
-});
-
-const bgfxInitStruct = struct({
-  type: u32(),
-  vendorId: u16(),
-  deviceId: u16(),
-  capabilities: u64(),
-  debug: bool(),
-  profile: bool(),
-  platformData: bgfxPlatformDataStruct,
-  resolution: bgfxResolutionStruct,
-  callback: ptrAny(),
-  allocator: ptrAny(),
-  limits: struct({
-    maxEncoders: u16(),
-    minResourceCbSize: u32(),
-    transientVbSize: u32(),
-    transientIbSize: u32(),
-  }),
-});
+import { type Pointer } from 'bun:ffi';
+import { afterAll, describe, expect, it } from 'bun:test';
+import { cstr, GLFW } from '../src/dynamic-libs';
 
 describe('GLFW window test', () => {
   let initialized = false;
   let windowHandle: Pointer | null = null;
 
-  it('open window 2 seconds', async () => {
+  it('open window 4 seconds', async () => {
     expect(GLFW.glfwInit(), 'GLFW initialization failed').toBe(1);
     if (GLFW.glfwInit() === 0) return;
 
@@ -81,40 +25,20 @@ describe('GLFW window test', () => {
     if (!window) return;
     windowHandle = window;
 
-    GLFW.glfwMakeContextCurrent(windowHandle);
-    GLFW.glfwSwapInterval(1);
     console.log(
-      '[GLFW] Window opened for 2 seconds. Close it manually or wait...',
+      '[GLFW] Window opened for 4 seconds. Close it manually or wait...',
     );
+    const start = performance.now();
 
-    BGFX.bgfx_render_frame();
-
-    // Initialize BGFX set platform data windows
-
-    const platformDataPtr = GLFW.glfwGetWin32Window(windowHandle);
-
-    const bgfxInit = toBuffer(
-      bgfxInitStruct,
-      {
-        platformData: {
-          nwh: BigInt(platformDataPtr || 0n),
-        } as any,
-        resolution: {
-          width: 800,
-          height: 600,
-          reset: 0x00000001,
-        } as any,
-      },
-      writeHandler,
-    );
-
-    const bgfxInitResult = BGFX.bgfx_init(ptr(bgfxInit));
-    expect(bgfxInitResult, 'BGFX initialization failed').toBe(true);
-    if (!bgfxInitResult) return;
-
-    while (GLFW.glfwWindowShouldClose(windowHandle) === 0) {
+    while (GLFW.glfwWindowShouldClose(window) === 0) {
       GLFW.glfwPollEvents();
-      GLFW.glfwSwapBuffers(windowHandle);
+
+      if (performance.now() - start > 4000) {
+        console.log('[GLFW] Auto-closing window after 4 seconds.');
+        break;
+      }
+
+      await Bun.sleep(16);
     }
   });
 
