@@ -49,6 +49,10 @@ type ReadOptions = {
   pointerToString: (pointer: bigint) => string;
 };
 
+function isPointerField(field: AllFields): boolean {
+  return 'isPointer' in field && field.isPointer === true;
+}
+
 function calculateStructLayout(
   desc: StructDesc,
   isUnion: boolean,
@@ -94,7 +98,7 @@ export function calculateFieldSize(
   field: AllFields,
   pack?: Bytes,
 ): { size: number; alignment: number; offsets?: StructOffsets } {
-  if (field.meta?.isPointer) {
+  if (isPointerField(field)) {
     return pointerLayout(pack);
   }
 
@@ -127,7 +131,7 @@ export function calculateFieldSize(
     }
 
     default: {
-      const primitiveSize = TYPE_BYTES[field.type as FieldType];
+      const primitiveSize = TYPE_BYTES[field.type as FieldType]!;
       const alignment = getFieldAlignment(primitiveSize, pack);
 
       return {
@@ -148,8 +152,9 @@ function normalizePointer(value: unknown): bigint {
 }
 
 function getDefaultValue(field: AllFields): unknown {
-  const metaDefault = field.meta?.default;
-  if (metaDefault !== undefined) return metaDefault;
+  if ('default' in field && field.default !== undefined) {
+    return field.default;
+  }
 
   switch (field.type) {
     case 'bool':
@@ -280,12 +285,12 @@ export function writeFieldValue<F extends AllFields>(
   const pack = options.pack ?? PTR_SIZE;
   const resolvedValue = value ?? (getDefaultValue(field) as InferField<F>);
 
-  if (field.meta?.isPointer) {
+  if (isPointerField(field)) {
     view.setBigUint64(offset, normalizePointer(resolvedValue), LITTLE_ENDIAN);
     return;
   }
 
-  if (field.type === 'string') {
+  if ((field as any).type === 'string') {
     const pointerValue =
       typeof resolvedValue === 'string'
         ? options.stringToPointer(resolvedValue)
@@ -294,14 +299,17 @@ export function writeFieldValue<F extends AllFields>(
     return;
   }
 
-  if (field.type === 'array') {
-    if (typeof field.length !== 'number' || field.length <= 0) {
+  if ((field as any).type === 'array') {
+    if (
+      typeof (field as any).length !== 'number' ||
+      (field as any).length <= 0
+    ) {
       view.setBigUint64(offset, normalizePointer(resolvedValue), LITTLE_ENDIAN);
       return;
     }
 
-    const length = field.length;
-    const elementLayout = calculateFieldSize(field.to, pack);
+    const length = (field as any).length;
+    const elementLayout = calculateFieldSize((field as any).to, pack);
     const elementAlignment = getFieldAlignment(elementLayout.alignment, pack);
     const stride = alignTo(elementLayout.size, elementAlignment);
 
@@ -317,10 +325,11 @@ export function writeFieldValue<F extends AllFields>(
       : [];
 
     for (let i = 0; i < length; i++) {
-      const elementValue = arrayValue[i] ?? getDefaultValue(field.to);
+      const elementField = (field as any).to;
+      const elementValue = arrayValue[i] ?? getDefaultValue(elementField);
       writeFieldValue(
-        field.to,
-        elementValue as InferField<typeof field.to>,
+        elementField,
+        elementValue as any,
         view,
         offset + stride * i,
         options,
@@ -330,17 +339,17 @@ export function writeFieldValue<F extends AllFields>(
     return;
   }
 
-  if (field.type === 'struct') {
+  if ((field as any).type === 'struct') {
     const { offsets, size } = calculateStructLayout(
-      field.fields,
-      field.isUnion ?? false,
+      (field as any).fields,
+      (field as any).isUnion ?? false,
       pack,
     );
 
     const slice = new Uint8Array(view.buffer, view.byteOffset + offset, size);
     slice.fill(0);
 
-    const entries = Object.entries(field.fields);
+    const entries = Object.entries((field as any).fields);
     const objectValue =
       resolvedValue && typeof resolvedValue === 'object'
         ? (resolvedValue as Record<string, unknown>)
@@ -361,7 +370,7 @@ export function writeFieldValue<F extends AllFields>(
     return;
   }
 
-  writePrimitive(field.type as FieldType, resolvedValue, view, offset);
+  writePrimitive((field as any).type as FieldType, resolvedValue, view, offset);
 }
 
 export function readFieldValue<F extends AllFields>(
@@ -372,44 +381,42 @@ export function readFieldValue<F extends AllFields>(
 ): InferField<F> {
   const pack = options.pack ?? PTR_SIZE;
 
-  if (field.meta?.isPointer) {
+  if (isPointerField(field)) {
     return view.getBigUint64(offset, LITTLE_ENDIAN) as unknown as InferField<F>;
   }
 
-  if (field.type === 'string') {
+  if ((field as any).type === 'string') {
     const pointer = view.getBigUint64(offset, LITTLE_ENDIAN);
     return options.pointerToString(pointer) as InferField<F>;
   }
 
-  if (field.type === 'array') {
-    if (typeof field.length !== 'number' || field.length <= 0) {
-      return view.getBigUint64(
-        offset,
-        LITTLE_ENDIAN,
-      ) as unknown as InferField<F>;
-    }
-
-    const length = field.length;
-    const elementLayout = calculateFieldSize(field.to, pack);
+  if ((field as any).type === 'array') {
+    const length = (field as any).length;
+    const elementLayout = calculateFieldSize((field as any).to, pack);
     const elementAlignment = getFieldAlignment(elementLayout.alignment, pack);
     const stride = alignTo(elementLayout.size, elementAlignment);
 
     const result: unknown[] = new Array(length);
     for (let i = 0; i < length; i++) {
-      result[i] = readFieldValue(field.to, view, offset + stride * i, options);
+      result[i] = readFieldValue(
+        (field as any).to,
+        view,
+        offset + stride * i,
+        options,
+      );
     }
 
     return result as InferField<F>;
   }
 
-  if (field.type === 'struct') {
+  if ((field as any).type === 'struct') {
     const { offsets } = calculateStructLayout(
-      field.fields,
-      field.isUnion ?? false,
+      (field as any).fields,
+      (field as any).isUnion ?? false,
       pack,
     );
 
-    const entries = Object.entries(field.fields);
+    const entries = Object.entries((field as any).fields);
     const result: Record<string, unknown> = {};
 
     entries.forEach(([key, childField], index) => {
@@ -425,5 +432,9 @@ export function readFieldValue<F extends AllFields>(
     return result as InferField<F>;
   }
 
-  return readPrimitive(field.type as FieldType, view, offset) as InferField<F>;
+  return readPrimitive(
+    (field as any).type as FieldType,
+    view,
+    offset,
+  ) as InferField<F>;
 }

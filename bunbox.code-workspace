@@ -1,6 +1,10 @@
 {
   "folders": [
     {
+      "name": "struct",
+      "path": "./libs/struct"
+    },
+    {
       "name": "engine",
       "path": "./libs/engine"
     },
@@ -11,10 +15,6 @@
     {
       "name": "utils",
       "path": "./libs/utils"
-    },
-    {
-      "name": "struct",
-      "path": "./libs/struct"
     },
     {
       "name": "naga",

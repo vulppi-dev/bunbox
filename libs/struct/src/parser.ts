@@ -1,4 +1,4 @@
-import type { AllFields, InferField } from './fields';
+import type { InferField, StructField } from './fields';
 import {
   PTR_SIZE,
   calculateFieldSize,
@@ -17,119 +17,213 @@ declare global {
   }
 }
 
+const BASE_STRUCT_PROXY_HANDLERS: ProxyHandler<any> = {
+  construct: () => {
+    throw new Error('Cannot construct struct instances directly.');
+  },
+  defineProperty: () => {
+    throw new Error('Cannot define properties on struct instances.');
+  },
+  deleteProperty: () => {
+    throw new Error('Cannot delete properties from struct instances.');
+  },
+  apply: () => {
+    throw new Error('Cannot call struct instances directly.');
+  },
+  getOwnPropertyDescriptor: () => {
+    throw new Error('Cannot get property descriptors of struct instances.');
+  },
+  getPrototypeOf: () => {
+    throw new Error('Cannot get prototype of struct instances.');
+  },
+  setPrototypeOf: () => {
+    throw new Error('Cannot set prototype of struct instances.');
+  },
+  isExtensible: () => {
+    throw new Error('Cannot check extensibility of struct instances.');
+  },
+  preventExtensions: () => {
+    throw new Error('Cannot prevent extensions on struct instances.');
+  },
+};
+
 export function setupStruct({
-  pack,
+  pack = PTR_SIZE,
   stringToPointer,
   pointerToString,
 }: {
-  pack: Bytes;
+  pack?: Bytes;
   stringToPointer: (str: string) => bigint;
   pointerToString: (ptr: bigint) => string;
 }) {
-  Reflect.defineProperty(globalThis, '___STRUCTS_SETUP___', {
-    value: {
-      pack,
-      stringToPointer,
-      pointerToString,
+  if (typeof ___STRUCTS_SETUP___ !== 'undefined') {
+    ___STRUCTS_SETUP___!.pack = pack;
+    ___STRUCTS_SETUP___!.stringToPointer = stringToPointer;
+    ___STRUCTS_SETUP___!.pointerToString = pointerToString;
+  } else {
+    Object.defineProperty(globalThis, '___STRUCTS_SETUP___', {
+      value: {
+        pack,
+        stringToPointer,
+        pointerToString,
+      },
+      writable: false,
+      configurable: false,
+      enumerable: false,
+    });
+  }
+}
+
+function createNestedStructProxy(
+  field: StructField<any>,
+  view: DataView,
+  baseOffset: number,
+  proxyCache: WeakMap<object, any>,
+): any {
+  const { pack, stringToPointer, pointerToString } = ___STRUCTS_SETUP___!;
+  const { offsets } = calculateFieldSize(field, pack);
+  const fieldKeys = Object.keys(field.fields);
+  const fieldIndexMap = new Map(fieldKeys.map((key, idx) => [key, idx]));
+
+  return new Proxy(
+    {},
+    {
+      ...BASE_STRUCT_PROXY_HANDLERS,
+      has(_, prop) {
+        return prop in field.fields;
+      },
+      ownKeys(_) {
+        return fieldKeys;
+      },
+      get(_, prop: string) {
+        const fieldIndex = fieldIndexMap.get(prop);
+        if (fieldIndex === undefined) return undefined;
+
+        const childField = field.fields[prop]!;
+        const absoluteOffset = baseOffset + offsets![fieldIndex]![0];
+
+        const isPointer =
+          'isPointer' in childField && childField.isPointer === true;
+        if (childField.type === 'struct' && !isPointer) {
+          let cachedProxy = proxyCache.get(childField);
+
+          if (!cachedProxy) {
+            cachedProxy = createNestedStructProxy(
+              childField,
+              view,
+              absoluteOffset,
+              proxyCache,
+            );
+            proxyCache.set(childField, cachedProxy);
+          }
+
+          return cachedProxy;
+        }
+
+        return readFieldValue(childField, view, absoluteOffset, {
+          pack,
+          pointerToString,
+        });
+      },
+      set(_, prop: string, value) {
+        const fieldIndex = fieldIndexMap.get(prop);
+        if (fieldIndex === undefined) return false;
+
+        const childField = field.fields[prop]!;
+        const absoluteOffset = baseOffset + offsets![fieldIndex]![0];
+
+        writeFieldValue(childField, value, view, absoluteOffset, {
+          pack,
+          stringToPointer,
+        });
+
+        const isPointer =
+          'isPointer' in childField && childField.isPointer === true;
+        if (childField.type === 'struct' && !isPointer) {
+          proxyCache.delete(childField);
+        }
+
+        return true;
+      },
     },
-    writable: false,
-    configurable: false,
-    enumerable: false,
-  });
+  );
 }
 
-export function prepareObject<F extends AllFields>(field: F): InferField<F> {
-  if (typeof ___STRUCTS_SETUP___ === 'undefined') {
-    throw new Error('Structs not setup. Please call setupStruct first.');
-  }
-
-  // Respect explicit default if provided
-  const metaDefault = (field as any).meta?.default;
-  if (metaDefault !== undefined) {
-    return metaDefault as InferField<F>;
-  }
-
-  // Pointer storage defaults to null pointer
-  if ((field as any).meta?.isPointer) {
-    return 0n as unknown as InferField<F>;
-  }
-
-  switch (field.type) {
-    case 'bool':
-      return false as InferField<F>;
-    case 'u8':
-    case 'u16':
-    case 'u32':
-    case 'i8':
-    case 'i16':
-    case 'i32':
-    case 'f32':
-    case 'f64':
-      return 0 as InferField<F>;
-    case 'u64':
-    case 'i64':
-    case 'void':
-      return 0n as InferField<F>;
-    case 'string':
-      return '' as InferField<F>;
-    case 'array': {
-      const length = (field.length as number) ?? 0;
-      if (typeof length !== 'number' || length <= 0) {
-        // dynamic array -> pointer default
-        return 0n as unknown as InferField<F>;
-      }
-      const result: unknown[] = new Array(length);
-      for (let i = 0; i < length; i++) {
-        result[i] = prepareObject(field.to as AllFields);
-      }
-      return result as InferField<F>;
-    }
-    case 'struct': {
-      const out: Record<string, unknown> = {};
-      for (const [key, child] of Object.entries(field.fields)) {
-        out[key] = prepareObject(child as AllFields);
-      }
-      return out as InferField<F>;
-    }
-    default:
-      // Fallback for completeness; shouldn't be reached.
-      return 0 as InferField<F>;
-  }
-}
-
-export function objectToBuffer<F extends AllFields>(
+export function instantiate<F extends StructField<any>>(
   field: F,
-  value: InferField<F>,
-): Uint8Array<ArrayBufferLike> {
+): [InferField<F>, ArrayBuffer] {
   if (typeof ___STRUCTS_SETUP___ === 'undefined') {
     throw new Error('Structs not setup. Please call setupStruct first.');
   }
-  const options = ___STRUCTS_SETUP___!;
 
-  const pack = options.pack ?? PTR_SIZE;
-  const { size } = calculateFieldSize(field, pack);
+  const { pack, stringToPointer, pointerToString } = ___STRUCTS_SETUP___!;
+  const fieldCopy = structuredClone(field);
+  const { size, offsets } = calculateFieldSize(fieldCopy, pack);
   const buffer = new ArrayBuffer(size);
   const view = new DataView(buffer);
+  const proxyCache = new WeakMap<object, any>();
+  const fieldKeys = Object.keys(fieldCopy.fields);
+  const fieldIndexMap = new Map(fieldKeys.map((key, idx) => [key, idx]));
 
-  writeFieldValue(field, value, view, 0, options);
+  const proxy = new Proxy({} as InferField<F>, {
+    ...BASE_STRUCT_PROXY_HANDLERS,
+    has(_, prop) {
+      return prop in fieldCopy.fields;
+    },
+    ownKeys(_) {
+      return fieldKeys;
+    },
+    get(_, prop: string) {
+      const fieldIndex = fieldIndexMap.get(prop);
+      if (fieldIndex === undefined) return undefined;
 
-  return new Uint8Array(buffer);
-}
+      const childField = fieldCopy.fields[prop]!;
+      const offset = offsets![fieldIndex]![0];
 
-export function bufferToObject<F extends AllFields>(
-  field: F,
-  value: Uint8Array<ArrayBufferLike>,
-): InferField<F> {
-  if (typeof ___STRUCTS_SETUP___ === 'undefined') {
-    throw new Error('Structs not setup. Please call setupStruct first.');
-  }
-  const options = ___STRUCTS_SETUP___!;
-  const arrayView = value instanceof Uint8Array ? value : new Uint8Array(value);
-  const dataView = new DataView(
-    arrayView.buffer,
-    arrayView.byteOffset,
-    arrayView.byteLength,
-  );
+      const isPointer =
+        'isPointer' in childField && childField.isPointer === true;
+      if (childField.type === 'struct' && !isPointer) {
+        let cachedProxy = proxyCache.get(childField);
 
-  return readFieldValue(field, dataView, 0, options);
+        if (!cachedProxy) {
+          cachedProxy = createNestedStructProxy(
+            childField,
+            view,
+            offset,
+            proxyCache,
+          );
+          proxyCache.set(childField, cachedProxy);
+        }
+
+        return cachedProxy;
+      }
+
+      return readFieldValue(childField, view, offset, {
+        pack,
+        pointerToString,
+      });
+    },
+    set(_, prop: string, value) {
+      const fieldIndex = fieldIndexMap.get(prop);
+      if (fieldIndex === undefined) return false;
+
+      const childField = fieldCopy.fields[prop]!;
+      const offset = offsets![fieldIndex]![0];
+
+      writeFieldValue(childField, value, view, offset, {
+        pack,
+        stringToPointer,
+      });
+
+      const isPointer =
+        'isPointer' in childField && childField.isPointer === true;
+      if (childField.type === 'struct' && !isPointer) {
+        proxyCache.delete(childField);
+      }
+
+      return true;
+    },
+  });
+
+  return [proxy, buffer];
 }
