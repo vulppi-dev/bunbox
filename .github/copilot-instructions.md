@@ -2,8 +2,9 @@
 
 Garantir que a implementação está correta observe as documentações nos site abaixo:
 
-- SDL => https://wiki.libsdl.org/SDL3
 - Bun => https://bun.com/docs, https://bun.com/reference
+- GLFW => https://glfw.org/docs/latest/topics.html
+- BGFX => https://bkaradzic.github.io/bgfx/bgfx.html
 
 ## Linguagem e padrões
 

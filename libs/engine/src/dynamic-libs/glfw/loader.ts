@@ -129,6 +129,28 @@ if (!GLFW_PATH) {
   );
 }
 
+const win32Functions = {
+  glfwGetWin32Adapter,
+  glfwGetWin32Monitor,
+  glfwGetWin32Window,
+} as const;
+
+const linuxFunctions = {
+  glfwGetX11Display,
+  glfwGetX11Adapter,
+  glfwGetX11Monitor,
+  glfwGetX11Window,
+  glfwGetWaylandDisplay,
+  glfwGetWaylandMonitor,
+  glfwGetWaylandWindow,
+} as const;
+
+const darwinFunctions = {
+  glfwGetCocoaMonitor,
+  glfwGetCocoaWindow,
+  glfwGetCocoaView,
+} as const;
+
 const { symbols: GLFW, close: glfwClose } = dlopen(GLFW_PATH, {
   glfwInit,
   glfwTerminate,
@@ -238,30 +260,23 @@ const { symbols: GLFW, close: glfwClose } = dlopen(GLFW_PATH, {
   glfwGetTimerValue,
   glfwGetTimerFrequency,
 
-  ...(process.platform === 'win32'
-    ? { glfwGetWin32Adapter, glfwGetWin32Monitor, glfwGetWin32Window }
-    : {}),
-  ...(process.platform === 'linux'
-    ? {
-        glfwGetX11Display,
-        glfwGetX11Adapter,
-        glfwGetX11Monitor,
-        glfwGetX11Window,
-        glfwGetWaylandDisplay,
-        glfwGetWaylandMonitor,
-        glfwGetWaylandWindow,
-      }
-    : {}),
-  ...(process.platform === 'darwin'
-    ? { glfwGetCocoaMonitor, glfwGetCocoaWindow, glfwGetCocoaView }
-    : {}),
+  ...((process.platform === 'win32'
+    ? win32Functions
+    : {}) as typeof win32Functions),
+  ...((process.platform === 'linux'
+    ? linuxFunctions
+    : {}) as typeof linuxFunctions),
+  ...((process.platform === 'darwin'
+    ? darwinFunctions
+    : {}) as typeof darwinFunctions),
 });
 
 process.on('exit', () => {
   glfwClose();
 });
 
-export * as GLFW_ENUMS from './enums';
-export * as GLFW_STRUCTS from './structs';
-export * as GLFW_TYPES from './types';
+export * from './callbacks';
+export * from './structs';
+export * from './enums';
+export * from './types';
 export { GLFW };
