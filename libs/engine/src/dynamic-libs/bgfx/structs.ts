@@ -1,7 +1,10 @@
 import {
   array,
+  bool,
   f32,
   i32,
+  i64,
+  pointer,
   ptrAny,
   struct,
   u16,
@@ -9,148 +12,9 @@ import {
   u64,
   u8,
 } from '@bunbox/struct';
+import { BGFX_Attributes, BGFX_TextureFormat, BGFX_Topology } from './enums';
 
-// BGFX MARK: Memory
-
-/** Memory must be obtained by calling bgfx_alloc, bgfx_copy, or bgfx_make_ref. */
-export const memory = struct({
-  data: ptrAny(),
-  size: u32(),
-});
-
-// BGFX MARK: Transform
-
-export const transform = struct({
-  data: ptrAny(),
-  num: u16(),
-});
-
-// BGFX MARK: Transient Index Buffer
-
-export const transientIndexBuffer = struct({
-  data: ptrAny(),
-  size: u32(),
-  startIndex: u32(),
-  handle: u16(),
-  isIndex16: u8(),
-});
-
-// BGFX MARK: Transient Vertex Buffer
-
-export const transientVertexBuffer = struct({
-  data: ptrAny(),
-  size: u32(),
-  startVertex: u32(),
-  stride: u16(),
-  handle: u16(),
-  layoutHandle: u16(),
-});
-
-// BGFX MARK: Instance Data Buffer
-
-export const instanceDataBuffer = struct({
-  data: ptrAny(),
-  size: u32(),
-  offset: u32(),
-  num: u32(),
-  stride: u16(),
-  handle: u16(),
-});
-
-// BGFX MARK: Texture Info
-
-export const textureInfo = struct({
-  format: u32(),
-  storageSize: u32(),
-  width: u16(),
-  height: u16(),
-  depth: u16(),
-  numLayers: u16(),
-  numMips: u8(),
-  bitsPerPixel: u8(),
-  cubeMap: u8(),
-});
-
-// BGFX MARK: Uniform Info
-
-export const uniformInfo = struct({
-  name: array(u8(), 256),
-  type: u32(),
-  num: u16(),
-});
-
-// BGFX MARK: Attachment
-
-export const attachment = struct({
-  access: u32(),
-  handle: u16(),
-  mip: u16(),
-  layer: u16(),
-  numLayers: u16(),
-  resolve: u8(),
-});
-
-// BGFX MARK: Caps GPU
-
-export const capsGPU = struct({
-  vendorId: u16(),
-  deviceId: u16(),
-});
-
-// BGFX MARK: Caps Limits
-
-export const capsLimits = struct({
-  maxDrawCalls: u32(),
-  maxBlits: u32(),
-  maxTextureSize: u32(),
-  maxTextureLayers: u32(),
-  maxViews: u32(),
-  maxFrameBuffers: u32(),
-  maxFBAttachments: u32(),
-  maxPrograms: u32(),
-  maxShaders: u32(),
-  maxTextures: u32(),
-  maxTextureSamplers: u32(),
-  maxComputeBindings: u32(),
-  maxVertexLayouts: u32(),
-  maxVertexStreams: u32(),
-  maxIndexBuffers: u32(),
-  maxVertexBuffers: u32(),
-  maxDynamicIndexBuffers: u32(),
-  maxDynamicVertexBuffers: u32(),
-  maxUniforms: u32(),
-  maxOcclusionQueries: u32(),
-  maxEncoders: u32(),
-  minResourceCbSize: u32(),
-  transientVbSize: u32(),
-  transientIbSize: u32(),
-});
-
-// BGFX MARK: Caps
-
-export const caps = struct({
-  rendererType: u32(),
-  supported: u64(),
-  vendorId: u16(),
-  deviceId: u16(),
-  homogeneousDepth: u8(),
-  originBottomLeft: u8(),
-  numGPUs: u8(),
-  gpu: array(capsGPU, 4),
-  limits: capsLimits,
-  formats: array(u16(), 96),
-});
-
-// BGFX MARK: Internal Data
-
-export const internalData = struct({
-  caps: ptrAny(),
-  context: ptrAny(),
-});
-
-// BGFX MARK: Platform Data
-
-export const platformData = struct({
+export const bgfxPlatformDataStruct = struct({
   ndt: ptrAny(),
   nwh: ptrAny(),
   context: ptrAny(),
@@ -159,10 +23,7 @@ export const platformData = struct({
   type: u32(),
 });
 
-// BGFX MARK: Resolution
-
-export const resolution = struct({
-  format: u32(),
+export const bgfxResolutionStruct = struct({
   width: u32(),
   height: u32(),
   reset: u32(),
@@ -171,43 +32,109 @@ export const resolution = struct({
   debugTextScale: u8(),
 });
 
-// BGFX MARK: Init Limits
-
-export const initLimits = struct({
-  maxEncoders: u16(),
-  minResourceCbSize: u32(),
-  transientVbSize: u32(),
-  transientIbSize: u32(),
-});
-
-// BGFX MARK: Init
-
-export const init = struct({
+export const bgfxInitStruct = struct({
   type: u32(),
   vendorId: u16(),
   deviceId: u16(),
   capabilities: u64(),
-  debug: u8(),
-  profile: u8(),
-  platformData: platformData,
-  resolution: resolution,
-  limits: initLimits,
+  debug: bool(),
+  profile: bool(),
+  platformData: bgfxPlatformDataStruct,
+  resolution: bgfxResolutionStruct,
+  limits: struct({
+    maxEncoders: u16(),
+    minResourceCbSize: u32(),
+    transientVbSize: u32(),
+    transientIbSize: u32(),
+  }),
   callback: ptrAny(),
   allocator: ptrAny(),
 });
 
-// BGFX MARK: Stats
+export const bgfxCallbackStruct = struct({
+  fatal: ptrAny(),
+  traceVargs: ptrAny(),
+  profileBegin: ptrAny(),
+  profileBeginLiteral: ptrAny(),
+  profileEnd: ptrAny(),
+  cacheReadSize: ptrAny(),
+  cacheRead: ptrAny(),
+  cacheWrite: ptrAny(),
+  screenShot: ptrAny(),
+  captureBegin: ptrAny(),
+  captureEnd: ptrAny(),
+  captureFrame: ptrAny(),
+});
 
-export const stats = struct({
-  cpuTimeFrame: i32(),
-  cpuTimeBegin: i32(),
-  cpuTimeEnd: i32(),
-  cpuTimerFreq: i32(),
-  gpuTimeBegin: i32(),
-  gpuTimeEnd: i32(),
-  gpuTimerFreq: i32(),
-  waitRender: i32(),
-  waitSubmit: i32(),
+export const bgfxCapsStruct = struct({
+  rendererType: u32(),
+  supported: u64(),
+  vendorId: u16(),
+  deviceId: u16(),
+  homogeneousDepth: bool(),
+  originBottomLeft: bool(),
+  numGPUs: u16(),
+  gpu: array(
+    struct({
+      vendorId: u16(),
+      deviceId: u16(),
+    }),
+    4,
+  ),
+  limits: struct({
+    maxDrawCalls: u32(),
+    maxBlits: u32(),
+    maxTextureSize: u32(),
+    maxTextureLayers: u32(),
+    maxViews: u32(),
+    maxFrameBuffers: u32(),
+    maxFBAttachments: u32(),
+    maxPrograms: u32(),
+    maxShaders: u32(),
+    maxTextures: u32(),
+    maxTextureSamplers: u32(),
+    maxComputeBindings: u32(),
+    maxVertexLayouts: u32(),
+    maxVertexStreams: u32(),
+    maxIndexBuffers: u32(),
+    maxVertexBuffers: u32(),
+    maxDynamicIndexBuffers: u32(),
+    maxDynamicVertexBuffer: u32(),
+    maxUniforms: u32(),
+    maxOcclusionQueries: u32(),
+    maxEncoders: u32(),
+    minResourceCbSize: u32(),
+    transientVbSize: u32(),
+    transientIbSize: u32(),
+  }),
+  formats: array(u16(), BGFX_TextureFormat.Count),
+});
+
+export const bgfxViewStatsStruct = struct({
+  name: array(u8(), 256),
+  view: u16(),
+  cpuTimeBegin: i64(),
+  cpuTimeEnd: i64(),
+  gpuTimeBegin: i64(),
+  gpuTimeEnd: i64(),
+  gpuFrameNum: u32(),
+});
+
+export const bgfxEncoderStatsStruct = struct({
+  cpuTimeBegin: i64(),
+  cpuTimeEnd: i64(),
+});
+
+export const bgfxStatsStruct = struct({
+  cpuTimeFrame: i64(),
+  cpuTimeBegin: i64(),
+  cpuTimeEnd: i64(),
+  cpuTimeFreq: i64(),
+  gpuTimeBegin: i64(),
+  gpuTimeEnd: i64(),
+  gpuTimeFreq: i64(),
+  waitRender: i64(),
+  waitSubmit: i64(),
   numDraw: u32(),
   numCompute: u32(),
   numBlit: u32(),
@@ -221,38 +148,76 @@ export const stats = struct({
   numPrograms: u16(),
   numShaders: u16(),
   numTextures: u16(),
-  numUniforms: u16(),
   numVertexBuffers: u16(),
   numVertexLayouts: u16(),
-  textureMemoryUsed: i32(),
-  rtMemoryUsed: i32(),
+  textureMemoryUsed: i64(),
+  rtMemoryUsed: i64(),
   transientVbUsed: i32(),
   transientIbUsed: i32(),
-  numPrims: array(u32(), 5),
-  gpuMemoryMax: i32(),
-  gpuMemoryUsed: i32(),
+  numPrims: array(u32(), BGFX_Topology.Count),
+  gpuMemoryMax: i64(),
+  gpuMemoryUsed: i64(),
   width: u16(),
   height: u16(),
   textWidth: u16(),
   textHeight: u16(),
   numViews: u16(),
-  viewStats: ptrAny(),
+  viewStats: pointer(bgfxViewStatsStruct),
   numEncoders: u8(),
-  encoderStats: ptrAny(),
+  encoderStats: pointer(bgfxEncoderStatsStruct),
 });
 
-// BGFX MARK: Vertex Layout
-
-export const vertexLayout = struct({
-  hash: u32(),
-  stride: u16(),
-  offset: array(u16(), 18),
-  attributes: array(u16(), 18),
+export const bgfxInternalDataStruct = struct({
+  caps: ptrAny(),
+  context: ptrAny(),
 });
 
-// BGFX MARK: Encoder
+export const bgfxHandleStruct = struct({
+  idx: u16(),
+});
 
-export const encoder = struct({
-  // Opaque pointer
-  _opaque: ptrAny(),
+export const bgfxVertexLayoutStruct = struct({
+  begin: ptrAny(),
+  end: ptrAny(),
+  add: ptrAny(),
+  skip: ptrAny(),
+  decode: ptrAny(),
+  has: ptrAny(),
+  getOffset: ptrAny(),
+  getStride: ptrAny(),
+  getSize: ptrAny(),
+  m_hash: u32(),
+  m_stride: u16(),
+  m_offset: array(u16(), BGFX_Attributes.Count),
+  m_attributes: array(u16(), BGFX_Attributes.Count),
+});
+
+export const bgfxTextureInfoStruct = struct({
+  format: u32(),
+  storageSize: u32(),
+  width: u16(),
+  height: u16(),
+  depth: u16(),
+  numLayers: u16(),
+  numMips: u8(),
+  bitsPerPixel: u8(),
+  cubeMap: bool(),
+});
+
+export const bgfxAttachmentStruct = struct({
+  init: ptrAny(),
+  access: u32(),
+  handle: ptrAny(),
+  mip: u16(),
+  layer: u16(),
+  numLayers: u16(),
+  resolve: bool(),
+});
+
+export const bgfxTransientIndexBufferStruct = struct({
+  data: pointer(u8()),
+  size: u32(),
+  startIndex: u32(),
+  handle: ptrAny(),
+  isIndex16: bool(),
 });
