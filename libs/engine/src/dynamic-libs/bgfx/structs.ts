@@ -26,6 +26,7 @@ export const bgfxPlatformDataStruct = struct({
 });
 
 export const bgfxResolutionStruct = struct({
+  format: u32(),
   width: u32(),
   height: u32(),
   reset: u32(),
@@ -141,11 +142,13 @@ export const bgfxStatsStruct = struct({
   gpuTimeFreq: i64(),
   waitRender: i64(),
   waitSubmit: i64(),
+
   numDraw: u32(),
   numCompute: u32(),
   numBlit: u32(),
   maxGpuLatency: u32(),
   gpuFrameNum: u32(),
+
   numDynamicIndexBuffers: u16(),
   numDynamicVertexBuffers: u16(),
   numFrameBuffers: u16(),
@@ -154,20 +157,26 @@ export const bgfxStatsStruct = struct({
   numPrograms: u16(),
   numShaders: u16(),
   numTextures: u16(),
+  numUniforms: u16(),
   numVertexBuffers: u16(),
   numVertexLayouts: u16(),
+
   textureMemoryUsed: i64(),
   rtMemoryUsed: i64(),
   transientVbUsed: i32(),
   transientIbUsed: i32(),
+
   numPrims: array(u32(), BGFX_Topology.Count),
+
   gpuMemoryMax: i64(),
   gpuMemoryUsed: i64(),
+
   width: u16(),
   height: u16(),
   textWidth: u16(),
   textHeight: u16(),
   numViews: u16(),
+
   viewStats: pointer(bgfxViewStatsStruct),
   numEncoders: u8(),
   encoderStats: pointer(bgfxEncoderStatsStruct),

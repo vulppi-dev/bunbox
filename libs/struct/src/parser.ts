@@ -227,3 +227,13 @@ export function instantiate<F extends StructField<any>>(
 
   return [proxy, buffer];
 }
+
+export function sizeOf(field: StructField<any>): number {
+  if (typeof ___STRUCTS_SETUP___ === 'undefined') {
+    throw new Error('Structs not setup. Please call setupStruct first.');
+  }
+
+  const { pack } = ___STRUCTS_SETUP___!;
+  const { size } = calculateFieldSize(field, pack);
+  return size;
+}

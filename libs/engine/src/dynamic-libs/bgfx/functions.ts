@@ -25,7 +25,7 @@ export const bgfx_shutdown = {
 /**
  * Reset graphic settings and back-buffer size.
  *
- * C ref: `void bgfx::reset (uint32_t _width, uint32_t _height, uint32_t _flags, TextureFormat::Enum _format)`
+ * C ref: `void bgfx::reset(uint32_t _width, uint32_t _height, uint32_t _flags = BGFX_RESET_NONE, TextureFormat::Enum _format = TextureFormat::Count)`
  */
 export const bgfx_reset = {
   args: ['u32', 'u32', 'u32', 'u32'],
@@ -68,7 +68,7 @@ export const bgfx_dbg_text_clear = {
  * C ref: `void bgfx::dbgTextPrintf(uint16_t _x, uint16_t _y, uint8_t _attr, const char* _format, ...)`
  */
 export const bgfx_dbg_text_printf = {
-  args: ['u16', 'u16', 'u8', 'cstring', 'ptr'],
+  args: ['u16', 'u16', 'u8', 'cstring'],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -1100,7 +1100,7 @@ export const bgfx_submit = {
  *
  * C ref: `void bgfx::submit(ViewId _id, ProgramHandle _program, OcclusionQueryHandle _occlusionQuery, uint32_t _depth = 0, uint8_t _flags = BGFX_DISCARD_ALL)`
  */
-export const bgfx_submit_with_occlusion_query = {
+export const bgfx_submit_occlusion_query = {
   args: ['u16', 'ptr', 'ptr', 'u32', 'u8'],
   returns: 'void',
 } as const satisfies FFIFunction;
@@ -1847,7 +1847,7 @@ export const bgfx_create_frame_buffer_from_nwh = {
  *
  * C ref: `FrameBufferHandle bgfx::createFrameBuffer(uint8_t _num, const Attachment *_attachment, bool _destroyTextures = false)`
  */
-export const bgfx_create_frame_buffer_from_attachments = {
+export const bgfx_create_frame_buffer_from_attachment = {
   args: ['u8', 'ptr', 'bool'],
   returns: 'ptr',
 } as const satisfies FFIFunction;
