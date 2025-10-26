@@ -1,6 +1,10 @@
 {
   "folders": [
     {
+      "name": "root",
+      "path": "."
+    },
+    {
       "name": "struct",
       "path": "./libs/struct"
     },
@@ -16,9 +20,5 @@
       "name": "engine",
       "path": "./libs/engine"
     },
-    {
-      "name": "root",
-      "path": "."
-    }
   ],
 }

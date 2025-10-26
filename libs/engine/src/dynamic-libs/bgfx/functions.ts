@@ -430,7 +430,7 @@ export const bgfx_reset_view = {
  *
  * C ref: `Encoder *bgfx::begin(bool _forThread = false)`
  */
-export const bgfx_begin = {
+export const bgfx_encoder_begin = {
   args: ['bool'],
   returns: 'ptr',
 } as const satisfies FFIFunction;
@@ -440,7 +440,7 @@ export const bgfx_begin = {
  *
  * C ref: `void bgfx::end(Encoder *_encoder)`
  */
-export const bgfx_end = {
+export const bgfx_encoder_end = {
   args: ['ptr'],
   returns: 'void',
 } as const satisfies FFIFunction;
