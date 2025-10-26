@@ -7,7 +7,7 @@ This library uses a **field-based model** with **proxy-based access**: you compo
 > [!NOTE]
 > **Primary Focus: Bun FFI**
 >
-> This library is primarily designed for use with **[`bun:ffi`](https://bun.sh/docs/api/ffi)** and includes optimized examples for Bun's FFI system. However, thanks to the **`setupStruct()`** configuration layer, it remains **completely agnostic** to the FFI implementation—you can use it with any FFI system, WebAssembly, or even custom binary protocols by providing your own string codec and pointer management.
+> This library is primarily designed for use with **[`bun:ffi`](https://bun.sh/docs/api/ffi)** and includes optimized examples for Bun's FFI system with libraries like **GLFW**. However, thanks to the **`setupStruct()`** configuration layer, it remains **completely agnostic** to the FFI implementation—you can use it with any FFI system, WebAssembly, or even custom binary protocols by providing your own string codec and pointer management.
 
 ---
 
@@ -42,6 +42,7 @@ Requirements:
 - [API Reference](#api-reference)
   - [setupStruct()](#setupstructoptions)
   - [instantiate()](#instantiatefield)
+  - [sizeOf()](#sizeoffield)
 - [Memory Layout & Alignment](#memory-layout--alignment)
 - [String Handling](#string-handling)
   - [FFI Integration](#ffi-integration-recommended)
@@ -77,64 +78,96 @@ Requirements:
 import { dlopen, FFIType, suffix } from 'bun:ffi';
 import {
   struct,
-  u8,
-  bool,
-  string,
+  i32,
+  f64,
+  pointer,
   instantiate,
   setupStruct,
+  sizeOf,
 } from '@bunbox/struct';
 
-// Define the struct layout using field helpers
-const Person = struct({
-  name: string(),
-  age: u8(),
-  active: bool(),
+// Define GLFW structs matching C layout
+const GLFWvidmode = struct({
+  width: i32(),
+  height: i32(),
+  redBits: i32(),
+  greenBits: i32(),
+  blueBits: i32(),
+  refreshRate: i32(),
 });
 
-// Load native library (example with SDL3 or custom C library)
-const lib = dlopen(`libmylib.${suffix}`, {
-  allocString: {
-    args: [FFIType.cstring],
+const WindowConfig = struct({
+  width: i32(800),
+  height: i32(600),
+  title: pointer(i32()), // char* title
+  monitor: pointer(i32()), // GLFWmonitor*
+  share: pointer(i32()), // GLFWwindow*
+});
+
+// Load GLFW library
+const glfw = dlopen(`libglfw.${suffix}`, {
+  glfwInit: {
+    args: [],
+    returns: FFIType.i32,
+  },
+  glfwCreateWindow: {
+    args: [
+      FFIType.i32,
+      FFIType.i32,
+      FFIType.cstring,
+      FFIType.pointer,
+      FFIType.pointer,
+    ],
     returns: FFIType.pointer,
   },
-  freeString: {
-    args: [FFIType.pointer],
-    returns: FFIType.void,
+  glfwGetPrimaryMonitor: {
+    args: [],
+    returns: FFIType.pointer,
   },
-  readString: {
+  glfwGetVideoMode: {
     args: [FFIType.pointer],
-    returns: FFIType.cstring,
+    returns: FFIType.pointer,
   },
 });
 
-// Setup struct with FFI string handlers
+// Setup struct with simple pointer management
 setupStruct({
   pack: 8,
   stringToPointer(value: string): bigint {
-    if (!value) return 0n;
-    return BigInt(lib.symbols.allocString(value));
+    // For GLFW, strings are typically stack-allocated or static
+    return 0n; // Simplified for example
   },
   pointerToString(pointer: bigint): string {
-    if (pointer === 0n) return '';
-    return lib.symbols.readString(pointer);
+    return ''; // Simplified for example
   },
 });
 
-// Instantiate the struct - get a proxy and its backing buffer
-const [person, buffer] = instantiate(Person);
+// Initialize GLFW
+if (glfw.symbols.glfwInit() === 0) {
+  throw new Error('Failed to initialize GLFW');
+}
 
-// Direct property access - no serialization needed!
-person.name = 'Alice';
-person.age = 42;
-person.active = true;
+// Create window config
+const [config, configBuffer] = instantiate(WindowConfig);
+config.width = 1920;
+config.height = 1080;
+config.monitor = 0n;
+config.share = 0n;
 
-// Read values back
-console.log(person.name); // 'Alice'
-console.log(person.age); // 42
-console.log(person.active); // true
+// Get size of structs
+console.log('GLFWvidmode size:', sizeOf(GLFWvidmode)); // 24 bytes
+console.log('WindowConfig size:', sizeOf(WindowConfig)); // 32 bytes
 
-// The buffer contains the raw bytes, ready for FFI/WASM
-console.log(new Uint8Array(buffer));
+// Create window
+const window = glfw.symbols.glfwCreateWindow(
+  config.width,
+  config.height,
+  'My GLFW Window',
+  config.monitor,
+  config.share,
+);
+
+console.log('Window created:', window !== 0n);
 ```
 
 The proxy object provides direct, typed access to the underlying binary data—changes are immediately reflected in the `ArrayBuffer`, ready to pass to native code or write to disk.
@@ -378,6 +411,78 @@ player.position.y = 20.3;
 sendToWasm(buffer);
 ```
 
+### `sizeOf(field)`
+
+Calculates the total size in bytes of a struct, including padding and alignment.
+
+```ts
+function sizeOf(field: StructField<any>): number;
+```
+
+**Returns:** The size in bytes of the struct layout.
+
+**Example:**
+
+```ts
+const Vec3 = struct({
+  x: f32(),
+  y: f32(),
+  z: f32(),
+});
+
+const Transform = struct({
+  position: Vec3,
+  rotation: Vec3,
+  scale: Vec3,
+});
+
+console.log(sizeOf(Vec3)); // 12 bytes (3 * 4)
+console.log(sizeOf(Transform)); // 36 bytes (3 * 12)
+
+// Useful for pre-allocating buffers
+const vertexCount = 1000;
+const totalBytes = sizeOf(Vec3) * vertexCount;
+console.log(`Need ${totalBytes} bytes for ${vertexCount} vertices`);
+```
+
+### Serialization with `toJSON()`
+
+All struct proxies include a `toJSON()` method that serializes the struct to a JSON string. This is useful for debugging, logging, or transferring struct data.
+
+```ts
+const Player = struct({
+  name: string(),
+  health: f32(),
+  position: struct({
+    x: f32(),
+    y: f32(),
+  }),
+  inventory: array(i32(), 3),
+});
+
+const [player, buffer] = instantiate(Player);
+player.name = 'Hero';
+player.health = 100.0;
+player.position.x = 10.5;
+player.position.y = 20.3;
+player.inventory = [1, 2, 3];
+
+// Serialize to JSON string
+const json = player.toJSON();
+console.log(json);
+// Output: {"name":"Hero","health":100,"position":{"x":10.5,"y":20.3},"inventory":[1,2,3]}
+
+// Can also use JSON.stringify (which calls toJSON internally)
+console.log(JSON.stringify(player));
+```
+
+**Notes:**
+
+- `bigint` values are automatically converted to strings in the JSON output
+- Nested structs are recursively serialized
+- Arrays are serialized as JSON arrays
+- The method returns a JSON **string**, not an object
+
 ---
 
 ## Memory Layout & Alignment
@@ -411,12 +516,37 @@ Strings are **always stored as pointers** (8 bytes). The library doesn't manage 
 
 **Common patterns:**
 
-### FFI Integration (Recommended)
+### FFI Integration with GLFW (Recommended)
 
 ```ts
-import { dlopen, FFIType, suffix } from 'bun:ffi';
+import { dlopen, FFIType, suffix, CString } from 'bun:ffi';
 
-const lib = dlopen(`libmylib.${suffix}`, {
+// For GLFW, most strings are passed directly without special allocation
+// But here's a complete example with string management:
+
+const stringMap = new Map<string, bigint>();
+let nextPtr = 1n;
+
+setupStruct({
+  pack: 8,
+  stringToPointer(str: string): bigint {
+    if (!str) return 0n;
+    // For GLFW window titles and similar, strings are typically stack-allocated
+    // or managed by the caller. This is a simple mapping approach:
+    if (!stringMap.has(str)) {
+      stringMap.set(str, nextPtr++);
+    }
+    return stringMap.get(str)!;
+  },
+  pointerToString(ptr: bigint): string {
+    if (ptr === 0n) return '';
+    const entry = [...stringMap.entries()].find(([_, p]) => p === ptr);
+    return entry ? entry[0] : '';
+  },
+});
+
+// Alternative: If you have custom string allocation in native code
+const lib = dlopen(`libcustom.${suffix}`, {
   allocString: {
     args: [FFIType.cstring],
     returns: FFIType.pointer,
@@ -424,6 +554,10 @@ const lib = dlopen(`libmylib.${suffix}`, {
   readString: {
     args: [FFIType.pointer],
     returns: FFIType.cstring,
+  },
+  freeString: {
+    args: [FFIType.pointer],
+    returns: FFIType.void,
   },
 });
 
@@ -633,102 +767,181 @@ All tests validate both memory layout correctness and proxy behavior.
 
 ## Common Patterns
 
-### FFI Integration
+### GLFW Integration
 
 ```ts
 import { dlopen, FFIType, suffix } from 'bun:ffi';
+import {
+  struct,
+  i32,
+  f64,
+  pointer,
+  instantiate,
+  setupStruct,
+} from '@bunbox/struct';
 
-// Load SDL3 library
-const sdl = dlopen(`libSDL3.${suffix}`, {
-  SDL_FillRect: {
-    args: [FFIType.pointer, FFIType.pointer, FFIType.u32],
+// Load GLFW library
+const glfw = dlopen(`libglfw.${suffix}`, {
+  glfwInit: {
+    args: [],
     returns: FFIType.i32,
   },
-  SDL_Init: {
-    args: [FFIType.u32],
-    returns: FFIType.i32,
-  },
-  // ... other SDL functions
-});
-
-// Define C struct layout matching SDL_Rect
-const SDL_Rect = struct({
-  x: i32(),
-  y: i32(),
-  w: i32(),
-  h: i32(),
-});
-
-const [rect, buffer] = instantiate(SDL_Rect);
-rect.x = 100;
-rect.y = 100;
-rect.w = 50;
-rect.h = 50;
-
-// Pass buffer directly to FFI
-sdl.symbols.SDL_FillRect(surfacePtr, buffer, 0xff0000ff);
-```
-
-### Custom C Library Integration
-
-```ts
-import { dlopen, FFIType, suffix, CString } from 'bun:ffi';
-
-// Define your C struct
-const PlayerData = struct({
-  name: string(),
-  position: struct({
-    x: f32(),
-    y: f32(),
-    z: f32(),
-  }),
-  health: f32(),
-  team: u8(),
-});
-
-// Load your game engine library
-const engine = dlopen(`libgame.${suffix}`, {
-  player_create: {
-    args: [FFIType.pointer], // Takes PlayerData*
-    returns: FFIType.u32, // Returns player ID
-  },
-  player_update: {
-    args: [FFIType.u32, FFIType.pointer], // ID, PlayerData*
-    returns: FFIType.void,
-  },
-  // String management
-  alloc_string: {
-    args: [FFIType.cstring],
+  glfwCreateWindow: {
+    args: [
+      FFIType.i32,
+      FFIType.i32,
+      FFIType.cstring,
+      FFIType.pointer,
+      FFIType.pointer,
+    ],
     returns: FFIType.pointer,
   },
-  read_string: {
-    args: [FFIType.pointer],
-    returns: FFIType.cstring,
+  glfwWindowHint: {
+    args: [FFIType.i32, FFIType.i32],
+    returns: FFIType.void,
+  },
+  glfwGetWindowSize: {
+    args: [FFIType.pointer, FFIType.pointer, FFIType.pointer],
+    returns: FFIType.void,
+  },
+  glfwGetCursorPos: {
+    args: [FFIType.pointer, FFIType.pointer, FFIType.pointer],
+    returns: FFIType.void,
   },
 });
 
-// Setup with your library's string functions
-setupStruct({
-  pack: 8,
-  stringToPointer: (s) => (s ? BigInt(engine.symbols.alloc_string(s)) : 0n),
-  pointerToString: (p) => (p ? engine.symbols.read_string(p) : ''),
+// Define struct for window properties
+const WindowProps = struct({
+  width: i32(),
+  height: i32(),
+  cursorX: f64(),
+  cursorY: f64(),
 });
 
-// Create and use the struct
-const [player, buffer] = instantiate(PlayerData);
-player.name = 'Hero';
-player.position.x = 100.0;
-player.position.y = 50.0;
-player.position.z = 0.0;
-player.health = 100.0;
-player.team = 1;
+// Setup structs
+setupStruct({
+  pack: 8,
+  stringToPointer: (s) => 0n,
+  pointerToString: (p) => '',
+});
 
-// Send to native code
-const playerId = engine.symbols.player_create(buffer);
+// Initialize GLFW
+glfw.symbols.glfwInit();
 
-// Update later
-player.health = 85.0;
-engine.symbols.player_update(playerId, buffer);
+// Set window hints
+const GLFW_CONTEXT_VERSION_MAJOR = 0x00022002;
+const GLFW_CONTEXT_VERSION_MINOR = 0x00022003;
+glfw.symbols.glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+glfw.symbols.glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+
+// Create window
+const window = glfw.symbols.glfwCreateWindow(800, 600, 'GLFW Window', 0n, 0n);
+
+// Get window properties
+const [props, buffer] = instantiate(WindowProps);
+glfw.symbols.glfwGetWindowSize(window, buffer, buffer.byteLength / 2);
+glfw.symbols.glfwGetCursorPos(window, buffer, buffer.byteLength / 2);
+
+console.log(`Window: ${props.width}x${props.height}`);
+console.log(`Cursor: (${props.cursorX}, ${props.cursorY})`);
+```
+
+### Custom C Library Integration with GLFW Callbacks
+
+```ts
+import { dlopen, FFIType, suffix, ptr, CString } from 'bun:ffi';
+import {
+  struct,
+  i32,
+  f32,
+  f64,
+  pointer,
+  instantiate,
+  setupStruct,
+  sizeOf,
+} from '@bunbox/struct';
+
+// Define GLFW callback data structures
+const MouseState = struct({
+  x: f64(),
+  y: f64(),
+  leftButton: i32(),
+  rightButton: i32(),
+  middleButton: i32(),
+});
+
+const KeyState = struct({
+  key: i32(),
+  scancode: i32(),
+  action: i32(),
+  mods: i32(),
+});
+
+// Load GLFW
+const glfw = dlopen(`libglfw.${suffix}`, {
+  glfwInit: {
+    args: [],
+    returns: FFIType.i32,
+  },
+  glfwCreateWindow: {
+    args: [
+      FFIType.i32,
+      FFIType.i32,
+      FFIType.cstring,
+      FFIType.pointer,
+      FFIType.pointer,
+    ],
+    returns: FFIType.pointer,
+  },
+  glfwSetMouseButtonCallback: {
+    args: [FFIType.pointer, FFIType.pointer],
+    returns: FFIType.pointer,
+  },
+  glfwSetKeyCallback: {
+    args: [FFIType.pointer, FFIType.pointer],
+    returns: FFIType.pointer,
+  },
+  glfwPollEvents: {
+    args: [],
+    returns: FFIType.void,
+  },
+});
+
+// Setup structs
+setupStruct({
+  pack: 8,
+  stringToPointer: (s) => 0n,
+  pointerToString: (p) => '',
+});
+
+// Initialize
+glfw.symbols.glfwInit();
+const window = glfw.symbols.glfwCreateWindow(800, 600, 'Input Demo', 0n, 0n);
+
+// Create state structs
+const [mouseState, mouseBuffer] = instantiate(MouseState);
+const [keyState, keyBuffer] = instantiate(KeyState);
+
+console.log('MouseState size:', sizeOf(MouseState)); // 40 bytes
+console.log('KeyState size:', sizeOf(KeyState)); // 16 bytes
+
+// Setup callbacks (simplified - in real use, you'd use FFI callbacks)
+// ...
+
+// Main loop
+while (true) {
+  glfw.symbols.glfwPollEvents();
+
+  // Access current state
+  if (mouseState.leftButton === 1) {
+    console.log(`Mouse clicked at (${mouseState.x}, ${mouseState.y})`);
+  }
+
+  if (keyState.action === 1) {
+    // GLFW_PRESS
+    console.log(`Key pressed: ${keyState.key}`);
+  }
+}
 ```
 
 ### Binary File Format
@@ -806,12 +1019,28 @@ person.age = 42;
 
 ### Error: "Structs not setup"
 
-Call `setupStruct()` before using `instantiate()`:
+Call `setupStruct()` before using `instantiate()` or `sizeOf()`:
 
 ```ts
 setupStruct({
   /* options */
 });
+```
+
+### Error: "Structs have already been setup"
+
+`setupStruct()` can only be called **once** per application lifetime. If you need to change configuration, restart your application or use a different approach for managing multiple configurations.
+
+```ts
+// ✅ Correct - call once at startup
+setupStruct({
+  /* config */
+});
+
+// ❌ Error - cannot call again
+setupStruct({
+  /* different config */
+}); // Throws error!
 ```
 
 ### Incorrect alignment/size
