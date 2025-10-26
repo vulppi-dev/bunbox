@@ -1,12 +1,6 @@
 import { type Pointer, JSCallback } from 'bun:ffi';
 import { afterAll, describe, expect, it, setDefaultTimeout } from 'bun:test';
-import {
-  cstr,
-  GLFW,
-  GLFW_ENUMS,
-  type GLFW_TYPES,
-  BGFX,
-} from '../src/dynamic-libs';
+import { cstr, GLFW, GLFW_WindowMacro } from '../src/dynamic-libs';
 
 setDefaultTimeout(20000);
 
@@ -31,7 +25,7 @@ describe('GLFW window test', () => {
     expect(GLFW.glfwInit(), 'GLFW initialization failed').toBe(1);
     if (GLFW.glfwInit() === 0) return;
 
-    GLFW.glfwWindowHint(GLFW_ENUMS.WindowMacro.CLIENT_API, 0); // GLFW_NO_API
+    GLFW.glfwWindowHint(GLFW_WindowMacro.CLIENT_API, 0); // GLFW_NO_API
 
     isInitGlfw = true;
     const version = GLFW.glfwGetVersionString();

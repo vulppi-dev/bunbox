@@ -1,5 +1,7 @@
 import type { FFIFunction } from 'bun:ffi';
 
+// BGFX MARK: General
+
 /**
  * This callback is called on unrecoverable errors. It’s not safe to continue (Excluding _code Fatal::DebugCheck), inform the user and terminate the application.
  *
@@ -119,3 +121,5 @@ export const bgfxCaptureFrameCallback = {
   args: ['ptr', 'u32'],
   returns: 'void',
 } as const satisfies FFIFunction;
+
+// BGFX MARK: Encoder

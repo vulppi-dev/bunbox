@@ -19,9 +19,6 @@
     {
       "name": "root",
       "path": "."
-    },
+    }
   ],
-  "settings": {
-    "commentTranslate.targetLanguage": "pt",
-  },
 }

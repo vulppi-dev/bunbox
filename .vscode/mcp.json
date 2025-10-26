@@ -1,0 +1,12 @@
+{
+  "servers": {
+    "typescript-ast": {
+      "type": "stdio",
+      "command": "bunx",
+      "args": [
+        "typescript-ast-server"
+      ],
+      "cwd": "${workspaceFolder}"
+    }
+  }
+}

@@ -14,6 +14,8 @@ import {
 } from '@bunbox/struct';
 import { BGFX_Attributes, BGFX_TextureFormat, BGFX_Topology } from './enums';
 
+// BGFX MARK: General
+
 export const bgfxPlatformDataStruct = struct({
   ndt: ptrAny(),
   nwh: ptrAny(),
@@ -51,7 +53,7 @@ export const bgfxInitStruct = struct({
   allocator: ptrAny(),
 });
 
-export const bgfxCallbackStruct = struct({
+export const bgfxCallbackInterfaceStruct = struct({
   fatal: ptrAny(),
   traceVargs: ptrAny(),
   profileBegin: ptrAny(),
@@ -64,6 +66,10 @@ export const bgfxCallbackStruct = struct({
   captureBegin: ptrAny(),
   captureEnd: ptrAny(),
   captureFrame: ptrAny(),
+});
+
+export const bgfxCallbackStruct = struct({
+  callback: ptrAny(),
 });
 
 export const bgfxCapsStruct = struct({
@@ -168,28 +174,56 @@ export const bgfxStatsStruct = struct({
 });
 
 export const bgfxInternalDataStruct = struct({
-  caps: ptrAny(),
+  caps: pointer(bgfxCapsStruct),
   context: ptrAny(),
 });
 
-export const bgfxHandleStruct = struct({
-  idx: u16(),
+// BGFX MARK: Encoder
+
+export const bgfxTransientIndexBufferStruct = struct({
+  data: pointer(u8()),
+  size: u32(),
+  startIndex: u32(),
+  handle: ptrAny(),
+  isIndex16: bool(),
+});
+
+export const bgfxTransientVertexBufferStruct = struct({
+  data: pointer(u8()),
+  size: u32(),
+  startVertex: u32(),
+  stride: u16(),
+  handle: ptrAny(),
+  layoutHandle: ptrAny(),
+});
+
+export const bgfxInstanceDataBufferStruct = struct({
+  data: pointer(u8()),
+  size: u32(),
+  offset: u32(),
+  num: u32(),
+  stride: u16(),
+  handle: ptrAny(),
+});
+
+// BGFX MARK: Resources
+
+export const bgfxMemoryStruct = struct({
+  data: pointer(u8()),
+  size: u32(),
+});
+
+export const bgfxUniformInfoStruct = struct({
+  name: array(u8(), 256),
+  type: u32(),
+  num: u16(),
 });
 
 export const bgfxVertexLayoutStruct = struct({
-  begin: ptrAny(),
-  end: ptrAny(),
-  add: ptrAny(),
-  skip: ptrAny(),
-  decode: ptrAny(),
-  has: ptrAny(),
-  getOffset: ptrAny(),
-  getStride: ptrAny(),
-  getSize: ptrAny(),
-  m_hash: u32(),
-  m_stride: u16(),
-  m_offset: array(u16(), BGFX_Attributes.Count),
-  m_attributes: array(u16(), BGFX_Attributes.Count),
+  hash: u32(),
+  stride: u16(),
+  offset: array(u16(), BGFX_Attributes.Count),
+  attributes: array(u16(), BGFX_Attributes.Count),
 });
 
 export const bgfxTextureInfoStruct = struct({
@@ -205,19 +239,10 @@ export const bgfxTextureInfoStruct = struct({
 });
 
 export const bgfxAttachmentStruct = struct({
-  init: ptrAny(),
   access: u32(),
   handle: ptrAny(),
   mip: u16(),
   layer: u16(),
   numLayers: u16(),
   resolve: bool(),
-});
-
-export const bgfxTransientIndexBufferStruct = struct({
-  data: pointer(u8()),
-  size: u32(),
-  startIndex: u32(),
-  handle: ptrAny(),
-  isIndex16: bool(),
 });

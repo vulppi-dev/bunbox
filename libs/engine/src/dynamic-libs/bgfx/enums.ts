@@ -1,3 +1,5 @@
+// BGFX MARK: General
+
 export enum BGFX_VendorId {
   /** Autoselect adapter. */
   PCI_ID_NONE = 0x0000,
@@ -18,9 +20,6 @@ export enum BGFX_VendorId {
 }
 
 export enum BGFX_Reset {
-  /** No reset flags. */
-  RESET_NONE = 0x00000000,
-
   /** Enable 2x MSAA. */
   RESET_MSAA_X2 = 0x00000010,
   /** Enable 4x MSAA. */
@@ -61,145 +60,6 @@ export enum BGFX_Reset {
   RESET_TRANSPARENT_BACKBUFFER = 0x00100000,
   RESET_RESERVED_SHIFT = 31,
   RESET_RESERVED_MASK = 0x80000000,
-}
-
-export enum BGFX_TextureFormat {
-  /** DXT1 R5G6B5A1. */
-  BC1,
-  /** DXT3 R5G6B5A4. */
-  BC2,
-  /** DXT5 R5G6B5A8. */
-  BC3,
-  /** LATC1/ATI1 R8. */
-  BC4,
-  /** LATC2/ATI2 RG8. */
-  BC5,
-  /** BC6H RGB16F. */
-  BC6H,
-  /** BC7 RGB 4-7 bits per color channel, 0-8 bits alpha. */
-  BC7,
-  /** ETC1 RGB8. */
-  ETC1,
-  /** ETC2 RGB8. */
-  ETC2,
-  /** ETC2 RGBA8. */
-  ETC2A,
-  /** ETC2 RGB8A1. */
-  ETC2A1,
-  /** PVRTC1 RGB 2BPP. */
-  PTC12,
-  /** PVRTC1 RGB 4BPP. */
-  PTC14,
-  /** PVRTC1 RGBA 2BPP. */
-  PTC12A,
-  /** PVRTC1 RGBA 4BPP. */
-  PTC14A,
-  /** PVRTC2 RGBA 2BPP. */
-  PTC22,
-  /** PVRTC2 RGBA 4BPP. */
-  PTC24,
-  /** ATC RGB 4BPP. */
-  ATC,
-  /** ATCE RGBA 8 BPP explicit alpha. */
-  ATCE,
-  /** ATCI RGBA 8 BPP interpolated alpha. */
-  ATCI,
-  /** ASTC 4x4 8.0 BPP. */
-  ASTC4x4,
-  /** ASTC 5x4 6.40 BPP. */
-  ASTC5x4,
-  /** ASTC 5x5 5.12 BPP. */
-  ASTC5x5,
-  /** ASTC 6x5 4.27 BPP. */
-  ASTC6x5,
-  /** ASTC 6x6 3.56 BPP. */
-  ASTC6x6,
-  /** ASTC 8x5 3.20 BPP. */
-  ASTC8x5,
-  /** ASTC 8x6 2.67 BPP. */
-  ASTC8x6,
-  /** ASTC 8x8 2.00 BPP. */
-  ASTC8x8,
-  /** ASTC 10x5 2.56 BPP. */
-  ASTC10x5,
-  /** ASTC 10x6 2.13 BPP. */
-  ASTC10x6,
-  /** ASTC 10x8 1.60 BPP. */
-  ASTC10x8,
-  /** ASTC 10x10 1.28 BPP. */
-  ASTC10x10,
-  /** ASTC 12x10 1.07 BPP. */
-  ASTC12x10,
-  /** ASTC 12x12 0.89 BPP. */
-  ASTC12x12,
-
-  Unknown,
-
-  R1,
-  A8,
-  R8,
-  R8I,
-  R8U,
-  R8S,
-  R16,
-  R16I,
-  R16U,
-  R16F,
-  R16S,
-  R32I,
-  R32U,
-  R32F,
-  RG8,
-  RG8I,
-  RG8U,
-  RG8S,
-  RG16,
-  RG16I,
-  RG16U,
-  RG16F,
-  RG16S,
-  RG32I,
-  RG32U,
-  RG32F,
-  RGB8,
-  RGB8I,
-  RGB8U,
-  RGB8S,
-  RGB9E5F,
-  BGRA8,
-  RGBA8,
-  RGBA8I,
-  RGBA8U,
-  RGBA8S,
-  RGBA16,
-  RGBA16I,
-  RGBA16U,
-  RGBA16F,
-  RGBA16S,
-  RGBA32I,
-  RGBA32U,
-  RGBA32F,
-  B5G6R5,
-  R5G6B5,
-  BGRA4,
-  RGBA4,
-  BGR5A1,
-  RGB5A1,
-  RGB10A2,
-  RG11B10F,
-
-  UnknownDepth,
-
-  D16,
-  D24,
-  D24S8,
-  D32,
-  D16F,
-  D24F,
-  D32F,
-  D0S8,
-
-  Count,
 }
 
 export enum BGFX_DebugFlags {
@@ -346,6 +206,47 @@ export const BGFX_AvailableCaps = {
   },
 };
 
+export enum BGFX_RenderFrame {
+  NoContext,
+  Render,
+  Timeout,
+  Exiting,
+
+  Count,
+}
+
+export enum BGFX_TopologyConvert {
+  /** Flip winding order of triangle list. */
+  TriListFlipWinding,
+  /** Flip winding order of triangle strip. */
+  TriStripFlipWinding,
+  /** Convert triangle list to line list. */
+  TriListToLineList,
+  /** Convert triangle strip to triangle list. */
+  TriStripToTriList,
+  /** Convert line strip to line list. */
+  LineStripToLineList,
+
+  Count,
+}
+
+export enum BGFX_TopologySort {
+  DirectionFrontToBackMin,
+  DirectionFrontToBackAvg,
+  DirectionFrontToBackMax,
+  DirectionBackToFrontMin,
+  DirectionBackToFrontAvg,
+  DirectionBackToFrontMax,
+  DistanceFrontToBackMin,
+  DistanceFrontToBackAvg,
+  DistanceFrontToBackMax,
+  DistanceBackToFrontMin,
+  DistanceBackToFrontAvg,
+  DistanceBackToFrontMax,
+
+  Count,
+}
+
 export enum BGFX_Topology {
   /** Triangle list. */
   TriList,
@@ -361,20 +262,523 @@ export enum BGFX_Topology {
   Count,
 }
 
-export enum BGFX_RenderFrame {
-  NoContext,
-  Render,
-  Timeout,
-  Exiting,
+// BGFX MARK: Views
+
+export enum BGFX_BackBufferRatio {
+  /** Equal to backbuffer. */
+  Equal,
+  /** One half size of backbuffer. */
+  Half,
+  /** One quarter size of backbuffer. */
+  Quarter,
+  /** One eighth size of backbuffer. */
+  Eighth,
+  /** One sixteenth size of backbuffer. */
+  Sixteenth,
+  /** Double size of backbuffer. */
+  Double,
 
   Count,
 }
 
-export enum BGFX_NativeWindowHandlerType {
-  /** Platform default handle type (X11 on Linux). */
-  Default = 0,
-  /** Wayland. */
-  Wayland,
+export enum BGFX_Clear {
+  /**  No clear flags. */
+  NONE = 0x0000,
+  /**  Clear color. */
+  COLOR = 0x0001,
+  /**  Clear depth. */
+  DEPTH = 0x0002,
+  /**  Clear stencil. */
+  STENCIL = 0x0004,
+  /**  Discard frame buffer attachment 0. */
+  DISCARD_COLOR_0 = 0x0008,
+  /**  Discard frame buffer attachment 1. */
+  DISCARD_COLOR_1 = 0x0010,
+  /**  Discard frame buffer attachment 2. */
+  DISCARD_COLOR_2 = 0x0020,
+  /**  Discard frame buffer attachment 3. */
+  DISCARD_COLOR_3 = 0x0040,
+  /**  Discard frame buffer attachment 4. */
+  DISCARD_COLOR_4 = 0x0080,
+  /**  Discard frame buffer attachment 5. */
+  DISCARD_COLOR_5 = 0x0100,
+  /**  Discard frame buffer attachment 6. */
+  DISCARD_COLOR_6 = 0x0200,
+  /**  Discard frame buffer attachment 7. */
+  DISCARD_COLOR_7 = 0x0400,
+  /**  Discard frame buffer depth attachment. */
+  DISCARD_DEPTH = 0x0800,
+  /**  Discard frame buffer stencil attachment. */
+  DISCARD_STENCIL = 0x1000,
+  DISCARD_COLOR_MASK = DISCARD_COLOR_0 |
+    DISCARD_COLOR_1 |
+    DISCARD_COLOR_2 |
+    DISCARD_COLOR_3 |
+    DISCARD_COLOR_4 |
+    DISCARD_COLOR_5 |
+    DISCARD_COLOR_6 |
+    DISCARD_COLOR_7,
+
+  DISCARD_MASK = DISCARD_COLOR_MASK | DISCARD_DEPTH | DISCARD_STENCIL,
+}
+
+export enum BGFX_ViewMode {
+  /** Default sort order. */
+  Default,
+  /** Sort in the same order in which submit calls were called. */
+  Sequential,
+  /** Sort draw call depth in ascending order. */
+  DepthAscending,
+  /** Sort draw call depth in descending order. */
+  DepthDescending,
+
+  Count,
+}
+
+// BGFX MARK: Encoder
+
+export const BGFX_State = {
+  // Color RGB/alpha/depth write. When it's not specified write will be disabled.
+  /** Enable R write. */
+  WRITE_R: 0x0000000000000001n,
+  /** Enable G write. */
+  WRITE_G: 0x0000000000000002n,
+  /** Enable B write. */
+  WRITE_B: 0x0000000000000004n,
+  /** Enable alpha write. */
+  WRITE_A: 0x0000000000000008n,
+  /** Enable depth write. */
+  WRITE_Z: 0x0000004000000000n,
+
+  /// Enable RGB write.
+  get WRITE_RGB() {
+    return this.WRITE_R | this.WRITE_G | this.WRITE_B;
+  },
+
+  /// Write all channels mask.
+  get WRITE_MASK() {
+    return this.WRITE_RGB | this.WRITE_A | this.WRITE_Z;
+  },
+
+  // Depth test state. When `DEPTH_` is not specified depth test will be disabled.
+  /**  Enable depth test, less. */
+  DEPTH_TEST_LESS: 0x0000000000000010n,
+  /**  Enable depth test, less or equal. */
+  DEPTH_TEST_LEQUAL: 0x0000000000000020n,
+  /**  Enable depth test, equal. */
+  DEPTH_TEST_EQUAL: 0x0000000000000030n,
+  /**  Enable depth test, greater or equal. */
+  DEPTH_TEST_GEQUAL: 0x0000000000000040n,
+  /**  Enable depth test, greater. */
+  DEPTH_TEST_GREATER: 0x0000000000000050n,
+  /**  Enable depth test, not equal. */
+  DEPTH_TEST_NOTEQUAL: 0x0000000000000060n,
+  /**  Enable depth test, never. */
+  DEPTH_TEST_NEVER: 0x0000000000000070n,
+  /**  Enable depth test, always. */
+  DEPTH_TEST_ALWAYS: 0x0000000000000080n,
+  /** Depth test state bit shift */
+  DEPTH_TEST_SHIFT: 4n,
+  /**  Depth test state bit mask */
+  DEPTH_TEST_MASK: 0x00000000000000f0n,
+
+  //Use BLEND_FUNC(_src, _dst) or BLEND_FUNC_SEPARATE(_srcRGB, _dstRGB, _srcA, _dstA) helper macros.
+  /**  0, 0, 0, 0 */
+  BLEND_ZERO: 0x0000000000001000n,
+  /**  1, 1, 1, 1 */
+  BLEND_ONE: 0x0000000000002000n,
+  /**  Rs, Gs, Bs, As */
+  BLEND_SRC_COLOR: 0x0000000000003000n,
+  /**  1-Rs, 1-Gs, 1-Bs, 1-As */
+  BLEND_INV_SRC_COLOR: 0x0000000000004000n,
+  /**  As, As, As, As */
+  BLEND_SRC_ALPHA: 0x0000000000005000n,
+  /**  1-As, 1-As, 1-As, 1-As */
+  BLEND_INV_SRC_ALPHA: 0x0000000000006000n,
+  /**  Ad, Ad, Ad, Ad */
+  BLEND_DST_ALPHA: 0x0000000000007000n,
+  /**  1-Ad, 1-Ad, 1-Ad ,1-Ad */
+  BLEND_INV_DST_ALPHA: 0x0000000000008000n,
+  /**  Rd, Gd, Bd, Ad */
+  BLEND_DST_COLOR: 0x0000000000009000n,
+  /**  1-Rd, 1-Gd, 1-Bd, 1-Ad */
+  BLEND_INV_DST_COLOR: 0x000000000000a000n,
+  /**  f, f, f, 1; f = min(As, 1-Ad) */
+  BLEND_SRC_ALPHA_SAT: 0x000000000000b000n,
+  /**  Blend factor */
+  BLEND_FACTOR: 0x000000000000c000n,
+  /**  1-Blend factor */
+  BLEND_INV_FACTOR: 0x000000000000d000n,
+  /** Blend state bit shift */
+  BLEND_SHIFT: 12n,
+  /**  Blend state bit mask */
+  BLEND_MASK: 0x000000000ffff000n,
+
+  //Use BLEND_EQUATION(_equation) or BLEND_EQUATION_SEPARATE(_equationRGB, _equationA) helper macros.
+  /**  Blend add: src + dst. */
+  BLEND_EQUATION_ADD: 0x0000000000000000n,
+  /**  Blend subtract: src - dst. */
+  BLEND_EQUATION_SUB: 0x0000000010000000n,
+  /**  Blend reverse subtract: dst - src. */
+  BLEND_EQUATION_REVSUB: 0x0000000020000000n,
+  /**  Blend min: min(src, dst). */
+  BLEND_EQUATION_MIN: 0x0000000030000000n,
+  /**  Blend max: max(src, dst). */
+  BLEND_EQUATION_MAX: 0x0000000040000000n,
+  /** Blend equation bit shift */
+  BLEND_EQUATION_SHIFT: 28n,
+  /**  Blend equation bit mask */
+  BLEND_EQUATION_MASK: 0x00000003f0000000n,
+
+  // Cull state. When `CULL_*` is not specified culling will be disabled.
+  /**  Cull clockwise triangles. */
+  CULL_CW: 0x0000001000000000n,
+  /**  Cull counter-clockwise triangles. */
+  CULL_CCW: 0x0000002000000000n,
+  /** Culling mode bit shift */
+  CULL_SHIFT: 36n,
+  /**  Culling mode bit mask */
+  CULL_MASK: 0x0000003000000000n,
+
+  // Alpha reference value.
+  /** Alpha reference bit shift */
+  ALPHA_REF_SHIFT: 40n,
+  /**  Alpha reference bit mask */
+  ALPHA_REF_MASK: 0x0000ff0000000000n,
+
+  /**  Tristrip. */
+  PT_TRISTRIP: 0x0001000000000000n,
+  /**  Lines. */
+  PT_LINES: 0x0002000000000000n,
+  /**  Line strip. */
+  PT_LINESTRIP: 0x0003000000000000n,
+  /**  Points. */
+  PT_POINTS: 0x0004000000000000n,
+  /** Primitive type bit shift */
+  PT_SHIFT: 48n,
+  /**  Primitive type bit mask */
+  PT_MASK: 0x0007000000000000n,
+
+  // Point size value.
+  /** Point size bit shift */
+  POINT_SIZE_SHIFT: 52n,
+  /**  Point size bit mask */
+  POINT_SIZE_MASK: 0x00f0000000000000n,
+
+  // Enable MSAA write when writing into MSAA frame buffer. This flag is ignored when not writing into MSAA frame buffer.
+  /**  Enable MSAA rasterization. */
+  MSAA: 0x0100000000000000n,
+  /**  Enable line AA rasterization. */
+  LINEAA: 0x0200000000000000n,
+  /**  Enable conservative rasterization. */
+  CONSERVATIVE_RASTER: 0x0400000000000000n,
+  /**  No state. */
+  NONE: 0x0000000000000000n,
+  /**  Front counter-clockwise (default is clockwise). */
+  FRONT_CCW: 0x0000008000000000n,
+  /**  Enable blend independent. */
+  BLEND_INDEPENDENT: 0x0000000400000000n,
+  /**  Enable alpha to coverage. */
+  BLEND_ALPHA_TO_COVERAGE: 0x0000000800000000n,
+  // Default state is write to RGB, alpha, and depth with depth test less enabled, with clockwise
+  // culling and MSAA (when writing into MSAA frame buffer, otherwise this flag is ignored).
+  get DEFAULT() {
+    return (
+      this.WRITE_RGB |
+      this.WRITE_A |
+      this.WRITE_Z |
+      this.DEPTH_TEST_LESS |
+      this.CULL_CW |
+      this.MSAA
+    );
+  },
+
+  /**  State bit mask */
+  MASK: 0xffffffffffffffffn,
+
+  /** @deprecated Do not use! */
+  RESERVED_SHIFT: 61n,
+
+  /** @deprecated Do not use! */
+  RESERVED_MASK: 0xe000000000000000n,
+};
+
+export function BGFX_StateAlphaRefNormalize(v: bigint) {
+  return (v << BGFX_State.ALPHA_REF_SHIFT) & BGFX_State.ALPHA_REF_MASK;
+}
+
+export function BGFX_StatePointSizeNormalize(v: bigint) {
+  return (v << BGFX_State.POINT_SIZE_SHIFT) & BGFX_State.POINT_SIZE_MASK;
+}
+
+export enum BGFX_Buffer {
+  /** 1 8-bit value */
+  COMPUTE_FORMAT_8X1 = 0x0001,
+  /** 2 8-bit values */
+  COMPUTE_FORMAT_8X2 = 0x0002,
+  /** 4 8-bit values */
+  COMPUTE_FORMAT_8X4 = 0x0003,
+  /** 1 16-bit value */
+  COMPUTE_FORMAT_16X1 = 0x0004,
+  /** 2 16-bit values */
+  COMPUTE_FORMAT_16X2 = 0x0005,
+  /** 4 16-bit values */
+  COMPUTE_FORMAT_16X4 = 0x0006,
+  /** 1 32-bit value */
+  COMPUTE_FORMAT_32X1 = 0x0007,
+  /** 2 32-bit values */
+  COMPUTE_FORMAT_32X2 = 0x0008,
+  /** 4 32-bit values */
+  COMPUTE_FORMAT_32X4 = 0x0009,
+  COMPUTE_FORMAT_SHIFT = 0,
+
+  COMPUTE_FORMAT_MASK = 0x000f,
+
+  /** Type `int`. */
+  COMPUTE_TYPE_INT = 0x0010,
+  /** Type `uint`. */
+  COMPUTE_TYPE_UINT = 0x0020,
+  /** Type `float`. */
+  COMPUTE_TYPE_FLOAT = 0x0030,
+  COMPUTE_TYPE_SHIFT = 4,
+
+  COMPUTE_TYPE_MASK = 0x0030,
+
+  NONE = 0x0000,
+  /** Buffer will be read by shader. */
+  COMPUTE_READ = 0x0100,
+  /** Buffer will be used for writing. */
+  COMPUTE_WRITE = 0x0200,
+  /** Buffer will be used for storing draw indirect commands. */
+  DRAW_INDIRECT = 0x0400,
+  /** Allow dynamic index/vertex buffer resize during update. */
+  ALLOW_RESIZE = 0x0800,
+  /** Index buffer contains 32-bit indices. */
+  INDEX32 = 0x1000,
+  COMPUTE_READ_WRITE = COMPUTE_READ | COMPUTE_WRITE,
+}
+
+export enum BGFX_Access {
+  Read,
+  Write,
+  ReadWrite,
+
+  Count,
+}
+
+export enum BGFX_Discard {
+  /** Discard texture sampler and buffer bindings. */
+  BGFX_DISCARD_BINDINGS = 0x01,
+  /** Discard index buffer. */
+  BGFX_DISCARD_INDEX_BUFFER = 0x02,
+  /** Discard instance data. */
+  BGFX_DISCARD_INSTANCE_DATA = 0x04,
+  /** Discard state and uniform bindings. */
+  BGFX_DISCARD_STATE = 0x08,
+  /** Discard transform. */
+  BGFX_DISCARD_TRANSFORM = 0x10,
+  /** Discard vertex streams. */
+  BGFX_DISCARD_VERTEX_STREAMS = 0x20,
+  /** Discard all states. */
+  BGFX_DISCARD_ALL = 0xff,
+}
+
+// BGFX MARK: Resources
+
+export enum BGFX_UniformType {
+  /** Sampler. */
+  Sampler,
+  /** Reserved, do not use. */
+  End,
+  /** 4 floats vector. */
+  Vec4,
+  /** 3x3 matrix. */
+  Mat3,
+  /** 4x4 matrix. */
+  Mat4,
+
+  Count,
+}
+
+export enum BGFX_BufferFlags {
+  COMPUTE_READ = 0x0100,
+  COMPUTE_WRITE = 0x0200,
+  DRAW_INDIRECT = 0x0400,
+  ALLOW_RESIZE = 0x0800,
+  INDEX32 = 0x1000,
+  COMPUTE_READ_WRITE = COMPUTE_READ | COMPUTE_WRITE,
+}
+
+export enum BGFX_Attributes {
+  Position,
+  Normal,
+  Tangent,
+  Bitangent,
+  Color0,
+  Color1,
+  Color2,
+  Color3,
+  Indices,
+  Weight,
+  TexCoord0,
+  TexCoord1,
+  TexCoord2,
+  TexCoord3,
+  TexCoord4,
+  TexCoord5,
+  TexCoord6,
+  TexCoord7,
+
+  Count,
+}
+
+export enum BGFX_AttributesType {
+  Uint8,
+  /** Uint10, availability depends on: `BGFX_CAPS_VERTEX_ATTRIB_UINT10`. */
+  Uint10,
+  Int16,
+  /** Half, availability depends on: `BGFX_CAPS_VERTEX_ATTRIB_HALF`. */
+  Half,
+  Float,
+
+  Count,
+}
+
+export enum BGFX_TextureFormat {
+  /** DXT1 R5G6B5A1. */
+  BC1,
+  /** DXT3 R5G6B5A4. */
+  BC2,
+  /** DXT5 R5G6B5A8. */
+  BC3,
+  /** LATC1/ATI1 R8. */
+  BC4,
+  /** LATC2/ATI2 RG8. */
+  BC5,
+  /** BC6H RGB16F. */
+  BC6H,
+  /** BC7 RGB 4-7 bits per color channel, 0-8 bits alpha. */
+  BC7,
+  /** ETC1 RGB8. */
+  ETC1,
+  /** ETC2 RGB8. */
+  ETC2,
+  /** ETC2 RGBA8. */
+  ETC2A,
+  /** ETC2 RGB8A1. */
+  ETC2A1,
+  /** PVRTC1 RGB 2BPP. */
+  PTC12,
+  /** PVRTC1 RGB 4BPP. */
+  PTC14,
+  /** PVRTC1 RGBA 2BPP. */
+  PTC12A,
+  /** PVRTC1 RGBA 4BPP. */
+  PTC14A,
+  /** PVRTC2 RGBA 2BPP. */
+  PTC22,
+  /** PVRTC2 RGBA 4BPP. */
+  PTC24,
+  /** ATC RGB 4BPP. */
+  ATC,
+  /** ATCE RGBA 8 BPP explicit alpha. */
+  ATCE,
+  /** ATCI RGBA 8 BPP interpolated alpha. */
+  ATCI,
+  /** ASTC 4x4 8.0 BPP. */
+  ASTC4x4,
+  /** ASTC 5x4 6.40 BPP. */
+  ASTC5x4,
+  /** ASTC 5x5 5.12 BPP. */
+  ASTC5x5,
+  /** ASTC 6x5 4.27 BPP. */
+  ASTC6x5,
+  /** ASTC 6x6 3.56 BPP. */
+  ASTC6x6,
+  /** ASTC 8x5 3.20 BPP. */
+  ASTC8x5,
+  /** ASTC 8x6 2.67 BPP. */
+  ASTC8x6,
+  /** ASTC 8x8 2.00 BPP. */
+  ASTC8x8,
+  /** ASTC 10x5 2.56 BPP. */
+  ASTC10x5,
+  /** ASTC 10x6 2.13 BPP. */
+  ASTC10x6,
+  /** ASTC 10x8 1.60 BPP. */
+  ASTC10x8,
+  /** ASTC 10x10 1.28 BPP. */
+  ASTC10x10,
+  /** ASTC 12x10 1.07 BPP. */
+  ASTC12x10,
+  /** ASTC 12x12 0.89 BPP. */
+  ASTC12x12,
+
+  Unknown,
+
+  R1,
+  A8,
+  R8,
+  R8I,
+  R8U,
+  R8S,
+  R16,
+  R16I,
+  R16U,
+  R16F,
+  R16S,
+  R32I,
+  R32U,
+  R32F,
+  RG8,
+  RG8I,
+  RG8U,
+  RG8S,
+  RG16,
+  RG16I,
+  RG16U,
+  RG16F,
+  RG16S,
+  RG32I,
+  RG32U,
+  RG32F,
+  RGB8,
+  RGB8I,
+  RGB8U,
+  RGB8S,
+  RGB9E5F,
+  BGRA8,
+  RGBA8,
+  RGBA8I,
+  RGBA8U,
+  RGBA8S,
+  RGBA16,
+  RGBA16I,
+  RGBA16U,
+  RGBA16F,
+  RGBA16S,
+  RGBA32I,
+  RGBA32U,
+  RGBA32F,
+  B5G6R5,
+  R5G6B5,
+  BGRA4,
+  RGBA4,
+  BGR5A1,
+  RGB5A1,
+  RGB10A2,
+  RG11B10F,
+
+  UnknownDepth,
+
+  D16,
+  D24,
+  D24S8,
+  D32,
+  D16F,
+  D24F,
+  D32F,
+  D0S8,
 
   Count,
 }
@@ -515,54 +919,19 @@ export function BGFX_SamplerNormalizeColor(color: number) {
   );
 }
 
-export enum BGFX_Attributes {
-  Position,
-  Normal,
-  Tangent,
-  Bitangent,
-  Color0,
-  Color1,
-  Color2,
-  Color3,
-  Indices,
-  Weight,
-  TexCoord0,
-  TexCoord1,
-  TexCoord2,
-  TexCoord3,
-  TexCoord4,
-  TexCoord5,
-  TexCoord6,
-  TexCoord7,
-
-  Count,
-}
-
-export enum BGFX_AttributesType {
-  Uint8,
-  /** Uint10, availability depends on: `BGFX_CAPS_VERTEX_ATTRIB_UINT10`. */
-  Uint10,
-  Int16,
-  /** Half, availability depends on: `BGFX_CAPS_VERTEX_ATTRIB_HALF`. */
-  Half,
-  Float,
-
-  Count,
-}
-
-export enum BGFX_BufferFlags {
-  COMPUTE_READ = 0x0100,
-  COMPUTE_WRITE = 0x0200,
-  DRAW_INDIRECT = 0x0400,
-  ALLOW_RESIZE = 0x0800,
-  INDEX32 = 0x1000,
-  COMPUTE_READ_WRITE = COMPUTE_READ | COMPUTE_WRITE,
-}
-
 export enum BGFX_OcclusionQuery {
   Invisible,
   Visible,
   NoResult,
+
+  Count,
+}
+
+export enum BGFX_NativeWindowHandlerType {
+  /** Platform default handle type (X11 on Linux). */
+  Default = 0,
+  /** Wayland. */
+  Wayland,
 
   Count,
 }
