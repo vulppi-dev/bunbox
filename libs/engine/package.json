@@ -11,11 +11,11 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/vulppi-dev/bunbox",
-    "directory": "libs/sdl3"
+    "directory": "libs/engine"
   },
   "keywords": [
-    "sdl",
-    "sdl3",
+    "glfw",
+    "bgfx",
     "ffi",
     "wgsl",
     "graphics",

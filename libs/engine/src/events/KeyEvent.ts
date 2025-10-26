@@ -1,4 +1,3 @@
-import { SDL_Keycode } from '@bunbox/sdl3';
 import { Event, type EventOptions } from './Event';
 
 export type KeyEventOptions = {

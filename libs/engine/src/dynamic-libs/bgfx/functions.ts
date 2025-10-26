@@ -13,6 +13,16 @@ export const bgfx_init = {
 } as const satisfies FFIFunction;
 
 /**
+ * Fill bgfx::Init struct with default values, before using it to initialize the library.
+ *
+ * C ref: `bool bgfx::initCtor (const bgfx_init_t * _init)`
+ */
+export const bgfx_init_ctor = {
+  args: ['ptr'],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
+/**
  * Shutdown bgfx library.
  *
  * C ref: `void bgfx::shutdown (void)`

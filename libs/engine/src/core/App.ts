@@ -1,26 +1,6 @@
-import {
-  cstr,
-  SDL,
-  SDL_DisplayOrientation,
-  SDL_Event,
-  SDL_EventType,
-  SDL_GamepadAxis,
-  SDL_GPUShaderFormat,
-  SDL_InitFlags,
-  SDL_Keymod,
-  SDL_Locale,
-  SDL_MouseWheelDirection,
-  SDL_PowerState,
-  SDL_Rect,
-  SDL_SensorType,
-  SDL_SystemTheme,
-} from '@bunbox/sdl3';
 import { promiseDelay } from '@vulppi/toolbelt';
 import { CString, read, type Pointer } from 'bun:ffi';
 import {
-  APP_FEATURES_MAP,
-  APP_LOG_CATEGORY_MAP,
-  APP_LOG_PRIORITY_MAP,
   BACKGROUND_RENDERING,
   POINTER_KEY_DEVICE,
   USING_VULKAN,
