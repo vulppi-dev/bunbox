@@ -271,7 +271,7 @@ const { symbols: GLFW, close: glfwClose } = dlopen(GLFW_PATH, {
     : {}) as typeof darwinFunctions),
 });
 
-process.on('exit', () => {
+process.on('beforeExit', () => {
   glfwClose();
 });
 

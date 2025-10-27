@@ -2,37 +2,28 @@ import { DirtyState } from './DirtyState';
 
 export type EventMap = Record<string | symbol, any[]>;
 
-export type Listener<K extends keyof T, T extends EventMap> = T[K] extends any[]
-  ? (...args: T[K]) => void | Promise<void>
-  : () => void | Promise<void>;
-
 export type Disposable = {
   dispose(): void | Promise<void>;
 };
-
-type Args<K extends keyof T, T extends EventMap> = T[K] extends any[]
-  ? T[K]
-  : [];
 
 type BaseEvents = {
   dispose: [];
 };
 
 export type MergeEventMaps<A extends EventMap, B extends EventMap> = {
-  [K in keyof A | keyof B]: K extends keyof A
-    ? K extends keyof B
-      ? A[K] | B[K]
-      : A[K]
-    : K extends keyof B
-      ? B[K]
-      : [];
+  [K in keyof (A & B)]: K extends keyof B
+    ? B[K]
+    : K extends keyof A
+      ? A[K]
+      : never;
 };
-
-type WithBase<T extends EventMap> = MergeEventMaps<BaseEvents, T>;
 
 export class EventEmitter<T extends EventMap = {}> extends DirtyState {
   #isDisposed = false;
-  #listeners: Map<keyof WithBase<T>, Set<(...args: any[]) => void>> = new Map();
+  #listeners: Map<
+    keyof MergeEventMaps<T, BaseEvents>,
+    Set<(...args: any[]) => void>
+  > = new Map();
 
   constructor() {
     super();
@@ -42,19 +33,9 @@ export class EventEmitter<T extends EventMap = {}> extends DirtyState {
     return this.#isDisposed;
   }
 
-  subscribe<K extends keyof WithBase<T>>(
+  emit<K extends keyof MergeEventMaps<T, BaseEvents>>(
     eventName: K,
-    listener: Listener<K, WithBase<T>>,
-  ) {
-    this.on(eventName, listener);
-    return () => {
-      this.off(eventName, listener);
-    };
-  }
-
-  emit<K extends keyof WithBase<T>>(
-    eventName: K,
-    ...args: Args<K, WithBase<T>>
+    ...args: MergeEventMaps<T, BaseEvents>[K]
   ): this {
     if (this.#isDisposed) return this;
     const set = this.#listeners.get(eventName);
@@ -71,9 +52,9 @@ export class EventEmitter<T extends EventMap = {}> extends DirtyState {
     return this;
   }
 
-  async asyncEmit<K extends keyof WithBase<T>>(
+  async asyncEmit<K extends keyof MergeEventMaps<T, BaseEvents>>(
     eventName: K,
-    ...args: Args<K, WithBase<T>>
+    ...args: MergeEventMaps<T, BaseEvents>[K]
   ) {
     if (this.#isDisposed) return this;
     const set = this.#listeners.get(eventName);
@@ -93,9 +74,11 @@ export class EventEmitter<T extends EventMap = {}> extends DirtyState {
     await Promise.allSettled(promises);
   }
 
-  on<K extends keyof WithBase<T>>(
+  on<K extends keyof MergeEventMaps<T, BaseEvents>>(
     eventName: K,
-    listener: Listener<K, WithBase<T>>,
+    listener: (
+      ...args: MergeEventMaps<T, BaseEvents>[K]
+    ) => void | any | Promise<void | any>,
   ): this {
     if (this.#isDisposed) return this;
     if (!this.#listeners.has(eventName)) {
@@ -105,14 +88,16 @@ export class EventEmitter<T extends EventMap = {}> extends DirtyState {
     return this;
   }
 
-  off<K extends keyof WithBase<T>>(
+  off<K extends keyof MergeEventMaps<T, BaseEvents>>(
     eventName: K,
-    listener: Listener<K, WithBase<T>>,
+    listener: (
+      ...args: MergeEventMaps<T, BaseEvents>[K]
+    ) => void | any | Promise<void | any>,
   ): this {
     if (this.#isDisposed) return this;
     const listeners = this.#listeners.get(eventName);
     if (listeners) {
-      listeners.delete(listener);
+      listeners.delete(listener as any);
       if (listeners.size === 0) {
         this.#listeners.delete(eventName);
       }
@@ -120,20 +105,36 @@ export class EventEmitter<T extends EventMap = {}> extends DirtyState {
     return this;
   }
 
-  once<K extends keyof WithBase<T>>(
+  subscribe<K extends keyof MergeEventMaps<T, BaseEvents>>(
     eventName: K,
-    listener: Listener<K, WithBase<T>>,
+    listener: (
+      ...args: MergeEventMaps<T, BaseEvents>[K]
+    ) => void | any | Promise<void | any>,
+  ) {
+    this.on(eventName, listener);
+    return () => {
+      this.off(eventName, listener);
+    };
+  }
+
+  once<K extends keyof MergeEventMaps<T, BaseEvents>>(
+    eventName: K,
+    listener: (
+      ...args: MergeEventMaps<T, BaseEvents>[K]
+    ) => void | any | Promise<void | any>,
   ): this {
     if (this.#isDisposed) return this;
     const onceListener = (...args: any[]) => {
       // @ts-ignore
       listener(...args);
-      this.off<K>(eventName, onceListener as Listener<K, WithBase<T>>);
+      this.off<K>(eventName, onceListener);
     };
-    return this.on(eventName, onceListener as Listener<K, WithBase<T>>);
+    return this.on(eventName, onceListener);
   }
 
-  clearListeners<K extends keyof WithBase<T>>(eventName?: K): this {
+  clearListeners<K extends keyof MergeEventMaps<T, BaseEvents>>(
+    eventName?: K,
+  ): this {
     if (this.#isDisposed) return this;
     if (eventName) {
       this.#listeners.delete(eventName);
@@ -143,12 +144,16 @@ export class EventEmitter<T extends EventMap = {}> extends DirtyState {
     return this;
   }
 
-  hasListeners<K extends keyof WithBase<T>>(eventName: K): boolean {
+  hasListeners<K extends keyof MergeEventMaps<T, BaseEvents>>(
+    eventName: K,
+  ): boolean {
     const set = this.#listeners.get(eventName);
     return Boolean(set && set.size > 0);
   }
 
-  listenerCount<K extends keyof WithBase<T>>(eventName?: K): number {
+  listenerCount<K extends keyof MergeEventMaps<T, BaseEvents>>(
+    eventName?: K,
+  ): number {
     if (eventName) return this.#listeners.get(eventName)?.size ?? 0;
     let total = 0;
     for (const set of this.#listeners.values()) total += set.size;

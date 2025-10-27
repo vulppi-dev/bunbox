@@ -1,6 +1,7 @@
 import { AbstractNode } from '@bunbox/tree';
 import type { EventMap, MergeEventMaps } from '@bunbox/utils';
-import type { SdlEventMap } from '../events';
+import type { InputsEventMap } from '../events';
+import type { AppLogLevel } from '../types';
 
 /**
  * Base scene-graph node.
@@ -13,16 +14,7 @@ export class Node<
   P extends Record<string, any> = Record<string, any>,
   M extends Record<string, any> = Record<string, any>,
   T extends EventMap = {},
-> extends AbstractNode<P, M, MergeEventMaps<SdlEventMap, T>> {
-  /**
-   * Per-frame update hook executed before rendering. Use for transform caches,
-   * animations dependent on render pacing, or GPU resource preparation.
-   * @param deltaTime Elapsed time since last frame in milliseconds.
-   */
-  _update(_deltaTime: number): void {
-    // Override in subclasses
-  }
-
+> extends AbstractNode<P, M, MergeEventMaps<InputsEventMap, T>> {
   /**
    * Game logic/update hook running as frequently as possible (event loop).
    * Use for input, AI, timers, etc.
@@ -30,6 +22,14 @@ export class Node<
    */
   _process(_deltaTime: number): void {
     // Override in subclasses
+  }
+
+  loggerCall(message: string, level: AppLogLevel, tag: string): this {
+    const root = this.getRoot();
+    if (root && root !== this) {
+      (root as Node).loggerCall(message, level, tag);
+    }
+    return this;
   }
 
   protected override _getType(): string {

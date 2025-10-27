@@ -203,7 +203,6 @@ export abstract class AbstractNode<
    */
   setEnabled(value: boolean): this {
     if (this.#enabled === value) return this;
-    const prev = this.#enabled;
     this.#enabled = value;
     this.markAsDirty();
     (this as AbstractNode).emit('enabled-change', this as AbstractNode);

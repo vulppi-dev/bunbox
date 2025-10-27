@@ -28,7 +28,7 @@ export const glfwTerminate = {
  * C ref: `void glfwInitHint (int hint, int value)`
  */
 export const glfwInitHint = {
-  args: ['i32', 'i32'],
+  args: ['i32', 'i32'] as [hint: 'i32', value: 'i32'],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -38,7 +38,7 @@ export const glfwInitHint = {
  * C ref: `void glfwGetVersion (int *major, int *minor, int *rev)`
  */
 export const glfwGetVersion = {
-  args: ['ptr', 'ptr', 'ptr'],
+  args: ['ptr', 'ptr', 'ptr'] as [major: 'ptr', minor: 'ptr', rev: 'ptr'],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -58,7 +58,7 @@ export const glfwGetVersionString = {
  * C ref: `int glfwGetError (const char **description)`
  */
 export const glfwGetError = {
-  args: ['ptr'],
+  args: ['ptr'] as [description: 'ptr'],
   returns: 'i32',
 } as const satisfies FFIFunction;
 
@@ -68,7 +68,7 @@ export const glfwGetError = {
  * C ref: `GLFWerrorfun glfwSetErrorCallback (GLFWerrorfun callback)`
  */
 export const glfwSetErrorCallback = {
-  args: ['callback'],
+  args: ['callback'] as [callback: 'callback'],
   returns: 'ptr',
 } as const satisfies FFIFunction;
 
@@ -88,7 +88,7 @@ export const glfwGetPlatform = {
  * C ref: `int glfwPlatformSupported (int platform)`
  */
 export const glfwPlatformSupported = {
-  args: ['i32'],
+  args: ['i32'] as [platform: 'i32'],
   returns: 'i32',
 } as const satisfies FFIFunction;
 
@@ -110,7 +110,7 @@ export const glfwDefaultWindowHints = {
  * C ref: `void glfwWindowHint (int hint, int value)`
  */
 export const glfwWindowHint = {
-  args: ['i32', 'i32'],
+  args: ['i32', 'i32'] as [hint: 'i32', value: 'i32'],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -120,7 +120,7 @@ export const glfwWindowHint = {
  * C ref: `void glfwWindowHintString (int hint, const char *value)`
  */
 export const glfwWindowHintString = {
-  args: ['i32', 'cstring'],
+  args: ['i32', 'cstring'] as [hint: 'i32', value: 'cstring'],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -130,7 +130,13 @@ export const glfwWindowHintString = {
  * C ref: `GLFWwindow * glfwCreateWindow (int width, int height, const char *title, GLFWmonitor *monitor, GLFWwindow *share)`
  */
 export const glfwCreateWindow = {
-  args: ['i32', 'i32', 'cstring', 'ptr', 'ptr'],
+  args: ['i32', 'i32', 'cstring', 'ptr', 'ptr'] as [
+    width: 'i32',
+    height: 'i32',
+    title: 'cstring',
+    monitor: 'ptr',
+    share: 'ptr',
+  ],
   returns: 'ptr',
 } as const satisfies FFIFunction;
 
@@ -140,7 +146,7 @@ export const glfwCreateWindow = {
  * C ref: `void glfwDestroyWindow (GLFWwindow *window)`
  */
 export const glfwDestroyWindow = {
-  args: ['ptr'],
+  args: ['ptr'] as [window: 'ptr'],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -150,7 +156,7 @@ export const glfwDestroyWindow = {
  * C ref: `int glfwWindowShouldClose (GLFWwindow *window)`
  */
 export const glfwWindowShouldClose = {
-  args: ['ptr'],
+  args: ['ptr'] as [window: 'ptr'],
   returns: 'i32',
 } as const satisfies FFIFunction;
 
@@ -160,7 +166,7 @@ export const glfwWindowShouldClose = {
  * C ref: `void glfwSetWindowShouldClose (GLFWwindow *window, int value)`
  */
 export const glfwSetWindowShouldClose = {
-  args: ['ptr', 'i32'],
+  args: ['ptr', 'i32'] as [window: 'ptr', value: 'i32'],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -170,7 +176,7 @@ export const glfwSetWindowShouldClose = {
  * C ref: `const char * glfwGetWindowTitle (GLFWwindow *window)`
  */
 export const glfwGetWindowTitle = {
-  args: ['ptr'],
+  args: ['ptr'] as [window: 'ptr'],
   returns: 'cstring',
 } as const satisfies FFIFunction;
 
@@ -180,7 +186,7 @@ export const glfwGetWindowTitle = {
  * C ref: `void glfwSetWindowTitle (GLFWwindow *window, const char *title)`
  */
 export const glfwSetWindowTitle = {
-  args: ['ptr', 'cstring'],
+  args: ['ptr', 'cstring'] as [window: 'ptr', title: 'cstring'],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -190,7 +196,7 @@ export const glfwSetWindowTitle = {
  * C ref: `void glfwSetWindowIcon (GLFWwindow *window, int count, const GLFWimage *images)`
  */
 export const glfwSetWindowIcon = {
-  args: ['ptr', 'i32', 'ptr'],
+  args: ['ptr', 'i32', 'ptr'] as [window: 'ptr', count: 'i32', images: 'ptr'],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -200,7 +206,7 @@ export const glfwSetWindowIcon = {
  * C ref: `void glfwGetWindowPos (GLFWwindow *window, int *xpos, int *ypos)`
  */
 export const glfwGetWindowPos = {
-  args: ['ptr', 'ptr', 'ptr'],
+  args: ['ptr', 'ptr', 'ptr'] as [window: 'ptr', xpos: 'ptr', ypos: 'ptr'],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -210,7 +216,7 @@ export const glfwGetWindowPos = {
  * C ref: `void glfwSetWindowPos (GLFWwindow *window, int xpos, int ypos)`
  */
 export const glfwSetWindowPos = {
-  args: ['ptr', 'i32', 'i32'],
+  args: ['ptr', 'i32', 'i32'] as [window: 'ptr', xpos: 'i32', ypos: 'i32'],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -220,7 +226,7 @@ export const glfwSetWindowPos = {
  * C ref: `void glfwGetWindowSize (GLFWwindow *window, int *width, int *height)`
  */
 export const glfwGetWindowSize = {
-  args: ['ptr', 'ptr', 'ptr'],
+  args: ['ptr', 'ptr', 'ptr'] as [window: 'ptr', width: 'ptr', height: 'ptr'],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -230,7 +236,13 @@ export const glfwGetWindowSize = {
  * C ref: `void glfwSetWindowSizeLimits (GLFWwindow *window, int minwidth, int minheight, int maxwidth, int maxheight)`
  */
 export const glfwSetWindowSizeLimits = {
-  args: ['ptr', 'i32', 'i32', 'i32', 'i32'],
+  args: ['ptr', 'i32', 'i32', 'i32', 'i32'] as [
+    window: 'ptr',
+    minwidth: 'i32',
+    minheight: 'i32',
+    maxwidth: 'i32',
+    maxheight: 'i32',
+  ],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -240,7 +252,7 @@ export const glfwSetWindowSizeLimits = {
  * C ref: `void glfwSetWindowAspectRatio (GLFWwindow *window, int numer, int denom)`
  */
 export const glfwSetWindowAspectRatio = {
-  args: ['ptr', 'i32', 'i32'],
+  args: ['ptr', 'i32', 'i32'] as [window: 'ptr', numer: 'i32', denom: 'i32'],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -250,7 +262,7 @@ export const glfwSetWindowAspectRatio = {
  * C ref: `void glfwSetWindowSize (GLFWwindow *window, int width, int height)`
  */
 export const glfwSetWindowSize = {
-  args: ['ptr', 'i32', 'i32'],
+  args: ['ptr', 'i32', 'i32'] as [window: 'ptr', width: 'i32', height: 'i32'],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -260,7 +272,7 @@ export const glfwSetWindowSize = {
  * C ref: `void glfwGetFramebufferSize (GLFWwindow *window, int *width, int *height)`
  */
 export const glfwGetFramebufferSize = {
-  args: ['ptr', 'ptr', 'ptr'],
+  args: ['ptr', 'ptr', 'ptr'] as [window: 'ptr', width: 'ptr', height: 'ptr'],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -270,7 +282,13 @@ export const glfwGetFramebufferSize = {
  * C ref: `void glfwGetWindowFrameSize (GLFWwindow *window, int *left, int *top, int *right, int *bottom)`
  */
 export const glfwGetWindowFrameSize = {
-  args: ['ptr', 'ptr', 'ptr', 'ptr', 'ptr'],
+  args: ['ptr', 'ptr', 'ptr', 'ptr', 'ptr'] as [
+    window: 'ptr',
+    left: 'ptr',
+    top: 'ptr',
+    right: 'ptr',
+    bottom: 'ptr',
+  ],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -280,7 +298,7 @@ export const glfwGetWindowFrameSize = {
  * C ref: `void glfwGetWindowContentScale (GLFWwindow *window, float *xscale, float *yscale)`
  */
 export const glfwGetWindowContentScale = {
-  args: ['ptr', 'ptr', 'ptr'],
+  args: ['ptr', 'ptr', 'ptr'] as [window: 'ptr', xscale: 'ptr', yscale: 'ptr'],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -290,7 +308,7 @@ export const glfwGetWindowContentScale = {
  * C ref: `float glfwGetWindowOpacity (GLFWwindow *window)`
  */
 export const glfwGetWindowOpacity = {
-  args: ['ptr'],
+  args: ['ptr'] as [window: 'ptr'],
   returns: 'float',
 } as const satisfies FFIFunction;
 
@@ -300,7 +318,7 @@ export const glfwGetWindowOpacity = {
  * C ref: `void glfwSetWindowOpacity (GLFWwindow *window, float opacity)`
  */
 export const glfwSetWindowOpacity = {
-  args: ['ptr', 'float'],
+  args: ['ptr', 'float'] as [window: 'ptr', opacity: 'float'],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -310,7 +328,7 @@ export const glfwSetWindowOpacity = {
  * C ref: `void glfwIconifyWindow (GLFWwindow *window)`
  */
 export const glfwIconifyWindow = {
-  args: ['ptr'],
+  args: ['ptr'] as [window: 'ptr'],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -320,7 +338,7 @@ export const glfwIconifyWindow = {
  * C ref: `void glfwRestoreWindow (GLFWwindow *window)`
  */
 export const glfwRestoreWindow = {
-  args: ['ptr'],
+  args: ['ptr'] as [window: 'ptr'],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -330,7 +348,7 @@ export const glfwRestoreWindow = {
  * C ref: `void glfwMaximizeWindow (GLFWwindow *window)`
  */
 export const glfwMaximizeWindow = {
-  args: ['ptr'],
+  args: ['ptr'] as [window: 'ptr'],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -340,7 +358,7 @@ export const glfwMaximizeWindow = {
  * C ref: `void glfwShowWindow (GLFWwindow *window)`
  */
 export const glfwShowWindow = {
-  args: ['ptr'],
+  args: ['ptr'] as [window: 'ptr'],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -350,7 +368,7 @@ export const glfwShowWindow = {
  * C ref: `void glfwHideWindow (GLFWwindow *window)`
  */
 export const glfwHideWindow = {
-  args: ['ptr'],
+  args: ['ptr'] as [window: 'ptr'],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -360,7 +378,7 @@ export const glfwHideWindow = {
  * C ref: `void glfwFocusWindow (GLFWwindow *window)`
  */
 export const glfwFocusWindow = {
-  args: ['ptr'],
+  args: ['ptr'] as [window: 'ptr'],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -370,7 +388,7 @@ export const glfwFocusWindow = {
  * C ref: `void glfwRequestWindowAttention (GLFWwindow *window)`
  */
 export const glfwRequestWindowAttention = {
-  args: ['ptr'],
+  args: ['ptr'] as [window: 'ptr'],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -380,7 +398,7 @@ export const glfwRequestWindowAttention = {
  * C ref: `GLFWmonitor * glfwGetWindowMonitor (GLFWwindow *window)`
  */
 export const glfwGetWindowMonitor = {
-  args: ['ptr'],
+  args: ['ptr'] as [window: 'ptr'],
   returns: 'ptr',
 } as const satisfies FFIFunction;
 
@@ -390,7 +408,15 @@ export const glfwGetWindowMonitor = {
  * C ref: `void glfwSetWindowMonitor (GLFWwindow *window, GLFWmonitor *monitor, int xpos, int ypos, int width, int height, int refreshRate)`
  */
 export const glfwSetWindowMonitor = {
-  args: ['ptr', 'ptr', 'i32', 'i32', 'i32', 'i32', 'i32'],
+  args: ['ptr', 'ptr', 'i32', 'i32', 'i32', 'i32', 'i32'] as [
+    window: 'ptr',
+    monitor: 'ptr',
+    xpos: 'i32',
+    ypos: 'i32',
+    width: 'i32',
+    height: 'i32',
+    refreshRate: 'i32',
+  ],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -400,7 +426,7 @@ export const glfwSetWindowMonitor = {
  * C ref: `int glfwGetWindowAttrib (GLFWwindow *window, int attrib)`
  */
 export const glfwGetWindowAttrib = {
-  args: ['ptr', 'i32'],
+  args: ['ptr', 'i32'] as [window: 'ptr', attrib: 'i32'],
   returns: 'i32',
 } as const satisfies FFIFunction;
 
@@ -410,7 +436,7 @@ export const glfwGetWindowAttrib = {
  * C ref: `void glfwSetWindowAttrib (GLFWwindow *window, int attrib, int value)`
  */
 export const glfwSetWindowAttrib = {
-  args: ['ptr', 'i32', 'i32'],
+  args: ['ptr', 'i32', 'i32'] as [window: 'ptr', attrib: 'i32', value: 'i32'],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -420,7 +446,7 @@ export const glfwSetWindowAttrib = {
  * C ref: `void glfwSetWindowUserPointer (GLFWwindow *window, void *pointer)`
  */
 export const glfwSetWindowUserPointer = {
-  args: ['ptr', 'ptr'],
+  args: ['ptr', 'ptr'] as [window: 'ptr', pointer: 'ptr'],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -430,7 +456,7 @@ export const glfwSetWindowUserPointer = {
  * C ref: `void * glfwGetWindowUserPointer (GLFWwindow *window)`
  */
 export const glfwGetWindowUserPointer = {
-  args: ['ptr'],
+  args: ['ptr'] as [window: 'ptr'],
   returns: 'ptr',
 } as const satisfies FFIFunction;
 
@@ -440,7 +466,7 @@ export const glfwGetWindowUserPointer = {
  * C ref: `GLFWwindowposfun glfwSetWindowPosCallback (GLFWwindow *window, GLFWwindowposfun callback)`
  */
 export const glfwSetWindowPosCallback = {
-  args: ['ptr', 'callback'],
+  args: ['ptr', 'callback'] as [window: 'ptr', callback: 'callback'],
   returns: 'ptr',
 } as const satisfies FFIFunction;
 
@@ -450,7 +476,7 @@ export const glfwSetWindowPosCallback = {
  * C ref: `GLFWwindowsizefun glfwSetWindowSizeCallback (GLFWwindow *window, GLFWwindowsizefun callback)`
  */
 export const glfwSetWindowSizeCallback = {
-  args: ['ptr', 'callback'],
+  args: ['ptr', 'callback'] as [window: 'ptr', callback: 'callback'],
   returns: 'ptr',
 } as const satisfies FFIFunction;
 
@@ -460,7 +486,7 @@ export const glfwSetWindowSizeCallback = {
  * C ref: `GLFWwindowclosefun glfwSetWindowCloseCallback (GLFWwindow *window, GLFWwindowclosefun callback)`
  */
 export const glfwSetWindowCloseCallback = {
-  args: ['ptr', 'callback'],
+  args: ['ptr', 'callback'] as [window: 'ptr', callback: 'callback'],
   returns: 'ptr',
 } as const satisfies FFIFunction;
 
@@ -470,7 +496,7 @@ export const glfwSetWindowCloseCallback = {
  * C ref: `GLFWwindowrefreshfun glfwSetWindowRefreshCallback (GLFWwindow *window, GLFWwindowrefreshfun callback)`
  */
 export const glfwSetWindowRefreshCallback = {
-  args: ['ptr', 'callback'],
+  args: ['ptr', 'callback'] as [window: 'ptr', callback: 'callback'],
   returns: 'ptr',
 } as const satisfies FFIFunction;
 
@@ -480,7 +506,7 @@ export const glfwSetWindowRefreshCallback = {
  * C ref: `GLFWwindowfocusfun glfwSetWindowFocusCallback (GLFWwindow *window, GLFWwindowfocusfun callback)`
  */
 export const glfwSetWindowFocusCallback = {
-  args: ['ptr', 'callback'],
+  args: ['ptr', 'callback'] as [window: 'ptr', callback: 'callback'],
   returns: 'ptr',
 } as const satisfies FFIFunction;
 
@@ -490,7 +516,7 @@ export const glfwSetWindowFocusCallback = {
  * C ref: `GLFWwindowiconifyfun glfwSetWindowIconifyCallback (GLFWwindow *window, GLFWwindowiconifyfun callback)`
  */
 export const glfwSetWindowIconifyCallback = {
-  args: ['ptr', 'callback'],
+  args: ['ptr', 'callback'] as [window: 'ptr', callback: 'callback'],
   returns: 'ptr',
 } as const satisfies FFIFunction;
 
@@ -500,7 +526,7 @@ export const glfwSetWindowIconifyCallback = {
  * C ref: `GLFWwindowmaximizefun glfwSetWindowMaximizeCallback (GLFWwindow *window, GLFWwindowmaximizefun callback)`
  */
 export const glfwSetWindowMaximizeCallback = {
-  args: ['ptr', 'callback'],
+  args: ['ptr', 'callback'] as [window: 'ptr', callback: 'callback'],
   returns: 'ptr',
 } as const satisfies FFIFunction;
 
@@ -510,7 +536,7 @@ export const glfwSetWindowMaximizeCallback = {
  * C ref: `GLFWframebuffersizefun glfwSetFramebufferSizeCallback (GLFWwindow *window, GLFWframebuffersizefun callback)`
  */
 export const glfwSetFramebufferSizeCallback = {
-  args: ['ptr', 'callback'],
+  args: ['ptr', 'callback'] as [window: 'ptr', callback: 'callback'],
   returns: 'ptr',
 } as const satisfies FFIFunction;
 
@@ -520,7 +546,7 @@ export const glfwSetFramebufferSizeCallback = {
  * C ref: `GLFWwindowcontentscalefun glfwSetWindowContentScaleCallback (GLFWwindow *window, GLFWwindowcontentscalefun callback)`
  */
 export const glfwSetWindowContentScaleCallback = {
-  args: ['ptr', 'callback'],
+  args: ['ptr', 'callback'] as [window: 'ptr', callback: 'callback'],
   returns: 'ptr',
 } as const satisfies FFIFunction;
 
@@ -550,7 +576,7 @@ export const glfwWaitEvents = {
  * C ref: `void glfwWaitEventsTimeout (double timeout)`
  */
 export const glfwWaitEventsTimeout = {
-  args: ['f64'],
+  args: ['f64'] as [timeout: 'f64'],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -572,7 +598,7 @@ export const glfwPostEmptyEvent = {
  * C ref: `GLFWmonitor ** glfwGetMonitors (int *count)`
  */
 export const glfwGetMonitors = {
-  args: ['ptr'],
+  args: ['ptr'] as [count: 'ptr'],
   returns: 'ptr',
 } as const satisfies FFIFunction;
 
@@ -592,7 +618,7 @@ export const glfwGetPrimaryMonitor = {
  * C ref: `void glfwGetMonitorPos (GLFWmonitor *monitor, int *xpos, int *ypos)`
  */
 export const glfwGetMonitorPos = {
-  args: ['ptr', 'ptr', 'ptr'],
+  args: ['ptr', 'ptr', 'ptr'] as [monitor: 'ptr', xpos: 'ptr', ypos: 'ptr'],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -602,7 +628,13 @@ export const glfwGetMonitorPos = {
  * C ref: `void glfwGetMonitorWorkarea (GLFWmonitor *monitor, int *xpos, int *ypos, int *width, int *height)`
  */
 export const glfwGetMonitorWorkarea = {
-  args: ['ptr', 'ptr', 'ptr', 'ptr', 'ptr'],
+  args: ['ptr', 'ptr', 'ptr', 'ptr', 'ptr'] as [
+    monitor: 'ptr',
+    xpos: 'ptr',
+    ypos: 'ptr',
+    width: 'ptr',
+    height: 'ptr',
+  ],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -612,7 +644,7 @@ export const glfwGetMonitorWorkarea = {
  * C ref: `void glfwGetMonitorContentScale (GLFWmonitor *monitor, float *xscale, float *yscale)`
  */
 export const glfwGetMonitorContentScale = {
-  args: ['ptr', 'ptr', 'ptr'],
+  args: ['ptr', 'ptr', 'ptr'] as [monitor: 'ptr', xscale: 'ptr', yscale: 'ptr'],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -622,7 +654,7 @@ export const glfwGetMonitorContentScale = {
  * C ref: `const char * glfwGetMonitorName (GLFWmonitor *monitor)`
  */
 export const glfwGetMonitorName = {
-  args: ['ptr'],
+  args: ['ptr'] as [monitor: 'ptr'],
   returns: 'cstring',
 } as const satisfies FFIFunction;
 
@@ -632,7 +664,7 @@ export const glfwGetMonitorName = {
  * C ref: `void glfwSetMonitorUserPointer (GLFWmonitor *monitor, void *pointer)`
  */
 export const glfwSetMonitorUserPointer = {
-  args: ['ptr', 'ptr'],
+  args: ['ptr', 'ptr'] as [monitor: 'ptr', pointer: 'ptr'],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -642,7 +674,7 @@ export const glfwSetMonitorUserPointer = {
  * C ref: `void * glfwGetMonitorUserPointer (GLFWmonitor *monitor)`
  */
 export const glfwGetMonitorUserPointer = {
-  args: ['ptr'],
+  args: ['ptr'] as [monitor: 'ptr'],
   returns: 'ptr',
 } as const satisfies FFIFunction;
 
@@ -652,7 +684,7 @@ export const glfwGetMonitorUserPointer = {
  * C ref: `GLFWmonitorfun glfwSetMonitorCallback (GLFWmonitorfun callback)`
  */
 export const glfwSetMonitorCallback = {
-  args: ['callback'],
+  args: ['callback'] as [callback: 'callback'],
   returns: 'ptr',
 } as const satisfies FFIFunction;
 
@@ -662,7 +694,7 @@ export const glfwSetMonitorCallback = {
  * C ref: `const GLFWvidmode * glfwGetVideoModes (GLFWmonitor *monitor, int *count)`
  */
 export const glfwGetVideoModes = {
-  args: ['ptr', 'ptr'],
+  args: ['ptr', 'ptr'] as [monitor: 'ptr', count: 'ptr'],
   returns: 'ptr',
 } as const satisfies FFIFunction;
 
@@ -672,7 +704,7 @@ export const glfwGetVideoModes = {
  * C ref: `const GLFWvidmode * glfwGetVideoMode (GLFWmonitor *monitor)`
  */
 export const glfwGetVideoMode = {
-  args: ['ptr'],
+  args: ['ptr'] as [monitor: 'ptr'],
   returns: 'ptr',
 } as const satisfies FFIFunction;
 
@@ -684,7 +716,7 @@ export const glfwGetVideoMode = {
  * C ref: `const char * glfwGetWin32Adapter (GLFWmonitor *monitor)`
  */
 export const glfwGetWin32Adapter = {
-  args: ['ptr'],
+  args: ['ptr'] as [monitor: 'ptr'],
   returns: 'cstring',
 } as const satisfies FFIFunction;
 
@@ -694,7 +726,7 @@ export const glfwGetWin32Adapter = {
  * C ref: `const char * glfwGetWin32Monitor (GLFWmonitor *monitor)`
  */
 export const glfwGetWin32Monitor = {
-  args: ['ptr'],
+  args: ['ptr'] as [monitor: 'ptr'],
   returns: 'cstring',
 } as const satisfies FFIFunction;
 
@@ -704,7 +736,7 @@ export const glfwGetWin32Monitor = {
  * C ref: `HWND glfwGetWin32Window (GLFWwindow *window)`
  */
 export const glfwGetWin32Window = {
-  args: ['ptr'],
+  args: ['ptr'] as [window: 'ptr'],
   returns: 'ptr',
 } as const satisfies FFIFunction;
 
@@ -714,7 +746,7 @@ export const glfwGetWin32Window = {
  * C ref: `CGDirectDisplayID glfwGetCocoaMonitor (GLFWmonitor *monitor)`
  */
 export const glfwGetCocoaMonitor = {
-  args: ['ptr'],
+  args: ['ptr'] as [monitor: 'ptr'],
   returns: 'ptr',
 } as const satisfies FFIFunction;
 
@@ -724,7 +756,7 @@ export const glfwGetCocoaMonitor = {
  * C ref: `id glfwGetCocoaWindow (GLFWwindow *window)`
  */
 export const glfwGetCocoaWindow = {
-  args: ['ptr'],
+  args: ['ptr'] as [window: 'ptr'],
   returns: 'ptr',
 } as const satisfies FFIFunction;
 
@@ -734,7 +766,7 @@ export const glfwGetCocoaWindow = {
  * C ref: `id glfwGetCocoaView (GLFWwindow *window)`
  */
 export const glfwGetCocoaView = {
-  args: ['ptr'],
+  args: ['ptr'] as [window: 'ptr'],
   returns: 'ptr',
 } as const satisfies FFIFunction;
 
@@ -754,7 +786,7 @@ export const glfwGetX11Display = {
  * C ref: `RRCrtc glfwGetX11Adapter (GLFWmonitor *monitor)`
  */
 export const glfwGetX11Adapter = {
-  args: ['ptr'],
+  args: ['ptr'] as [monitor: 'ptr'],
   returns: 'ptr',
 } as const satisfies FFIFunction;
 
@@ -764,7 +796,7 @@ export const glfwGetX11Adapter = {
  * C ref: `RROutput glfwGetX11Monitor (GLFWmonitor *monitor)`
  */
 export const glfwGetX11Monitor = {
-  args: ['ptr'],
+  args: ['ptr'] as [monitor: 'ptr'],
   returns: 'ptr',
 } as const satisfies FFIFunction;
 
@@ -774,7 +806,7 @@ export const glfwGetX11Monitor = {
  * C ref: `Window glfwGetX11Window (GLFWwindow *window)`
  */
 export const glfwGetX11Window = {
-  args: ['ptr'],
+  args: ['ptr'] as [window: 'ptr'],
   returns: 'ptr',
 } as const satisfies FFIFunction;
 
@@ -794,7 +826,7 @@ export const glfwGetWaylandDisplay = {
  * C ref: `struct wl_output * glfwGetWaylandMonitor (GLFWmonitor *monitor)`
  */
 export const glfwGetWaylandMonitor = {
-  args: ['ptr'],
+  args: ['ptr'] as [monitor: 'ptr'],
   returns: 'ptr',
 } as const satisfies FFIFunction;
 
@@ -804,7 +836,7 @@ export const glfwGetWaylandMonitor = {
  * C ref: `struct wl_surface * glfwGetWaylandWindow (GLFWwindow *window)`
  */
 export const glfwGetWaylandWindow = {
-  args: ['ptr'],
+  args: ['ptr'] as [window: 'ptr'],
   returns: 'ptr',
 } as const satisfies FFIFunction;
 
@@ -816,7 +848,7 @@ export const glfwGetWaylandWindow = {
  * C ref: `int glfwGetInputMode (GLFWwindow *window, int mode)`
  */
 export const glfwGetInputMode = {
-  args: ['ptr', 'i32'],
+  args: ['ptr', 'i32'] as [window: 'ptr', mode: 'i32'],
   returns: 'i32',
 } as const satisfies FFIFunction;
 
@@ -826,7 +858,7 @@ export const glfwGetInputMode = {
  * C ref: `void glfwSetInputMode (GLFWwindow *window, int mode, int value)`
  */
 export const glfwSetInputMode = {
-  args: ['ptr', 'i32', 'i32'],
+  args: ['ptr', 'i32', 'i32'] as [window: 'ptr', mode: 'i32', value: 'i32'],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -846,7 +878,7 @@ export const glfwRawMouseMotionSupported = {
  * C ref: `const char * glfwGetKeyName (int key, int scancode)`
  */
 export const glfwGetKeyName = {
-  args: ['i32', 'i32'],
+  args: ['i32', 'i32'] as [key: 'i32', scancode: 'i32'],
   returns: 'cstring',
 } as const satisfies FFIFunction;
 
@@ -856,7 +888,7 @@ export const glfwGetKeyName = {
  * C ref: `int glfwGetKeyScancode (int key)`
  */
 export const glfwGetKeyScancode = {
-  args: ['i32'],
+  args: ['i32'] as [key: 'i32'],
   returns: 'i32',
 } as const satisfies FFIFunction;
 
@@ -866,7 +898,7 @@ export const glfwGetKeyScancode = {
  * C ref: `int glfwGetKey (GLFWwindow *window, int key)`
  */
 export const glfwGetKey = {
-  args: ['ptr', 'i32'],
+  args: ['ptr', 'i32'] as [window: 'ptr', key: 'i32'],
   returns: 'i32',
 } as const satisfies FFIFunction;
 
@@ -876,7 +908,7 @@ export const glfwGetKey = {
  * C ref: `int glfwGetMouseButton (GLFWwindow *window, int button)`
  */
 export const glfwGetMouseButton = {
-  args: ['ptr', 'i32'],
+  args: ['ptr', 'i32'] as [window: 'ptr', button: 'i32'],
   returns: 'i32',
 } as const satisfies FFIFunction;
 
@@ -886,7 +918,7 @@ export const glfwGetMouseButton = {
  * C ref: `void glfwGetCursorPos (GLFWwindow *window, double *xpos, double *ypos)`
  */
 export const glfwGetCursorPos = {
-  args: ['ptr', 'ptr', 'ptr'],
+  args: ['ptr', 'ptr', 'ptr'] as [window: 'ptr', xpos: 'ptr', ypos: 'ptr'],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -896,7 +928,7 @@ export const glfwGetCursorPos = {
  * C ref: `void glfwSetCursorPos (GLFWwindow *window, double xpos, double ypos)`
  */
 export const glfwSetCursorPos = {
-  args: ['ptr', 'f64', 'f64'],
+  args: ['ptr', 'f64', 'f64'] as [window: 'ptr', xpos: 'f64', ypos: 'f64'],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -906,7 +938,7 @@ export const glfwSetCursorPos = {
  * C ref: `GLFWcursor * glfwCreateCursor (const GLFWimage *image, int xhot, int yhot)`
  */
 export const glfwCreateCursor = {
-  args: ['ptr', 'i32', 'i32'],
+  args: ['ptr', 'i32', 'i32'] as [image: 'ptr', xhot: 'i32', yhot: 'i32'],
   returns: 'ptr',
 } as const satisfies FFIFunction;
 
@@ -916,7 +948,7 @@ export const glfwCreateCursor = {
  * C ref: `GLFWcursor * glfwCreateStandardCursor (int shape)`
  */
 export const glfwCreateStandardCursor = {
-  args: ['i32'],
+  args: ['i32'] as [shape: 'i32'],
   returns: 'ptr',
 } as const satisfies FFIFunction;
 
@@ -926,7 +958,7 @@ export const glfwCreateStandardCursor = {
  * C ref: `void glfwDestroyCursor (GLFWcursor *cursor)`
  */
 export const glfwDestroyCursor = {
-  args: ['ptr'],
+  args: ['ptr'] as [cursor: 'ptr'],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -936,7 +968,7 @@ export const glfwDestroyCursor = {
  * C ref: `void glfwSetCursor (GLFWwindow *window, GLFWcursor *cursor)`
  */
 export const glfwSetCursor = {
-  args: ['ptr', 'ptr'],
+  args: ['ptr', 'ptr'] as [window: 'ptr', cursor: 'ptr'],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -946,7 +978,7 @@ export const glfwSetCursor = {
  * C ref: `GLFWkeyfun glfwSetKeyCallback (GLFWwindow *window, GLFWkeyfun callback)`
  */
 export const glfwSetKeyCallback = {
-  args: ['ptr', 'callback'],
+  args: ['ptr', 'callback'] as [window: 'ptr', callback: 'callback'],
   returns: 'ptr',
 } as const satisfies FFIFunction;
 
@@ -956,7 +988,7 @@ export const glfwSetKeyCallback = {
  * C ref: `GLFWcharfun glfwSetCharCallback (GLFWwindow *window, GLFWcharfun callback)`
  */
 export const glfwSetCharCallback = {
-  args: ['ptr', 'callback'],
+  args: ['ptr', 'callback'] as [window: 'ptr', callback: 'callback'],
   returns: 'ptr',
 } as const satisfies FFIFunction;
 
@@ -966,7 +998,7 @@ export const glfwSetCharCallback = {
  * C ref: `GLFWcharmodsfun glfwSetCharModsCallback (GLFWwindow *window, GLFWcharmodsfun callback)`
  */
 export const glfwSetCharModsCallback = {
-  args: ['ptr', 'callback'],
+  args: ['ptr', 'callback'] as [window: 'ptr', callback: 'callback'],
   returns: 'ptr',
 } as const satisfies FFIFunction;
 
@@ -976,7 +1008,7 @@ export const glfwSetCharModsCallback = {
  * C ref: `GLFWmousebuttonfun glfwSetMouseButtonCallback (GLFWwindow *window, GLFWmousebuttonfun callback)`
  */
 export const glfwSetMouseButtonCallback = {
-  args: ['ptr', 'callback'],
+  args: ['ptr', 'callback'] as [window: 'ptr', callback: 'callback'],
   returns: 'ptr',
 } as const satisfies FFIFunction;
 
@@ -986,7 +1018,7 @@ export const glfwSetMouseButtonCallback = {
  * C ref: `GLFWcursorposfun glfwSetCursorPosCallback (GLFWwindow *window, GLFWcursorposfun callback)`
  */
 export const glfwSetCursorPosCallback = {
-  args: ['ptr', 'callback'],
+  args: ['ptr', 'callback'] as [window: 'ptr', callback: 'callback'],
   returns: 'ptr',
 } as const satisfies FFIFunction;
 
@@ -996,7 +1028,7 @@ export const glfwSetCursorPosCallback = {
  * C ref: `GLFWcursorenterfun glfwSetCursorEnterCallback (GLFWwindow *window, GLFWcursorenterfun callback)`
  */
 export const glfwSetCursorEnterCallback = {
-  args: ['ptr', 'callback'],
+  args: ['ptr', 'callback'] as [window: 'ptr', callback: 'callback'],
   returns: 'ptr',
 } as const satisfies FFIFunction;
 
@@ -1006,7 +1038,7 @@ export const glfwSetCursorEnterCallback = {
  * C ref: `GLFWscrollfun glfwSetScrollCallback (GLFWwindow *window, GLFWscrollfun callback)`
  */
 export const glfwSetScrollCallback = {
-  args: ['ptr', 'callback'],
+  args: ['ptr', 'callback'] as [window: 'ptr', callback: 'callback'],
   returns: 'ptr',
 } as const satisfies FFIFunction;
 
@@ -1016,7 +1048,7 @@ export const glfwSetScrollCallback = {
  * C ref: `GLFWdropfun glfwSetDropCallback (GLFWwindow *window, GLFWdropfun callback)`
  */
 export const glfwSetDropCallback = {
-  args: ['ptr', 'callback'],
+  args: ['ptr', 'callback'] as [window: 'ptr', callback: 'callback'],
   returns: 'ptr',
 } as const satisfies FFIFunction;
 
@@ -1026,7 +1058,7 @@ export const glfwSetDropCallback = {
  * C ref: `int glfwJoystickPresent (int jid)`
  */
 export const glfwJoystickPresent = {
-  args: ['i32'],
+  args: ['i32'] as [jid: 'i32'],
   returns: 'i32',
 } as const satisfies FFIFunction;
 
@@ -1036,7 +1068,7 @@ export const glfwJoystickPresent = {
  * C ref: `const float * glfwGetJoystickAxes (int jid, int *count)`
  */
 export const glfwGetJoystickAxes = {
-  args: ['i32', 'ptr'],
+  args: ['i32', 'ptr'] as [jid: 'i32', count: 'ptr'],
   returns: 'ptr',
 } as const satisfies FFIFunction;
 
@@ -1046,7 +1078,7 @@ export const glfwGetJoystickAxes = {
  * C ref: `const unsigned char * glfwGetJoystickButtons (int jid, int *count)`
  */
 export const glfwGetJoystickButtons = {
-  args: ['i32', 'ptr'],
+  args: ['i32', 'ptr'] as [jid: 'i32', count: 'ptr'],
   returns: 'cstring',
 } as const satisfies FFIFunction;
 
@@ -1056,7 +1088,7 @@ export const glfwGetJoystickButtons = {
  * C ref: `const unsigned char * glfwGetJoystickHats (int jid, int *count)`
  */
 export const glfwGetJoystickHats = {
-  args: ['i32', 'ptr'],
+  args: ['i32', 'ptr'] as [jid: 'i32', count: 'ptr'],
   returns: 'cstring',
 } as const satisfies FFIFunction;
 
@@ -1066,7 +1098,7 @@ export const glfwGetJoystickHats = {
  * C ref: `const char * glfwGetJoystickName (int jid)`
  */
 export const glfwGetJoystickName = {
-  args: ['i32'],
+  args: ['i32'] as [jid: 'i32'],
   returns: 'cstring',
 } as const satisfies FFIFunction;
 
@@ -1076,7 +1108,7 @@ export const glfwGetJoystickName = {
  * C ref: `const char * glfwGetJoystickGUID (int jid)`
  */
 export const glfwGetJoystickGUID = {
-  args: ['i32'],
+  args: ['i32'] as [jid: 'i32'],
   returns: 'cstring',
 } as const satisfies FFIFunction;
 
@@ -1086,7 +1118,7 @@ export const glfwGetJoystickGUID = {
  * C ref: `void glfwSetJoystickUserPointer (int jid, void *pointer)`
  */
 export const glfwSetJoystickUserPointer = {
-  args: ['i32', 'ptr'],
+  args: ['i32', 'ptr'] as [jid: 'i32', pointer: 'ptr'],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -1096,7 +1128,7 @@ export const glfwSetJoystickUserPointer = {
  * C ref: `void * glfwGetJoystickUserPointer (int jid)`
  */
 export const glfwGetJoystickUserPointer = {
-  args: ['i32'],
+  args: ['i32'] as [jid: 'i32'],
   returns: 'ptr',
 } as const satisfies FFIFunction;
 
@@ -1106,7 +1138,7 @@ export const glfwGetJoystickUserPointer = {
  * C ref: `int glfwJoystickIsGamepad (int jid)`
  */
 export const glfwJoystickIsGamepad = {
-  args: ['i32'],
+  args: ['i32'] as [jid: 'i32'],
   returns: 'i32',
 } as const satisfies FFIFunction;
 
@@ -1116,7 +1148,7 @@ export const glfwJoystickIsGamepad = {
  * C ref: `GLFWjoystickfun glfwSetJoystickCallback (GLFWjoystickfun callback)`
  */
 export const glfwSetJoystickCallback = {
-  args: ['callback'],
+  args: ['callback'] as [callback: 'callback'],
   returns: 'ptr',
 } as const satisfies FFIFunction;
 
@@ -1126,7 +1158,7 @@ export const glfwSetJoystickCallback = {
  * C ref: `int glfwUpdateGamepadMappings (const char *string)`
  */
 export const glfwUpdateGamepadMappings = {
-  args: ['cstring'],
+  args: ['cstring'] as [string: 'cstring'],
   returns: 'i32',
 } as const satisfies FFIFunction;
 
@@ -1136,7 +1168,7 @@ export const glfwUpdateGamepadMappings = {
  * C ref: `const char * glfwGetGamepadName (int jid)`
  */
 export const glfwGetGamepadName = {
-  args: ['i32'],
+  args: ['i32'] as [jid: 'i32'],
   returns: 'cstring',
 } as const satisfies FFIFunction;
 
@@ -1146,7 +1178,7 @@ export const glfwGetGamepadName = {
  * C ref: `int glfwGetGamepadState (int jid, GLFWgamepadstate *state)`
  */
 export const glfwGetGamepadState = {
-  args: ['i32', 'ptr'],
+  args: ['i32', 'ptr'] as [jid: 'i32', state: 'ptr'],
   returns: 'i32',
 } as const satisfies FFIFunction;
 
@@ -1156,7 +1188,7 @@ export const glfwGetGamepadState = {
  * C ref: `void glfwSetClipboardString (GLFWwindow *window, const char *string)`
  */
 export const glfwSetClipboardString = {
-  args: ['ptr', 'cstring'],
+  args: ['ptr', 'cstring'] as [window: 'ptr', string: 'cstring'],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -1166,7 +1198,7 @@ export const glfwSetClipboardString = {
  * C ref: `const char * glfwGetClipboardString (GLFWwindow *window)`
  */
 export const glfwGetClipboardString = {
-  args: ['ptr'],
+  args: ['ptr'] as [window: 'ptr'],
   returns: 'cstring',
 } as const satisfies FFIFunction;
 
@@ -1186,7 +1218,7 @@ export const glfwGetTime = {
  * C ref: `void glfwSetTime (double time)`
  */
 export const glfwSetTime = {
-  args: ['f64'],
+  args: ['f64'] as [time: 'f64'],
   returns: 'void',
 } as const satisfies FFIFunction;
 

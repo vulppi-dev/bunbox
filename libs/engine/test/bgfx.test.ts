@@ -18,7 +18,7 @@ describe('GLFW window preparation for BGFX', () => {
   let isInitGlfw = false;
   let windowHandle: Pointer | null = null;
 
-  it('should initialize GLFW and create window suitable for BGFX', async () => {
+  it('should initialize GLFW and create window suitable for BGFX', () => {
     // Setup GLFW error callback
     const errorCallback = new JSCallback(
       (errorCode, description) => {
@@ -60,7 +60,7 @@ describe('GLFW window preparation for BGFX', () => {
     console.log('[GLFW] Window is ready for BGFX initialization');
   });
 
-  it('should get native window handle for BGFX', async () => {
+  it('should get native window handle for BGFX', () => {
     if (!windowHandle) {
       throw new Error('Window not created');
     }

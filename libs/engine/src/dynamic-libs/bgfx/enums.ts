@@ -262,6 +262,12 @@ export enum BGFX_Topology {
   Count,
 }
 
+export enum BGFX_MaximumLimits {
+  MAX_UINT8 = 0xff,
+  MAX_UINT16 = 0xffff,
+  MAX_UINT32 = 0xffffffff,
+}
+
 // BGFX MARK: Views
 
 export enum BGFX_BackBufferRatio {

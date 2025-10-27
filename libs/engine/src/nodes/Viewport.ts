@@ -1,5 +1,5 @@
 import type { EventMap } from '@bunbox/utils';
-import { Node3D } from './Node3D';
+import { Node } from '../core';
 import type { TextureImage } from '../elements';
 /**
  * Logical render surface that owns a render target texture and viewport rectangle.
@@ -9,7 +9,7 @@ export class Viewport<
   P extends Record<string, any> = Record<string, any>,
   M extends Record<string, any> = Record<string, any>,
   T extends EventMap = {},
-> extends Node3D<P, M, T> {
+> extends Node<P, M, T> {
   /** Optional render target; when null, rendering uses default backbuffer. */
   #target: TextureImage | null = null;
 

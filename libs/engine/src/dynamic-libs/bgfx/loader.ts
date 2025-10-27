@@ -10,7 +10,7 @@ if (!BGFX_PATH) {
 
 const { symbols: BGFX, close: bgfxClose } = dlopen(BGFX_PATH, BGFX_FUNCS);
 
-process.on('exit', () => {
+process.on('beforeExit', () => {
   bgfxClose();
 });
 

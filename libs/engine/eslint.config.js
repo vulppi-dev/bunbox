@@ -4,7 +4,14 @@ import tseslint from 'typescript-eslint';
 
 export default [
   {
-    ignores: ['dist', 'node_modules', 'coverage', 'example', 'eslint.config.*'],
+    ignores: [
+      'dist',
+      'node_modules',
+      'coverage',
+      'example',
+      'eslint.config.*',
+      '**/dynamic-libs/**',
+    ],
   },
   // Base JS recs off by default to avoid linting config files; enable if you add src JS files
   // js.configs.recommended,
@@ -96,20 +103,17 @@ export default [
         // Types, classes, interfaces, enums
         { selector: 'typeLike', format: ['PascalCase'] },
         // Default variables/functions: camelCase
-        { selector: 'variable', format: ['camelCase', 'UPPER_CASE'] },
-        { selector: 'function', format: ['camelCase'] },
-        // Exported consts (global constants functions): camelCase
         {
           selector: 'variable',
-          modifiers: ['const', 'exported', 'function'],
-          format: ['camelCase'],
+          format: ['camelCase', 'UPPER_CASE'],
           leadingUnderscore: 'forbid',
         },
-        // Exported consts (global constants): UPPER_CASE
+        { selector: 'function', format: ['camelCase'] },
+        // Exported consts (global constants): UPPER_CASE | camelCase
         {
           selector: 'variable',
           modifiers: ['const', 'exported'],
-          format: ['UPPER_CASE'],
+          format: ['UPPER_CASE', 'camelCase'],
           leadingUnderscore: 'forbid',
         },
         // Protected members must start with underscore and be camelCase otherwise
