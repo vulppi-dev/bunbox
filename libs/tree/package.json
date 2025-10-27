@@ -1,6 +1,6 @@
 {
   "name": "@bunbox/tree",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Tree data structure implementation for Bunbox",
   "author": {
     "name": "Renato Rodrigues",

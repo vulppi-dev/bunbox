@@ -1,5 +1,6 @@
 import {
   EventEmitter,
+  type Ctor,
   type EventMap,
   type MergeEventMaps,
 } from '@bunbox/utils';
@@ -350,10 +351,16 @@ export abstract class AbstractNode<
    */
   traverse(
     visitor: (node: AbstractNode) => void,
-    options?: { includeDisabled?: boolean; order?: 'pre' | 'post' },
+    options?: {
+      includeDisabled?: boolean;
+      order?: 'pre' | 'post';
+      ignoreType?: Ctor;
+    },
   ): void {
     const includeDisabled = Boolean(options?.includeDisabled);
     const order = options?.order ?? 'pre';
+
+    if (options?.ignoreType && this instanceof options?.ignoreType) return;
 
     if (!includeDisabled && !this.isEnabled) return;
 
