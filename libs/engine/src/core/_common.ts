@@ -36,3 +36,15 @@ export function getRendererName(r: BGFX_RenderType): string {
       return `Unknown(${r})`;
   }
 }
+
+const MAIN_WINDOW_KEY = Symbol('MAIN_WINDOW_KEY');
+
+export const MAIN_WINDOW = {
+  [MAIN_WINDOW_KEY]: null as null | Pointer,
+  set(ptr: Pointer | null) {
+    this[MAIN_WINDOW_KEY] = ptr;
+  },
+  get() {
+    return this[MAIN_WINDOW_KEY];
+  },
+};

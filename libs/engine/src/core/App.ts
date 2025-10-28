@@ -1,5 +1,5 @@
 import { instantiate, setupStruct } from '@bunbox/struct';
-import { CString, JSCallback, ptr, type Pointer } from 'bun:ffi';
+import { CString, ptr, type Pointer } from 'bun:ffi';
 import {
   BGFX,
   BGFX_MaximumLimits,
@@ -7,9 +7,11 @@ import {
   BGFX_Reset,
   bgfxInitStruct,
   bgfxPlatformDataStruct,
+  buildCallback,
   cstr,
   GLFW,
-  GLFW_InitMacro,
+  GLFW_GeneralMacro,
+  GLFW_WindowHints,
   GLFW_WindowMacro,
   glfwErrorCallback,
 } from '../dynamic-libs';
@@ -17,7 +19,11 @@ import { DynamicLibError } from '../errors';
 import type { AppLogLevel } from '../types';
 import { Node } from './Node';
 import { Window } from './Window';
-import { getNativeWindowHandler, getRendererName } from './_common';
+import {
+  getNativeWindowHandler,
+  getRendererName,
+  MAIN_WINDOW,
+} from './_common';
 
 // Setup struct pointer/string conversions globally
 setupStruct({
@@ -70,11 +76,11 @@ export class App extends Node {
       }
     };
 
-    const errorCallback = new JSCallback(
-      (errorCode: number, description: string) => {
+    const errorCallback = buildCallback(
+      glfwErrorCallback,
+      (errorCode, description) => {
         this.loggerCall(`(${errorCode}) ${description}`, 'error', 'GLFW');
       },
-      glfwErrorCallback,
     );
 
     GLFW.glfwSetErrorCallback(errorCallback.ptr);
@@ -85,11 +91,14 @@ export class App extends Node {
     const glfwVersion = GLFW.glfwGetVersionString();
     this.loggerCall(`Version: ${glfwVersion}`, 'debug', 'GLFW');
 
-    GLFW.glfwWindowHint(GLFW_WindowMacro.CLIENT_API, 0);
-    GLFW.glfwWindowHint(GLFW_WindowMacro.POSITION_X, 0);
-    GLFW.glfwWindowHint(GLFW_WindowMacro.POSITION_Y, 0);
-    GLFW.glfwWindowHint(GLFW_WindowMacro.VISIBLE, GLFW_InitMacro.FALSE);
-    GLFW.glfwWindowHint(GLFW_WindowMacro.TRANSPARENT_FRAMEBUFFER, 1);
+    GLFW.glfwWindowHint(GLFW_WindowMacro.CLIENT_API, GLFW_GeneralMacro.FALSE);
+    GLFW.glfwWindowHint(GLFW_WindowHints.POSITION_X, GLFW_GeneralMacro.FALSE);
+    GLFW.glfwWindowHint(GLFW_WindowHints.POSITION_Y, GLFW_GeneralMacro.FALSE);
+    GLFW.glfwWindowHint(GLFW_WindowHints.VISIBLE, GLFW_GeneralMacro.FALSE);
+    GLFW.glfwWindowHint(
+      GLFW_WindowHints.TRANSPARENT_FRAMEBUFFER,
+      GLFW_GeneralMacro.TRUE,
+    );
     this.loggerCall('Configure main window hints', 'debug', 'GLFW');
 
     const window = GLFW.glfwCreateWindow(1, 1, cstr(''), null, null);
@@ -98,6 +107,7 @@ export class App extends Node {
     }
     this.loggerCall('Main window created', 'debug', 'GLFW');
 
+    MAIN_WINDOW.set(window);
     const windowHandler = getNativeWindowHandler(window);
     if (!windowHandler) {
       throw new DynamicLibError('failed to get native window handle', 'GLFW');
@@ -142,10 +152,9 @@ export class App extends Node {
     );
 
     bgfxInit.platformData = bgfxPlatformData;
-    bgfxInit.resolution.width = 1;
-    bgfxInit.resolution.height = 1;
-    bgfxInit.resolution.reset =
-      BGFX_Reset.VSYNC | BGFX_Reset.TRANSPARENT_BACKBUFFER;
+    bgfxInit.resolution.width = 64;
+    bgfxInit.resolution.height = 64;
+    bgfxInit.resolution.reset = BGFX_Reset.VSYNC;
     bgfxInit.type = renderersSupported.includes(BGFX_RenderType.Direct3D12)
       ? BGFX_RenderType.Direct3D12
       : renderersSupported.includes(BGFX_RenderType.Metal)
@@ -173,6 +182,7 @@ export class App extends Node {
     ];
 
     this.on('dispose', () => {
+      MAIN_WINDOW.set(null);
       unsubscribes.forEach((fn) => fn());
       this.#windowStack = [];
       BGFX.bgfx_shutdown();
@@ -218,7 +228,6 @@ export class App extends Node {
     for (const node of this.#windowStack) {
       if (node.isEnabled) node._appTriggerProcessStack(delta);
     }
-
     BGFX.bgfx_frame(false);
   }
 
@@ -236,7 +245,7 @@ export class App extends Node {
       this.#triggerWindowStack(delta);
 
       prev = now;
-      await Bun.sleep(0);
+      await Bun.sleep(16);
     }
   }
 }

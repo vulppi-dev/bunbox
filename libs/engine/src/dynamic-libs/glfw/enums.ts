@@ -1,6 +1,7 @@
 // GLFW MARK: Init
 
-export enum GLFW_InitMacro {
+export enum GLFW_GeneralMacro {
+  DONT_CARE = -1,
   FALSE = 0,
   TRUE = 1,
 
@@ -84,38 +85,43 @@ export enum GLFW_ErrorCodes {
 
 // GLFW MARK: Window
 
-/** GLFW Window reference defs */
-export enum GLFW_WindowMacro {
-  /** Input focus window hint and attribute. */
+export enum GLFW_WindowHints {
+  /** Specifies whether the windowed mode window will be given input focus when created. Possible values are TRUE and FALSE. This hint is ignored for full screen and initially hidden windows. */
   FOCUSED = 0x00020001,
   /** Window iconification window attribute. */
   ICONIFIED = 0x00020002,
-  /** Window resize-ability window hint and attribute. */
+  /** Specifies whether the windowed mode window will be resizable by the user. The window will still be resizable using the glfwSetWindowSize function. Possible values are GLFW_TRUE and GLFW_FALSE. This hint is ignored for full screen and undecorated windows. */
   RESIZABLE = 0x00020003,
-  /** Window visibility window hint and attribute. */
+  /** Specifies whether the windowed mode window will be initially visible. Possible values are TRUE and FALSE. This hint is ignored for full screen windows. */
   VISIBLE = 0x00020004,
-  /** Window decoration window hint and attribute. */
+  /** Specifies whether the windowed mode window will have window decorations such as a border, a close widget, etc. An undecorated window will not be resizable by the user but will still allow the user to generate close events on some platforms. Possible values are TRUE and FALSE. This hint is ignored for full screen windows. */
   DECORATED = 0x00020005,
-  /** Window auto-iconification window hint and attribute. */
+  /** Specifies whether the full screen window will automatically iconify and restore the previous video mode on input focus loss. Possible values are TRUE and FALSE. This hint is ignored for windowed mode windows. */
   AUTO_ICONIFY = 0x00020006,
-  /** Window decoration window hint and attribute. */
+  /** Specifies whether the windowed mode window will be floating above other regular windows, also called topmost or always-on-top. This is intended primarily for debugging purposes and cannot be used to implement proper full screen windows. Possible values are TRUE and FALSE. This hint is ignored for full screen windows. */
   FLOATING = 0x00020007,
-  /** Window maximization window hint and attribute. */
+  /** Specifies whether the windowed mode window will be maximized when created. Possible values are TRUE and FALSE. This hint is ignored for full screen windows. */
   MAXIMIZED = 0x00020008,
-  /** Cursor centering window hint. */
+  /** Specifies whether the cursor should be centered over newly created full screen windows. Possible values are TRUE and FALSE. This hint is ignored for windowed mode windows. */
   CENTER_CURSOR = 0x00020009,
-  /** Window framebuffer transparency hint and attribute. */
+  /** Specifies whether the window framebuffer will be transparent. If enabled and supported by the system, the window framebuffer alpha channel will be used to combine the framebuffer with the background. This does not affect window decorations. Possible values are TRUE and FALSE. */
   TRANSPARENT_FRAMEBUFFER = 0x0002000a,
-  /** Mouse cursor hover window attribute. */
-  HOVERED = 0x0002000b,
-  /** Input focus on calling show window hint and attribute. */
+  /** Specifies whether the window will be given input focus when glfwShowWindow is called. Possible values are TRUE and FALSE. */
   FOCUS_ON_SHOW = 0x0002000c,
-  /** Mouse input transparency window hint and attribute. */
-  MOUSE_PASSTHROUGH = 0x0002000d,
   /** Initial position x-coordinate window hint. */
   POSITION_X = 0x0002000e,
   /** Initial position y-coordinate window hint. */
   POSITION_Y = 0x0002000f,
+  /** Specified whether the window content area should be resized based on the monitor content scale of any monitor it is placed on. This includes the initial placement when the window is created. Possible values are TRUE and FALSE. */
+  SCALE_TO_MONITOR = 0x0002200c,
+}
+
+/** GLFW Window reference defs */
+export enum GLFW_WindowMacro {
+  /** Mouse cursor hover window attribute. */
+  HOVERED = 0x0002000b,
+  /** Mouse input transparency window hint and attribute. */
+  MOUSE_PASSTHROUGH = 0x0002000d,
   /** Framebuffer bit depth hint. */
   RED_BITS = 0x00021001,
   /** Framebuffer bit depth hint. */
@@ -172,8 +178,6 @@ export enum GLFW_WindowMacro {
   CONTEXT_NO_ERROR = 0x0002200a,
   /** Context creation API hint and attribute. */
   CONTEXT_CREATION_API = 0x0002200b,
-  /** Window content area scaling window window hint. */
-  SCALE_TO_MONITOR = 0x0002200c,
   /** Window framebuffer scaling window hint. */
   SCALE_FRAMEBUFFER = 0x0002200d,
   /** Legacy name for compatibility. */

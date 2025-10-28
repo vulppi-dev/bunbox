@@ -9,3 +9,10 @@ win.on('dispose', () => {
   app.dispose();
   process.exit(0);
 });
+
+await Bun.sleep(3000)
+
+  .then(() => {
+    win.fullscreen();
+    return Bun.sleep(Infinity);
+  });

@@ -1,0 +1,80 @@
+
+/*
+
+export enum GLFW_WindowAttributes {
+  ? Window resize-ability window hint and attribute.
+  RESIZABLE = 0x00020003,
+  ? Window decoration window hint and attribute.
+  DECORATED = 0x00020005,
+  ? Window auto-iconification window hint and attribute.
+  AUTO_ICONIFY = 0x00020006,
+  ? Window decoration window hint and attribute.
+  FLOATING = 0x00020007,
+  ? Input focus on calling show window hint and attribute.
+  FOCUS_ON_SHOW = 0x0002000c,
+}
+
+
+glfwSetFramebufferSizeCallback
+glfwSetKeyCallback
+glfwSetCharCallback
+glfwSetCharModsCallback
+glfwSetMouseButtonCallback
+glfwSetCursorPosCallback
+glfwSetCursorEnterCallback
+glfwSetScrollCallback
+glfwSetDropCallback
+
+glfwSetKeyCallback
+glfwSetCharCallback
+glfwSetCharModsCallback
+glfwSetMouseButtonCallback
+glfwSetCursorPosCallback
+glfwSetCursorEnterCallback
+glfwSetScrollCallback
+glfwSetDropCallback
+
+
+# Only gets
+glfwGetKey
+glfwGetMouseButton
+glfwGetCursorPos
+
+# Get/Set
+? glfwGetWindowTitle
+? glfwGetWindowPos
+? glfwGetWindowSize
+
+glfwGetWindowOpacity
+glfwSetWindowOpacity
+
+glfwGetWindowAttrib
+glfwSetWindowAttrib
+
+glfwGetWindowUserPointer
+glfwSetWindowUserPointer
+
+glfwGetInputMode
+glfwSetInputMode
+
+glfwGetClipboardString
+glfwSetClipboardString
+
+glfwWindowShouldClose
+glfwSetWindowShouldClose
+
+glfwDestroyWindow
+
+glfwSetWindowIcon
+glfwSetWindowAspectRatio
+glfwIconifyWindow
+glfwRestoreWindow
+glfwMaximizeWindow
+glfwShowWindow
+glfwHideWindow
+glfwFocusWindow
+glfwRequestWindowAttention
+glfwSetCursorPos
+glfwSetCursor
+
+*/
