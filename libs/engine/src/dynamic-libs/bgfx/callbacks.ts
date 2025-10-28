@@ -8,7 +8,12 @@ import type { FFIFunction } from 'bun:ffi';
  * C ref: `virtual void fatal(const char *_filePath, uint16_t _line, Fatal::Enum _code, const char *_str)`
  */
 export const bgfxFatalCallback = {
-  args: ['cstring', 'u16', 'u32', 'cstring'],
+  args: ['cstring', 'u16', 'u32', 'cstring'] as [
+    filePath: 'cstring',
+    line: 'u16',
+    code: 'u32',
+    message: 'cstring',
+  ],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -18,7 +23,12 @@ export const bgfxFatalCallback = {
  * C ref: `virtual void traceVargs(const char *_filePath, uint16_t _line, const char *_format, va_list _argList)`
  */
 export const bgfxTraceArgsCallback = {
-  args: ['cstring', 'u16', 'cstring', 'ptr'],
+  args: ['cstring', 'u16', 'cstring', 'ptr'] as [
+    filePath: 'cstring',
+    line: 'u16',
+    format: 'cstring',
+    argList: 'ptr',
+  ],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -28,7 +38,12 @@ export const bgfxTraceArgsCallback = {
  * C ref: `virtual void profilerBegin(const char *_name, uint32_t _abgr, const char *_filePath, uint16_t _line)`
  */
 export const bgfxProfilerBeginCallback = {
-  args: ['cstring', 'u32', 'cstring', 'u16'],
+  args: ['cstring', 'u32', 'cstring', 'u16'] as [
+    name: 'cstring',
+    abgr: 'u32',
+    filePath: 'cstring',
+    line: 'u16',
+  ],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -38,7 +53,12 @@ export const bgfxProfilerBeginCallback = {
  * C ref: `virtual void profilerBeginLiteral(const char *_name, uint32_t _abgr, const char *_filePath, uint16_t _line)`
  */
 export const bgfxProfilerBeginLiteralCallback = {
-  args: ['cstring', 'u32', 'cstring', 'u16'],
+  args: ['cstring', 'u32', 'cstring', 'u16'] as [
+    name: 'cstring',
+    abgr: 'u32',
+    filePath: 'cstring',
+    line: 'u16',
+  ],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -58,7 +78,7 @@ export const bgfxProfilerEndCallback = {
  * C ref: `virtual uint32_t cacheReadSize(uint64_t _id)`
  */
 export const bgfxCacheReadSizeCallback = {
-  args: ['u64'],
+  args: ['u64'] as [id: 'u64'],
   returns: 'u32',
 } as const satisfies FFIFunction;
 
@@ -68,7 +88,7 @@ export const bgfxCacheReadSizeCallback = {
  * C ref: `virtual bool cacheRead(uint64_t _id, void *_data, uint32_t _size)`
  */
 export const bgfxCacheReadCallback = {
-  args: ['u64', 'ptr', 'u32'],
+  args: ['u64', 'ptr', 'u32'] as [id: 'u64', data: 'ptr', size: 'u32'],
   returns: 'bool',
 } as const satisfies FFIFunction;
 
@@ -78,7 +98,7 @@ export const bgfxCacheReadCallback = {
  * C ref: `virtual void cacheWrite(uint64_t _id, const void *_data, uint32_t _size)`
  */
 export const bgfxCacheWriteCallback = {
-  args: ['u64', 'ptr', 'u32'],
+  args: ['u64', 'ptr', 'u32'] as [id: 'u64', data: 'ptr', size: 'u32'],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -88,7 +108,15 @@ export const bgfxCacheWriteCallback = {
  * C ref: `virtual void screenShot(const char *_filePath, uint32_t _width, uint32_t _height, uint32_t _pitch, const void *_data, uint32_t _size, bool _yflip)`
  */
 export const bgfxScreenShotCallback = {
-  args: ['cstring', 'u32', 'u32', 'u32', 'ptr', 'u32', 'bool'],
+  args: ['cstring', 'u32', 'u32', 'u32', 'ptr', 'u32', 'bool'] as [
+    filePath: 'cstring',
+    width: 'u32',
+    height: 'u32',
+    pitch: 'u32',
+    data: 'ptr',
+    size: 'u32',
+    yflip: 'bool',
+  ],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -98,7 +126,13 @@ export const bgfxScreenShotCallback = {
  * C ref: `virtual void captureBegin(uint32_t _width, uint32_t _height, uint32_t _pitch, TextureFormat::Enum _format, bool _yflip)`
  */
 export const bgfxCaptureBeginCallback = {
-  args: ['u32', 'u32', 'u32', 'u32', 'bool'],
+  args: ['u32', 'u32', 'u32', 'u32', 'bool'] as [
+    width: 'u32',
+    height: 'u32',
+    pitch: 'u32',
+    format: 'u32',
+    yflip: 'bool',
+  ],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -118,7 +152,7 @@ export const bgfxCaptureEndCallback = {
  * C ref: `virtual void captureFrame(const void *_data, uint32_t _size)`
  */
 export const bgfxCaptureFrameCallback = {
-  args: ['ptr', 'u32'],
+  args: ['ptr', 'u32'] as [data: 'ptr', size: 'u32'],
   returns: 'void',
 } as const satisfies FFIFunction;
 

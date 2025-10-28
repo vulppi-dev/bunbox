@@ -21,60 +21,60 @@ export enum BGFX_VendorId {
 
 export enum BGFX_Reset {
   /** Enable 2x MSAA. */
-  RESET_MSAA_X2 = 0x00000010,
+  MSAA_X2 = 0x00000010,
   /** Enable 4x MSAA. */
-  RESET_MSAA_X4 = 0x00000020,
+  MSAA_X4 = 0x00000020,
   /** Enable 8x MSAA. */
-  RESET_MSAA_X8 = 0x00000030,
+  MSAA_X8 = 0x00000030,
   /** Enable 16x MSAA. */
-  RESET_MSAA_X16 = 0x00000040,
-  RESET_MSAA_SHIFT = 4,
-  RESET_MSAA_MASK = 0x00000070,
+  MSAA_X16 = 0x00000040,
+  MSAA_SHIFT = 4,
+  MSAA_MASK = 0x00000070,
 
   /** Not supported yet. */
-  RESET_FULLSCREEN = 0x00000001,
-  RESET_FULLSCREEN_SHIFT = 0x00000000,
-  RESET_FULLSCREEN_MASK = 0x00000001,
+  FULLSCREEN = 0x00000001,
+  FULLSCREEN_SHIFT = 0x00000000,
+  FULLSCREEN_MASK = 0x00000001,
   /** Enable V-Sync. */
-  RESET_VSYNC = 0x00000080,
+  VSYNC = 0x00000080,
   /** Turn on/off max anisotropy. */
-  RESET_MAXANISOTROPY = 0x00000100,
+  MAXANISOTROPY = 0x00000100,
   /** Begin screen capture. */
-  RESET_CAPTURE = 0x00000200,
+  CAPTURE = 0x00000200,
   /** Flush rendering after submitting to GPU. */
-  RESET_FLUSH_AFTER_RENDER = 0x000002000,
+  FLUSH_AFTER_RENDER = 0x000002000,
 
   /** This flag specifies where flip occurs. Default behaviour is that flip occurs before rendering new frame. This flag only has effect when BGFX_CONFIG_MULTITHREADED=0. */
-  RESET_FLIP_AFTER_RENDER = 0x00004000,
+  FLIP_AFTER_RENDER = 0x00004000,
   /** Enable sRGB backbuffer. */
-  RESET_SRGB_BACKBUFFER = 0x00008000,
+  SRGB_BACKBUFFER = 0x00008000,
   /** Enable HDR10 rendering. */
-  RESET_HDR10 = 0x00010000,
+  HDR10 = 0x00010000,
   /** Enable HiDPI rendering. */
-  RESET_HIDPI = 0x00020000,
+  HIDPI = 0x00020000,
   /** Enable depth clamp. */
-  RESET_DEPTH_CLAMP = 0x00040000,
+  DEPTH_CLAMP = 0x00040000,
   /** Suspend rendering. */
-  RESET_SUSPEND = 0x00080000,
+  SUSPEND = 0x00080000,
   /** Transparent backbuffer. Availability depends on: BGFX_CAPS_TRANSPARENT_BACKBUFFER. */
-  RESET_TRANSPARENT_BACKBUFFER = 0x00100000,
-  RESET_RESERVED_SHIFT = 31,
-  RESET_RESERVED_MASK = 0x80000000,
+  TRANSPARENT_BACKBUFFER = 0x00100000,
+  RESERVED_SHIFT = 31,
+  RESERVED_MASK = 0x80000000,
 }
 
 export enum BGFX_DebugFlags {
   /** No debug. */
-  DEBUG_NONE,
+  NONE,
   /** Enable wireframe for all primitives. */
-  DEBUG_WIREFRAME,
+  WIREFRAME,
   /** Enable infinitely fast hardware test. No draw calls will be submitted to driver. It’s useful when profiling to quickly assess bottleneck between CPU and GPU. */
-  DEBUG_IFH = 1 << 1,
+  IFH = 1 << 1,
   /** Enable statistics display. */
-  DEBUG_STATS = 1 << 2,
+  STATS = 1 << 2,
   /** Enable debug text display. */
-  DEBUG_TEXT = 1 << 3,
+  TEXT = 1 << 3,
   /** Enable profiler. This causes per-view statistics to be collected, available through bgfx::Stats::ViewStats. This is unrelated to the profiler functions in bgfx::CallbackI. */
-  DEBUG_PROFILER = 1 << 4,
+  PROFILER = 1 << 4,
 }
 
 export enum BGFX_RenderType {

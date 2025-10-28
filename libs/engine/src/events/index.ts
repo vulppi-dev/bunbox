@@ -1,6 +1,7 @@
 import type { ClipboardEvent } from './ClipboardEvent';
 import type { DeviceEvent } from './DeviceEvent';
 import type { DisplayEvent } from './DisplayEvent';
+import type { DropEvent } from './DropEvent';
 import type { Event } from './Event';
 import type { GamepadAxisEvent } from './GamepadAxisEvent';
 import type { GamepadBatteryEvent } from './GamepadBatteryEvent';
@@ -12,12 +13,11 @@ import type { PointerEvent } from './PointerEvent';
 import type { QuitEvent } from './QuitEvent';
 import type { TextEvent } from './TextEvent';
 import type { ThemeEvent } from './ThemeEvent';
-import type { WindowEvent } from './WindowEvent';
-import type { DropEvent } from './DropEvent';
 
 export * from './ClipboardEvent';
 export * from './DeviceEvent';
 export * from './DisplayEvent';
+export * from './DropEvent';
 export * from './Event';
 export * from './GamepadAxisEvent';
 export * from './GamepadBatteryEvent';
@@ -30,7 +30,6 @@ export * from './QuitEvent';
 export * from './TextEvent';
 export * from './ThemeEvent';
 export * from './WindowEvent';
-export * from './DropEvent';
 
 export type InputsEventMap = {
   quit: [event: QuitEvent];
@@ -43,22 +42,6 @@ export type InputsEventMap = {
   'display-removed': [event: DisplayEvent];
   'display-move': [event: DisplayEvent];
   'display-change': [event: DisplayEvent];
-  'window-shown': [event: WindowEvent];
-  'window-hidden': [event: WindowEvent];
-  'window-move': [event: WindowEvent];
-  'window-resize': [event: WindowEvent];
-  'window-minimized': [event: WindowEvent];
-  'window-maximized': [event: WindowEvent];
-  'window-restored': [event: WindowEvent];
-  'window-pointer-enter': [event: WindowEvent];
-  'window-pointer-leave': [event: WindowEvent];
-  'window-focus': [event: WindowEvent];
-  'window-blur': [event: WindowEvent];
-  'window-close': [event: WindowEvent];
-  'window-display-changed': [event: WindowEvent];
-  'window-fullscreen-enter': [event: WindowEvent];
-  'window-fullscreen-leave': [event: WindowEvent];
-  'window-destroy': [event: WindowEvent];
   'key-down': [event: KeyEvent];
   'key-up': [event: KeyEvent];
   'keymap-change': [event: Event];

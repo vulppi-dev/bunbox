@@ -1,20 +1,35 @@
-import type { EventMap } from '@bunbox/utils';
+import type { EventMap, MergeEventMaps } from '@bunbox/utils';
 import { ptr, type Pointer } from 'bun:ffi';
 import {
   BGFX,
   BGFX_Clear,
   BGFX_MaximumLimits,
+  BGFX_State,
   BGFX_TextureFormat,
+  buildCallback,
   cstr,
   GLFW,
   GLFW_GeneralMacro,
   GLFW_InitMacro,
   GLFW_WindowMacro,
+  glfwWindowCloseCallback,
+  glfwWindowContentScaleCallback,
+  glfwWindowFocusCallback,
+  glfwWindowIconifyCallback,
+  glfwWindowMaximizeCallback,
+  glfwWindowPositionCallback,
+  glfwWindowRefreshCallback,
+  glfwWindowSizeCallback,
 } from '../dynamic-libs';
 import { DynamicLibError } from '../errors';
-import { Vector2 } from '../math';
+import { WindowEvent } from '../events';
 import { Node } from './Node';
 import { getNativeWindowHandler } from './_common';
+
+const MAX_WINDOWS_COUNT = 256;
+const VIEW_IDS = new Set<number>(
+  Array.from({ length: MAX_WINDOWS_COUNT - 1 }, (_, i) => i + 1),
+);
 
 export type WindowProperties = {
   width?: number;
@@ -23,34 +38,53 @@ export type WindowProperties = {
   y?: number;
 };
 
-const MAX_WINDOWS_COUNT = 256;
-const VIEW_IDS = new Set<number>(
-  Array.from({ length: MAX_WINDOWS_COUNT - 1 }, (_, i) => i + 1),
-);
+export type WindowEventMap = {
+  'window-shown': [event: WindowEvent];
+  'window-hidden': [event: WindowEvent];
+  'window-move': [event: WindowEvent];
+  'window-resize': [event: WindowEvent];
+  'window-minimized': [event: WindowEvent];
+  'window-maximized': [event: WindowEvent];
+  'window-restored': [event: WindowEvent];
+  'window-pointer-enter': [event: WindowEvent];
+  'window-pointer-leave': [event: WindowEvent];
+  'window-focus': [event: WindowEvent];
+  'window-blur': [event: WindowEvent];
+  'window-display-changed': [event: WindowEvent];
+  'window-fullscreen-enter': [event: WindowEvent];
+  'window-fullscreen-leave': [event: WindowEvent];
+};
 
 export class Window<
   P extends Record<string, any> = Record<string, any>,
   M extends Record<string, any> = Record<string, any>,
   T extends EventMap = {},
-> extends Node<P, M, T> {
+> extends Node<P, M, MergeEventMaps<T, WindowEventMap>> {
   static #activeWindows: number = 1;
 
   #windowPtr: Pointer | null = null;
   #fbHandlePtr: number = BGFX_MaximumLimits.MAX_UINT16;
 
   #viewId: number = -1;
+  #monitor: any = null;
 
   #title: string;
   #x: number = 0;
   #y: number = 0;
   #width: number = 0;
   #height: number = 0;
+  #bufferWidth: number = 0;
+  #bufferHeight: number = 0;
+  #xScale: number = 1;
+  #yScale: number = 1;
 
   #stack: Node[] = [];
   #scheduleDirty: boolean = true;
 
   #heightAux: Int32Array = new Int32Array(1);
   #widthAux: Int32Array = new Int32Array(1);
+  #xsAux: Float32Array = new Float32Array(1);
+  #ysAux: Float32Array = new Float32Array(1);
 
   constructor(title: string, props?: WindowProperties) {
     super();
@@ -119,6 +153,16 @@ export class Window<
     return this.#height;
   }
 
+  /** Window buffer width in pixels. */
+  get bufferWidth(): number {
+    return this.#bufferWidth;
+  }
+
+  /** Window buffer height in pixels. */
+  get bufferHeight(): number {
+    return this.#bufferHeight;
+  }
+
   set title(value: string) {
     this.#title = value;
     if (this.#windowPtr)
@@ -154,28 +198,40 @@ export class Window<
     this.markAsDirty();
   }
 
-  getWindowSize() {
-    if (!this.#windowPtr) {
-      return new Vector2();
-    }
-    GLFW.glfwGetWindowSize(
-      this.#windowPtr,
-      ptr(this.#widthAux),
-      ptr(this.#heightAux),
-    );
-    return new Vector2(this.#widthAux[0], this.#heightAux[0]);
-  }
+  loadFramebufferSize() {
+    if (!this.#windowPtr) return;
 
-  getFramebufferSize() {
-    if (!this.#windowPtr) {
-      return new Vector2();
-    }
     GLFW.glfwGetFramebufferSize(
       this.#windowPtr,
       ptr(this.#widthAux),
       ptr(this.#heightAux),
     );
-    return new Vector2(this.#widthAux[0], this.#heightAux[0]);
+    this.#bufferWidth = this.#widthAux[0]!;
+    this.#bufferHeight = this.#heightAux[0]!;
+  }
+
+  loadWindowSize() {
+    if (!this.#windowPtr) return;
+
+    GLFW.glfwGetWindowSize(
+      this.#windowPtr,
+      ptr(this.#widthAux),
+      ptr(this.#heightAux),
+    );
+    this.#width = this.#widthAux[0]!;
+    this.#height = this.#heightAux[0]!;
+  }
+
+  loadWindowScale() {
+    if (!this.#windowPtr) return;
+
+    GLFW.glfwGetWindowContentScale(
+      this.#windowPtr,
+      ptr(this.#xsAux),
+      ptr(this.#ysAux),
+    );
+    this.#xScale = this.#xsAux[0]!;
+    this.#yScale = this.#ysAux[0]!;
   }
 
   /**
@@ -225,6 +281,10 @@ export class Window<
       GLFW_WindowMacro.POSITION_Y,
       this.#y >= 0 ? this.#y : GLFW_GeneralMacro.ANY_POSITION,
     );
+    GLFW.glfwWindowHint(
+      GLFW_WindowMacro.TRANSPARENT_FRAMEBUFFER,
+      GLFW_InitMacro.TRUE,
+    );
     this.loggerCall('Configure window hints', 'debug', 'GLFW');
 
     const window = GLFW.glfwCreateWindow(
@@ -239,26 +299,108 @@ export class Window<
     }
     this.loggerCall(`Window "${this.#title}" created`, 'debug', 'GLFW');
     this.#windowPtr = window;
+    this.loadWindowSize();
+    this.loadFramebufferSize();
+    this.#monitor = GLFW.glfwGetWindowMonitor(window);
 
     const myViewId = VIEW_IDS.values().next().value!;
     VIEW_IDS.delete(myViewId);
     this.#viewId = myViewId;
 
-    const unsubscribes = [
-      (this as Window).subscribe('window-resize', (ev) => {
-        this.#x = ev.x;
-        this.#y = ev.y;
-        this.#width = ev.width;
-        this.#height = ev.height;
+    const windowPosCB = buildCallback(
+      glfwWindowPositionCallback,
+      (win, xpos, ypos) => {
+        if (this.#windowPtr !== win) return;
+        this.#x = xpos;
+        this.#y = ypos;
         this.markAsDirty();
-      }),
-    ];
+        this.#dispatchEvent('window-move');
+      },
+    );
+    const windowSizeCB = buildCallback(
+      glfwWindowSizeCallback,
+      (win, width, height) => {
+        if (this.#windowPtr !== win) return;
+        this.#width = width;
+        this.#height = height;
+        this.markAsDirty();
+        this.#dispatchEvent('window-resize');
+      },
+    );
+    const windowCloseCB = buildCallback(glfwWindowCloseCallback, (win) => {
+      if (this.#windowPtr !== win) return;
+      this.dispose();
+    });
+    const windowRefreshCB = buildCallback(glfwWindowRefreshCallback, (win) => {
+      if (this.#windowPtr !== win) return;
+      this.#dispatchEvent('window-restored');
+    });
+    const windowFocusCB = buildCallback(
+      glfwWindowFocusCallback,
+      (win, focused) => {
+        if (this.#windowPtr !== win) return;
+        this.#dispatchEvent(focused ? 'window-focus' : 'window-blur');
+      },
+    );
+    const windowIconifyCB = buildCallback(
+      glfwWindowIconifyCallback,
+      (win, iconified) => {
+        if (this.#windowPtr !== win) return;
+        this.#dispatchEvent(iconified ? 'window-minimized' : 'window-restored');
+      },
+    );
+    const windowMaximizeCB = buildCallback(
+      glfwWindowMaximizeCallback,
+      (win, maximized) => {
+        if (this.#windowPtr !== win) return;
+        this.#dispatchEvent(
+          maximized ? 'window-maximized' : 'window-minimized',
+        );
+      },
+    );
+    const windowContentScaleCB = buildCallback(
+      glfwWindowContentScaleCallback,
+      (win, xscale, yscale) => {
+        if (this.#windowPtr !== win) return;
+        this.#xScale = xscale;
+        this.#yScale = yscale;
+        this.loadFramebufferSize();
+        this.#monitor = GLFW.glfwGetWindowMonitor(win);
+        this.markAsDirty();
+        this.#dispatchEvent('window-display-changed');
+      },
+    );
+
+    GLFW.glfwSetWindowPosCallback(window, windowPosCB.ptr);
+    GLFW.glfwSetWindowSizeCallback(window, windowSizeCB.ptr);
+    GLFW.glfwSetWindowCloseCallback(window, windowCloseCB.ptr);
+    GLFW.glfwSetWindowRefreshCallback(window, windowRefreshCB.ptr);
+    GLFW.glfwSetWindowFocusCallback(window, windowFocusCB.ptr);
+    GLFW.glfwSetWindowIconifyCallback(window, windowIconifyCB.ptr);
+    GLFW.glfwSetWindowMaximizeCallback(window, windowMaximizeCB.ptr);
+    GLFW.glfwSetWindowContentScaleCallback(window, windowContentScaleCB.ptr);
 
     this.#rebuildStacks();
     this.#rebuildFrameBuffer();
 
     this.on('dispose', () => {
-      unsubscribes.forEach((fn) => fn());
+      GLFW.glfwSetWindowPosCallback(window, 0 as Pointer);
+      GLFW.glfwSetWindowSizeCallback(window, 0 as Pointer);
+      GLFW.glfwSetWindowCloseCallback(window, 0 as Pointer);
+      GLFW.glfwSetWindowRefreshCallback(window, 0 as Pointer);
+      GLFW.glfwSetWindowFocusCallback(window, 0 as Pointer);
+      GLFW.glfwSetWindowIconifyCallback(window, 0 as Pointer);
+      GLFW.glfwSetWindowMaximizeCallback(window, 0 as Pointer);
+      GLFW.glfwSetWindowContentScaleCallback(window, 0 as Pointer);
+      windowPosCB.close();
+      windowSizeCB.close();
+      windowCloseCB.close();
+      windowRefreshCB.close();
+      windowFocusCB.close();
+      windowIconifyCB.close();
+      windowMaximizeCB.close();
+      windowContentScaleCB.close();
+
       BGFX.bgfx_set_view_frame_buffer(
         this.#viewId,
         BGFX_MaximumLimits.MAX_UINT16,
@@ -289,6 +431,21 @@ export class Window<
     this.unmarkAsDirty();
   }
 
+  #dispatchEvent(eventKey: keyof WindowEventMap) {
+    console.log({ eventKey });
+    const event = new WindowEvent({
+      currentDisplayId: this.#monitor,
+      windowId: this.viewId,
+      height: this.#height,
+      width: this.#width,
+      x: this.#x,
+      y: this.#y,
+      timestamp: new Date(),
+      type: eventKey,
+    });
+    (this as Window).emit(eventKey, event);
+  }
+
   #rebuildStacks() {
     const nextStack: Node[] = [];
     this.traverse(
@@ -304,8 +461,8 @@ export class Window<
   #rebuildFrameBuffer() {
     if (!this.#windowPtr) return;
 
+    this.loadFramebufferSize();
     const windowHandler = getNativeWindowHandler(this.#windowPtr);
-    const fSize = this.getFramebufferSize();
     if (this.#fbHandlePtr !== BGFX_MaximumLimits.MAX_UINT16) {
       BGFX.bgfx_set_view_frame_buffer(
         this.#viewId,
@@ -315,15 +472,15 @@ export class Window<
       this.#fbHandlePtr = BGFX_MaximumLimits.MAX_UINT16;
     }
     this.loggerCall(
-      `Rebuilding framebuffer for window: ${this.#title} (${fSize.x}x${fSize.y})`,
+      `Rebuilding framebuffer for window: ${this.#title} (${this.#bufferWidth}x${this.#bufferHeight})`,
       'info',
       'BGFX',
     );
 
     const fbHandle = BGFX.bgfx_create_frame_buffer_from_nwh(
       windowHandler,
-      fSize.x,
-      fSize.y,
+      this.#bufferWidth,
+      this.#bufferHeight,
       BGFX_TextureFormat.Count,
       BGFX_TextureFormat.Count,
     );
@@ -355,27 +512,21 @@ export class Window<
 
     BGFX.bgfx_set_view_clear(
       this.#viewId,
-      BGFX_Clear.COLOR | BGFX_Clear.DEPTH,
-      0xff0000ff,
+      BGFX_Clear.COLOR | BGFX_Clear.DEPTH | BGFX_Clear.STENCIL,
+      0x121212_ff,
       1.0,
       0,
     );
     BGFX.bgfx_set_view_rect(this.#viewId, 0, 0, this.#width, this.#height);
+    BGFX.bgfx_set_state(BGFX_State.DEFAULT, 0);
+    BGFX.bgfx_touch(this.#viewId);
 
     // TODO: implement render logic
   }
 }
 
 /*
-glfwSetWindowPosCallback
-glfwSetWindowSizeCallback
-glfwSetWindowCloseCallback
-glfwSetWindowRefreshCallback
-glfwSetWindowFocusCallback
-glfwSetWindowIconifyCallback
-glfwSetWindowMaximizeCallback
 glfwSetFramebufferSizeCallback
-glfwSetWindowContentScaleCallback
 glfwSetKeyCallback
 glfwSetCharCallback
 glfwSetCharModsCallback
@@ -396,22 +547,14 @@ glfwSetDropCallback
 
 
 # Only gets
-glfwGetFramebufferSize
-glfwGetWindowContentScale
-glfwGetWindowMonitor
 glfwGetKey
 glfwGetMouseButton
 glfwGetCursorPos
 
 # Get/Set
-glfwGetWindowTitle
-glfwSetWindowTitle
-
-glfwGetWindowPos
-glfwSetWindowPos
-
-glfwGetWindowSize
-glfwSetWindowSize
+? glfwGetWindowTitle
+? glfwGetWindowPos
+? glfwGetWindowSize
 
 glfwGetWindowOpacity
 glfwSetWindowOpacity
@@ -431,9 +574,7 @@ glfwSetClipboardString
 glfwWindowShouldClose
 glfwSetWindowShouldClose
 
-
 glfwDestroyWindow
-
 
 glfwSetWindowIcon
 glfwSetWindowAspectRatio
@@ -446,4 +587,5 @@ glfwFocusWindow
 glfwRequestWindowAttention
 glfwSetCursorPos
 glfwSetCursor
+
 */

@@ -3,6 +3,7 @@ import { CString, JSCallback, ptr, type Pointer } from 'bun:ffi';
 import {
   BGFX,
   BGFX_MaximumLimits,
+  BGFX_RenderType,
   BGFX_Reset,
   bgfxInitStruct,
   bgfxPlatformDataStruct,
@@ -16,7 +17,7 @@ import { DynamicLibError } from '../errors';
 import type { AppLogLevel } from '../types';
 import { Node } from './Node';
 import { Window } from './Window';
-import { getNativeWindowHandler } from './_common';
+import { getNativeWindowHandler, getRendererName } from './_common';
 
 // Setup struct pointer/string conversions globally
 setupStruct({
@@ -88,6 +89,7 @@ export class App extends Node {
     GLFW.glfwWindowHint(GLFW_WindowMacro.POSITION_X, 0);
     GLFW.glfwWindowHint(GLFW_WindowMacro.POSITION_Y, 0);
     GLFW.glfwWindowHint(GLFW_WindowMacro.VISIBLE, GLFW_InitMacro.FALSE);
+    GLFW.glfwWindowHint(GLFW_WindowMacro.TRANSPARENT_FRAMEBUFFER, 1);
     this.loggerCall('Configure main window hints', 'debug', 'GLFW');
 
     const window = GLFW.glfwCreateWindow(1, 1, cstr(''), null, null);
@@ -122,10 +124,38 @@ export class App extends Node {
     BGFX.bgfx_set_platform_data(platformPtr);
     this.loggerCall('platform data set', 'debug', 'BGFX');
 
+    this.loggerCall('Verifying background', 'debug', 'BGFX');
+    const renderersSupportedBfr = new Int32Array(16);
+    const count = BGFX.bgfx_get_supported_renderers(
+      16,
+      ptr(renderersSupportedBfr),
+    );
+    const renderersSupported = Array.from(
+      renderersSupportedBfr.slice(0, count),
+    );
+    this.loggerCall(
+      `Supported renderers: ${renderersSupported
+        .map(getRendererName)
+        .join(', ')}`,
+      'debug',
+      'BGFX',
+    );
+
     bgfxInit.platformData = bgfxPlatformData;
     bgfxInit.resolution.width = 1;
     bgfxInit.resolution.height = 1;
-    bgfxInit.resolution.reset = BGFX_Reset.RESET_VSYNC;
+    bgfxInit.resolution.reset =
+      BGFX_Reset.VSYNC | BGFX_Reset.TRANSPARENT_BACKBUFFER;
+    bgfxInit.type = renderersSupported.includes(BGFX_RenderType.Direct3D12)
+      ? BGFX_RenderType.Direct3D12
+      : renderersSupported.includes(BGFX_RenderType.Metal)
+        ? BGFX_RenderType.Metal
+        : BGFX_RenderType.Vulkan;
+    this.loggerCall(
+      `Selected renderer: ${getRendererName(bgfxInit.type)}`,
+      'info',
+      'BGFX',
+    );
 
     if (!BGFX.bgfx_init(initPtr)) {
       throw new DynamicLibError('BGFX initialization failed', 'BGFX');
