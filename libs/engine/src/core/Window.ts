@@ -432,7 +432,6 @@ export class Window<
   }
 
   #dispatchEvent(eventKey: keyof WindowEventMap) {
-    console.log({ eventKey });
     const event = new WindowEvent({
       currentDisplayId: this.#monitor,
       windowId: this.viewId,
