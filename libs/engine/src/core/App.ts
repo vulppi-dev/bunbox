@@ -1,12 +1,12 @@
 import { instantiate, setupStruct } from '@bunbox/struct';
 import { CString, ptr, type Pointer } from 'bun:ffi';
 import {
-  BGFX,
-  BGFX_MaximumLimits,
-  BGFX_RenderType,
-  BGFX_Reset,
-  bgfxInitStruct,
-  bgfxPlatformDataStruct,
+  // BGFX,
+  // BGFX_MaximumLimits,
+  // BGFX_RenderType,
+  // BGFX_Reset,
+  // bgfxInitStruct,
+  // bgfxPlatformDataStruct,
   buildCallback,
   cstr,
   GLFW,
@@ -20,6 +20,7 @@ import type { AppLogLevel } from '../types';
 import { Node } from './Node';
 import { Window } from './Window';
 import {
+  getGLFWErrorDescription,
   getNativeWindowHandler,
   getRendererName,
   MAIN_WINDOW,
@@ -79,7 +80,11 @@ export class App extends Node {
     const errorCallback = buildCallback(
       glfwErrorCallback,
       (errorCode, description) => {
-        this.loggerCall(`(${errorCode}) ${description}`, 'error', 'GLFW');
+        this.loggerCall(
+          `${getGLFWErrorDescription(errorCode)} : ${typeof description}`,
+          'error',
+          'GLFW',
+        );
       },
     );
 
@@ -91,86 +96,90 @@ export class App extends Node {
     const glfwVersion = GLFW.glfwGetVersionString();
     this.loggerCall(`Version: ${glfwVersion}`, 'debug', 'GLFW');
 
-    GLFW.glfwWindowHint(GLFW_WindowMacro.CLIENT_API, GLFW_GeneralMacro.FALSE);
-    GLFW.glfwWindowHint(GLFW_WindowHints.POSITION_X, GLFW_GeneralMacro.FALSE);
-    GLFW.glfwWindowHint(GLFW_WindowHints.POSITION_Y, GLFW_GeneralMacro.FALSE);
-    GLFW.glfwWindowHint(GLFW_WindowHints.VISIBLE, GLFW_GeneralMacro.FALSE);
-    GLFW.glfwWindowHint(
-      GLFW_WindowHints.TRANSPARENT_FRAMEBUFFER,
-      GLFW_GeneralMacro.TRUE,
-    );
-    this.loggerCall('Configure main window hints', 'debug', 'GLFW');
+    // GLFW.glfwWindowHint(GLFW_WindowMacro.CLIENT_API, GLFW_GeneralMacro.FALSE);
+    // GLFW.glfwWindowHint(
+    //   GLFW_WindowMacro.OPENGL_PROFILE,
+    //   GLFW_GeneralMacro.OPENGL_CORE_PROFILE,
+    // );
+    // GLFW.glfwWindowHint(GLFW_WindowHints.POSITION_X, GLFW_GeneralMacro.FALSE);
+    // GLFW.glfwWindowHint(GLFW_WindowHints.POSITION_Y, GLFW_GeneralMacro.FALSE);
+    // GLFW.glfwWindowHint(GLFW_WindowHints.VISIBLE, GLFW_GeneralMacro.FALSE);
+    // GLFW.glfwWindowHint(
+    //   GLFW_WindowHints.TRANSPARENT_FRAMEBUFFER,
+    //   GLFW_GeneralMacro.TRUE,
+    // );
+    // this.loggerCall('Configure main window hints', 'debug', 'GLFW');
 
-    const window = GLFW.glfwCreateWindow(1, 1, cstr(''), null, null);
-    if (!window) {
-      throw new DynamicLibError('window creation failed', 'GLFW');
-    }
-    this.loggerCall('Main window created', 'debug', 'GLFW');
-
-    MAIN_WINDOW.set(window);
-    const windowHandler = getNativeWindowHandler(window);
-    if (!windowHandler) {
-      throw new DynamicLibError('failed to get native window handle', 'GLFW');
-    }
+    // const window = GLFW.glfwCreateWindow(64, 64, cstr(''), null, null);
+    // if (!window) {
+    //   throw new DynamicLibError('window creation failed', 'GLFW');
+    // }
+    // this.loggerCall('Main window created', 'debug', 'GLFW');
+    // GLFW.glfwMakeContextCurrent(window);
+    // MAIN_WINDOW.set(window);
+    // const windowHandler = getNativeWindowHandler(window);
+    // if (!windowHandler) {
+    //   throw new DynamicLibError('failed to get native window handle', 'GLFW');
+    // }
     // Render frame to ensure everything is set up
-    BGFX.bgfx_render_frame(-1);
-    this.loggerCall('Init with mono thread', 'debug', 'BGFX');
+    // BGFX.bgfx_render_frame(-1);
+    // this.loggerCall('Init with mono thread', 'debug', 'BGFX');
 
-    const displayHandler =
-      process.platform === 'linux' ? BigInt(GLFW.glfwGetX11Display()!) : 0n;
+    // const displayHandler =
+    //   process.platform === 'linux' ? BigInt(GLFW.glfwGetX11Display()!) : 0n;
 
-    const [bgfxPlatformData, bgfxPlatformDataBfr] = instantiate(
-      bgfxPlatformDataStruct,
-    );
-    const [bgfxInit, bgfxInitBfr] = instantiate(bgfxInitStruct);
-    const platformPtr = ptr(bgfxPlatformDataBfr);
-    const initPtr = ptr(bgfxInitBfr);
+    // const [bgfxPlatformData, bgfxPlatformDataBfr] = instantiate(
+    //   bgfxPlatformDataStruct,
+    // );
+    // const [bgfxInit, bgfxInitBfr] = instantiate(bgfxInitStruct);
+    // const platformPtr = ptr(bgfxPlatformDataBfr);
+    // const initPtr = ptr(bgfxInitBfr);
 
-    BGFX.bgfx_init_ctor(initPtr);
-    this.loggerCall('init struct constructed', 'debug', 'BGFX');
+    // BGFX.bgfx_init_ctor(initPtr);
+    // this.loggerCall('init struct constructed', 'debug', 'BGFX');
 
-    bgfxPlatformData.nwh = BigInt(windowHandler);
-    bgfxPlatformData.ndt = displayHandler;
-    BGFX.bgfx_set_platform_data(platformPtr);
-    this.loggerCall('platform data set', 'debug', 'BGFX');
+    // bgfxPlatformData.nwh = BigInt(windowHandler);
+    // bgfxPlatformData.ndt = displayHandler;
+    // BGFX.bgfx_set_platform_data(platformPtr);
+    // this.loggerCall('platform data set', 'debug', 'BGFX');
 
-    this.loggerCall('Verifying background', 'debug', 'BGFX');
-    const renderersSupportedBfr = new Int32Array(16);
-    const count = BGFX.bgfx_get_supported_renderers(
-      16,
-      ptr(renderersSupportedBfr),
-    );
-    const renderersSupported = Array.from(
-      renderersSupportedBfr.slice(0, count),
-    );
-    this.loggerCall(
-      `Supported renderers: ${renderersSupported
-        .map(getRendererName)
-        .join(', ')}`,
-      'debug',
-      'BGFX',
-    );
+    // this.loggerCall('Verifying background', 'debug', 'BGFX');
+    // const renderersSupportedBfr = new Int32Array(16);
+    // const count = BGFX.bgfx_get_supported_renderers(
+    //   16,
+    //   ptr(renderersSupportedBfr),
+    // );
+    // const renderersSupported = Array.from(
+    //   renderersSupportedBfr.slice(0, count),
+    // );
+    // this.loggerCall(
+    //   `Supported renderers: ${renderersSupported
+    //     .map(getRendererName)
+    //     .join(', ')}`,
+    //   'debug',
+    //   'BGFX',
+    // );
 
-    bgfxInit.platformData = bgfxPlatformData;
-    bgfxInit.resolution.width = 64;
-    bgfxInit.resolution.height = 64;
-    bgfxInit.resolution.reset = BGFX_Reset.VSYNC;
-    bgfxInit.type = renderersSupported.includes(BGFX_RenderType.Direct3D12)
-      ? BGFX_RenderType.Direct3D12
-      : renderersSupported.includes(BGFX_RenderType.Metal)
-        ? BGFX_RenderType.Metal
-        : BGFX_RenderType.Vulkan;
-    this.loggerCall(
-      `Selected renderer: ${getRendererName(bgfxInit.type)}`,
-      'info',
-      'BGFX',
-    );
+    // bgfxInit.platformData = bgfxPlatformData;
+    // bgfxInit.resolution.width = 64;
+    // bgfxInit.resolution.height = 64;
+    // bgfxInit.resolution.reset = BGFX_Reset.VSYNC;
+    // bgfxInit.type = renderersSupported.includes(BGFX_RenderType.Direct3D12)
+    //   ? BGFX_RenderType.Direct3D12
+    //   : renderersSupported.includes(BGFX_RenderType.Metal)
+    //     ? BGFX_RenderType.Metal
+    //     : BGFX_RenderType.Vulkan;
+    // this.loggerCall(
+    //   `Selected renderer: ${getRendererName(bgfxInit.type)}`,
+    //   'info',
+    //   'BGFX',
+    // );
 
-    if (!BGFX.bgfx_init(initPtr)) {
-      throw new DynamicLibError('BGFX initialization failed', 'BGFX');
-    }
-    this.loggerCall('BGFX initialized', 'info', 'BGFX');
-    BGFX.bgfx_set_view_frame_buffer(0, BGFX_MaximumLimits.MAX_UINT16);
+    // if (!BGFX.bgfx_init(initPtr)) {
+    //   throw new DynamicLibError('BGFX initialization failed', 'BGFX');
+    // }
+    // this.loggerCall('BGFX initialized', 'info', 'BGFX');
+    // BGFX.bgfx_set_view_frame_buffer(0, BGFX_MaximumLimits.MAX_UINT16);
 
     const unsubscribes = [
       this.subscribe('add-child', (node) => {
@@ -185,9 +194,13 @@ export class App extends Node {
       MAIN_WINDOW.set(null);
       unsubscribes.forEach((fn) => fn());
       this.#windowStack = [];
-      BGFX.bgfx_shutdown();
+      // BGFX.bgfx_frame(false);
+      // BGFX.bgfx_frame(false);
+      // BGFX.bgfx_frame(false);
+      // BGFX.bgfx_frame(false);
+      // BGFX.bgfx_shutdown();
       this.loggerCall('BGFX shutdown', 'debug', 'BGFX');
-      GLFW.glfwDestroyWindow(window);
+      // GLFW.glfwDestroyWindow(window);
       this.loggerCall('Main window destroyed', 'debug', 'GLFW');
       GLFW.glfwSetErrorCallback(0 as Pointer);
       errorCallback.close();
@@ -228,7 +241,7 @@ export class App extends Node {
     for (const node of this.#windowStack) {
       if (node.isEnabled) node._appTriggerProcessStack(delta);
     }
-    BGFX.bgfx_frame(false);
+    // BGFX.bgfx_frame(false);
   }
 
   async #startProcessLooper() {

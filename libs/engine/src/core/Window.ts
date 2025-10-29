@@ -2,9 +2,10 @@ import { instantiate } from '@bunbox/struct';
 import type { EventMap, MergeEventMaps } from '@bunbox/utils';
 import { ptr, toBuffer, type Pointer } from 'bun:ffi';
 import {
-  BGFX,
-  BGFX_MaximumLimits,
-  BGFX_TextureFormat,
+  // BGFX,
+  // BGFX_Clear,
+  // BGFX_MaximumLimits,
+  // BGFX_TextureFormat,
   buildCallback,
   cstr,
   GLFW,
@@ -69,7 +70,8 @@ export class Window<
   static #activeWindows: number = 1;
 
   #windowPtr: Pointer | null = null;
-  #fbHandlePtr: number = BGFX_MaximumLimits.MAX_UINT16;
+  // #fbHandlePtr: number = BGFX_MaximumLimits.MAX_UINT16;
+  #fbWait: number = 0;
 
   #viewId: number = -1;
 
@@ -300,8 +302,6 @@ export class Window<
   fullscreen(windowed: boolean = false) {
     if (!this.#windowPtr) return;
 
-    this.#destroyFramebuffer();
-
     const monitor = GLFW.glfwGetPrimaryMonitor();
     if (!monitor) {
       throw new DynamicLibError('failed to get window monitor', 'GLFW');
@@ -333,6 +333,7 @@ export class Window<
         modeStr.height,
         GLFW_GeneralMacro.DONT_CARE,
       );
+      this.disable();
     }
   }
 
@@ -394,7 +395,7 @@ export class Window<
     this.disable();
     this.loggerCall(`Creating window: ${this.#title}`, 'info', 'GLFW');
 
-    GLFW.glfwWindowHint(GLFW_WindowMacro.CLIENT_API, GLFW_GeneralMacro.FALSE);
+    // GLFW.glfwWindowHint(GLFW_WindowMacro.CLIENT_API, GLFW_GeneralMacro.FALSE);
     GLFW.glfwWindowHint(GLFW_WindowHints.VISIBLE, GLFW_GeneralMacro.TRUE);
     GLFW.glfwWindowHint(
       GLFW_WindowHints.POSITION_X,
@@ -404,10 +405,10 @@ export class Window<
       GLFW_WindowHints.POSITION_Y,
       this.#y >= 0 ? this.#y : GLFW_GeneralMacro.ANY_POSITION,
     );
-    GLFW.glfwWindowHint(
-      GLFW_WindowHints.TRANSPARENT_FRAMEBUFFER,
-      GLFW_GeneralMacro.TRUE,
-    );
+    // GLFW.glfwWindowHint(
+    //   GLFW_WindowHints.TRANSPARENT_FRAMEBUFFER,
+    //   GLFW_GeneralMacro.TRUE,
+    // );
     GLFW.glfwWindowHint(
       GLFW_WindowHints.DECORATED,
       this.#borderless ? GLFW_GeneralMacro.FALSE : GLFW_GeneralMacro.TRUE,
@@ -437,6 +438,7 @@ export class Window<
     if (!window) {
       throw new DynamicLibError('window creation failed', 'GLFW');
     }
+    GLFW.glfwMakeContextCurrent(window);
 
     switch (this.#state) {
       case 'minimized':
@@ -560,10 +562,10 @@ export class Window<
       windowFramebufferSizeCB.close();
       windowCloseCB.close();
 
-      BGFX.bgfx_set_view_frame_buffer(
-        this.#viewId,
-        BGFX_MaximumLimits.MAX_UINT16,
-      );
+      // BGFX.bgfx_set_view_frame_buffer(
+      //   this.#viewId,
+      //   BGFX_MaximumLimits.MAX_UINT16,
+      // );
       VIEW_IDS.add(myViewId);
       this.loggerCall(
         `Releasing view ID ${this.#viewId} for window: ${this.#title}`,
@@ -571,9 +573,9 @@ export class Window<
         'BGFX',
       );
 
-      if (this.#fbHandlePtr !== BGFX_MaximumLimits.MAX_UINT16) {
-        this.#destroyFramebuffer();
-      }
+      // if (this.#fbHandlePtr !== BGFX_MaximumLimits.MAX_UINT16) {
+      //   this.#destroyFramebuffer();
+      // }
 
       GLFW.glfwDestroyWindow(this.#windowPtr);
       this.loggerCall(`Window "${this.#title}" destroyed`, 'info', 'GLFW');
@@ -582,20 +584,6 @@ export class Window<
 
     this.#rebuildStacks();
     this.enable();
-  }
-
-  #destroyFramebuffer() {
-    BGFX.bgfx_set_view_frame_buffer(
-      this.#viewId,
-      BGFX_MaximumLimits.MAX_UINT16,
-    );
-    BGFX.bgfx_destroy_frame_buffer(this.#fbHandlePtr);
-    this.#fbHandlePtr = BGFX_MaximumLimits.MAX_UINT16;
-    this.loggerCall(
-      `Framebuffer destroyed for window: ${this.#title}`,
-      'debug',
-      'BGFX',
-    );
   }
 
   #loadFramebufferSize() {
@@ -661,62 +649,85 @@ export class Window<
     this.#scheduleDirty = false;
   }
 
-  #rebuildFrameBuffer() {
-    if (!this.#windowPtr) return;
-    if (!this.#bufferHeight || !this.#bufferWidth) {
-      this.loggerCall(
-        `Skipping framebuffer rebuild for window: ${this.#title} due to zero size (${this.#bufferWidth}x${this.#bufferHeight})`,
-        'warn',
-        'BGFX',
-      );
-      return false;
-    }
+  // #destroyFramebuffer() {
+  //   BGFX.bgfx_set_view_frame_buffer(
+  //     this.#viewId,
+  //     BGFX_MaximumLimits.MAX_UINT16,
+  //   );
+  //   BGFX.bgfx_destroy_frame_buffer(this.#fbHandlePtr);
+  //   this.#fbHandlePtr = BGFX_MaximumLimits.MAX_UINT16;
+  //   this.#fbWait = 2;
+  //   this.loggerCall(
+  //     `Framebuffer destroyed for window: ${this.#title}`,
+  //     'debug',
+  //     'BGFX',
+  //   );
+  // }
 
-    if (this.#fbHandlePtr !== BGFX_MaximumLimits.MAX_UINT16) {
-      this.#destroyFramebuffer();
-    }
+  // #rebuildFrameBuffer() {
+  //   if (!this.#windowPtr) return;
+  //   if (!this.#bufferHeight || !this.#bufferWidth) {
+  //     this.loggerCall(
+  //       `Skipping framebuffer rebuild for window: ${this.#title} due to zero size (${this.#bufferWidth}x${this.#bufferHeight})`,
+  //       'warn',
+  //       'BGFX',
+  //     );
+  //     return false;
+  //   }
 
-    this.loggerCall(
-      `Rebuilding framebuffer for window: ${this.#title} (${this.#bufferWidth}x${this.#bufferHeight})`,
-      'info',
-      'BGFX',
-    );
+  //   if (this.#fbHandlePtr !== BGFX_MaximumLimits.MAX_UINT16) {
+  //     this.#destroyFramebuffer();
+  //   }
 
-    const windowHandler = getNativeWindowHandler(this.#windowPtr);
-    const fbHandle = BGFX.bgfx_create_frame_buffer_from_nwh(
-      windowHandler,
-      this.#bufferWidth,
-      this.#bufferHeight,
-      BGFX_TextureFormat.Count,
-      BGFX_TextureFormat.Count,
-    );
-    if (fbHandle === BGFX_MaximumLimits.MAX_UINT16) {
-      throw new DynamicLibError('framebuffer creation failed', 'BGFX');
-    }
-    this.#fbHandlePtr = fbHandle;
-    this.loggerCall(
-      `Framebuffer created for window: ${this.#title} (handle: ${fbHandle})`,
-      'debug',
-      'BGFX',
-    );
+  //   if (this.#fbWait > 0) {
+  //     this.loggerCall(
+  //       `Waiting to rebuild framebuffer for window: ${this.#title}`,
+  //       'debug',
+  //       'BGFX',
+  //     );
+  //     this.#fbWait--;
+  //     return false;
+  //   }
 
-    BGFX.bgfx_set_view_frame_buffer(this.#viewId, fbHandle);
-    this.loggerCall(
-      `Framebuffer assigned to view ID ${this.#viewId} for window: ${this.#title}`,
-      'debug',
-      'BGFX',
-    );
-    return true;
-  }
+  //   this.loggerCall(
+  //     `Rebuilding framebuffer for window: ${this.#title} (${this.#bufferWidth}x${this.#bufferHeight})`,
+  //     'info',
+  //     'BGFX',
+  //   );
+
+  //   const windowHandler = getNativeWindowHandler(this.#windowPtr);
+  //   const fbHandle = BGFX.bgfx_create_frame_buffer_from_nwh(
+  //     windowHandler,
+  //     this.#bufferWidth,
+  //     this.#bufferHeight,
+  //     BGFX_TextureFormat.Count,
+  //     BGFX_TextureFormat.Count,
+  //   );
+  //   if (fbHandle === BGFX_MaximumLimits.MAX_UINT16) {
+  //     throw new DynamicLibError('framebuffer creation failed', 'BGFX');
+  //   }
+  //   this.#fbHandlePtr = fbHandle;
+  //   this.loggerCall(
+  //     `Framebuffer created for window: ${this.#title} (handle: ${fbHandle})`,
+  //     'debug',
+  //     'BGFX',
+  //   );
+
+  //   BGFX.bgfx_set_view_frame_buffer(this.#viewId, fbHandle);
+  //   this.loggerCall(
+  //     `Framebuffer assigned to view ID ${this.#viewId} for window: ${this.#title}`,
+  //     'debug',
+  //     'BGFX',
+  //   );
+  //   return true;
+  // }
 
   #render() {
-    if (this.isDirty || this.#fbHandlePtr === BGFX_MaximumLimits.MAX_UINT16) {
-      const success = this.#rebuildFrameBuffer();
-      if (success) this.unmarkAsDirty();
-
-      return;
-    }
-
+    // if (this.isDirty || this.#fbHandlePtr === BGFX_MaximumLimits.MAX_UINT16) {
+    //   const success = this.#rebuildFrameBuffer();
+    //   if (success) this.unmarkAsDirty();
+    //   return;
+    // }
     // BGFX.bgfx_set_view_clear(
     //   this.#viewId,
     //   BGFX_Clear.COLOR | BGFX_Clear.DEPTH | BGFX_Clear.STENCIL,
@@ -731,6 +742,7 @@ export class Window<
     //   this.#bufferWidth,
     //   this.#bufferHeight,
     // );
-    BGFX.bgfx_touch(this.#viewId);
+    // BGFX.bgfx_touch(this.#viewId);
+    GLFW.glfwSwapBuffers(this.#windowPtr);
   }
 }

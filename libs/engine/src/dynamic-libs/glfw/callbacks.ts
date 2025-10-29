@@ -12,6 +12,18 @@ export const glfwErrorCallback = {
   returns: 'void',
 } as const satisfies FFIFunction;
 
+// GLFW MARK: Context
+
+/**
+ * Client API function pointer type.
+ *
+ * C ref: `typedef void(* 	GLFWglproc) (void)`
+ */
+export const glfwGLProcCallback = {
+  args: [] as [],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
 // GLFW MARK: Window
 
 /**

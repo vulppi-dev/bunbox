@@ -92,6 +92,58 @@ export const glfwPlatformSupported = {
   returns: 'i32',
 } as const satisfies FFIFunction;
 
+// GLFW MARK: Context
+
+/**
+ * This function makes the OpenGL or OpenGL ES context of the specified window current on the calling thread. It can also detach the current context from the calling thread without making a new one current by passing in NULL.
+ *
+ * C ref: `void glfwMakeContextCurrent (GLFWwindow * window)`
+ */
+export const glfwMakeContextCurrent = {
+  args: ['ptr'] as [window: 'ptr'],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
+/**
+ * This function returns the window whose OpenGL or OpenGL ES context is current on the calling thread.
+ *
+ * C ref: `GLFWwindow * glfwGetCurrentContext (void)`
+ */
+export const glfwGetCurrentContext = {
+  args: [],
+  returns: 'ptr',
+} as const satisfies FFIFunction;
+
+/**
+ * This function sets the swap interval for the current OpenGL or OpenGL ES context, i.e. the number of screen updates to wait from the time glfwSwapBuffers was called before swapping the buffers and returning. This is sometimes called vertical synchronization, vertical retrace synchronization or just vsync.
+ *
+ * C ref: `void glfwSwapInterval (int interval)`
+ */
+export const glfwSwapInterval = {
+  args: ['i32'] as [interval: 'i32'],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
+/**
+ * This function returns whether the specified API extension is supported by the current OpenGL or OpenGL ES context. It searches both for client API extension and context creation API extensions.
+ *
+ * C ref: `int glfwExtensionSupported (const char *extension)`
+ */
+export const glfwExtensionSupported = {
+  args: ['cstring'] as [extension: 'cstring'],
+  returns: 'i32',
+} as const satisfies FFIFunction;
+
+/**
+ * This function returns the address of the specified OpenGL or OpenGL ES core or extension function, if it is supported by the current context.
+ *
+ * C ref: `GLFWglproc glfwGetProcAddress (const char *procname)`
+ */
+export const glfwGetProcAddress = {
+  args: ['cstring'] as [procname: 'cstring'],
+  returns: 'ptr',
+} as const satisfies FFIFunction;
+
 // GLFW MARK: Window
 
 /**
@@ -590,6 +642,16 @@ export const glfwPostEmptyEvent = {
   returns: 'void',
 } as const satisfies FFIFunction;
 
+/**
+ * This function swaps the front and back buffers of the specified window when rendering with OpenGL or OpenGL ES. If the swap interval is greater than zero, the GPU driver waits the specified number of screen updates before swapping the buffers.
+ *
+ * C ref: `void glfwSwapBuffers (GLFWwindow *window)`
+ */
+export const glfwSwapBuffers = {
+  args: ['ptr'] as [window: 'ptr'],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
 // GLFW MARK: Monitor
 
 /**
@@ -705,138 +767,6 @@ export const glfwGetVideoModes = {
  */
 export const glfwGetVideoMode = {
   args: ['ptr'] as [monitor: 'ptr'],
-  returns: 'ptr',
-} as const satisfies FFIFunction;
-
-// GLFW MARK: Native
-
-/**
- * Returns the adapter device name of the specified monitor.
- *
- * C ref: `const char * glfwGetWin32Adapter (GLFWmonitor *monitor)`
- */
-export const glfwGetWin32Adapter = {
-  args: ['ptr'] as [monitor: 'ptr'],
-  returns: 'cstring',
-} as const satisfies FFIFunction;
-
-/**
- * Returns the display device name of the specified monitor.
- *
- * C ref: `const char * glfwGetWin32Monitor (GLFWmonitor *monitor)`
- */
-export const glfwGetWin32Monitor = {
-  args: ['ptr'] as [monitor: 'ptr'],
-  returns: 'cstring',
-} as const satisfies FFIFunction;
-
-/**
- * Returns the HWND of the specified window.
- *
- * C ref: `HWND glfwGetWin32Window (GLFWwindow *window)`
- */
-export const glfwGetWin32Window = {
-  args: ['ptr'] as [window: 'ptr'],
-  returns: 'ptr',
-} as const satisfies FFIFunction;
-
-/**
- * Returns the CGDirectDisplayID of the specified monitor.
- *
- * C ref: `CGDirectDisplayID glfwGetCocoaMonitor (GLFWmonitor *monitor)`
- */
-export const glfwGetCocoaMonitor = {
-  args: ['ptr'] as [monitor: 'ptr'],
-  returns: 'ptr',
-} as const satisfies FFIFunction;
-
-/**
- * Returns the NSWindow of the specified window.
- *
- * C ref: `id glfwGetCocoaWindow (GLFWwindow *window)`
- */
-export const glfwGetCocoaWindow = {
-  args: ['ptr'] as [window: 'ptr'],
-  returns: 'ptr',
-} as const satisfies FFIFunction;
-
-/**
- * Returns the NSView of the specified window.
- *
- * C ref: `id glfwGetCocoaView (GLFWwindow *window)`
- */
-export const glfwGetCocoaView = {
-  args: ['ptr'] as [window: 'ptr'],
-  returns: 'ptr',
-} as const satisfies FFIFunction;
-
-/**
- * Returns the Display used by GLFW.
- *
- * C ref: `Display * glfwGetX11Display (void)`
- */
-export const glfwGetX11Display = {
-  args: [],
-  returns: 'ptr',
-} as const satisfies FFIFunction;
-
-/**
- * Returns the RRCrtc of the specified monitor.
- *
- * C ref: `RRCrtc glfwGetX11Adapter (GLFWmonitor *monitor)`
- */
-export const glfwGetX11Adapter = {
-  args: ['ptr'] as [monitor: 'ptr'],
-  returns: 'ptr',
-} as const satisfies FFIFunction;
-
-/**
- * Returns the RROutput of the specified monitor.
- *
- * C ref: `RROutput glfwGetX11Monitor (GLFWmonitor *monitor)`
- */
-export const glfwGetX11Monitor = {
-  args: ['ptr'] as [monitor: 'ptr'],
-  returns: 'ptr',
-} as const satisfies FFIFunction;
-
-/**
- * Returns the Window of the specified window.
- *
- * C ref: `Window glfwGetX11Window (GLFWwindow *window)`
- */
-export const glfwGetX11Window = {
-  args: ['ptr'] as [window: 'ptr'],
-  returns: 'ptr',
-} as const satisfies FFIFunction;
-
-/**
- * Returns the struct wl_display* used by GLFW.
- *
- * C ref: `struct wl_display * glfwGetWaylandDisplay (void)`
- */
-export const glfwGetWaylandDisplay = {
-  args: [],
-  returns: 'ptr',
-} as const satisfies FFIFunction;
-
-/**
- * Returns the struct wl_output* of the specified monitor.
- *
- * C ref: `struct wl_output * glfwGetWaylandMonitor (GLFWmonitor *monitor)`
- */
-export const glfwGetWaylandMonitor = {
-  args: ['ptr'] as [monitor: 'ptr'],
-  returns: 'ptr',
-} as const satisfies FFIFunction;
-
-/**
- * Returns the main struct wl_surface* of the specified window.
- *
- * C ref: `struct wl_surface * glfwGetWaylandWindow (GLFWwindow *window)`
- */
-export const glfwGetWaylandWindow = {
-  args: ['ptr'] as [window: 'ptr'],
   returns: 'ptr',
 } as const satisfies FFIFunction;
 
