@@ -77,6 +77,19 @@ export function setupStruct({
   }
 }
 
+// WeakMap to store the buffer associated with each proxy instance
+const PROXY_BUFFER_MAP = new WeakMap<object, ArrayBuffer>();
+
+// WeakMap to store metadata needed for serialization
+const PROXY_METADATA_MAP = new WeakMap<
+  object,
+  {
+    fields: Record<string, AllFields>;
+    offsets: StructOffsets;
+    view: DataView;
+  }
+>();
+
 function serializeValue(value: any): any {
   if (typeof value === 'bigint') {
     return value.toString();
@@ -84,29 +97,32 @@ function serializeValue(value: any): any {
   if (Array.isArray(value)) {
     return value.map(serializeValue);
   }
-  if (typeof value === 'object' && value !== null && 'toJSON' in value) {
-    return JSON.parse(value.toJSON());
+  if (typeof value === 'object' && value !== null) {
+    // Check if it's a struct instance
+    const metadata = PROXY_METADATA_MAP.get(value);
+    if (metadata) {
+      return instanceToObject(
+        value,
+        metadata.fields,
+        metadata.offsets,
+        metadata.view,
+      );
+    }
   }
   return value;
 }
 
-function structToObject(
+function instanceToObject(
+  instance: any,
   fields: Record<string, AllFields>,
-  fieldKeys: string[],
-  fieldIndexMap: Map<string, number>,
   offsets: StructOffsets,
   view: DataView,
-  baseOffset: number,
-  proxyCache: WeakMap<object, any>,
-  createProxy: (
-    field: StructField<any>,
-    view: DataView,
-    offset: number,
-    proxyCache: WeakMap<object, any>,
-  ) => any,
+  baseOffset: number = 0,
 ): Record<string, any> {
   const { pack, pointerToString } = ___STRUCTS_SETUP___!;
   const result: Record<string, any> = {};
+  const fieldKeys = Object.keys(fields);
+  const fieldIndexMap = new Map(fieldKeys.map((key, idx) => [key, idx]));
 
   for (const key of fieldKeys) {
     const fieldIndex = fieldIndexMap.get(key)!;
@@ -117,13 +133,9 @@ function structToObject(
       'isPointer' in childField && childField.isPointer === true;
 
     if (childField.type === 'struct' && !isPointer) {
-      const nestedProxy = createProxy(
-        childField,
-        view,
-        absoluteOffset,
-        proxyCache,
-      );
-      result[key] = JSON.parse(nestedProxy.toJSON());
+      // Access the nested struct through the proxy
+      const nestedValue = instance[key];
+      result[key] = serializeValue(nestedValue);
     } else {
       const value = readFieldValue(childField, view, absoluteOffset, {
         pack,
@@ -152,28 +164,12 @@ function createStructProxy(
     {
       ...BASE_STRUCT_PROXY_HANDLERS,
       has(_, prop) {
-        return prop in fields || prop === 'toJSON';
+        return prop in fields;
       },
       ownKeys(_) {
-        return fieldKeys.concat('toJSON');
+        return fieldKeys;
       },
       get(_, prop: string) {
-        if (prop === 'toJSON') {
-          return () => {
-            const obj = structToObject(
-              fields,
-              fieldKeys,
-              fieldIndexMap,
-              offsets,
-              view,
-              baseOffset,
-              proxyCache,
-              createStructProxyWrapper,
-            );
-            return JSON.stringify(obj);
-          };
-        }
-
         const fieldIndex = fieldIndexMap.get(prop);
         if (fieldIndex === undefined) return undefined;
 
@@ -247,7 +243,7 @@ function createStructProxyWrapper(
 
 export function instantiate<F extends StructField<any>>(
   field: F,
-): [InferField<F>, ArrayBuffer] {
+): InferField<F> {
   if (typeof ___STRUCTS_SETUP___ === 'undefined') {
     throw new Error('Structs not setup. Please call setupStruct first.');
   }
@@ -267,7 +263,43 @@ export function instantiate<F extends StructField<any>>(
     proxyCache,
   ) as InferField<F>;
 
-  return [proxy, buffer];
+  // Store the buffer and metadata associated with this proxy instance
+  PROXY_BUFFER_MAP.set(proxy, buffer);
+  PROXY_METADATA_MAP.set(proxy, {
+    fields: fieldCopy.fields,
+    offsets: offsets!,
+    view,
+  });
+
+  return proxy;
+}
+
+export function getInstanceBuffer(instance: Record<string, any>): ArrayBuffer {
+  const buffer = PROXY_BUFFER_MAP.get(instance);
+  if (!buffer) {
+    throw new Error(
+      'Instance buffer not found. Is this a valid struct instance?',
+    );
+  }
+  return buffer;
+}
+
+export function instanceToJSON<I extends Record<string, any>>(instance: I): I {
+  const metadata = PROXY_METADATA_MAP.get(instance);
+  if (!metadata) {
+    throw new Error(
+      'Instance metadata not found. Is this a valid struct instance?',
+    );
+  }
+
+  const obj = instanceToObject(
+    instance,
+    metadata.fields,
+    metadata.offsets,
+    metadata.view,
+  );
+
+  return obj as I;
 }
 
 export function sizeOf(field: StructField<any>): number {

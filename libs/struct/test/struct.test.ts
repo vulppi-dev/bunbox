@@ -12,7 +12,7 @@ import {
   u8,
   union,
 } from '../src/fields';
-import { instantiate, setupStruct } from '../src/parser';
+import { instantiate, setupStruct, getInstanceBuffer } from '../src/parser';
 
 function createStringCodec() {
   const byValue = new Map<string, bigint>();
@@ -58,16 +58,14 @@ function createStringCodec() {
   } as const;
 }
 
+const codec = createStringCodec();
+setupStruct({
+  pack: 8,
+  stringToPointer: codec.handlers.stringToPointer,
+  pointerToString: codec.handlers.pointerToString,
+});
+
 describe('struct parser', () => {
-  // Create a fresh codec for this test suite
-  let codec = createStringCodec();
-
-  setupStruct({
-    pack: 8,
-    stringToPointer: codec.handlers.stringToPointer,
-    pointerToString: codec.handlers.pointerToString,
-  });
-
   it('encodes and decodes primitives with string fields', () => {
     const person = struct({
       name: string(),
@@ -75,7 +73,8 @@ describe('struct parser', () => {
       active: bool(),
     });
 
-    const [proxy, buffer] = instantiate(person);
+    const proxy = instantiate(person);
+    const buffer = getInstanceBuffer(proxy);
     proxy.name = 'Alice';
     proxy.age = 42;
     proxy.active = true;
@@ -100,7 +99,8 @@ describe('struct parser', () => {
       flag: u8(),
     });
 
-    const [proxy, buffer] = instantiate(header);
+    const proxy = instantiate(header);
+    const buffer = getInstanceBuffer(proxy);
     proxy.flag = 7;
 
     const view = new DataView(buffer);
@@ -121,7 +121,7 @@ describe('struct parser', () => {
       }),
     });
 
-    const [proxy] = instantiate(payloadStruct);
+    const proxy = instantiate(payloadStruct);
     proxy.values = [10, 20, 30];
     proxy.meta.label = 'payload';
     proxy.meta.count = 2;
@@ -136,7 +136,7 @@ describe('struct parser', () => {
       tags: array(string(), 2),
     });
 
-    const [proxy] = instantiate(tagsStruct);
+    const proxy = instantiate(tagsStruct);
     proxy.tags = ['alpha', 'beta'];
 
     expect(proxy.tags).toEqual(['alpha', 'beta']);
@@ -147,7 +147,8 @@ describe('struct parser', () => {
       body: string(),
     });
 
-    const [proxy, buffer] = instantiate(message);
+    const proxy = instantiate(message);
+    const buffer = getInstanceBuffer(proxy);
 
     // Assign a string value
     proxy.body = 'hello world';
@@ -179,7 +180,8 @@ describe('struct parser', () => {
 
     const pointerValue = 0x1fffn;
 
-    const [proxy, buffer] = instantiate(pointerArray);
+    const proxy = instantiate(pointerArray);
+    const buffer = getInstanceBuffer(proxy);
 
     // Dynamic arrays as pointers are stored as pointers
     (proxy as any).buffer = pointerValue;
@@ -208,7 +210,7 @@ describe('struct parser', () => {
       }),
     });
 
-    const [proxy] = instantiate(deepStruct);
+    const proxy = instantiate(deepStruct);
 
     // Access nested structs multiple times to test proxy caching
     proxy.level1.value1 = 10;
@@ -234,7 +236,7 @@ describe('struct parser', () => {
       }),
     });
 
-    const [proxy] = instantiate(containerStruct);
+    const proxy = instantiate(containerStruct);
 
     // Set initial value
     proxy.nested.value = 42;
@@ -251,8 +253,10 @@ describe('struct parser', () => {
       age: u8(),
     });
 
-    const [proxy1, buffer1] = instantiate(personStruct);
-    const [proxy2, buffer2] = instantiate(personStruct);
+    const proxy1 = instantiate(personStruct);
+    const buffer1 = getInstanceBuffer(proxy1);
+    const proxy2 = instantiate(personStruct);
+    const buffer2 = getInstanceBuffer(proxy2);
 
     proxy1.name = 'Alice';
     proxy1.age = 30;
@@ -277,7 +281,7 @@ describe('struct parser', () => {
       z: u8(),
     });
 
-    const [proxy] = instantiate(dataStruct);
+    const proxy = instantiate(dataStruct);
 
     expect('x' in proxy).toBe(true);
     expect('y' in proxy).toBe(true);
@@ -290,7 +294,7 @@ describe('struct parser', () => {
       value: u8(),
     });
 
-    const [proxy] = instantiate(simpleStruct);
+    const proxy = instantiate(simpleStruct);
 
     expect((proxy as any).nonExistent).toBeUndefined();
   });
@@ -305,7 +309,7 @@ describe('struct parser', () => {
       points: array(pointStruct, 3),
     });
 
-    const [proxy] = instantiate(polygonStruct);
+    const proxy = instantiate(polygonStruct);
 
     proxy.points = [
       { x: 10, y: 20 },
@@ -321,22 +325,14 @@ describe('struct parser', () => {
 });
 
 describe('union type', () => {
-  // Create a fresh codec for this test suite
-  let codec = createStringCodec();
-
-  setupStruct({
-    pack: 8,
-    stringToPointer: codec.handlers.stringToPointer,
-    pointerToString: codec.handlers.pointerToString,
-  });
-
   it('overlays all fields at the same memory offset', () => {
     const valueUnion = union({
       asU8: u8(),
       asU16: u16(),
     });
 
-    const [proxy, buffer] = instantiate(valueUnion);
+    const proxy = instantiate(valueUnion);
+    const buffer = getInstanceBuffer(proxy);
 
     // Set via u16 field
     proxy.asU16 = 0x1234;
@@ -358,7 +354,8 @@ describe('union type', () => {
       medium: u16(),
     });
 
-    const [_, buffer] = instantiate(sizeUnion);
+    const _ = instantiate(sizeUnion);
+    const buffer = getInstanceBuffer(_);
 
     // Union should be sized to fit the largest field (u16 = 2 bytes)
     // With alignment, it should be at least 2 bytes
@@ -371,7 +368,7 @@ describe('union type', () => {
       asBytes: array(u8(), 2),
     });
 
-    const [proxy] = instantiate(dataUnion);
+    const proxy = instantiate(dataUnion);
 
     // Set as integer
     proxy.asInt = 0xabcd;
@@ -395,7 +392,8 @@ describe('union type', () => {
       asPointer: u16(), // Using u16 to test overlay (pointer is 8 bytes, but we check overlap)
     });
 
-    const [proxy, buffer] = instantiate(stringUnion);
+    const proxy = instantiate(stringUnion);
+    const buffer = getInstanceBuffer(proxy);
 
     proxy.asString = 'test';
 
@@ -418,7 +416,7 @@ describe('union type', () => {
       value: u16(),
     });
 
-    const [proxy] = instantiate(nestedUnion);
+    const proxy = instantiate(nestedUnion);
 
     // Set via nested struct
     proxy.point.x = 0x12;
@@ -441,7 +439,8 @@ describe('union type', () => {
       word: u16(),
     });
 
-    const [proxy, buffer] = instantiate(alignedUnion);
+    const proxy = instantiate(alignedUnion);
+    const buffer = getInstanceBuffer(proxy);
 
     proxy.word = 0xffee;
 
@@ -459,7 +458,7 @@ describe('union type', () => {
       asU8: u8(),
     });
 
-    const [proxy] = instantiate(boolUnion);
+    const proxy = instantiate(boolUnion);
 
     proxy.asU8 = 42;
     expect(proxy.asBool).toBe(true); // Non-zero is true
@@ -481,7 +480,7 @@ describe('union type', () => {
       name: string(),
     });
 
-    const [proxy] = instantiate(containerStruct);
+    const proxy = instantiate(containerStruct);
 
     proxy.id = 10;
     proxy.data.asInt = 0x0100;
@@ -499,8 +498,8 @@ describe('union type', () => {
       b: u16(),
     });
 
-    const [proxy1] = instantiate(testUnion);
-    const [proxy2] = instantiate(testUnion);
+    const proxy1 = instantiate(testUnion);
+    const proxy2 = instantiate(testUnion);
 
     proxy1.b = 0x1234;
     proxy2.b = 0x5678;
@@ -519,7 +518,7 @@ describe('union type', () => {
       }),
     });
 
-    const [proxy] = instantiate(outerStruct);
+    const proxy = instantiate(outerStruct);
 
     const ref1 = proxy.inner;
     const ref2 = proxy.inner;
@@ -556,7 +555,8 @@ describe('union type', () => {
       }),
     });
 
-    const [proxy, buffer] = instantiate(messageUnion);
+    const proxy = instantiate(messageUnion);
+    const buffer = getInstanceBuffer(proxy);
     const view = new DataView(buffer);
 
     // Set as text message (type = 1)
@@ -626,7 +626,8 @@ describe('union type', () => {
       }),
     });
 
-    const [proxy, buffer] = instantiate(variantUnion);
+    const proxy = instantiate(variantUnion);
+    const buffer = getInstanceBuffer(proxy);
 
     // Union should be sized for the largest variant
     expect(buffer.byteLength).toBeGreaterThanOrEqual(4);
@@ -674,7 +675,8 @@ describe('union type', () => {
       }),
     });
 
-    const [proxy, buffer] = instantiate(eventUnion);
+    const proxy = instantiate(eventUnion);
+    const buffer = getInstanceBuffer(proxy);
     const view = new DataView(buffer);
 
     // Configurar como evento de mouse
@@ -731,21 +733,14 @@ describe('union type', () => {
 });
 
 describe('buffer size calculation', () => {
-  let codec = createStringCodec();
-
-  setupStruct({
-    pack: 8,
-    stringToPointer: codec.handlers.stringToPointer,
-    pointerToString: codec.handlers.pointerToString,
-  });
-
   it('calculates size for primitive types correctly', () => {
     const primitives = struct({
       byte: u8(),
       word: u16(),
     });
 
-    const [_, buffer] = instantiate(primitives);
+    const _ = instantiate(primitives);
+    const buffer = getInstanceBuffer(_);
 
     // u8 (1 byte) + padding (1 byte) + u16 (2 bytes) = 4 bytes
     // With pack=8 alignment, u16 aligns to 2-byte boundary
@@ -758,7 +753,8 @@ describe('buffer size calculation', () => {
       age: u8(), // 1 byte
     });
 
-    const [_, buffer] = instantiate(aligned);
+    const _ = instantiate(aligned);
+    const buffer = getInstanceBuffer(_);
 
     // string pointer (8 bytes) + u8 (1 byte) + padding (7 bytes) = 16 bytes
     // The struct is padded to align to the largest field (8 bytes)
@@ -774,7 +770,8 @@ describe('buffer size calculation', () => {
       }),
     });
 
-    const [_, buffer] = instantiate(nested);
+    const _ = instantiate(nested);
+    const buffer = getInstanceBuffer(_);
 
     // id (1 byte) + data.x (1 byte) + data.y (1 byte) + padding = aligned
     expect(buffer.byteLength).toBeGreaterThanOrEqual(3);
@@ -786,7 +783,8 @@ describe('buffer size calculation', () => {
       values: array(u16(), 4),
     });
 
-    const [_, buffer] = instantiate(withArray);
+    const _ = instantiate(withArray);
+    const buffer = getInstanceBuffer(_);
 
     // u8 (1 byte) + padding (1 byte) + array of 4 u16 (8 bytes) = 10 bytes
     // Plus alignment padding
@@ -800,7 +798,8 @@ describe('buffer size calculation', () => {
       large: string(), // 8 bytes (pointer)
     });
 
-    const [_, buffer] = instantiate(testUnion);
+    const _ = instantiate(testUnion);
+    const buffer = getInstanceBuffer(_);
 
     // Union size should match the largest field (string pointer = 8 bytes)
     expect(buffer.byteLength).toBe(8);
@@ -819,7 +818,8 @@ describe('buffer size calculation', () => {
       }),
     });
 
-    const [_, buffer] = instantiate(unionWithStructs);
+    const _ = instantiate(unionWithStructs);
+    const buffer = getInstanceBuffer(_);
 
     // Should use size of largest struct
     // large: 3 * u16 = 6 bytes, aligned to 2 bytes = 6 bytes
@@ -833,7 +833,8 @@ describe('buffer size calculation', () => {
       value: u8(), // 1 byte, align 1
     });
 
-    const [_, buffer] = instantiate(mixed);
+    const _ = instantiate(mixed);
+    const buffer = getInstanceBuffer(_);
 
     // flag (1 byte) + padding (7 bytes) + ptr (8 bytes) + value (1 byte) + padding (7 bytes)
     // Total aligned to 8 bytes = 24 bytes
@@ -853,7 +854,8 @@ describe('buffer size calculation', () => {
       }),
     });
 
-    const [_, buffer] = instantiate(deepNested);
+    const _ = instantiate(deepNested);
+    const buffer = getInstanceBuffer(_);
 
     // Minimum: u8 (1) + padding (1) + u16 (2) + u8 (1) + padding = at least 5 bytes
     expect(buffer.byteLength).toBeGreaterThanOrEqual(5);
@@ -862,7 +864,8 @@ describe('buffer size calculation', () => {
   it('handles empty struct edge case', () => {
     const empty = struct({});
 
-    const [_, buffer] = instantiate(empty);
+    const _ = instantiate(empty);
+    const buffer = getInstanceBuffer(_);
 
     // Empty struct should have minimal size
     expect(buffer.byteLength).toBeGreaterThanOrEqual(0);
@@ -879,7 +882,8 @@ describe('buffer size calculation', () => {
       ),
     });
 
-    const [_, buffer] = instantiate(arrayOfStructs);
+    const _ = instantiate(arrayOfStructs);
+    const buffer = getInstanceBuffer(_);
 
     // 3 structs * (2 u16s = 4 bytes each) = 12 bytes minimum
     expect(buffer.byteLength).toBeGreaterThanOrEqual(12);
@@ -893,7 +897,8 @@ describe('buffer size calculation', () => {
       c: u8(),
     });
 
-    const [_, buffer] = instantiate(packed);
+    const _ = instantiate(packed);
+    const buffer = getInstanceBuffer(_);
 
     // a (1 byte) + padding (7 bytes) + b (8 bytes) + c (1 byte) + padding (7 bytes)
     // With pack=8, total should be 24 bytes
@@ -912,7 +917,8 @@ describe('buffer size calculation', () => {
       }),
     });
 
-    const [_, buffer] = instantiate(complexUnion);
+    const _ = instantiate(complexUnion);
+    const buffer = getInstanceBuffer(_);
 
     // variant1: u8 (1) + array of 10 u8 (10) = 11 bytes
     // variant2: u8 (1) + padding (7) + string pointer (8) = 16 bytes
@@ -928,7 +934,8 @@ describe('buffer size calculation', () => {
       d: u8(),
     });
 
-    const [_, buffer] = instantiate(consecutive);
+    const _ = instantiate(consecutive);
+    const buffer = getInstanceBuffer(_);
 
     // 4 consecutive u8s = 4 bytes (no padding between same-aligned fields)
     expect(buffer.byteLength).toBe(4);
@@ -942,7 +949,8 @@ describe('buffer size calculation', () => {
       value: u16(),
     });
 
-    const [_, buffer] = instantiate(withBools);
+    const _ = instantiate(withBools);
+    const buffer = getInstanceBuffer(_);
 
     // 3 bools (3 bytes) + padding (1 byte) + u16 (2 bytes) = 6 bytes
     expect(buffer.byteLength).toBeGreaterThanOrEqual(6);
@@ -955,7 +963,8 @@ describe('buffer size calculation', () => {
       str3: string(),
     });
 
-    const [_, buffer] = instantiate(stringStruct);
+    const _ = instantiate(stringStruct);
+    const buffer = getInstanceBuffer(_);
 
     // 3 string pointers * 8 bytes = 24 bytes
     expect(buffer.byteLength).toBe(24);
@@ -968,7 +977,8 @@ describe('buffer size calculation', () => {
       count: u8(),
     });
 
-    const [_, buffer] = instantiate(mixedArrays);
+    const _ = instantiate(mixedArrays);
+    const buffer = getInstanceBuffer(_);
 
     // inline array (5 bytes) + padding (3 bytes) + pointer (8 bytes) + u8 (1 byte) + padding (7 bytes)
     // Total = 24 bytes

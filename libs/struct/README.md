@@ -148,7 +148,7 @@ if (glfw.symbols.glfwInit() === 0) {
 }
 
 // Create window config
-const [config, configBuffer] = instantiate(WindowConfig);
+const config = instantiate(WindowConfig);
 config.width = 1920;
 config.height = 1080;
 config.monitor = 0n;

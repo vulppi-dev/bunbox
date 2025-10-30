@@ -1,7 +1,7 @@
 export type InferField<D extends AllFields> = D extends { isPointer: true }
   ? bigint
   : D extends StructField<infer Desc>
-    ? { [K in keyof Desc]: InferField<Desc[K]> } & { toJSON(): string }
+    ? { [K in keyof Desc]: InferField<Desc[K]> }
     : D extends { type: 'array'; to: infer P }
       ? P extends AllFields
         ? InferField<P>[]
