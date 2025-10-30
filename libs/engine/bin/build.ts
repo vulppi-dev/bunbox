@@ -19,14 +19,14 @@ const ASSETS = {
     './assets/x64/macos/libfreetype.dylib',
   ],
   linux: [
-    './assets/x64/linux/libglfw.dylib',
-    './assets/x64/linux/libbgfx.dylib',
-    './assets/x64/linux/libfreetype.dylib',
+    './assets/x64/linux/libglfw.so',
+    './assets/x64/linux/libbgfx.so',
+    './assets/x64/linux/libfreetype.so',
   ],
   win32: [
-    './assets/x64/win32/libglfw.dylib',
-    './assets/x64/win32/libbgfx.dylib',
-    './assets/x64/win32/libfreetype.dylib',
+    './assets/x64/win32/glfw3.dll',
+    './assets/x64/win32/bgfx.dll',
+    './assets/x64/win32/freetype.dll',
   ],
   'darwin-arm': [
     './assets/arm64/macos/libglfw.dylib',
@@ -34,9 +34,9 @@ const ASSETS = {
     './assets/arm64/macos/libfreetype.dylib',
   ],
   'linux-arm': [
-    './assets/arm64/linux/libglfw.dylib',
-    './assets/arm64/linux/libbgfx.dylib',
-    './assets/arm64/linux/libfreetype.dylib',
+    './assets/arm64/linux/libglfw.so',
+    './assets/arm64/linux/libbgfx.so',
+    './assets/arm64/linux/libfreetype.so',
   ],
 };
 

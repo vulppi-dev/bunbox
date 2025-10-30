@@ -1,7 +1,7 @@
 import type { EventMap } from '@bunbox/utils';
 import { Node } from '../core';
-import { Euler, Matrix, type Quaternion, Vector3 } from '../math';
 import { MaskHelper } from '../elements';
+import { Euler, Matrix, type Quaternion, Vector3 } from '../math';
 
 /**
  * Base 3D node with transform and layer mask support.
@@ -105,10 +105,10 @@ export class Node3D<
         this.#rotationQ || this.#rotation,
       );
 
-      this.#position.unmarkAsDirty();
-      this.#scale.unmarkAsDirty();
-      this.#rotation.unmarkAsDirty();
-      this.#rotationQ?.unmarkAsDirty();
+      this.#position.markAsClean();
+      this.#scale.markAsClean();
+      this.#rotation.markAsClean();
+      this.#rotationQ?.markAsClean();
     }
   }
 

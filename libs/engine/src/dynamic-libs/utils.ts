@@ -10,11 +10,10 @@ import {
 type InferFFIFunction<F extends FFIFunction> = (
   ...args: F['args'] extends infer A extends readonly FFITypeOrString[]
     ? { [L in keyof A]: FFITypeToArgsType[ToFFIType<A[L]>] }
-    : // eslint-disable-next-line @definitelytyped/no-single-element-tuple-type
-      [unknown] extends [F['args']]
+    : [unknown] extends [F['args']]
       ? []
       : never
-) => [unknown] extends [F['returns']] // eslint-disable-next-line @definitelytyped/no-single-element-tuple-type
+) => [unknown] extends [F['returns']]
   ? undefined
   : FFITypeToReturnsType[ToFFIType<NonNullable<F['returns']>>];
 

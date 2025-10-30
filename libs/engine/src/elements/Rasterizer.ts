@@ -191,12 +191,12 @@ export class Rasterizer extends DirtyState {
       stencilBack: { ...this.#depthStencil.stencilBack },
       stencilReadMask: (() => {
         const m = new MaskHelper();
-        m.set(this.#depthStencil.stencilReadMask.get()).unmarkAsDirty();
+        m.set(this.#depthStencil.stencilReadMask.get()).markAsClean();
         return m;
       })(),
       stencilWriteMask: (() => {
         const m = new MaskHelper();
-        m.set(this.#depthStencil.stencilWriteMask.get()).unmarkAsDirty();
+        m.set(this.#depthStencil.stencilWriteMask.get()).markAsClean();
         return m;
       })(),
     };
@@ -208,7 +208,7 @@ export class Rasterizer extends DirtyState {
       ...this.#multisample,
       mask: (() => {
         const m = new MaskHelper();
-        m.set(this.#multisample.mask.get()).unmarkAsDirty();
+        m.set(this.#multisample.mask.get()).markAsClean();
         return m;
       })(),
     };
@@ -222,7 +222,7 @@ export class Rasterizer extends DirtyState {
       alpha: { ...this.#blend.alpha },
       writeMask: (() => {
         const m = new MaskHelper();
-        m.set(this.#blend.writeMask.get()).unmarkAsDirty();
+        m.set(this.#blend.writeMask.get()).markAsClean();
         return m;
       })(),
     };
@@ -257,12 +257,12 @@ export class Rasterizer extends DirtyState {
       stencilBack: { ...v.stencilBack },
       stencilReadMask: (() => {
         const m = new MaskHelper();
-        m.set(v.stencilReadMask.get()).unmarkAsDirty();
+        m.set(v.stencilReadMask.get()).markAsClean();
         return m;
       })(),
       stencilWriteMask: (() => {
         const m = new MaskHelper();
-        m.set(v.stencilWriteMask.get()).unmarkAsDirty();
+        m.set(v.stencilWriteMask.get()).markAsClean();
         return m;
       })(),
     };
@@ -281,7 +281,7 @@ export class Rasterizer extends DirtyState {
       ...v,
       mask: (() => {
         const m = new MaskHelper();
-        m.set(v.mask.get()).unmarkAsDirty();
+        m.set(v.mask.get()).markAsClean();
         return m;
       })(),
     };
@@ -297,7 +297,7 @@ export class Rasterizer extends DirtyState {
       alpha: { ...v.alpha },
       writeMask: (() => {
         const m = new MaskHelper();
-        m.set(v.writeMask.get()).unmarkAsDirty();
+        m.set(v.writeMask.get()).markAsClean();
         return m;
       })(),
     };

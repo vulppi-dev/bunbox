@@ -49,12 +49,12 @@ export abstract class AbstractCamera extends Node3D {
     this.transform.lookAt(eye, target);
     if (this.rotationQ) {
       this.transform.decomposeRotationQ(this.rotationQ);
-      this.rotationQ.unmarkAsDirty();
+      this.rotationQ.markAsClean();
     } else {
       const q = new Quaternion();
       this.transform.decomposeRotationQ(q);
       this.rotation = VectorParser.quaternionToEuler(q, this.rotation.order);
-      this.rotation.unmarkAsDirty();
+      this.rotation.markAsClean();
     }
     this.markAsDirty();
   }
@@ -77,8 +77,8 @@ export abstract class AbstractCamera extends Node3D {
     if (this.isDirty || this.transform.isDirty) {
       this._updateProjectionMatrix();
       this.#frustum = null; // Invalidate frustum cache
-      this.transform.unmarkAsDirty();
-      this.unmarkAsDirty();
+      this.transform.markAsClean();
+      this.markAsClean();
     }
   }
 

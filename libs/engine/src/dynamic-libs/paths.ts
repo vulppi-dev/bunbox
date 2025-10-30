@@ -2,6 +2,7 @@ import { embeddedFiles } from 'bun';
 import { existsSync } from 'fs';
 import { join, resolve } from 'path';
 import { findProjectRoot } from '../utils/path';
+import { fileURLToPath } from 'url';
 
 const MODULE_DIR = findProjectRoot(import.meta.url);
 
@@ -35,18 +36,18 @@ const BGFX_LIBS: Record<string, any> = {
   },
 };
 
-const FREE_TYPE_LIBS: Record<string, any> = {
+const WGPU_LIBS: Record<string, any> = {
   darwin: {
-    arm64: 'assets/arm64/macos/libfreetype.dylib',
-    x64: 'assets/x64/macos/libfreetype.dylib',
+    arm64: 'assets/arm64/macos/libwgpu_native.dylib',
+    x64: 'assets/x64/macos/libwgpu_native.dylib',
   },
   linux: {
-    arm64: 'assets/arm64/linux/libfreetype.so',
-    x64: 'assets/x64/linux/libfreetype.so',
+    arm64: 'assets/arm64/linux/libwgpu_native.so',
+    x64: 'assets/x64/linux/libwgpu_native.so',
   },
   win32: {
-    arm64: 'assets/arm64/win32/freetype.dll',
-    x64: 'assets/x64/win32/freetype.dll',
+    arm64: 'assets/arm64/win32/wgpu_native.dll',
+    x64: 'assets/x64/win32/wgpu_native.dll',
   },
 };
 
@@ -56,14 +57,7 @@ async function getDynamicLibPath(path?: string) {
   if (existsSync(relative)) return relative;
   const absolute = resolve(MODULE_DIR, path);
   if (existsSync(absolute)) return absolute;
-  const url = new URL(join('../..', 'engine', path), import.meta.url);
-
-  console.log('---LOADER DEBUG START---');
-  console.log(import.meta.url);
-  console.log(url.toString());
-  console.log(embeddedFiles);
-  console.log('---LOADER DEBUG END---');
-  return url;
+  return path;
 }
 
 export const GLFW_PATH = await getDynamicLibPath(
@@ -72,12 +66,6 @@ export const GLFW_PATH = await getDynamicLibPath(
 export const BGFX_PATH = await getDynamicLibPath(
   BGFX_LIBS[process.platform]?.[process.arch],
 );
-export const FREE_TYPE_PATH = await getDynamicLibPath(
-  FREE_TYPE_LIBS[process.platform]?.[process.arch],
+export const WGPU_PATH = await getDynamicLibPath(
+  WGPU_LIBS[process.platform]?.[process.arch],
 );
-
-if (!GLFW_PATH || !BGFX_PATH || !FREE_TYPE_PATH) {
-  throw new Error(
-    `Unsupported platform or architecture: ${process.platform} ${process.arch}`,
-  );
-}

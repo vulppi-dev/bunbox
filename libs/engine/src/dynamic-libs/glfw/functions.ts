@@ -361,7 +361,7 @@ export const glfwGetWindowContentScale = {
  */
 export const glfwGetWindowOpacity = {
   args: ['ptr'] as [window: 'ptr'],
-  returns: 'float',
+  returns: 'f32',
 } as const satisfies FFIFunction;
 
 /**
@@ -370,7 +370,7 @@ export const glfwGetWindowOpacity = {
  * C ref: `void glfwSetWindowOpacity (GLFWwindow *window, float opacity)`
  */
 export const glfwSetWindowOpacity = {
-  args: ['ptr', 'float'] as [window: 'ptr', opacity: 'float'],
+  args: ['ptr', 'f32'] as [window: 'ptr', opacity: 'f32'],
   returns: 'void',
 } as const satisfies FFIFunction;
 

@@ -1,17 +1,50 @@
-import { App, Window } from './core';
+import { Window } from './core';
 
-const app = new App();
-const win = new Window('My First Window');
+const win = new Window('Test Window', {});
 
-app.addChild(win);
+Bun.sleep(3000)
 
-win.on('dispose', () => {
-  app.dispose();
-});
-
-await Bun.sleep(3000)
-
+  // .then(() => {
+  //   win.fullscreen();
+  //   return Bun.sleep(2000);
+  // })
+  // .then(() => {
+  //   win.setSize(800, 600);
+  //   return Bun.sleep(3000);
+  // })
+  // .then(() => {
+  //   win.setSize(1366, 768);
+  //   return Bun.sleep(2000);
+  // })
+  // .then(() => {
+  //   win.restore();
+  //   return Bun.sleep(2000);
+  // })
+  // .then(() => {
+  //   win.maximize();
+  //   return Bun.sleep(2000);
+  // })
+  // .then(() => {
+  //   win.minimize();
+  //   return Bun.sleep(2000);
+  // })
   .then(() => {
-    win.fullscreen();
-    return Bun.sleep(Infinity);
+    win.fullscreen(true);
+    return Bun.sleep(2000);
+  })
+  .then(() => {
+    win.maximize();
+    return Bun.sleep(2000);
+  })
+  .then(() => {
+    win.restore();
+    return Bun.sleep(2000);
+  })
+  .then(() => {
+    win.restore();
+    return Bun.sleep(2000);
+  })
+  .then(() => {
+    win.dispose();
+    return Bun.sleep(2000);
   });

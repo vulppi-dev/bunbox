@@ -10,7 +10,7 @@ export class DirtyState {
     return this;
   }
 
-  unmarkAsDirty(): this {
+  markAsClean(): this {
     this.#isDirty = false;
     return this;
   }

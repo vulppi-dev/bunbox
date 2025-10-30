@@ -1,17 +1,25 @@
-import { instantiate } from '@bunbox/struct';
-import type { EventMap, MergeEventMaps } from '@bunbox/utils';
-import { ptr, toBuffer, type Pointer } from 'bun:ffi';
 import {
-  // BGFX,
-  // BGFX_Clear,
-  // BGFX_MaximumLimits,
-  // BGFX_TextureFormat,
+  getInstanceBuffer,
+  instanceToJSON,
+  instantiate,
+  setupStruct,
+} from '@bunbox/struct';
+import type { EventMap, MergeEventMaps } from '@bunbox/utils';
+import { CString, ptr, type JSCallback, type Pointer } from 'bun:ffi';
+import {
+  BGFX,
+  BGFX_MaximumLimits,
+  BGFX_RenderType,
+  BGFX_Reset,
+  bgfxInitStruct,
+  bgfxPlatformDataStruct,
   buildCallback,
   cstr,
   GLFW,
+  GLFW_ErrorCodes,
   GLFW_GeneralMacro,
-  GLFW_WindowHints,
   GLFW_WindowMacro,
+  glfwErrorCallback,
   glfwFrameBufferSizeCallback,
   glfwVideoModeStruct,
   glfwWindowCloseCallback,
@@ -24,15 +32,29 @@ import {
 } from '../dynamic-libs';
 import { DynamicLibError } from '../errors';
 import { WindowEvent } from '../events';
+import { BGFX_DEBUG, GLFW_DEBUG } from '../singleton/logger';
+import { pointerCopyBuffer } from '../utils/buffer';
 import { Node } from './Node';
-import { getNativeWindowHandler } from './_common';
+import { getRendererName, Renderer } from './Renderer';
 
-const MAX_WINDOWS_COUNT = 256;
-const VIEW_IDS = new Set<number>(
-  Array.from({ length: MAX_WINDOWS_COUNT - 1 }, (_, i) => i + 1),
-);
+import { Node3D } from '../nodes';
 
-export type WindowState = 'minimized' | 'maximized' | 'normal';
+// Setup struct pointer/string conversions globally
+setupStruct({
+  pointerToString(ptr) {
+    return new CString(Number(ptr) as Pointer).toString();
+  },
+  stringToPointer(str) {
+    return BigInt(ptr(cstr(str)));
+  },
+});
+
+export type WindowState =
+  | 'minimized'
+  | 'maximized'
+  | 'windowed'
+  | 'fullscreen'
+  | 'windowed-fullscreen';
 
 export type WindowProperties = {
   width?: number;
@@ -62,24 +84,172 @@ export type WindowEventMap = {
   'window-display-changed': [event: WindowEvent];
 };
 
+function getGLFWErrorDescription(errorCode: number): string {
+  switch (errorCode) {
+    case GLFW_ErrorCodes.API_UNAVAILABLE:
+      return 'GLFW API unavailable';
+    case GLFW_ErrorCodes.CURSOR_UNAVAILABLE:
+      return 'GLFW Cursor unavailable';
+    case GLFW_ErrorCodes.FEATURE_UNAVAILABLE:
+      return 'GLFW Feature unavailable';
+    case GLFW_ErrorCodes.FEATURE_UNIMPLEMENTED:
+      return 'GLFW Feature unimplemented';
+    case GLFW_ErrorCodes.FORMAT_UNAVAILABLE:
+      return 'GLFW Format unavailable';
+    case GLFW_ErrorCodes.INVALID_ENUM:
+      return 'GLFW Invalid enum';
+    case GLFW_ErrorCodes.INVALID_VALUE:
+      return 'GLFW Invalid value';
+    case GLFW_ErrorCodes.NOT_INITIALIZED:
+      return 'GLFW Not initialized';
+    case GLFW_ErrorCodes.NO_CURRENT_CONTEXT:
+      return 'GLFW No current context';
+    case GLFW_ErrorCodes.NO_ERROR:
+      return 'GLFW No error';
+    case GLFW_ErrorCodes.NO_WINDOW_CONTEXT:
+      return 'GLFW No window context';
+    case GLFW_ErrorCodes.OUT_OF_MEMORY:
+      return 'GLFW Out of memory';
+    case GLFW_ErrorCodes.PLATFORM_ERROR:
+      return 'GLFW Platform error';
+    case GLFW_ErrorCodes.PLATFORM_UNAVAILABLE:
+      return 'GLFW Platform unavailable';
+    case GLFW_ErrorCodes.VERSION_UNAVAILABLE:
+      return 'GLFW Version unavailable';
+    default:
+      return `Unknown GLFW error code: ${errorCode}`;
+  }
+}
+
 export class Window<
   P extends Record<string, any> = Record<string, any>,
   M extends Record<string, any> = Record<string, any>,
   T extends EventMap = {},
 > extends Node<P, M, MergeEventMaps<T, WindowEventMap>> {
-  static #activeWindows: number = 1;
+  static #isInitialized = false;
+  static #windowsList: Set<Window> = new Set();
+  static #errorCallback: JSCallback | null = null;
+  #renderer: Renderer;
 
-  #windowPtr: Pointer | null = null;
-  // #fbHandlePtr: number = BGFX_MaximumLimits.MAX_UINT16;
-  #fbWait: number = 0;
+  static #callInitializeGLFW() {
+    if (Window.#isInitialized) return;
+    GLFW_DEBUG('Initializing GLFW for first window creation');
+    Window.#errorCallback = buildCallback(
+      glfwErrorCallback,
+      (errorCode, description) => {
+        GLFW_DEBUG(getGLFWErrorDescription(errorCode), description);
+      },
+    );
+    GLFW.glfwSetErrorCallback(Window.#errorCallback.ptr);
 
-  #viewId: number = -1;
+    if (GLFW.glfwInit() === 0) {
+      throw new DynamicLibError('initialization failed', 'GLFW');
+    }
+    GLFW_DEBUG('GLFW initialized successfully');
+
+    const glfwVersion = GLFW.glfwGetVersionString();
+    GLFW_DEBUG(`Version: ${glfwVersion}`);
+
+    /*-------- BGFX Main invisible window --------*/
+    GLFW.glfwWindowHint(GLFW_WindowMacro.CLIENT_API, GLFW_GeneralMacro.FALSE);
+    GLFW.glfwWindowHint(GLFW_WindowMacro.POSITION_X, GLFW_GeneralMacro.FALSE);
+    GLFW.glfwWindowHint(GLFW_WindowMacro.POSITION_Y, GLFW_GeneralMacro.FALSE);
+    GLFW.glfwWindowHint(GLFW_WindowMacro.VISIBLE, GLFW_GeneralMacro.FALSE);
+    BGFX_DEBUG('Creating main invisible window for BGFX context');
+
+    const window = GLFW.glfwCreateWindow(32, 32, cstr(''), null, null);
+    if (!window) {
+      throw new DynamicLibError(
+        'BGFX main invisible window creation failed',
+        'GLFW',
+      );
+    }
+    const windowHandler = Renderer.getNativeWindowHandler(window);
+    if (!windowHandler) {
+      throw new DynamicLibError(
+        'BGFX main invisible window native handler retrieval failed',
+        'GLFW',
+      );
+    }
+    BGFX_DEBUG('BGFX main invisible window created successfully:', window);
+    BGFX.bgfx_render_frame(-1);
+    BGFX_DEBUG('BGFX render frame initialized');
+
+    const displayHandler =
+      process.platform === 'linux' ? BigInt(GLFW.glfwGetX11Display()!) : 0n;
+    const platformData = instantiate(bgfxPlatformDataStruct);
+    const initData = instantiate(bgfxInitStruct);
+    BGFX.bgfx_init_ctor(ptr(getInstanceBuffer(initData)));
+    BGFX_DEBUG('BGFX init struct initialized');
+
+    platformData.nwh = BigInt(windowHandler);
+    platformData.ndt = displayHandler;
+    BGFX.bgfx_set_platform_data(ptr(getInstanceBuffer(platformData)));
+    BGFX_DEBUG('BGFX platform data set:', instanceToJSON(platformData));
+
+    const renderersSupportedBfr = new Int32Array(16);
+    const count = BGFX.bgfx_get_supported_renderers(
+      16,
+      ptr(renderersSupportedBfr),
+    );
+    const renderersSupported = Array.from(
+      renderersSupportedBfr.slice(0, count),
+    );
+    BGFX_DEBUG(
+      `Supported renderers: ${renderersSupported
+        .map(getRendererName)
+        .join(', ')}`,
+    );
+
+    initData.platformData = platformData;
+    initData.resolution.width = 32;
+    initData.resolution.height = 32;
+    initData.resolution.reset = BGFX_Reset.VSYNC;
+    initData.type = renderersSupported.includes(BGFX_RenderType.Direct3D12)
+      ? BGFX_RenderType.Direct3D12
+      : renderersSupported.includes(BGFX_RenderType.Metal)
+        ? BGFX_RenderType.Metal
+        : BGFX_RenderType.Vulkan;
+    BGFX_DEBUG(`Selected renderer: ${getRendererName(initData.type)}`);
+
+    if (!BGFX.bgfx_init(ptr(getInstanceBuffer(initData)))) {
+      throw new DynamicLibError('BGFX initialization failed', 'BGFX');
+    }
+    BGFX_DEBUG('BGFX initialized successfully:', instanceToJSON(initData));
+    BGFX.bgfx_set_view_frame_buffer(0, BGFX_MaximumLimits.MAX_UINT16);
+
+    Window.#isInitialized = true;
+
+    let prev = performance.now();
+    (async () => {
+      GLFW_DEBUG('Starting GLFW main loop');
+      while (Window.#isInitialized) {
+        const now = performance.now();
+        const delta = now - prev;
+        prev = now;
+
+        GLFW.glfwPollEvents();
+        for (const win of Window.#windowsList) {
+          win.#appTriggerProcessStack(delta);
+        }
+        BGFX.bgfx_frame(false);
+        await Bun.sleep(4);
+      }
+    })();
+  }
+
+  #windowPtr: Pointer;
+  #monitorPtr: Pointer | null = null;
 
   #title: string;
   #x: number = 0;
   #y: number = 0;
+  #savedX: number = 0;
+  #savedY: number = 0;
   #width: number = 0;
   #height: number = 0;
+  #savedWidth: number = 0;
+  #savedHeight: number = 0;
   #bufferWidth: number = 0;
   #bufferHeight: number = 0;
   #xScale: number = 1;
@@ -89,23 +259,22 @@ export class Window<
   #resizable: boolean = true;
   #alwaysOnTop: boolean = false;
   #isFocused: boolean = false;
-  #state: WindowState = 'normal';
+  #state: WindowState = 'windowed';
 
   #stack: Node[] = [];
+  #stack3D: Node3D[] = [];
+
   #scheduleDirty: boolean = true;
 
-  #heightAux: Int32Array = new Int32Array(1);
-  #widthAux: Int32Array = new Int32Array(1);
-  #xsAux: Float32Array = new Float32Array(1);
-  #ysAux: Float32Array = new Float32Array(1);
+  #i32_aux1: Int32Array = new Int32Array(1);
+  #i32_aux2: Int32Array = new Int32Array(1);
+  #f32_aux1: Float32Array = new Float32Array(1);
+  #f32_aux2: Float32Array = new Float32Array(1);
+
+  #disposeCallbacks: (() => void) | null = null;
 
   constructor(title: string, props?: WindowProperties) {
     super();
-
-    if (Window.#activeWindows >= MAX_WINDOWS_COUNT) {
-      throw new DynamicLibError('maximum number of windows reached', 'GLFW');
-    }
-    Window.#activeWindows++;
 
     const {
       width = 800,
@@ -115,20 +284,55 @@ export class Window<
       borderless = false,
       resizable = true,
       opacity = 1.0,
-      state = 'normal',
+      state = 'windowed',
       alwaysOnTop = false,
     } = props || {};
 
     this.#title = title;
     this.#width = width;
     this.#height = height;
+    this.#savedWidth = width;
+    this.#savedHeight = height;
     this.#x = x;
     this.#y = y;
+    this.#savedX = x;
+    this.#savedY = y;
     this.#borderless = borderless;
     this.#resizable = resizable;
     this.#opacity = opacity;
     this.#state = state;
     this.#alwaysOnTop = alwaysOnTop;
+
+    Window.#callInitializeGLFW();
+
+    if (this.#state === 'fullscreen') {
+      this.#updateMainMonitorData(true);
+    }
+
+    this.#setWindowHints();
+    const window = GLFW.glfwCreateWindow(
+      this.#width,
+      this.#height,
+      cstr(this.#title),
+      this.#monitorPtr,
+      null,
+    );
+    if (!window) {
+      throw new DynamicLibError('window creation failed', 'GLFW');
+    }
+    this.#windowPtr = window;
+    Window.#windowsList.add(this);
+
+    this.opacity = this.#opacity;
+
+    this.#loadWindowPosition();
+    this.#loadWindowSize();
+    this.#loadFramebufferSize();
+    this.#loadWindowScale();
+
+    this.#bindWindowCallbacks();
+
+    this.#renderer = new Renderer(this.#windowPtr);
 
     const unsubscribes = [
       this.subscribe('add-child', () => {
@@ -143,17 +347,26 @@ export class Window<
     ];
 
     this.on('dispose', () => {
-      Window.#activeWindows--;
+      GLFW_DEBUG(`Disposing window: ${this.#title}`);
+      Window.#windowsList.delete(this);
+      this.#renderer.dispose();
+
       unsubscribes.forEach((fn) => fn());
       this.#stack = [];
+
+      this.#disposeCallbacks?.();
+      GLFW.glfwDestroyWindow(this.#windowPtr);
+
+      if (Window.#windowsList.size === 0) {
+        GLFW_DEBUG('No more windows. Terminating GLFW.');
+        GLFW.glfwSetErrorCallback(0 as Pointer);
+        GLFW.glfwTerminate();
+        Window.#errorCallback?.close();
+        Window.#isInitialized = false;
+      }
     });
 
-    this.disable();
-  }
-
-  /** Unique view ID associated with this window. */
-  get viewId() {
-    return this.#viewId;
+    GLFW_DEBUG(`First creating window: ${this.#title}`);
   }
 
   /** Window title. */
@@ -236,30 +449,6 @@ export class Window<
       GLFW.glfwSetWindowTitle(this.#windowPtr, cstr(this.#title));
   }
 
-  set x(value: number) {
-    this.#x = value;
-    if (this.#windowPtr)
-      GLFW.glfwSetWindowPos(this.#windowPtr, this.#x, this.#y);
-  }
-
-  set y(value: number) {
-    this.#y = value;
-    if (this.#windowPtr)
-      GLFW.glfwSetWindowPos(this.#windowPtr, this.#x, this.#y);
-  }
-
-  set width(value: number) {
-    this.#width = value;
-    if (this.#windowPtr)
-      GLFW.glfwSetWindowSize(this.#windowPtr, this.#width, this.#height);
-  }
-
-  set height(value: number) {
-    this.#height = value;
-    if (this.#windowPtr)
-      GLFW.glfwSetWindowSize(this.#windowPtr, this.#width, this.#height);
-  }
-
   set opacity(value: number) {
     this.#opacity = value;
     if (this.#windowPtr)
@@ -271,7 +460,7 @@ export class Window<
     if (this.#windowPtr) {
       GLFW.glfwSetWindowAttrib(
         this.#windowPtr,
-        GLFW_WindowHints.DECORATED,
+        GLFW_WindowMacro.DECORATED,
         this.#borderless ? GLFW_GeneralMacro.FALSE : GLFW_GeneralMacro.TRUE,
       );
     }
@@ -282,7 +471,7 @@ export class Window<
     if (this.#windowPtr) {
       GLFW.glfwSetWindowAttrib(
         this.#windowPtr,
-        GLFW_WindowHints.RESIZABLE,
+        GLFW_WindowMacro.RESIZABLE,
         this.#resizable ? GLFW_GeneralMacro.TRUE : GLFW_GeneralMacro.FALSE,
       );
     }
@@ -293,95 +482,167 @@ export class Window<
     if (this.#windowPtr) {
       GLFW.glfwSetWindowAttrib(
         this.#windowPtr,
-        GLFW_WindowHints.FLOATING,
+        GLFW_WindowMacro.FLOATING,
         this.#alwaysOnTop ? GLFW_GeneralMacro.TRUE : GLFW_GeneralMacro.FALSE,
       );
     }
   }
 
+  setPos(x: number, y: number) {
+    if (this.#state === 'fullscreen') {
+      console.warn('Cannot set window position while in fullscreen mode.');
+      return;
+    }
+
+    this.#x = x;
+    this.#y = y;
+    this.#savedX = x;
+    this.#savedY = y;
+    if (this.#windowPtr) {
+      GLFW.glfwSetWindowPos(this.#windowPtr, this.#x, this.#y);
+    }
+  }
+
+  setSize(width: number, height: number) {
+    if (this.#state === 'fullscreen') {
+      console.warn('Cannot set window position while in fullscreen mode.');
+    } else {
+      this.#savedWidth = width;
+      this.#savedHeight = height;
+    }
+    this.#width = width;
+    this.#height = height;
+    // TODO: Teste change resolution;
+    GLFW.glfwSetWindowSize(this.#windowPtr, this.#width, this.#height);
+  }
+
   fullscreen(windowed: boolean = false) {
     if (!this.#windowPtr) return;
 
-    const monitor = GLFW.glfwGetPrimaryMonitor();
-    if (!monitor) {
-      throw new DynamicLibError('failed to get window monitor', 'GLFW');
-    }
-    const mode = GLFW.glfwGetVideoMode(monitor);
-    if (!mode) {
-      throw new DynamicLibError('failed to get video mode', 'GLFW');
-    }
-
-    const [modeStr, modeBfr] = instantiate(glfwVideoModeStruct);
-    const modeOrigin = toBuffer(mode, 0, modeBfr.byteLength);
-    modeOrigin.copy(new Uint8Array(modeBfr));
-
     if (windowed) {
-      this.isBorderless = true;
-      this.#x = 0;
-      this.#y = 0;
-      this.#width = modeStr.width;
-      this.#height = modeStr.height;
+      this.#state = 'windowed-fullscreen';
+      this.#updateMainMonitorData();
+      GLFW.glfwSetWindowAttrib(
+        this.#windowPtr,
+        GLFW_WindowMacro.DECORATED,
+        GLFW_GeneralMacro.TRUE,
+      );
+
       GLFW.glfwSetWindowPos(this.#windowPtr, this.#x, this.#y);
       GLFW.glfwSetWindowSize(this.#windowPtr, this.#width, this.#height);
     } else {
+      this.#state = 'fullscreen';
+      this.#updateMainMonitorData(true);
       GLFW.glfwSetWindowMonitor(
         this.#windowPtr,
-        monitor,
+        this.#monitorPtr,
         0,
         0,
-        modeStr.width,
-        modeStr.height,
-        GLFW_GeneralMacro.DONT_CARE,
+        this.#width,
+        this.#height,
+        0,
       );
-      this.disable();
     }
   }
 
   minimize() {
-    if (this.#windowPtr) {
-      GLFW.glfwIconifyWindow(this.#windowPtr);
-      this.#state = 'minimized';
-    }
+    if (!this.#windowPtr) return;
+    this.#state = 'minimized';
+    GLFW.glfwIconifyWindow(this.#windowPtr);
   }
 
   restore() {
-    if (this.#windowPtr) {
+    if (!this.#windowPtr) return;
+    if (this.#state === 'minimized' && this.#monitorPtr) {
+      this.#state = 'fullscreen';
       GLFW.glfwRestoreWindow(this.#windowPtr);
-      this.#state = 'normal';
+    } else if (this.#state === 'windowed-fullscreen') {
+      this.#state = 'windowed';
+      GLFW.glfwSetWindowAttrib(
+        this.#windowPtr,
+        GLFW_WindowMacro.DECORATED,
+        this.isBorderless ? GLFW_GeneralMacro.FALSE : GLFW_GeneralMacro.TRUE,
+      );
+
+      this.#x = this.#savedX;
+      this.#y = this.#savedY;
+      this.#width = this.#savedWidth;
+      this.#height = this.#savedHeight;
+      GLFW.glfwSetWindowPos(this.#windowPtr, this.#savedX, this.#savedY);
+      GLFW.glfwSetWindowSize(
+        this.#windowPtr,
+        this.#savedWidth,
+        this.#savedHeight,
+      );
+    }
+    if (this.#state === 'fullscreen') {
+      this.#state = 'windowed';
+      GLFW.glfwRestoreWindow(this.#windowPtr);
+      this.#x = this.#savedX;
+      this.#y = this.#savedY;
+      this.#width = this.#savedWidth;
+      this.#height = this.#savedHeight;
+      this.#monitorPtr = null;
+      GLFW.glfwSetWindowMonitor(
+        this.#windowPtr,
+        null,
+        this.#x,
+        this.#y,
+        this.#width,
+        this.#height,
+        0,
+      );
+    } else {
+      this.#state = 'windowed';
+      GLFW.glfwRestoreWindow(this.#windowPtr);
     }
   }
 
   maximize() {
-    if (this.#windowPtr) {
-      GLFW.glfwMaximizeWindow(this.#windowPtr);
+    if (!this.#windowPtr) return;
+    if (this.#monitorPtr) {
       this.#state = 'maximized';
+      this.#x = this.#savedX;
+      this.#y = this.#savedY;
+      this.#width = this.#savedWidth;
+      this.#height = this.#savedHeight;
+      this.#monitorPtr = null;
+      GLFW.glfwSetWindowMonitor(
+        this.#windowPtr,
+        null,
+        this.#x,
+        this.#y,
+        this.#width,
+        this.#height,
+        0,
+      );
+    } else if (this.#state === 'windowed-fullscreen') {
+      this.#state = 'maximized';
+      GLFW.glfwSetWindowAttrib(
+        this.#windowPtr,
+        GLFW_WindowMacro.DECORATED,
+        this.isBorderless ? GLFW_GeneralMacro.FALSE : GLFW_GeneralMacro.TRUE,
+      );
+
+      this.#x = this.#savedX;
+      this.#y = this.#savedY;
+      this.#width = this.#savedWidth;
+      this.#height = this.#savedHeight;
+      GLFW.glfwSetWindowPos(this.#windowPtr, this.#savedX, this.#savedY);
+      GLFW.glfwSetWindowSize(
+        this.#windowPtr,
+        this.#savedWidth,
+        this.#savedHeight,
+      );
     }
-  }
 
-  /**
-   * # internal use only
-   * @ignore internal use only
-   */
-  _appTriggerProcessStack(delta: number) {
-    if (!this.isEnabled || this.isDisposed) return;
-    if (this.#scheduleDirty) this.#rebuildStacks();
-
-    this._process(delta);
-
-    if (this.isDisposed) return;
-
-    for (const node of this.#stack) {
-      if (node.isEnabled) {
-        node._process(delta);
-      }
-    }
-    this.#render();
+    GLFW.glfwMaximizeWindow(this.#windowPtr);
   }
 
   override _process(_deltaTime: number): void {
-    if (this.isDisposed) return;
+    // if (this.isDisposed) return;
     if (GLFW.glfwWindowShouldClose(this.#windowPtr)) {
-      this.dispose();
+      // this.dispose();
       return;
     }
   }
@@ -390,87 +651,89 @@ export class Window<
     return 'Window';
   }
 
-  protected override _ready(): void {
-    if (this.#windowPtr) return;
-    this.disable();
-    this.loggerCall(`Creating window: ${this.#title}`, 'info', 'GLFW');
+  #updateMainMonitorData(setMonitor: boolean = false) {
+    GLFW_DEBUG('Updating main monitor data for fullscreen mode');
+    const monitor = GLFW.glfwGetPrimaryMonitor();
+    if (!monitor) {
+      throw new DynamicLibError('failed to get window monitor', 'GLFW');
+    }
+    GLFW_DEBUG('Got primary monitor pointer:', monitor);
+    const mode = GLFW.glfwGetVideoMode(monitor);
+    if (!mode) {
+      throw new DynamicLibError('failed to get video mode', 'GLFW');
+    }
+    GLFW_DEBUG('Got video mode pointer:', mode);
 
-    // GLFW.glfwWindowHint(GLFW_WindowMacro.CLIENT_API, GLFW_GeneralMacro.FALSE);
-    GLFW.glfwWindowHint(GLFW_WindowHints.VISIBLE, GLFW_GeneralMacro.TRUE);
+    const modeStr = instantiate(glfwVideoModeStruct);
+    const modeBfr = getInstanceBuffer(modeStr);
+    GLFW_DEBUG('Video mode data:', instanceToJSON(modeStr));
+    pointerCopyBuffer(mode, new Uint8Array(modeBfr));
+
+    this.#x = 0;
+    this.#y = 0;
+    this.#width = modeStr.width;
+    this.#height = modeStr.height;
+    if (setMonitor) this.#monitorPtr = monitor;
+  }
+
+  #setWindowHints() {
+    GLFW.glfwWindowHint(GLFW_WindowMacro.CLIENT_API, GLFW_GeneralMacro.FALSE);
+    GLFW.glfwWindowHint(GLFW_WindowMacro.VISIBLE, GLFW_GeneralMacro.TRUE);
+    GLFW.glfwWindowHint(GLFW_WindowMacro.AUTO_ICONIFY, GLFW_GeneralMacro.FALSE);
     GLFW.glfwWindowHint(
-      GLFW_WindowHints.POSITION_X,
+      GLFW_WindowMacro.POSITION_X,
       this.#x >= 0 ? this.#x : GLFW_GeneralMacro.ANY_POSITION,
     );
     GLFW.glfwWindowHint(
-      GLFW_WindowHints.POSITION_Y,
+      GLFW_WindowMacro.POSITION_Y,
       this.#y >= 0 ? this.#y : GLFW_GeneralMacro.ANY_POSITION,
     );
     // GLFW.glfwWindowHint(
-    //   GLFW_WindowHints.TRANSPARENT_FRAMEBUFFER,
+    //   GLFW_WindowMacro.TRANSPARENT_FRAMEBUFFER,
     //   GLFW_GeneralMacro.TRUE,
     // );
     GLFW.glfwWindowHint(
-      GLFW_WindowHints.DECORATED,
+      GLFW_WindowMacro.DECORATED,
       this.#borderless ? GLFW_GeneralMacro.FALSE : GLFW_GeneralMacro.TRUE,
     );
     GLFW.glfwWindowHint(
-      GLFW_WindowHints.RESIZABLE,
+      GLFW_WindowMacro.RESIZABLE,
       this.#resizable ? GLFW_GeneralMacro.TRUE : GLFW_GeneralMacro.FALSE,
     );
     GLFW.glfwWindowHint(
-      GLFW_WindowHints.FLOATING,
+      GLFW_WindowMacro.FLOATING,
       this.#alwaysOnTop ? GLFW_GeneralMacro.TRUE : GLFW_GeneralMacro.FALSE,
     );
     GLFW.glfwWindowHint(
-      GLFW_WindowHints.FOCUS_ON_SHOW,
+      GLFW_WindowMacro.FOCUS_ON_SHOW,
       this.#isFocused ? GLFW_GeneralMacro.TRUE : GLFW_GeneralMacro.FALSE,
     );
 
-    this.loggerCall('Configure window hints', 'debug', 'GLFW');
+    GLFW_DEBUG('Set window hints for new window');
+  }
 
-    const window = GLFW.glfwCreateWindow(
-      this.#width,
-      this.#height,
-      cstr(this.#title),
-      null,
-      null,
-    );
-    if (!window) {
-      throw new DynamicLibError('window creation failed', 'GLFW');
+  #bindWindowCallbacks() {
+    if (this.#disposeCallbacks) {
+      this.#disposeCallbacks();
+      this.#disposeCallbacks = null;
     }
-    GLFW.glfwMakeContextCurrent(window);
-
-    switch (this.#state) {
-      case 'minimized':
-        this.minimize();
-        break;
-      case 'maximized':
-        this.maximize();
-        break;
-      case 'normal':
-        this.restore();
-        break;
-    }
-
-    this.loggerCall(`Window "${this.#title}" created`, 'debug', 'GLFW');
-    this.#windowPtr = window;
-    // Apply initial properties
-    this.opacity = this.#opacity;
-
-    this.#loadWindowSize();
-    this.#loadFramebufferSize();
-    this.#loadWindowScale();
-
-    const myViewId = VIEW_IDS.values().next().value!;
-    VIEW_IDS.delete(myViewId);
-    this.#viewId = myViewId;
+    if (!this.#windowPtr) return;
 
     const windowPosCB = buildCallback(
       glfwWindowPositionCallback,
       (win, xpos, ypos) => {
         if (this.#windowPtr !== win) return;
+
         this.#x = xpos;
         this.#y = ypos;
+        if (
+          this.#state !== 'fullscreen' &&
+          this.#state !== 'windowed-fullscreen'
+        ) {
+          this.#savedX = xpos;
+          this.#savedY = ypos;
+        }
+
         this.#dispatchEvent('window-move');
       },
     );
@@ -480,6 +743,13 @@ export class Window<
         if (this.#windowPtr !== win) return;
         this.#width = width;
         this.#height = height;
+        if (
+          this.#state !== 'fullscreen' &&
+          this.#state !== 'windowed-fullscreen'
+        ) {
+          this.#savedWidth = width;
+          this.#savedHeight = height;
+        }
         this.#dispatchEvent('window-resize');
       },
     );
@@ -495,7 +765,11 @@ export class Window<
       glfwWindowIconifyCallback,
       (win, iconified) => {
         if (this.#windowPtr !== win) return;
-        this.#state = iconified ? 'minimized' : 'normal';
+
+        if (iconified) {
+          this.#state = 'minimized';
+        }
+
         this.#loadWindowSize();
         this.#dispatchEvent(iconified ? 'window-minimized' : 'window-restored');
       },
@@ -504,7 +778,9 @@ export class Window<
       glfwWindowMaximizeCallback,
       (win, maximized) => {
         if (this.#windowPtr !== win) return;
-        this.#state = maximized ? 'maximized' : 'normal';
+        if (maximized) {
+          this.#state = 'maximized';
+        }
         this.#loadWindowSize();
         this.#dispatchEvent(maximized ? 'window-maximized' : 'window-restored');
       },
@@ -535,24 +811,30 @@ export class Window<
       this.dispose();
     });
 
-    GLFW.glfwSetWindowPosCallback(window, windowPosCB.ptr);
-    GLFW.glfwSetWindowSizeCallback(window, windowSizeCB.ptr);
-    GLFW.glfwSetWindowFocusCallback(window, windowFocusCB.ptr);
-    GLFW.glfwSetWindowIconifyCallback(window, windowIconifyCB.ptr);
-    GLFW.glfwSetWindowMaximizeCallback(window, windowMaximizeCB.ptr);
-    GLFW.glfwSetWindowContentScaleCallback(window, windowContentScaleCB.ptr);
-    GLFW.glfwSetFramebufferSizeCallback(window, windowFramebufferSizeCB.ptr);
-    GLFW.glfwSetWindowCloseCallback(window, windowCloseCB.ptr);
+    GLFW.glfwSetWindowPosCallback(this.#windowPtr, windowPosCB.ptr);
+    GLFW.glfwSetWindowSizeCallback(this.#windowPtr, windowSizeCB.ptr);
+    GLFW.glfwSetWindowFocusCallback(this.#windowPtr, windowFocusCB.ptr);
+    GLFW.glfwSetWindowIconifyCallback(this.#windowPtr, windowIconifyCB.ptr);
+    GLFW.glfwSetWindowMaximizeCallback(this.#windowPtr, windowMaximizeCB.ptr);
+    GLFW.glfwSetWindowContentScaleCallback(
+      this.#windowPtr,
+      windowContentScaleCB.ptr,
+    );
+    GLFW.glfwSetFramebufferSizeCallback(
+      this.#windowPtr,
+      windowFramebufferSizeCB.ptr,
+    );
+    GLFW.glfwSetWindowCloseCallback(this.#windowPtr, windowCloseCB.ptr);
 
-    this.on('dispose', () => {
-      GLFW.glfwSetWindowPosCallback(window, 0 as Pointer);
-      GLFW.glfwSetWindowSizeCallback(window, 0 as Pointer);
-      GLFW.glfwSetWindowFocusCallback(window, 0 as Pointer);
-      GLFW.glfwSetWindowIconifyCallback(window, 0 as Pointer);
-      GLFW.glfwSetWindowMaximizeCallback(window, 0 as Pointer);
-      GLFW.glfwSetWindowContentScaleCallback(window, 0 as Pointer);
-      GLFW.glfwSetFramebufferSizeCallback(window, 0 as Pointer);
-      GLFW.glfwSetWindowCloseCallback(window, 0 as Pointer);
+    this.#disposeCallbacks = () => {
+      GLFW.glfwSetWindowPosCallback(this.#windowPtr, 0 as Pointer);
+      GLFW.glfwSetWindowSizeCallback(this.#windowPtr, 0 as Pointer);
+      GLFW.glfwSetWindowFocusCallback(this.#windowPtr, 0 as Pointer);
+      GLFW.glfwSetWindowIconifyCallback(this.#windowPtr, 0 as Pointer);
+      GLFW.glfwSetWindowMaximizeCallback(this.#windowPtr, 0 as Pointer);
+      GLFW.glfwSetWindowContentScaleCallback(this.#windowPtr, 0 as Pointer);
+      GLFW.glfwSetFramebufferSizeCallback(this.#windowPtr, 0 as Pointer);
+      GLFW.glfwSetWindowCloseCallback(this.#windowPtr, 0 as Pointer);
       windowPosCB.close();
       windowSizeCB.close();
       windowFocusCB.close();
@@ -561,29 +843,7 @@ export class Window<
       windowContentScaleCB.close();
       windowFramebufferSizeCB.close();
       windowCloseCB.close();
-
-      // BGFX.bgfx_set_view_frame_buffer(
-      //   this.#viewId,
-      //   BGFX_MaximumLimits.MAX_UINT16,
-      // );
-      VIEW_IDS.add(myViewId);
-      this.loggerCall(
-        `Releasing view ID ${this.#viewId} for window: ${this.#title}`,
-        'info',
-        'BGFX',
-      );
-
-      // if (this.#fbHandlePtr !== BGFX_MaximumLimits.MAX_UINT16) {
-      //   this.#destroyFramebuffer();
-      // }
-
-      GLFW.glfwDestroyWindow(this.#windowPtr);
-      this.loggerCall(`Window "${this.#title}" destroyed`, 'info', 'GLFW');
-      this.#windowPtr = null;
-    });
-
-    this.#rebuildStacks();
-    this.enable();
+    };
   }
 
   #loadFramebufferSize() {
@@ -591,11 +851,25 @@ export class Window<
 
     GLFW.glfwGetFramebufferSize(
       this.#windowPtr,
-      ptr(this.#widthAux),
-      ptr(this.#heightAux),
+      ptr(this.#i32_aux2),
+      ptr(this.#i32_aux1),
     );
-    this.#bufferWidth = this.#widthAux[0]!;
-    this.#bufferHeight = this.#heightAux[0]!;
+    this.#bufferWidth = this.#i32_aux2[0]!;
+    this.#bufferHeight = this.#i32_aux1[0]!;
+  }
+
+  #loadWindowPosition() {
+    if (!this.#windowPtr) return;
+
+    GLFW.glfwGetWindowPos(
+      this.#windowPtr,
+      ptr(this.#i32_aux2),
+      ptr(this.#i32_aux1),
+    );
+    this.#x = this.#i32_aux2[0]!;
+    this.#y = this.#i32_aux1[0]!;
+    this.#savedX = this.#x;
+    this.#savedY = this.#y;
   }
 
   #loadWindowSize() {
@@ -603,11 +877,13 @@ export class Window<
 
     GLFW.glfwGetWindowSize(
       this.#windowPtr,
-      ptr(this.#widthAux),
-      ptr(this.#heightAux),
+      ptr(this.#i32_aux2),
+      ptr(this.#i32_aux1),
     );
-    this.#width = this.#widthAux[0]!;
-    this.#height = this.#heightAux[0]!;
+    this.#width = this.#i32_aux2[0]!;
+    this.#height = this.#i32_aux1[0]!;
+    this.#savedWidth = this.#width;
+    this.#savedHeight = this.#height;
   }
 
   #loadWindowScale() {
@@ -615,18 +891,18 @@ export class Window<
 
     GLFW.glfwGetWindowContentScale(
       this.#windowPtr,
-      ptr(this.#xsAux),
-      ptr(this.#ysAux),
+      ptr(this.#f32_aux1),
+      ptr(this.#f32_aux2),
     );
-    this.#xScale = this.#xsAux[0]!;
-    this.#yScale = this.#ysAux[0]!;
+    this.#xScale = this.#f32_aux1[0]!;
+    this.#yScale = this.#f32_aux2[0]!;
   }
 
   #dispatchEvent(eventKey: keyof WindowEventMap) {
     console.log('ev', eventKey);
     const event = new WindowEvent({
       currentDisplayId: GLFW.glfwGetWindowMonitor(this.#windowPtr) ?? 0,
-      windowId: this.viewId,
+      windowId: this.#windowPtr ?? 0,
       height: this.#height,
       width: this.#width,
       x: this.#x,
@@ -639,110 +915,41 @@ export class Window<
 
   #rebuildStacks() {
     const nextStack: Node[] = [];
+    const nextStack3D: Node3D[] = [];
     this.traverse(
       (n) => {
-        if (n !== this && n instanceof Node) nextStack.push(n as Node);
+        if (n !== this && n instanceof Node) {
+          nextStack.push(n as Node);
+          if (n instanceof Node3D) {
+            nextStack3D.push(n as Node3D);
+          }
+        }
       },
       { ignoreType: Window as any },
     );
     this.#stack = nextStack;
+    this.#stack3D = nextStack3D;
     this.#scheduleDirty = false;
   }
 
-  // #destroyFramebuffer() {
-  //   BGFX.bgfx_set_view_frame_buffer(
-  //     this.#viewId,
-  //     BGFX_MaximumLimits.MAX_UINT16,
-  //   );
-  //   BGFX.bgfx_destroy_frame_buffer(this.#fbHandlePtr);
-  //   this.#fbHandlePtr = BGFX_MaximumLimits.MAX_UINT16;
-  //   this.#fbWait = 2;
-  //   this.loggerCall(
-  //     `Framebuffer destroyed for window: ${this.#title}`,
-  //     'debug',
-  //     'BGFX',
-  //   );
-  // }
+  #appTriggerProcessStack(delta: number) {
+    if (!this.isEnabled || this.isDisposed) return;
+    if (this.#scheduleDirty) this.#rebuildStacks();
 
-  // #rebuildFrameBuffer() {
-  //   if (!this.#windowPtr) return;
-  //   if (!this.#bufferHeight || !this.#bufferWidth) {
-  //     this.loggerCall(
-  //       `Skipping framebuffer rebuild for window: ${this.#title} due to zero size (${this.#bufferWidth}x${this.#bufferHeight})`,
-  //       'warn',
-  //       'BGFX',
-  //     );
-  //     return false;
-  //   }
+    this._process(delta);
 
-  //   if (this.#fbHandlePtr !== BGFX_MaximumLimits.MAX_UINT16) {
-  //     this.#destroyFramebuffer();
-  //   }
+    if (this.isDisposed) return;
 
-  //   if (this.#fbWait > 0) {
-  //     this.loggerCall(
-  //       `Waiting to rebuild framebuffer for window: ${this.#title}`,
-  //       'debug',
-  //       'BGFX',
-  //     );
-  //     this.#fbWait--;
-  //     return false;
-  //   }
+    for (const node of this.#stack) {
+      if (node.isEnabled) {
+        node._process(delta);
+      }
+    }
 
-  //   this.loggerCall(
-  //     `Rebuilding framebuffer for window: ${this.#title} (${this.#bufferWidth}x${this.#bufferHeight})`,
-  //     'info',
-  //     'BGFX',
-  //   );
-
-  //   const windowHandler = getNativeWindowHandler(this.#windowPtr);
-  //   const fbHandle = BGFX.bgfx_create_frame_buffer_from_nwh(
-  //     windowHandler,
-  //     this.#bufferWidth,
-  //     this.#bufferHeight,
-  //     BGFX_TextureFormat.Count,
-  //     BGFX_TextureFormat.Count,
-  //   );
-  //   if (fbHandle === BGFX_MaximumLimits.MAX_UINT16) {
-  //     throw new DynamicLibError('framebuffer creation failed', 'BGFX');
-  //   }
-  //   this.#fbHandlePtr = fbHandle;
-  //   this.loggerCall(
-  //     `Framebuffer created for window: ${this.#title} (handle: ${fbHandle})`,
-  //     'debug',
-  //     'BGFX',
-  //   );
-
-  //   BGFX.bgfx_set_view_frame_buffer(this.#viewId, fbHandle);
-  //   this.loggerCall(
-  //     `Framebuffer assigned to view ID ${this.#viewId} for window: ${this.#title}`,
-  //     'debug',
-  //     'BGFX',
-  //   );
-  //   return true;
-  // }
-
-  #render() {
-    // if (this.isDirty || this.#fbHandlePtr === BGFX_MaximumLimits.MAX_UINT16) {
-    //   const success = this.#rebuildFrameBuffer();
-    //   if (success) this.unmarkAsDirty();
-    //   return;
-    // }
-    // BGFX.bgfx_set_view_clear(
-    //   this.#viewId,
-    //   BGFX_Clear.COLOR | BGFX_Clear.DEPTH | BGFX_Clear.STENCIL,
-    //   0xff30aa_ff,
-    //   1.0,
-    //   0,
-    // );
-    // BGFX.bgfx_set_view_rect(
-    //   this.#viewId,
-    //   0,
-    //   0,
-    //   this.#bufferWidth,
-    //   this.#bufferHeight,
-    // );
-    // BGFX.bgfx_touch(this.#viewId);
-    GLFW.glfwSwapBuffers(this.#windowPtr);
+    if (this.isDirty) {
+      this.#renderer.rebuildFrame();
+      this.markAsClean();
+    }
+    this.#renderer.render(this.#stack3D);
   }
 }

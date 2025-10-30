@@ -85,7 +85,8 @@ export enum GLFW_ErrorCodes {
 
 // GLFW MARK: Window
 
-export enum GLFW_WindowHints {
+/** GLFW Window reference defs */
+export enum GLFW_WindowMacro {
   /** Specifies whether the windowed mode window will be given input focus when created. Possible values are TRUE and FALSE. This hint is ignored for full screen and initially hidden windows. */
   FOCUSED = 0x00020001,
   /** Window iconification window attribute. */
@@ -114,10 +115,6 @@ export enum GLFW_WindowHints {
   POSITION_Y = 0x0002000f,
   /** Specified whether the window content area should be resized based on the monitor content scale of any monitor it is placed on. This includes the initial placement when the window is created. Possible values are TRUE and FALSE. */
   SCALE_TO_MONITOR = 0x0002200c,
-}
-
-/** GLFW Window reference defs */
-export enum GLFW_WindowMacro {
   /** Mouse cursor hover window attribute. */
   HOVERED = 0x0002000b,
   /** Mouse input transparency window hint and attribute. */

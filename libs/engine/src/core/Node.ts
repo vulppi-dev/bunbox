@@ -1,7 +1,6 @@
 import { AbstractNode } from '@bunbox/tree';
 import type { EventMap, MergeEventMaps } from '@bunbox/utils';
 import type { InputsEventMap } from '../events';
-import type { AppLogLevel } from '../types';
 
 /**
  * Base scene-graph node.
@@ -22,14 +21,6 @@ export class Node<
    */
   _process(_deltaTime: number): void {
     // Override in subclasses
-  }
-
-  loggerCall(message: string, level: AppLogLevel, tag: string): this {
-    const root = this.getRoot();
-    if (root && root !== this) {
-      (root as Node).loggerCall(message, level, tag);
-    }
-    return this;
   }
 
   protected override _getType(): string {
