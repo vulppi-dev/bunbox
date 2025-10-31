@@ -43,17 +43,19 @@ jobs:
             -DDILIGENT_NO_OPENGL=OFF \
             -DDILIGENT_NO_VULKAN=OFF
           cmake --build . --config Release -j $(nproc)
-          
+
           # Strip libraries
-          find . -name "*.so" -exec strip {} \;      - name: Prepare artifacts
+          find . -name "*.so" -exec strip {} \;
+
+      - name: Prepare artifacts
         run: |
           mkdir -p artifacts/x64/linux
-          
+
           # Copy Diligent Core libraries
           find diligent/build -name "libDiligentCore*.so*" -exec cp {} artifacts/x64/linux/ \;
           find diligent/build -name "libGraphicsEngineOpenGL*.so*" -exec cp {} artifacts/x64/linux/ \;
           find diligent/build -name "libGraphicsEngineVk*.so*" -exec cp {} artifacts/x64/linux/ \;
-          
+
           # List copied files for debugging
           ls -lh artifacts/x64/linux/ || echo "No files found"
 
@@ -109,7 +111,7 @@ jobs:
           set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
           set(PKG_CONFIG_EXECUTABLE /usr/bin/aarch64-linux-gnu-pkg-config)
           EOF
-          
+
           mkdir build
           cd build
           cmake .. \
@@ -122,12 +124,14 @@ jobs:
             -DDILIGENT_NO_OPENGL=OFF \
             -DDILIGENT_NO_VULKAN=OFF || echo "CMake configuration may fail on ARM64 cross-compilation"
           cmake --build . --config Release -j $(nproc) || echo "Build failed, continuing..."
-          
+
           # Strip libraries if present
-          find . -name "*.so" -exec aarch64-linux-gnu-strip {} \; 2>/dev/null || true      - name: Prepare artifacts
+          find . -name "*.so" -exec aarch64-linux-gnu-strip {} \; 2>/dev/null || true
+
+      - name: Prepare artifacts
         run: |
           mkdir -p artifacts/arm64/linux
-          
+
           # Copy Diligent libraries if present
           find diligent/build -name "libDiligentCore*.so*" -exec cp {} artifacts/arm64/linux/ \; 2>/dev/null || touch artifacts/arm64/linux/libDiligentCore.so
           find diligent/build -name "libGraphicsEngineOpenGL*.so*" -exec cp {} artifacts/arm64/linux/ \; 2>/dev/null || touch artifacts/arm64/linux/libGraphicsEngineOpenGL.so
@@ -185,16 +189,18 @@ jobs:
             -DDILIGENT_NO_VULKAN=ON \
             -DDILIGENT_NO_METAL=OFF
           cmake --build . --config Release -j $(sysctl -n hw.ncpu)
-          
+
           # Strip libraries
-          find . -name "*.dylib" -exec strip -u -r {} \;      - name: Prepare artifacts
+          find . -name "*.dylib" -exec strip -u -r {} \;
+
+      - name: Prepare artifacts
         run: |
           mkdir -p artifacts/${{matrix.ARCH}}/darwin
-          
+
           # Copy Diligent libraries
           find diligent/build -name "libDiligentCore*.dylib" -exec cp {} artifacts/${{matrix.ARCH}}/darwin/ \;
           find diligent/build -name "libGraphicsEngineMtl*.dylib" -exec cp {} artifacts/${{matrix.ARCH}}/darwin/ \;
-          
+
           # List copied files for debugging
           ls -lh artifacts/${{matrix.ARCH}}/darwin/ || echo "No files found"
 
@@ -249,17 +255,19 @@ jobs:
       - name: Prepare artifacts
         run: |
           mkdir artifacts\x64\win32
-          
+
           REM Copy Diligent DLLs from Release folder
           for /r diligent\build %%f in (*DiligentCore*.dll) do copy "%%f" artifacts\x64\win32\ 2>nul
           for /r diligent\build %%f in (*GraphicsEngineD3D11*.dll) do copy "%%f" artifacts\x64\win32\ 2>nul
           for /r diligent\build %%f in (*GraphicsEngineD3D12*.dll) do copy "%%f" artifacts\x64\win32\ 2>nul
           for /r diligent\build %%f in (*GraphicsEngineOpenGL*.dll) do copy "%%f" artifacts\x64\win32\ 2>nul
           for /r diligent\build %%f in (*GraphicsEngineVk*.dll) do copy "%%f" artifacts\x64\win32\ 2>nul
-          
+
           REM List copied files for debugging
           dir artifacts\x64\win32\ || echo No files found
-        shell: cmd      - name: Upload artifacts
+        shell: cmd
+
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: windows-x64
