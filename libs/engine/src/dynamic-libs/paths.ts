@@ -1,8 +1,6 @@
-import { embeddedFiles } from 'bun';
 import { existsSync } from 'fs';
 import { join, resolve } from 'path';
 import { findProjectRoot } from '../utils/path';
-import { fileURLToPath } from 'url';
 
 const MODULE_DIR = findProjectRoot(import.meta.url);
 
@@ -36,21 +34,6 @@ const BGFX_LIBS: Record<string, any> = {
   },
 };
 
-const WGPU_LIBS: Record<string, any> = {
-  darwin: {
-    arm64: 'assets/arm64/darwin/libwgpu_native.dylib',
-    x64: 'assets/x64/darwin/libwgpu_native.dylib',
-  },
-  linux: {
-    arm64: 'assets/arm64/linux/libwgpu_native.so',
-    x64: 'assets/x64/linux/libwgpu_native.so',
-  },
-  win32: {
-    arm64: 'assets/arm64/win32/wgpu_native.dll',
-    x64: 'assets/x64/win32/wgpu_native.dll',
-  },
-};
-
 async function getDynamicLibPath(path?: string) {
   if (!path) return null;
   const relative = join('../..', path);
@@ -65,7 +48,4 @@ export const GLFW_PATH = await getDynamicLibPath(
 );
 export const BGFX_PATH = await getDynamicLibPath(
   BGFX_LIBS[process.platform]?.[process.arch],
-);
-export const WGPU_PATH = await getDynamicLibPath(
-  WGPU_LIBS[process.platform]?.[process.arch],
 );
