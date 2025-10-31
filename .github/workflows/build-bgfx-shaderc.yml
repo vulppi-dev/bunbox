@@ -32,7 +32,7 @@ jobs:
         run: |
           git clone --depth 1 https://github.com/bkaradzic/bgfx.git bgfx
           cd bgfx
-          ../GENie/bin/linux/genie --gcc=linux-gcc gmake
+          ../GENie/bin/linux/genie --with-tools --gcc=linux-gcc gmake
           make -R -C .build/projects/gmake-linux-gcc config=release64 shaderc
           strip .build/linux64_gcc/bin/shadercRelease
 
@@ -88,7 +88,7 @@ jobs:
           # Modify toolchain.lua to use correct strip command
           sed -i 's/strip -s/aarch64-linux-gnu-strip/' ../bx/scripts/toolchain.lua
 
-          ../GENie/bin/linux/genie --gcc=linux-arm-gcc gmake
+          ../GENie/bin/linux/genie --with-tools --gcc=linux-arm-gcc gmake
 
           make -R -C .build/projects/gmake-linux-arm-gcc config=release \
             CXX="aarch64-linux-gnu-g++" \
@@ -156,7 +156,7 @@ jobs:
           MACOSX_DEPLOYMENT_TARGET=${{matrix.OSX_MIN}} \
           CFLAGS="-mmacosx-version-min=${{matrix.OSX_MIN}}" \
           LDFLAGS="-mmacosx-version-min=${{matrix.OSX_MIN}}" \
-          ../bx/tools/bin/darwin/genie --with-macos=${{matrix.OSX_MIN}} --gcc=${{matrix.PLATFORM}} gmake
+          ../bx/tools/bin/darwin/genie --with-tools --with-macos=${{matrix.OSX_MIN}} --gcc=${{matrix.PLATFORM}} gmake
 
           MACOSX_DEPLOYMENT_TARGET=${{matrix.OSX_MIN}} \
           CFLAGS="-mmacosx-version-min=${{matrix.OSX_MIN}}" \
@@ -204,7 +204,7 @@ jobs:
         run: |
           git clone --depth 1 https://github.com/bkaradzic/bgfx.git bgfx
           cd bgfx
-          ..\GENie\bin\windows\genie.exe --gcc=mingw-gcc gmake
+          ..\GENie\bin\windows\genie.exe --with-tools --gcc=mingw-gcc gmake
           cd .build\projects\gmake-mingw-gcc
           mingw32-make config=release64 shaderc
         shell: cmd
