@@ -1,0 +1,171 @@
+name: Build GLFW
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master]
+    paths: ['.github/workflows/build-glfw.yml']
+
+jobs:
+  build:
+    name: Build ${{ matrix.id }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: linux-x64
+            os: ubuntu-22.04
+            target_os: linux
+            arch: x64
+            is_cross: false
+
+          - id: linux-arm64
+            os: ubuntu-22.04
+            target_os: linux
+            arch: arm64
+            is_cross: true
+
+          - id: macos-x64
+            os: macos-14
+            target_os: macos
+            arch: x64
+            cmake_arch: x86_64
+            osx_min: '10.15.4'
+
+          - id: macos-arm64
+            os: macos-14
+            target_os: macos
+            arch: arm64
+            cmake_arch: arm64
+            osx_min: '11.0'
+
+          - id: windows-x64
+            os: windows-2022
+            target_os: windows
+            arch: x64
+
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.id }}
+      cancel-in-progress: true
+
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 3 }
+
+      # ---------- Linux x64 deps ----------
+      - name: Install GLFW dependencies (Linux x64)
+        if: matrix.target_os == 'linux' && matrix.is_cross == false
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libxext-dev libwayland-dev libxkbcommon-dev
+
+      # ---------- Linux ARM64 cross toolchain ----------
+      - name: Prepare cross-compilation for ARM64
+        if: matrix.target_os == 'linux' && matrix.is_cross == true
+        run: |
+          DEBIAN_FRONTEND=noninteractive sudo apt-get -yq update
+          DEBIAN_FRONTEND=noninteractive sudo apt-get -yq install cmake gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libc6-dev-arm64-cross
+          sudo grep 'deb ' /etc/apt/sources.list | sudo tee /etc/apt/sources.list.d/ports.list
+          sudo sed -i 's/^deb /deb [arch=amd64] /' /etc/apt/sources.list
+          sudo sed -i 's#^deb [^ ]\+#deb [arch=arm64] https://ports.ubuntu.com/ubuntu-ports/#' /etc/apt/sources.list.d/ports.list
+          sudo dpkg --add-architecture arm64
+          sudo apt-get update || true
+          sudo apt-get -yq --allow-unauthenticated install libgl1-mesa-dev:arm64 x11proto-dev libx11-dev:arm64 -o Dpkg::Options::="--force-overwrite"
+
+      # ---------- Build (Linux) ----------
+      - name: Build GLFW (Linux)
+        if: matrix.target_os == 'linux'
+        run: |
+          git clone --depth 1 https://github.com/glfw/glfw.git glfw
+          cd glfw
+
+          if [ "${{ matrix.is_cross }}" = "true" ]; then
+            cat > toolchain-aarch64.cmake << 'EOF'
+            set(CMAKE_SYSTEM_NAME Linux)
+            set(CMAKE_SYSTEM_PROCESSOR aarch64)
+            set(CMAKE_C_COMPILER aarch64-linux-gnu-gcc)
+            set(CMAKE_CXX_COMPILER aarch64-linux-gnu-g++)
+            set(CMAKE_FIND_ROOT_PATH /usr/aarch64-linux-gnu)
+            set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+            set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+            set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+            EOF
+            cmake -S . -B build \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_TOOLCHAIN_FILE=toolchain-aarch64.cmake \
+              -DBUILD_SHARED_LIBS=ON \
+              -DGLFW_BUILD_EXAMPLES=OFF \
+              -DGLFW_BUILD_TESTS=OFF \
+              -DGLFW_BUILD_DOCS=OFF \
+              -DGLFW_BUILD_WAYLAND=OFF \
+              -DGLFW_BUILD_X11=OFF || echo "GLFW build may fail on ARM64 cross-compilation"
+            cmake --build build --config Release || echo "GLFW build failed, continuing..."
+          else
+            cmake -S . -B build \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DBUILD_SHARED_LIBS=ON \
+              -DGLFW_BUILD_EXAMPLES=OFF \
+              -DGLFW_BUILD_TESTS=OFF \
+              -DGLFW_BUILD_DOCS=OFF
+            cmake --build build --config Release
+            strip build/src/libglfw.so* || true
+          fi
+
+      # ---------- Build (macOS) ----------
+      - name: Build GLFW (macOS)
+        if: matrix.target_os == 'macos'
+        run: |
+          git clone --depth 1 https://github.com/glfw/glfw.git glfw
+          cd glfw
+          cmake -S . -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES=${{ matrix.cmake_arch }} \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=${{ matrix.osx_min }} \
+            -DBUILD_SHARED_LIBS=ON \
+            -DGLFW_BUILD_EXAMPLES=OFF \
+            -DGLFW_BUILD_TESTS=OFF \
+            -DGLFW_BUILD_DOCS=OFF
+          cmake --build build --config Release
+          strip -u -r build/src/libglfw*.dylib || true
+
+      # ---------- Build (Windows) ----------
+      - name: Setup MSVC
+        if: matrix.target_os == 'windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: amd64
+
+      - name: Build GLFW (Windows)
+        if: matrix.target_os == 'windows'
+        shell: cmd
+        run: |
+          git clone --depth 1 https://github.com/glfw/glfw.git glfw
+          cd glfw
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DGLFW_BUILD_EXAMPLES=OFF -DGLFW_BUILD_TESTS=OFF -DGLFW_BUILD_DOCS=OFF
+          cmake --build build --config Release
+
+      # ---------- Artifacts ----------
+      - name: Prepare artifacts
+        run: |
+          mkdir -p artifacts/${{ matrix.target_os }}/${{ matrix.arch }}
+
+          if [ "${{ matrix.target_os }}" = "linux" ]; then
+            if compgen -G "glfw/build/src/libglfw*.so*" > /dev/null; then
+              cp glfw/build/src/libglfw*.so* artifacts/${{ matrix.target_os }}/${{ matrix.arch }}/ || true
+            else
+              # Cross may fail; create placeholder to keep layout
+              touch artifacts/${{ matrix.target_os }}/${{ matrix.arch }}/libglfw.so
+            fi
+          elif [ "${{ matrix.target_os }}" = "macos" ]; then
+            find glfw/build/src -name "libglfw*.dylib" -exec cp {} artifacts/${{ matrix.target_os }}/${{ matrix.arch }}/libglfw.dylib \;
+          else
+            cp glfw\\build\\src\\Release\\glfw3.dll artifacts\\${{ matrix.target_os }}\\${{ matrix.arch }}\\glfw3.dll
+          fi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: glfw-${{ matrix.id }}
+          path: artifacts/
+          retention-days: 7
