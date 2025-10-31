@@ -20,7 +20,7 @@ jobs:
       # Build FreeType
       - name: Clone and build FreeType
         run: |
-          git clone --depth 1 https://github.com/freetype/freetype.git freetype
+          git clone --depth 1 --branch VER-2-14-1 https://github.com/freetype/freetype.git freetype
           cd freetype
           cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DFT_DISABLE_HARFBUZZ=ON -DFT_DISABLE_BZIP2=ON -DFT_DISABLE_PNG=ON -DFT_DISABLE_BROTLI=ON
           cmake --build build --config Release
@@ -65,7 +65,7 @@ jobs:
       # Build FreeType
       - name: Clone and build FreeType
         run: |
-          git clone --depth 1 https://github.com/freetype/freetype.git freetype
+          git clone --depth 1 --branch VER-2-14-1 https://github.com/freetype/freetype.git freetype
           cd freetype
           cat > toolchain-aarch64.cmake << 'EOF'
           set(CMAKE_SYSTEM_NAME Linux)
@@ -129,7 +129,7 @@ jobs:
       # Build FreeType
       - name: Clone and build FreeType
         run: |
-          git clone --depth 1 https://github.com/freetype/freetype.git freetype
+          git clone --depth 1 --branch VER-2-14-1 https://github.com/freetype/freetype.git freetype
           cd freetype
           cmake -S . -B build \
             -DCMAKE_BUILD_TYPE=Release \
@@ -173,7 +173,7 @@ jobs:
       # Build FreeType
       - name: Clone and build FreeType
         run: |
-          git clone --depth 1 https://github.com/freetype/freetype.git freetype
+          git clone --depth 1 --branch VER-2-14-1 https://github.com/freetype/freetype.git freetype
           cd freetype
           cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DFT_DISABLE_HARFBUZZ=ON -DFT_DISABLE_BZIP2=ON -DFT_DISABLE_PNG=ON -DFT_DISABLE_BROTLI=ON
           cmake --build build --config Release

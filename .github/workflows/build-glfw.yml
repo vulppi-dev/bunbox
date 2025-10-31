@@ -25,7 +25,7 @@ jobs:
 
       - name: Clone and build GLFW
         run: |
-          git clone --depth 1 https://github.com/glfw/glfw.git glfw
+          git clone --depth 1 --branch 3.3.10 https://github.com/glfw/glfw.git glfw
           cd glfw
           cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DGLFW_BUILD_EXAMPLES=OFF -DGLFW_BUILD_TESTS=OFF -DGLFW_BUILD_DOCS=OFF
           cmake --build build --config Release
@@ -70,7 +70,7 @@ jobs:
       # Build GLFW
       - name: Clone and build GLFW
         run: |
-          git clone --depth 1 https://github.com/glfw/glfw.git glfw
+          git clone --depth 1 --branch 3.3.10 https://github.com/glfw/glfw.git glfw
           cd glfw
           cat > toolchain-aarch64.cmake << 'EOF'
           set(CMAKE_SYSTEM_NAME Linux)
@@ -135,7 +135,7 @@ jobs:
       # Build GLFW
       - name: Clone and build GLFW
         run: |
-          git clone --depth 1 https://github.com/glfw/glfw.git glfw
+          git clone --depth 1 --branch 3.3.10 https://github.com/glfw/glfw.git glfw
           cd glfw
           cmake -S . -B build \
             -DCMAKE_BUILD_TYPE=Release \
@@ -178,7 +178,7 @@ jobs:
       # Build GLFW
       - name: Clone and build GLFW
         run: |
-          git clone --depth 1 https://github.com/glfw/glfw.git glfw
+          git clone --depth 1 --branch 3.3.10 https://github.com/glfw/glfw.git glfw
           cd glfw
           cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DGLFW_BUILD_EXAMPLES=OFF -DGLFW_BUILD_TESTS=OFF -DGLFW_BUILD_DOCS=OFF
           cmake --build build --config Release
