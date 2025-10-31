@@ -8,8 +8,8 @@ const MODULE_DIR = findProjectRoot(import.meta.url);
 
 const GLFW_LIBS: Record<string, any> = {
   darwin: {
-    arm64: 'assets/arm64/macos/libglfw.dylib',
-    x64: 'assets/x64/macos/libglfw.dylib',
+    arm64: 'assets/arm64/darwin/libglfw.dylib',
+    x64: 'assets/x64/darwin/libglfw.dylib',
   },
   linux: {
     arm64: 'assets/arm64/linux/libglfw.so',
@@ -23,8 +23,8 @@ const GLFW_LIBS: Record<string, any> = {
 
 const BGFX_LIBS: Record<string, any> = {
   darwin: {
-    arm64: 'assets/arm64/macos/libbgfx.dylib',
-    x64: 'assets/x64/macos/libbgfx.dylib',
+    arm64: 'assets/arm64/darwin/libbgfx.dylib',
+    x64: 'assets/x64/darwin/libbgfx.dylib',
   },
   linux: {
     arm64: 'assets/arm64/linux/libbgfx.so',
@@ -38,8 +38,8 @@ const BGFX_LIBS: Record<string, any> = {
 
 const WGPU_LIBS: Record<string, any> = {
   darwin: {
-    arm64: 'assets/arm64/macos/libwgpu_native.dylib',
-    x64: 'assets/x64/macos/libwgpu_native.dylib',
+    arm64: 'assets/arm64/darwin/libwgpu_native.dylib',
+    x64: 'assets/x64/darwin/libwgpu_native.dylib',
   },
   linux: {
     arm64: 'assets/arm64/linux/libwgpu_native.so',
