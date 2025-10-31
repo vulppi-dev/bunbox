@@ -65,7 +65,7 @@ jobs:
           sudo apt-get update || true
 
       - name: Install cross-compilation dependencies
-        run: sudo apt-get -yq --allow-unauthenticated install libgl1-mesa-dev:arm64 x11proto-dev libx11-dev:arm64 -o Dpkg::Options::="--force-overwrite"
+        run: sudo apt-get -yq --allow-unauthenticated install libgl1-mesa-dev:arm64 x11proto-dev libx11-dev:arm64 libxml2:arm64 -o Dpkg::Options::="--force-overwrite"
 
       # Build GLFW
       - name: Clone and build GLFW
