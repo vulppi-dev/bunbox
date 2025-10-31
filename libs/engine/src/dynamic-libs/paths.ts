@@ -34,6 +34,21 @@ const BGFX_LIBS: Record<string, any> = {
   },
 };
 
+const FREE_TYPE_LIBS: Record<string, any> = {
+  darwin: {
+    arm64: 'assets/arm64/darwin/libfreetype.dylib',
+    x64: 'assets/x64/darwin/libfreetype.dylib',
+  },
+  linux: {
+    arm64: 'assets/arm64/linux/libfreetype.so',
+    x64: 'assets/x64/linux/libfreetype.so',
+  },
+  win32: {
+    arm64: 'assets/arm64/win32/freetype.dll',
+    x64: 'assets/x64/win32/freetype.dll',
+  },
+};
+
 async function getDynamicLibPath(path?: string) {
   if (!path) return null;
   const relative = join('../..', path);
@@ -46,6 +61,11 @@ async function getDynamicLibPath(path?: string) {
 export const GLFW_PATH = await getDynamicLibPath(
   GLFW_LIBS[process.platform]?.[process.arch],
 );
+
 export const BGFX_PATH = await getDynamicLibPath(
   BGFX_LIBS[process.platform]?.[process.arch],
+);
+
+export const FREE_TYPE_PATH = await getDynamicLibPath(
+  FREE_TYPE_LIBS[process.platform]?.[process.arch],
 );
