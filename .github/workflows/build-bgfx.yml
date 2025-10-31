@@ -1,170 +1,239 @@
-name: Build bgfx
+name: Build BGFX
 
 on:
   workflow_dispatch:
   push:
-    branches: [master]
-    paths: ['.github/workflows/build-bgfx.yml']
+    branches:
+      - master
+    paths:
+      - '.github/workflows/build-bgfx.yml'
 
 jobs:
-  build:
-    name: Build ${{ matrix.id }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - id: linux-x64
-            os: ubuntu-22.04
-            target_os: linux
-            arch: x64
-            is_cross: false
-
-          - id: linux-arm64
-            os: ubuntu-22.04
-            target_os: linux
-            arch: arm64
-            is_cross: true
-
-          - id: macos-x64
-            os: macos-14
-            target_os: macos
-            arch: x64
-            platform: osx-x64
-            osx_min: '10.15.4'
-
-          - id: macos-arm64
-            os: macos-14
-            target_os: macos
-            arch: arm64
-            platform: osx-arm64
-            osx_min: '11.0'
-
-          - id: windows-x64
-            os: windows-2022
-            target_os: windows
-            arch: x64
-
-    concurrency:
-      group: ${{ github.workflow }}-${{ github.ref }}-${{ matrix.id }}
-      cancel-in-progress: true
-
+  linux-x64:
+    name: Linux x64
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-        with: { fetch-depth: 3 }
+        with:
+          fetch-depth: 3
 
-      # ---------- Linux deps ----------
-      - name: Install bgfx dependencies (Linux)
-        if: matrix.target_os == 'linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev x11proto-dev libx11-dev
+      # Build bgfx
+      - name: Install bgfx dependencies
+        run: sudo apt-get install -y libgl1-mesa-dev libgles2-mesa-dev libegl1-mesa-dev x11proto-dev libx11-dev
 
-      # ---------- GENie for Linux ----------
-      - name: Clone bx, bimg & GENie (Linux)
-        if: matrix.target_os == 'linux'
+      - name: Clone bx, bimg & GENie
         run: |
           git clone --depth 1 https://github.com/bkaradzic/bx.git bx
           git clone --depth 1 https://github.com/bkaradzic/bimg.git bimg
           git clone https://github.com/bkaradzic/GENie.git GENie
-          cd GENie && make
+          cd GENie
+          make
 
-      # ---------- Build (Linux x64) ----------
-      - name: Build bgfx (Linux x64)
-        if: matrix.target_os == 'linux' && matrix.is_cross == false
+      - name: Build bgfx
         run: |
           git clone --depth 1 https://github.com/bkaradzic/bgfx.git bgfx
           cd bgfx
           ../GENie/bin/linux/genie --with-shared-lib --gcc=linux-gcc gmake
           make -R -C .build/projects/gmake-linux-gcc config=release64 bgfx-shared-lib
-          strip .build/linux64_gcc/bin/libbgfx-shared-libRelease.so || true
+          strip .build/linux64_gcc/bin/libbgfx-shared-libRelease.so
 
-      # ---------- Build (Linux ARM64 cross) ----------
-      - name: Build bgfx (Linux ARM64 cross)
-        if: matrix.target_os == 'linux' && matrix.is_cross == true
+      - name: Prepare artifacts
+        run: |
+          mkdir -p artifacts/x64/linux
+          cp bgfx/.build/linux64_gcc/bin/libbgfx-shared-libRelease.so artifacts/x64/linux/libbgfx.so
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-x64
+          path: artifacts/
+          retention-days: 7
+
+  linux-arm64:
+    name: Linux ARM64
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 3
+
+      - name: Install dependencies
+        run: |
+          DEBIAN_FRONTEND=noninteractive sudo apt-get -yq update
+          DEBIAN_FRONTEND=noninteractive sudo apt-get -yq install cmake gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libc6-dev-arm64-cross
+
+      - name: Prepare cross-compilation for arm64
+        run: |
+          sudo grep 'deb ' /etc/apt/sources.list | sudo tee /etc/apt/sources.list.d/ports.list
+          sudo sed -i 's/^deb /deb [arch=amd64] /' /etc/apt/sources.list
+          sudo sed -i 's#^deb [^ ]\+#deb [arch=arm64] https://ports.ubuntu.com/ubuntu-ports/#' /etc/apt/sources.list.d/ports.list
+          sudo dpkg --add-architecture arm64
+          sudo apt-get update || true
+
+      - name: Install cross-compilation dependencies
+        run: sudo apt-get -yq --allow-unauthenticated install libgl1-mesa-dev:arm64 x11proto-dev libx11-dev:arm64 -o Dpkg::Options::="--force-overwrite"
+
+      # Build bgfx
+      - name: Clone bx, bimg & GENie
+        run: |
+          git clone --depth 1 https://github.com/bkaradzic/bx.git bx
+          git clone --depth 1 https://github.com/bkaradzic/bimg.git bimg
+          git clone https://github.com/bkaradzic/GENie.git GENie
+          cd GENie
+          make
+
+      - name: Build bgfx
         run: |
           git clone --depth 1 https://github.com/bkaradzic/bgfx.git bgfx
           cd bgfx
+
+          # Modify toolchain.lua to use correct strip command
           sed -i 's/strip -s/aarch64-linux-gnu-strip/' ../bx/scripts/toolchain.lua
+
           ../GENie/bin/linux/genie --with-shared-lib --gcc=linux-arm-gcc gmake
+
           make -R -C .build/projects/gmake-linux-arm-gcc config=release \
             CXX="aarch64-linux-gnu-g++" \
             CC="aarch64-linux-gnu-gcc" \
             CFLAGS="-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0" \
             bgfx-shared-lib
-          aarch64-linux-gnu-strip .build/linux32_arm_gcc/bin/libbgfx-shared-libRelease.so || true
 
-      # ---------- Build (macOS / Metal only) ----------
-      - name: Clone bx, bimg (macOS)
-        if: matrix.target_os == 'macos'
+          aarch64-linux-gnu-strip .build/linux32_arm_gcc/bin/libbgfx-shared-libRelease.so
+
+      - name: Prepare artifacts
+        run: |
+          mkdir -p artifacts/arm64/linux logs/linux-arm64
+
+          echo "--- bgfx build output ---" > logs/linux-arm64/bgfx.txt
+          if [ -d "bgfx/.build" ]; then ls -la bgfx/.build >> logs/linux-arm64/bgfx.txt; fi
+
+          # Prefer the expected path, fallback to any libbgfx found under .build
+          BGFX_EXPECTED="bgfx/.build/linux32_arm_gcc/bin/libbgfx-shared-libRelease.so"
+          if [ -f "$BGFX_EXPECTED" ]; then
+            cp "$BGFX_EXPECTED" artifacts/arm64/linux/libbgfx.so
+            echo "bgfx: copied from expected path" >> logs/linux-arm64/bgfx.txt
+          else
+            echo "bgfx: expected file not found, searching .build for libbgfx" >> logs/linux-arm64/bgfx.txt
+            find bgfx/.build -name "libbgfx*.so*" -print -exec cp {} artifacts/arm64/linux/libbgfx.so \; -quit 2>/dev/null || true
+            if [ -f artifacts/arm64/linux/libbgfx.so ]; then
+              echo "bgfx: copied from fallback" >> logs/linux-arm64/bgfx.txt
+            else
+              echo "bgfx: not built" >> logs/linux-arm64/bgfx.txt
+              exit 1
+            fi
+          fi
+
+          if [ ! -s artifacts/arm64/linux/libbgfx.so ]; then
+            echo "bgfx: artifact is empty" >> logs/linux-arm64/bgfx.txt
+            exit 1
+          fi
+
+          ls -la artifacts/arm64/linux || true
+          cp -r logs/linux-arm64 artifacts/arm64/linux/ || true
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-arm64
+          path: artifacts/
+          retention-days: 7
+
+  macos:
+    name: macOS
+    runs-on: macos-14
+    strategy:
+      fail-fast: false
+      matrix:
+        ARCH: [x64, arm64]
+        include:
+          - ARCH: x64
+            PLATFORM: osx-x64
+            CMAKE_ARCH: x86_64
+            OSX_MIN: '10.15.4'
+          - ARCH: arm64
+            PLATFORM: osx-arm64
+            CMAKE_ARCH: arm64
+            OSX_MIN: '11.0'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 3
+
+      # Build bgfx
+      - name: Clone bx, bimg & GENie
         run: |
           git clone --depth 1 https://github.com/bkaradzic/bx.git bx
           git clone --depth 1 https://github.com/bkaradzic/bimg.git bimg
 
-      - name: Build bgfx (macOS Metal)
-        if: matrix.target_os == 'macos'
+      - name: Build bgfx (Metal only)
         run: |
           git clone --depth 1 https://github.com/bkaradzic/bgfx.git bgfx
           cd bgfx
-          MACOSX_DEPLOYMENT_TARGET=${{ matrix.osx_min }} \
-          CFLAGS="-mmacosx-version-min=${{ matrix.osx_min }}" \
-          LDFLAGS="-mmacosx-version-min=${{ matrix.osx_min }}" \
-          ../bx/tools/bin/darwin/genie --with-shared-lib --with-macos=${{ matrix.osx_min }} --gcc=${{ matrix.platform }} gmake
+          MACOSX_DEPLOYMENT_TARGET=${{matrix.OSX_MIN}} \
+          CFLAGS="-mmacosx-version-min=${{matrix.OSX_MIN}}" \
+          LDFLAGS="-mmacosx-version-min=${{matrix.OSX_MIN}}" \
+          ../bx/tools/bin/darwin/genie --with-shared-lib --with-macos=${{matrix.OSX_MIN}} --gcc=${{matrix.PLATFORM}} gmake
 
-          # Fix potential syntax issue
+          # Fix syntax error in renderer_mtl.mm if present
           if grep -q "MTL_RELEASE(m_screenshotBlitRenderPipelineState)$" src/renderer_mtl.mm 2>/dev/null; then
             sed -i '' 's/MTL_RELEASE(m_screenshotBlitRenderPipelineState)$/MTL_RELEASE(m_screenshotBlitRenderPipelineState);/g' src/renderer_mtl.mm
           fi
 
-          MACOSX_DEPLOYMENT_TARGET=${{ matrix.osx_min }} \
-          CFLAGS="-mmacosx-version-min=${{ matrix.osx_min }} -D BGFX_CONFIG_RENDERER_METAL=1 -D BGFX_CONFIG_RENDERER_OPENGL=0 -D BGFX_CONFIG_RENDERER_VULKAN=0 -D BGFX_CONFIG_RENDERER_DIRECT3D9=0 -D BGFX_CONFIG_RENDERER_DIRECT3D11=0 -D BGFX_CONFIG_RENDERER_DIRECT3D12=0" \
-          LDFLAGS="-mmacosx-version-min=${{ matrix.osx_min }}" \
-          make -C .build/projects/gmake-${{ matrix.platform }} config=release64 bgfx-shared-lib
-          strip -u -r .build/${{ matrix.platform }}/bin/libbgfx-shared-libRelease.dylib || true
+          MACOSX_DEPLOYMENT_TARGET=${{matrix.OSX_MIN}} \
+          CFLAGS="-mmacosx-version-min=${{matrix.OSX_MIN}} -D BGFX_CONFIG_RENDERER_METAL=1 -D BGFX_CONFIG_RENDERER_OPENGL=0 -D BGFX_CONFIG_RENDERER_VULKAN=0 -D BGFX_CONFIG_RENDERER_DIRECT3D9=0 -D BGFX_CONFIG_RENDERER_DIRECT3D11=0 -D BGFX_CONFIG_RENDERER_DIRECT3D12=0" \
+          LDFLAGS="-mmacosx-version-min=${{matrix.OSX_MIN}}" \
+          make -C .build/projects/gmake-${{matrix.PLATFORM}} config=release64 bgfx-shared-lib
+          strip -u -r .build/${{matrix.PLATFORM}}/bin/libbgfx-shared-libRelease.dylib
 
-      # ---------- Build (Windows) ----------
-      - name: Setup MSVC
-        if: matrix.target_os == 'windows'
-        uses: ilammy/msvc-dev-cmd@v1
+      - name: Prepare artifacts
+        run: |
+          mkdir -p artifacts/${{matrix.ARCH}}/darwin
+          cp bgfx/.build/${{matrix.PLATFORM}}/bin/libbgfx-shared-libRelease.dylib artifacts/${{matrix.ARCH}}/darwin/libbgfx.dylib
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{matrix.ARCH}}
+          path: artifacts/
+          retention-days: 7
+
+  windows-x64:
+    name: Windows x64
+    runs-on: windows-2022
+    defaults:
+      run:
+        shell: cmd
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 3
+
+      - uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: amd64
 
-      - name: Build bgfx (Windows)
-        if: matrix.target_os == 'windows'
-        shell: cmd
+      # Build bgfx
+      - name: Clone bx, bimg & GENie
         run: |
           git clone --depth 1 https://github.com/bkaradzic/bx.git bx
           git clone --depth 1 https://github.com/bkaradzic/bimg.git bimg
+
+      - name: Build bgfx
+        run: |
           git clone --depth 1 https://github.com/bkaradzic/bgfx.git bgfx
           cd bgfx
           ..\bx\tools\bin\windows\genie --with-shared-lib vs2022 --platform x64
           msbuild .build\projects\vs2022\bgfx-shared-lib.vcxproj /p:Configuration=Release /p:Platform=x64
 
-      # ---------- Artifacts ----------
       - name: Prepare artifacts
         run: |
-          mkdir -p artifacts/${{ matrix.target_os }}/${{ matrix.arch }}
-
-          if [ "${{ matrix.target_os }}" = "linux" ]; then
-            BGFX_X64="bgfx/.build/linux64_gcc/bin/libbgfx-shared-libRelease.so"
-            BGFX_ARM="bgfx/.build/linux32_arm_gcc/bin/libbgfx-shared-libRelease.so"
-            if [ -f "$BGFX_X64" ]; then
-              cp "$BGFX_X64" artifacts/${{ matrix.target_os }}/${{ matrix.arch }}/libbgfx.so
-            elif [ -f "$BGFX_ARM" ]; then
-              cp "$BGFX_ARM" artifacts/${{ matrix.target_os }}/${{ matrix.arch }}/libbgfx.so
-            else
-              find bgfx/.build -name "libbgfx*.so*" -print -exec cp {} artifacts/${{ matrix.target_os }}/${{ matrix.arch }}/libbgfx.so \; -quit 2>/dev/null || true
-            fi
-            [ -f artifacts/${{ matrix.target_os }}/${{ matrix.arch }}/libbgfx.so ] || (echo "bgfx not built" && exit 1)
-          elif [ "${{ matrix.target_os }}" = "macos" ]; then
-            cp bgfx/.build/${{ matrix.platform }}/bin/libbgfx-shared-libRelease.dylib artifacts/${{ matrix.target_os }}/${{ matrix.arch }}/libbgfx.dylib
-          else
-            cp bgfx\\.build\\win64_vs2022\\bin\\bgfx-shared-libRelease.dll artifacts\\${{ matrix.target_os }}\\${{ matrix.arch }}\\bgfx.dll
-          fi
+          mkdir artifacts\x64\win32
+          copy bgfx\.build\win64_vs2022\bin\bgfx-shared-libRelease.dll artifacts\x64\win32\bgfx.dll
+        shell: cmd
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: bgfx-${{ matrix.id }}
+          name: windows-x64
           path: artifacts/
           retention-days: 7
