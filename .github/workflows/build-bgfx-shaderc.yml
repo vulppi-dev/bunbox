@@ -191,28 +191,24 @@ jobs:
         with:
           arch: amd64
 
-      - name: Clone bx, bimg & GENie
+      - name: Clone bx, bimg & bgfx
         run: |
           git clone --depth 1 https://github.com/bkaradzic/bx.git bx
           git clone --depth 1 https://github.com/bkaradzic/bimg.git bimg
-          git clone https://github.com/bkaradzic/GENie.git GENie
-          cd GENie
-          nmake -f scripts\genie.mak windows
+          git clone --depth 1 https://github.com/bkaradzic/bgfx.git bgfx
         shell: cmd
 
       - name: Build bgfx shaderc
         run: |
-          git clone --depth 1 https://github.com/bkaradzic/bgfx.git bgfx
           cd bgfx
-          ..\GENie\bin\windows\genie.exe --with-tools --gcc=mingw-gcc gmake
-          cd .build\projects\gmake-mingw-gcc
-          mingw32-make config=release64 shaderc
+          ..\bx\tools\bin\windows\genie.exe --with-tools vs2022
+          msbuild .build\projects\vs2022\shaderc.vcxproj /p:Configuration=Release /p:Platform=x64
         shell: cmd
 
       - name: Prepare artifacts
         run: |
           mkdir artifacts\x64\win32
-          copy bgfx\.build\win64_mingw-gcc\bin\shadercRelease.exe artifacts\x64\win32\shaderc.exe
+          copy bgfx\.build\win64_vs2022\bin\shadercRelease.exe artifacts\x64\win32\shaderc.exe
         shell: cmd
 
       - name: Upload artifacts
