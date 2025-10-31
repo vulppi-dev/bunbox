@@ -111,8 +111,10 @@ jobs:
           mkdir -p artifacts/arm64/linux
 
           # Copy shaderc if present, otherwise create a placeholder
-          if compgen -G "shaderc/build/libshaderc/libshaderc_shared.so*" > /dev/null; then
-            cp shaderc/build/libshaderc/libshaderc_shared.so* artifacts/arm64/linux/libshaderc.so || true
+          if [ -f "shaderc/build/libshaderc/libshaderc_shared.so" ]; then
+            cp shaderc/build/libshaderc/libshaderc_shared.so artifacts/arm64/linux/libshaderc.so
+          elif [ -f "shaderc/build/libshaderc/libshaderc_shared.so.1" ]; then
+            cp shaderc/build/libshaderc/libshaderc_shared.so.1 artifacts/arm64/linux/libshaderc.so
           else
             touch artifacts/arm64/linux/libshaderc.so
           fi
