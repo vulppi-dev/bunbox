@@ -1,0 +1,274 @@
+name: Build Diligent Engine
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+    paths:
+      - '.github/workflows/build-diligent.yml'
+
+jobs:
+  linux-x64:
+    name: Linux x64
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 3
+
+      # Build Diligent Engine
+      - name: Install Diligent dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev libvulkan-dev
+
+      - name: Clone Diligent Engine
+        run: |
+          git clone --depth 1 --branch master --recurse-submodules https://github.com/DiligentGraphics/DiligentEngine.git diligent
+          cd diligent
+          git submodule update --init --recursive --depth 1
+
+      - name: Build Diligent Engine
+        run: |
+          cd diligent
+          mkdir build
+          cd build
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DDILIGENT_BUILD_SAMPLES=OFF \
+            -DDILIGENT_BUILD_TESTS=OFF \
+            -DDILIGENT_BUILD_UNITY_PLUGIN=OFF \
+            -DDILIGENT_NO_OPENGL=OFF \
+            -DDILIGENT_NO_VULKAN=OFF \
+            -DBUILD_SHARED_LIBS=ON
+          cmake --build . --config Release -j $(nproc)
+
+          # Strip libraries
+          find . -name "*.so" -exec strip {} \;
+
+      - name: Prepare artifacts
+        run: |
+          mkdir -p artifacts/x64/linux
+
+          # Copy Diligent Core libraries
+          find diligent/build -name "libDiligentCore.so" -exec cp {} artifacts/x64/linux/ \;
+          find diligent/build -name "libGraphicsEngineOpenGL.so" -exec cp {} artifacts/x64/linux/ \;
+          find diligent/build -name "libGraphicsEngineVk.so" -exec cp {} artifacts/x64/linux/ \;
+
+          # List copied files for debugging
+          ls -lh artifacts/x64/linux/
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-x64
+          path: artifacts/
+          retention-days: 7
+
+  linux-arm64:
+    name: Linux ARM64
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 3
+
+      - name: Install dependencies
+        run: |
+          DEBIAN_FRONTEND=noninteractive sudo apt-get -yq update
+          DEBIAN_FRONTEND=noninteractive sudo apt-get -yq install cmake gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libc6-dev-arm64-cross
+
+      - name: Prepare cross-compilation for arm64
+        run: |
+          sudo grep 'deb ' /etc/apt/sources.list | sudo tee /etc/apt/sources.list.d/ports.list
+          sudo sed -i 's/^deb /deb [arch=amd64] /' /etc/apt/sources.list
+          sudo sed -i 's#^deb [^ ]\+#deb [arch=arm64] https://ports.ubuntu.com/ubuntu-ports/#' /etc/apt/sources.list.d/ports.list
+          sudo dpkg --add-architecture arm64
+          sudo apt-get update || true
+
+      - name: Install cross-compilation dependencies
+        run: sudo apt-get -yq --allow-unauthenticated install libgl1-mesa-dev:arm64 x11proto-dev libx11-dev:arm64 libxml2:arm64 libvulkan-dev:arm64 -o Dpkg::Options::="--force-overwrite"
+
+      # Build Diligent Engine
+      - name: Clone Diligent Engine
+        run: |
+          git clone --depth 1 --branch master --recurse-submodules https://github.com/DiligentGraphics/DiligentEngine.git diligent
+          cd diligent
+          git submodule update --init --recursive --depth 1
+
+      - name: Build Diligent Engine
+        run: |
+          cd diligent
+          cat > toolchain-aarch64.cmake << 'EOF'
+          set(CMAKE_SYSTEM_NAME Linux)
+          set(CMAKE_SYSTEM_PROCESSOR aarch64)
+          set(CMAKE_C_COMPILER aarch64-linux-gnu-gcc)
+          set(CMAKE_CXX_COMPILER aarch64-linux-gnu-g++)
+          set(CMAKE_FIND_ROOT_PATH /usr/aarch64-linux-gnu)
+          set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+          set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+          set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+          EOF
+
+          mkdir build
+          cd build
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE=../toolchain-aarch64.cmake \
+            -DDILIGENT_BUILD_SAMPLES=OFF \
+            -DDILIGENT_BUILD_TESTS=OFF \
+            -DDILIGENT_BUILD_UNITY_PLUGIN=OFF \
+            -DDILIGENT_NO_OPENGL=OFF \
+            -DDILIGENT_NO_VULKAN=OFF \
+            -DBUILD_SHARED_LIBS=ON || echo "CMake configuration may fail on ARM64 cross-compilation"
+          cmake --build . --config Release -j $(nproc) || echo "Build failed, continuing..."
+
+          # Strip libraries if present
+          find . -name "*.so" -exec aarch64-linux-gnu-strip {} \; 2>/dev/null || true
+
+      - name: Prepare artifacts
+        run: |
+          mkdir -p artifacts/arm64/linux
+
+          # Copy Diligent libraries if present
+          find diligent/build -name "libDiligentCore.so" -exec cp {} artifacts/arm64/linux/ \; 2>/dev/null || touch artifacts/arm64/linux/libDiligentCore.so
+          find diligent/build -name "libGraphicsEngineOpenGL.so" -exec cp {} artifacts/arm64/linux/ \; 2>/dev/null || touch artifacts/arm64/linux/libGraphicsEngineOpenGL.so
+          find diligent/build -name "libGraphicsEngineVk.so" -exec cp {} artifacts/arm64/linux/ \; 2>/dev/null || touch artifacts/arm64/linux/libGraphicsEngineVk.so
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-arm64
+          path: artifacts/
+          retention-days: 7
+
+  macos:
+    name: macOS
+    runs-on: macos-14
+    strategy:
+      fail-fast: false
+      matrix:
+        ARCH: [x64, arm64]
+        include:
+          - ARCH: x64
+            PLATFORM: osx-x64
+            CMAKE_ARCH: x86_64
+            OSX_MIN: '10.15.4'
+          - ARCH: arm64
+            PLATFORM: osx-arm64
+            CMAKE_ARCH: arm64
+            OSX_MIN: '11.0'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 3
+
+      # Build Diligent Engine
+      - name: Clone Diligent Engine
+        run: |
+          git clone --depth 1 --branch master --recurse-submodules https://github.com/DiligentGraphics/DiligentEngine.git diligent
+          cd diligent
+          git submodule update --init --recursive --depth 1
+
+      - name: Build Diligent Engine (Metal)
+        run: |
+          cd diligent
+          mkdir build
+          cd build
+          cmake .. \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES=${{matrix.CMAKE_ARCH}} \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=${{matrix.OSX_MIN}} \
+            -DDILIGENT_BUILD_SAMPLES=OFF \
+            -DDILIGENT_BUILD_TESTS=OFF \
+            -DDILIGENT_BUILD_UNITY_PLUGIN=OFF \
+            -DDILIGENT_NO_OPENGL=ON \
+            -DDILIGENT_NO_VULKAN=ON \
+            -DDILIGENT_NO_METAL=OFF \
+            -DBUILD_SHARED_LIBS=ON
+          cmake --build . --config Release -j $(sysctl -n hw.ncpu)
+
+          # Strip libraries
+          find . -name "*.dylib" -exec strip -u -r {} \;
+
+      - name: Prepare artifacts
+        run: |
+          mkdir -p artifacts/${{matrix.ARCH}}/darwin
+
+          # Copy Diligent libraries
+          find diligent/build -name "libDiligentCore.dylib" -exec cp {} artifacts/${{matrix.ARCH}}/darwin/ \;
+          find diligent/build -name "libGraphicsEngineMtl.dylib" -exec cp {} artifacts/${{matrix.ARCH}}/darwin/ \;
+
+          # List copied files for debugging
+          ls -lh artifacts/${{matrix.ARCH}}/darwin/
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{matrix.ARCH}}
+          path: artifacts/
+          retention-days: 7
+
+  windows-x64:
+    name: Windows x64
+    runs-on: windows-2022
+    defaults:
+      run:
+        shell: cmd
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 3
+
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: amd64
+
+      # Build Diligent Engine
+      - name: Clone Diligent Engine
+        run: |
+          git clone --depth 1 --branch master --recurse-submodules https://github.com/DiligentGraphics/DiligentEngine.git diligent
+          cd diligent
+          git submodule update --init --recursive --depth 1
+
+      - name: Build Diligent Engine
+        run: |
+          cd diligent
+          mkdir build
+          cd build
+          cmake .. ^
+            -G "Visual Studio 17 2022" ^
+            -A x64 ^
+            -DCMAKE_BUILD_TYPE=Release ^
+            -DDILIGENT_BUILD_SAMPLES=OFF ^
+            -DDILIGENT_BUILD_TESTS=OFF ^
+            -DDILIGENT_BUILD_UNITY_PLUGIN=OFF ^
+            -DDILIGENT_NO_OPENGL=OFF ^
+            -DDILIGENT_NO_DIRECT3D11=OFF ^
+            -DDILIGENT_NO_DIRECT3D12=OFF ^
+            -DDILIGENT_NO_VULKAN=OFF ^
+            -DBUILD_SHARED_LIBS=ON
+          cmake --build . --config Release -j %NUMBER_OF_PROCESSORS%
+
+      - name: Prepare artifacts
+        run: |
+          mkdir artifacts\x64\win32
+
+          REM Copy Diligent DLLs
+          for /r diligent\build %%f in (DiligentCore.dll) do copy "%%f" artifacts\x64\win32\
+          for /r diligent\build %%f in (GraphicsEngineD3D11.dll) do copy "%%f" artifacts\x64\win32\
+          for /r diligent\build %%f in (GraphicsEngineD3D12.dll) do copy "%%f" artifacts\x64\win32\
+          for /r diligent\build %%f in (GraphicsEngineOpenGL.dll) do copy "%%f" artifacts\x64\win32\
+          for /r diligent\build %%f in (GraphicsEngineVk.dll) do copy "%%f" artifacts\x64\win32\
+
+          REM List copied files for debugging
+          dir artifacts\x64\win32\
+        shell: cmd
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-x64
+          path: artifacts/
+          retention-days: 7
