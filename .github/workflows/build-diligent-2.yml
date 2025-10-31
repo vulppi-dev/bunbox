@@ -28,7 +28,7 @@ jobs:
         run: |
           git clone --depth 1 --recursive https://github.com/DiligentGraphics/DiligentEngine.git DiligentEngine
 
-      - name: Configure (Release, GL+Vulkan only)
+      - name: Configure (Release, GL+Vulkan)
         run: |
           cmake -S DiligentEngine -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
@@ -46,12 +46,7 @@ jobs:
       - name: Strip and collect artifacts
         run: |
           mkdir -p artifacts/x64/linux
-          # tenta encontrar e copiar as .so relevantes
           find build -type f -name "libGraphicsEngine*.so*" -exec strip {} \; -exec cp {} artifacts/x64/linux/ \; || true
-          # fallback: copie qualquer coisa que comece com libGraphicsEngine
-          if [ -z "$(ls -A artifacts/x64/linux)" ]; then
-            find build -type f -name "libGraphicsEngine*.so*" -exec cp {} artifacts/x64/linux/ \; || true
-          fi
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -68,20 +63,35 @@ jobs:
         with:
           fetch-depth: 3
 
-      - name: Cross toolchain + Vulkan:arm64
+      - name: Prepare multiarch sources for arm64 (use ports.ubuntu.com)
         run: |
-          sudo apt-get update
-          sudo apt-get install -y cmake ninja-build gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libc6-dev-arm64-cross
-          # habilita repositório arm64 e instala libvulkan-dev:arm64
           sudo dpkg --add-architecture arm64
-          sudo apt-get update || true
-          sudo apt-get -yq --allow-unauthenticated install libvulkan-dev:arm64
+          sudo tee /etc/apt/sources.list >/dev/null <<'EOF'
+          # amd64 repos
+          deb [arch=amd64] http://archive.ubuntu.com/ubuntu jammy main restricted universe multiverse
+          deb [arch=amd64] http://archive.ubuntu.com/ubuntu jammy-updates main restricted universe multiverse
+          deb [arch=amd64] http://archive.ubuntu.com/ubuntu jammy-backports main restricted universe multiverse
+          deb [arch=amd64] http://security.ubuntu.com/ubuntu jammy-security main restricted universe multiverse
+          # arm64 repos via ports
+          deb [arch=arm64] https://ports.ubuntu.com/ubuntu-ports jammy main restricted universe multiverse
+          deb [arch=arm64] https://ports.ubuntu.com/ubuntu-ports jammy-updates main restricted universe multiverse
+          deb [arch=arm64] https://ports.ubuntu.com/ubuntu-ports jammy-backports main restricted universe multiverse
+          deb [arch=arm64] https://ports.ubuntu.com/ubuntu-ports jammy-security main restricted universe multiverse
+          EOF
+          sudo apt-get -yq update
+
+      - name: Install cross toolchain + arm64 Vulkan dev
+        run: |
+          sudo apt-get install -y cmake ninja-build gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libc6-dev-arm64-cross \
+                                   libvulkan-dev:arm64
+          # (opcional) se quiser tentar GL também:
+          # sudo apt-get install -y libx11-dev:arm64 libgl1-mesa-dev:arm64
 
       - name: Clone Diligent (with submodules)
         run: |
           git clone --depth 1 --recursive https://github.com/DiligentGraphics/DiligentEngine.git DiligentEngine
 
-      - name: Configure toolchain (aarch64)
+      - name: Toolchain file (aarch64)
         run: |
           cat > toolchain-aarch64.cmake << 'EOF'
           set(CMAKE_SYSTEM_NAME Linux)
@@ -94,7 +104,7 @@ jobs:
           set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
           EOF
 
-      - name: Configure (Release, Vulkan only to simplificar cross)
+      - name: Configure (Release, Vulkan only p/ simplificar)
         run: |
           cmake -S DiligentEngine -B build -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
@@ -107,9 +117,9 @@ jobs:
 
       - name: Build shared lib (Vulkan)
         run: |
-          cmake --build build --config Release --target Diligent-GraphicsEngineVk-shared || echo "arm64 Vulkan build falhou, seguindo..."
+          cmake --build build --config Release --target Diligent-GraphicsEngineVk-shared
 
-      - name: Coletar artifacts
+      - name: Collect artifacts
         run: |
           mkdir -p artifacts/arm64/linux
           find build -type f -name "libGraphicsEngine*.so*" -exec cp {} artifacts/arm64/linux/ \; || true
@@ -146,7 +156,7 @@ jobs:
         run: |
           git clone --depth 1 --recursive https://github.com/DiligentGraphics/DiligentEngine.git DiligentEngine
 
-      - name: Configure (Release, OpenGL only)
+      - name: Configure (Release, OpenGL + Metal)
         run: |
           cmake -S DiligentEngine -B build \
             -DCMAKE_BUILD_TYPE=Release \
@@ -156,12 +166,14 @@ jobs:
             -DDILIGENT_BUILD_TOOLS=OFF \
             -DDILIGENT_BUILD_FX=OFF \
             -DDILIGENT_NO_VULKAN=ON \
-            -DDILIGENT_NO_METAL=ON \
             -DDILIGENT_NO_WEBGPU=ON
+            # (Deixe Metal ON - padrão - para gerar libGraphicsEngineMetal.dylib)
 
-      - name: Build shared lib (OpenGL)
+      - name: Build shared libs (OpenGL + Metal)
         run: |
-          cmake --build build --config Release --target Diligent-GraphicsEngineOpenGL-shared
+          cmake --build build --config Release --target \
+            Diligent-GraphicsEngineOpenGL-shared \
+            Diligent-GraphicsEngineMetal-shared
 
       - name: Strip e empacotar
         run: |
@@ -190,17 +202,23 @@ jobs:
         with:
           arch: amd64
 
+      - name: Install Vulkan SDK (for VK backend)
+        shell: powershell
+        run: |
+          choco install vulkan-sdk --no-progress -y
+          $sdk = (Get-ChildItem "C:\Program Files\VulkanSDK" | Sort-Object Name -Descending | Select-Object -First 1).FullName
+          echo "VULKAN_SDK=$sdk" >> $env:GITHUB_ENV
+
       - name: Clone Diligent (with submodules)
         run: |
           git clone --depth 1 --recursive https://github.com/DiligentGraphics/DiligentEngine.git DiligentEngine
 
-      - name: Configure (Release, D3D11/D3D12/GL; Vulkan off)
+      - name: Configure (Release, D3D11/D3D12/GL/Vk)
         run: |
           cmake -S DiligentEngine -B build -G "Visual Studio 17 2022" -A x64 ^
             -DDILIGENT_BUILD_SAMPLES=OFF ^
             -DDILIGENT_BUILD_TOOLS=OFF ^
             -DDILIGENT_BUILD_FX=OFF ^
-            -DDILIGENT_NO_VULKAN=ON ^
             -DDILIGENT_NO_WEBGPU=ON
 
       - name: Build shared libs
@@ -208,9 +226,10 @@ jobs:
           cmake --build build --config Release --target ^
             Diligent-GraphicsEngineD3D11-shared ^
             Diligent-GraphicsEngineD3D12-shared ^
-            Diligent-GraphicsEngineOpenGL-shared
+            Diligent-GraphicsEngineOpenGL-shared ^
+            Diligent-GraphicsEngineVk-shared
 
-      - name: Coletar DLLs
+      - name: Collect DLLs
         shell: powershell
         run: |
           New-Item -ItemType Directory -Force -Path artifacts\x64\win32 | Out-Null
