@@ -95,22 +95,14 @@ jobs:
 
       - name: Prepare artifacts
         run: |
-          mkdir -p artifacts/arm64/linux logs/linux-arm64
+          mkdir -p artifacts/arm64/linux
 
-          echo "--- GLFW build output ---" > logs/linux-arm64/glfw.txt
-          ls -la glfw/build 2>/dev/null || true >> logs/linux-arm64/glfw.txt
-
-          # Copy GLFW if present, otherwise create a placeholder and note in logs
+          # Copy GLFW if present, otherwise create a placeholder
           if compgen -G "glfw/build/src/libglfw*.so*" > /dev/null; then
-            cp glfw/build/src/libglfw*.so* artifacts/arm64/linux/ || true
-            echo "GLFW: copied" >> logs/linux-arm64/glfw.txt
+            cp glfw/build/src/libglfw*.so* artifacts/arm64/linux/libglfw.so || true
           else
-            echo "GLFW: not built" >> logs/linux-arm64/glfw.txt
             touch artifacts/arm64/linux/libglfw.so
           fi
-
-          ls -la artifacts/arm64/linux || true
-          cp -r logs/linux-arm64 artifacts/arm64/linux/ || true
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

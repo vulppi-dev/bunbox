@@ -108,22 +108,14 @@ jobs:
 
       - name: Prepare artifacts
         run: |
-          mkdir -p artifacts/arm64/linux logs/linux-arm64
+          mkdir -p artifacts/arm64/linux
 
-          echo "--- shaderc build output ---" > logs/linux-arm64/shaderc.txt
-          ls -la shaderc/build/libshaderc 2>/dev/null || true >> logs/linux-arm64/shaderc.txt
-
-          # Copy shaderc if present, otherwise create a placeholder and note in logs
+          # Copy shaderc if present, otherwise create a placeholder
           if compgen -G "shaderc/build/libshaderc/libshaderc_shared.so*" > /dev/null; then
             cp shaderc/build/libshaderc/libshaderc_shared.so* artifacts/arm64/linux/libshaderc.so || true
-            echo "shaderc: copied" >> logs/linux-arm64/shaderc.txt
           else
-            echo "shaderc: not built" >> logs/linux-arm64/shaderc.txt
             touch artifacts/arm64/linux/libshaderc.so
           fi
-
-          ls -la artifacts/arm64/linux || true
-          cp -r logs/linux-arm64 artifacts/arm64/linux/ || true
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -154,9 +146,6 @@ jobs:
           fetch-depth: 3
 
       # Build shaderc
-      - name: Install dependencies
-        run: brew install ninja
-
       - name: Clone shaderc and dependencies
         run: |
           git clone --depth 1 https://github.com/google/shaderc.git shaderc

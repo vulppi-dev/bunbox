@@ -90,20 +90,13 @@ jobs:
 
       - name: Prepare artifacts
         run: |
-          mkdir -p artifacts/arm64/linux logs/linux-arm64
+          mkdir -p artifacts/arm64/linux
 
-          echo "--- FreeType build output ---" > logs/linux-arm64/freetype.txt
-          ls -la freetype/build 2>/dev/null || true >> logs/linux-arm64/freetype.txt
           if compgen -G "freetype/build/libfreetype*.so*" > /dev/null; then
-            cp freetype/build/libfreetype*.so* artifacts/arm64/linux/ || true
-            echo "FreeType: copied" >> logs/linux-arm64/freetype.txt
+            cp freetype/build/libfreetype*.so* artifacts/arm64/linux/libfreetype.so || true
           else
-            echo "FreeType: not built" >> logs/linux-arm64/freetype.txt
             touch artifacts/arm64/linux/libfreetype.so
           fi
-
-          ls -la artifacts/arm64/linux || true
-          cp -r logs/linux-arm64 artifacts/arm64/linux/ || true
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4

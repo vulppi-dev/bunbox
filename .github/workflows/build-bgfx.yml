@@ -102,34 +102,22 @@ jobs:
 
       - name: Prepare artifacts
         run: |
-          mkdir -p artifacts/arm64/linux logs/linux-arm64
-
-          echo "--- bgfx build output ---" > logs/linux-arm64/bgfx.txt
-          if [ -d "bgfx/.build" ]; then ls -la bgfx/.build >> logs/linux-arm64/bgfx.txt; fi
+          mkdir -p artifacts/arm64/linux
 
           # Prefer the expected path, fallback to any libbgfx found under .build
           BGFX_EXPECTED="bgfx/.build/linux32_arm_gcc/bin/libbgfx-shared-libRelease.so"
           if [ -f "$BGFX_EXPECTED" ]; then
             cp "$BGFX_EXPECTED" artifacts/arm64/linux/libbgfx.so
-            echo "bgfx: copied from expected path" >> logs/linux-arm64/bgfx.txt
           else
-            echo "bgfx: expected file not found, searching .build for libbgfx" >> logs/linux-arm64/bgfx.txt
             find bgfx/.build -name "libbgfx*.so*" -print -exec cp {} artifacts/arm64/linux/libbgfx.so \; -quit 2>/dev/null || true
-            if [ -f artifacts/arm64/linux/libbgfx.so ]; then
-              echo "bgfx: copied from fallback" >> logs/linux-arm64/bgfx.txt
-            else
-              echo "bgfx: not built" >> logs/linux-arm64/bgfx.txt
+            if [ ! -f artifacts/arm64/linux/libbgfx.so ]; then
               exit 1
             fi
           fi
 
           if [ ! -s artifacts/arm64/linux/libbgfx.so ]; then
-            echo "bgfx: artifact is empty" >> logs/linux-arm64/bgfx.txt
             exit 1
           fi
-
-          ls -la artifacts/arm64/linux || true
-          cp -r logs/linux-arm64 artifacts/arm64/linux/ || true
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
