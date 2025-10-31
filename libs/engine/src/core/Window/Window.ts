@@ -29,15 +29,15 @@ import {
   glfwWindowMaximizeCallback,
   glfwWindowPositionCallback,
   glfwWindowSizeCallback,
-} from '../dynamic-libs';
-import { DynamicLibError } from '../errors';
-import { WindowEvent } from '../events';
-import { BGFX_DEBUG, GLFW_DEBUG } from '../singleton/logger';
-import { pointerCopyBuffer } from '../utils/buffer';
-import { Node } from './Node';
+} from '../../dynamic-libs';
+import { DynamicLibError } from '../../errors';
+import { WindowEvent } from '../../events';
+import { BGFX_DEBUG, GLFW_DEBUG } from '../../singleton/logger';
+import { pointerCopyBuffer } from '../../utils/buffer';
+import { Node } from '../Node';
 import { getRendererName, Renderer } from './Renderer';
 
-import { Node3D } from '../nodes';
+import { Node3D } from '../../nodes';
 
 // Setup struct pointer/string conversions globally
 setupStruct({

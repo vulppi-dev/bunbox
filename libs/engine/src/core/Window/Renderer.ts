@@ -7,11 +7,11 @@ import {
   BGFX_RenderType,
   BGFX_TextureFormat,
   GLFW,
-} from '../dynamic-libs';
-import { DynamicLibError } from '../errors';
-import type { Node3D } from '../nodes';
-import { Vector2 } from '../math';
-import { BGFX_DEBUG } from '../singleton/logger';
+} from '../../dynamic-libs';
+import { DynamicLibError } from '../../errors';
+import type { Node3D } from '../../nodes';
+import { Vector2 } from '../../math';
+import { BGFX_DEBUG } from '../../singleton/logger';
 
 const VIEW_IDS_SET = new Set(Array.from({ length: 254 }, (_, i) => i + 1));
 
