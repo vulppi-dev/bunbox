@@ -1,4 +1,4 @@
-name: Build Diligent (shared libs)
+name: Build Diligent (shared libs, minimal backends)
 
 on:
   workflow_dispatch:
@@ -9,44 +9,40 @@ on:
 
 jobs:
   linux-x64:
-    name: Linux x64
+    name: Linux x64 (Vulkan only)
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 3
+        with: { fetch-depth: 3 }
 
-      - name: Install build deps (X11 + Vulkan)
+      - name: Install build deps (Vulkan)
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake ninja-build \
-            libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev \
-            libgl1-mesa-dev libwayland-dev libxkbcommon-dev \
-            libvulkan-dev mesa-vulkan-drivers python3-distutils
+          sudo apt-get install -y build-essential cmake libvulkan-dev mesa-vulkan-drivers
 
       - name: Clone Diligent (with submodules)
-        run: |
-          git clone --depth 1 --recursive https://github.com/DiligentGraphics/DiligentEngine.git DiligentEngine
+        run: git clone --depth 1 --recursive https://github.com/DiligentGraphics/DiligentEngine.git DiligentEngine
 
-      - name: Configure (Release, GL+Vulkan)
+      - name: Configure (Release, Vulkan only)
         run: |
-          cmake -S DiligentEngine -B build -G Ninja \
+          cmake -S DiligentEngine -B build \
             -DCMAKE_BUILD_TYPE=Release \
             -DDILIGENT_BUILD_SAMPLES=OFF \
             -DDILIGENT_BUILD_TOOLS=OFF \
             -DDILIGENT_BUILD_FX=OFF \
+            -DDILIGENT_NO_OPENGL=ON \
+            -DDILIGENT_NO_METAL=ON \
+            -DDILIGENT_NO_DIRECT3D11=ON \
+            -DDILIGENT_NO_DIRECT3D12=ON \
             -DDILIGENT_NO_WEBGPU=ON
 
-      - name: Build shared libs (GL + Vulkan)
-        run: |
-          cmake --build build --config Release --target \
-            Diligent-GraphicsEngineOpenGL-shared \
-            Diligent-GraphicsEngineVk-shared
+      - name: Build shared lib (Vulkan)
+        run: cmake --build build --config Release --target Diligent-GraphicsEngineVk-shared
 
-      - name: Strip and collect artifacts
+      - name: Collect artifacts
         run: |
           mkdir -p artifacts/x64/linux
-          find build -type f -name "libGraphicsEngine*.so*" -exec strip {} \; -exec cp {} artifacts/x64/linux/ \; || true
+          find build -type f -name "libGraphicsEngineVk.so*" -exec cp {} artifacts/x64/linux/ \;
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -56,23 +52,22 @@ jobs:
           retention-days: 7
 
   linux-arm64:
-    name: Linux ARM64 (cross)
+    name: Linux ARM64 (cross, Vulkan only)
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 3
+        with: { fetch-depth: 3 }
 
-      - name: Prepare multiarch sources for arm64 (use ports.ubuntu.com)
+      - name: Enable arm64 repos (ports.ubuntu.com) & update
         run: |
           sudo dpkg --add-architecture arm64
           sudo tee /etc/apt/sources.list >/dev/null <<'EOF'
-          # amd64 repos
+          # amd64
           deb [arch=amd64] http://archive.ubuntu.com/ubuntu jammy main restricted universe multiverse
           deb [arch=amd64] http://archive.ubuntu.com/ubuntu jammy-updates main restricted universe multiverse
           deb [arch=amd64] http://archive.ubuntu.com/ubuntu jammy-backports main restricted universe multiverse
           deb [arch=amd64] http://security.ubuntu.com/ubuntu jammy-security main restricted universe multiverse
-          # arm64 repos via ports
+          # arm64 (ports)
           deb [arch=arm64] https://ports.ubuntu.com/ubuntu-ports jammy main restricted universe multiverse
           deb [arch=arm64] https://ports.ubuntu.com/ubuntu-ports jammy-updates main restricted universe multiverse
           deb [arch=arm64] https://ports.ubuntu.com/ubuntu-ports jammy-backports main restricted universe multiverse
@@ -80,20 +75,17 @@ jobs:
           EOF
           sudo apt-get -yq update
 
-      - name: Install cross toolchain + arm64 Vulkan dev
+      - name: Install cross toolchain + Vulkan (arm64)
         run: |
-          sudo apt-get install -y cmake ninja-build gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libc6-dev-arm64-cross \
-                                   libvulkan-dev:arm64
-          # (opcional) se quiser tentar GL também:
-          # sudo apt-get install -y libx11-dev:arm64 libgl1-mesa-dev:arm64
+          sudo apt-get install -y cmake gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libc6-dev-arm64-cross libvulkan-dev:arm64
 
       - name: Clone Diligent (with submodules)
-        run: |
-          git clone --depth 1 --recursive https://github.com/DiligentGraphics/DiligentEngine.git DiligentEngine
+        run: git clone --depth 1 --recursive https://github.com/DiligentGraphics/DiligentEngine.git DiligentEngine
 
       - name: Toolchain file (aarch64)
         run: |
-          cat > toolchain-aarch64.cmake << 'EOF'
+          mkdir -p toolchains
+          cat > toolchains/aarch64.cmake << 'EOF'
           set(CMAKE_SYSTEM_NAME Linux)
           set(CMAKE_SYSTEM_PROCESSOR aarch64)
           set(CMAKE_C_COMPILER aarch64-linux-gnu-gcc)
@@ -103,26 +95,32 @@ jobs:
           set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
           set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
           EOF
+          ls -la toolchains
 
-      - name: Configure (Release, Vulkan only p/ simplificar)
+      - name: Configure (Release, Vulkan only; Makefiles)
+        env:
+          TOOLCHAIN: ${{ github.workspace }}/toolchains/aarch64.cmake
         run: |
-          cmake -S DiligentEngine -B build -G Ninja \
+          cmake -S DiligentEngine -B build \
+            -G "Unix Makefiles" \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_TOOLCHAIN_FILE=toolchain-aarch64.cmake \
+            -DCMAKE_TOOLCHAIN_FILE="${TOOLCHAIN}" \
             -DDILIGENT_BUILD_SAMPLES=OFF \
             -DDILIGENT_BUILD_TOOLS=OFF \
             -DDILIGENT_BUILD_FX=OFF \
             -DDILIGENT_NO_OPENGL=ON \
+            -DDILIGENT_NO_METAL=ON \
+            -DDILIGENT_NO_DIRECT3D11=ON \
+            -DDILIGENT_NO_DIRECT3D12=ON \
             -DDILIGENT_NO_WEBGPU=ON
 
       - name: Build shared lib (Vulkan)
-        run: |
-          cmake --build build --config Release --target Diligent-GraphicsEngineVk-shared
+        run: cmake --build build --config Release --target Diligent-GraphicsEngineVk-shared
 
       - name: Collect artifacts
         run: |
           mkdir -p artifacts/arm64/linux
-          find build -type f -name "libGraphicsEngine*.so*" -exec cp {} artifacts/arm64/linux/ \; || true
+          find build -type f -name "libGraphicsEngineVk.so*" -exec cp {} artifacts/arm64/linux/ \; || true
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -132,7 +130,7 @@ jobs:
           retention-days: 7
 
   macos:
-    name: macOS
+    name: macOS (Vulkan only via MoltenVK)
     runs-on: macos-14
     strategy:
       fail-fast: false
@@ -140,23 +138,30 @@ jobs:
         ARCH: [x64, arm64]
         include:
           - ARCH: x64
-            PLATFORM: osx-x64
             CMAKE_ARCH: x86_64
             OSX_MIN: '10.15'
           - ARCH: arm64
-            PLATFORM: osx-arm64
             CMAKE_ARCH: arm64
             OSX_MIN: '11.0'
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 3
+        with: { fetch-depth: 3 }
+
+      - name: Install Vulkan SDK + MoltenVK
+        run: |
+          brew update >/dev/null
+          brew install --cask vulkan-sdk
+          brew install molten-vk
+          # detect Vulkan SDK dir (cask installs in /Applications/VulkanSDK/<ver>)
+          SDK_DIR=$(ls -1d /Applications/VulkanSDK/* | sort -V | tail -n1)
+          if [ -z "$SDK_DIR" ]; then echo "Vulkan SDK not found"; exit 1; fi
+          echo "VULKAN_SDK=$SDK_DIR" >> $GITHUB_ENV
+          echo "Using VULKAN_SDK=$SDK_DIR"
 
       - name: Clone Diligent (with submodules)
-        run: |
-          git clone --depth 1 --recursive https://github.com/DiligentGraphics/DiligentEngine.git DiligentEngine
+        run: git clone --depth 1 --recursive https://github.com/DiligentGraphics/DiligentEngine.git DiligentEngine
 
-      - name: Configure (Release, OpenGL + Metal)
+      - name: Configure (Release, Vulkan only)
         run: |
           cmake -S DiligentEngine -B build \
             -DCMAKE_BUILD_TYPE=Release \
@@ -165,20 +170,19 @@ jobs:
             -DDILIGENT_BUILD_SAMPLES=OFF \
             -DDILIGENT_BUILD_TOOLS=OFF \
             -DDILIGENT_BUILD_FX=OFF \
-            -DDILIGENT_NO_VULKAN=ON \
+            -DDILIGENT_NO_OPENGL=ON \
+            -DDILIGENT_NO_METAL=ON \
+            -DDILIGENT_NO_DIRECT3D11=ON \
+            -DDILIGENT_NO_DIRECT3D12=ON \
             -DDILIGENT_NO_WEBGPU=ON
-            # (Deixe Metal ON - padrão - para gerar libGraphicsEngineMetal.dylib)
 
-      - name: Build shared libs (OpenGL + Metal)
-        run: |
-          cmake --build build --config Release --target \
-            Diligent-GraphicsEngineOpenGL-shared \
-            Diligent-GraphicsEngineMetal-shared
+      - name: Build shared lib (Vulkan)
+        run: cmake --build build --config Release --target Diligent-GraphicsEngineVk-shared
 
-      - name: Strip e empacotar
+      - name: Collect artifacts
         run: |
           mkdir -p artifacts/${{ matrix.ARCH }}/darwin
-          find build -type f -name "libGraphicsEngine*.dylib" -exec strip -u -r {} \; -exec cp {} artifacts/${{ matrix.ARCH }}/darwin/ \;
+          find build -type f -name "libGraphicsEngineVk.dylib" -exec cp {} artifacts/${{ matrix.ARCH }}/darwin/ \;
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -188,45 +192,45 @@ jobs:
           retention-days: 7
 
   windows-x64:
-    name: Windows x64
+    name: Windows x64 (D3D12 + Vulkan)
     runs-on: windows-2022
-    defaults:
-      run:
-        shell: cmd
+    defaults: { run: { shell: cmd } }
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 3
+        with: { fetch-depth: 3 }
 
       - uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: amd64
+        with: { arch: amd64 }
 
-      - name: Install Vulkan SDK (for VK backend)
+      - name: Install Vulkan SDK (winget)
         shell: powershell
         run: |
-          choco install vulkan-sdk --no-progress -y
-          $sdk = (Get-ChildItem "C:\Program Files\VulkanSDK" | Sort-Object Name -Descending | Select-Object -First 1).FullName
-          echo "VULKAN_SDK=$sdk" >> $env:GITHUB_ENV
+          winget install --id LunarG.VulkanSDK -e --silent --accept-package-agreements --accept-source-agreements
+          $cands=@("C:\VulkanSDK","C:\Program Files\VulkanSDK")
+          $sdk=$null
+          foreach($c in $cands){ if(Test-Path $c){ $sdk=(Get-ChildItem $c | Sort-Object Name -Descending | Select-Object -First 1).FullName; break } }
+          if(-not $sdk){ throw "Vulkan SDK not found after winget install." }
+          "VULKAN_SDK=$sdk" | Out-File -FilePath $env:GITHUB_ENV -Append
+          Write-Host "VULKAN_SDK=$sdk"
 
       - name: Clone Diligent (with submodules)
-        run: |
-          git clone --depth 1 --recursive https://github.com/DiligentGraphics/DiligentEngine.git DiligentEngine
+        run: git clone --depth 1 --recursive https://github.com/DiligentGraphics/DiligentEngine.git DiligentEngine
 
-      - name: Configure (Release, D3D11/D3D12/GL/Vk)
+      - name: Configure (Release, D3D12 + Vulkan only)
         run: |
           cmake -S DiligentEngine -B build -G "Visual Studio 17 2022" -A x64 ^
             -DDILIGENT_BUILD_SAMPLES=OFF ^
             -DDILIGENT_BUILD_TOOLS=OFF ^
             -DDILIGENT_BUILD_FX=OFF ^
+            -DDILIGENT_NO_OPENGL=ON ^
+            -DDILIGENT_NO_DIRECT3D11=ON ^
+            -DDILIGENT_NO_METAL=ON ^
             -DDILIGENT_NO_WEBGPU=ON
 
       - name: Build shared libs
         run: |
           cmake --build build --config Release --target ^
-            Diligent-GraphicsEngineD3D11-shared ^
             Diligent-GraphicsEngineD3D12-shared ^
-            Diligent-GraphicsEngineOpenGL-shared ^
             Diligent-GraphicsEngineVk-shared
 
       - name: Collect DLLs

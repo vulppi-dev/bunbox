@@ -40,7 +40,7 @@ jobs:
             -DDILIGENT_BUILD_TESTS=OFF \
             -DDILIGENT_BUILD_UNITY_PLUGIN=OFF \
             -DDILIGENT_BUILD_TOOLS=OFF \
-            -DDILIGENT_NO_OPENGL=OFF \
+            -DDILIGENT_NO_OPENGL=ON \
             -DDILIGENT_NO_VULKAN=OFF
           cmake --build . --config Release -j $(nproc)
 
@@ -53,7 +53,6 @@ jobs:
 
           # Copy Diligent Core libraries
           find diligent/build -name "libDiligentCore*.so*" -exec cp {} artifacts/x64/linux/ \;
-          find diligent/build -name "libGraphicsEngineOpenGL*.so*" -exec cp {} artifacts/x64/linux/ \;
           find diligent/build -name "libGraphicsEngineVk*.so*" -exec cp {} artifacts/x64/linux/ \;
 
           # List copied files for debugging
@@ -110,12 +109,12 @@ jobs:
           set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
           set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
           set(PKG_CONFIG_EXECUTABLE /usr/bin/aarch64-linux-gnu-pkg-config)
-          
+
           # Help CMake find X11 for ARM64
           set(X11_X11_INCLUDE_PATH /usr/include/aarch64-linux-gnu)
           set(X11_X11_LIB /usr/lib/aarch64-linux-gnu/libX11.so)
           EOF
-          
+
           mkdir build
           cd build
           cmake .. \
@@ -125,18 +124,19 @@ jobs:
             -DDILIGENT_BUILD_TESTS=OFF \
             -DDILIGENT_BUILD_UNITY_PLUGIN=OFF \
             -DDILIGENT_BUILD_TOOLS=OFF \
-            -DDILIGENT_NO_OPENGL=OFF \
+            -DDILIGENT_NO_OPENGL=ON \
             -DDILIGENT_NO_VULKAN=OFF || echo "CMake configuration may fail on ARM64 cross-compilation"
           cmake --build . --config Release -j $(nproc) || echo "Build failed, continuing..."
-          
+
           # Strip libraries if present
-          find . -name "*.so" -exec aarch64-linux-gnu-strip {} \; 2>/dev/null || true      - name: Prepare artifacts
+          find . -name "*.so" -exec aarch64-linux-gnu-strip {} \; 2>/dev/null || true
+
+      - name: Prepare artifacts
         run: |
           mkdir -p artifacts/arm64/linux
 
           # Copy Diligent libraries if present
           find diligent/build -name "libDiligentCore*.so*" -exec cp {} artifacts/arm64/linux/ \; 2>/dev/null || touch artifacts/arm64/linux/libDiligentCore.so
-          find diligent/build -name "libGraphicsEngineOpenGL*.so*" -exec cp {} artifacts/arm64/linux/ \; 2>/dev/null || touch artifacts/arm64/linux/libGraphicsEngineOpenGL.so
           find diligent/build -name "libGraphicsEngineVk*.so*" -exec cp {} artifacts/arm64/linux/ \; 2>/dev/null || touch artifacts/arm64/linux/libGraphicsEngineVk.so
 
       - name: Upload artifacts
@@ -179,8 +179,8 @@ jobs:
           cd diligent
           mkdir build
           cd build
-          
-          # Configure with explicit Metal backend
+
+          # Configure with Vulkan backend only
           cmake .. \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_OSX_ARCHITECTURES=${{matrix.CMAKE_ARCH}} \
@@ -190,41 +190,22 @@ jobs:
             -DDILIGENT_BUILD_UNITY_PLUGIN=OFF \
             -DDILIGENT_BUILD_TOOLS=OFF \
             -DDILIGENT_NO_OPENGL=ON \
-            -DDILIGENT_NO_VULKAN=ON
-          
-          # Check if Metal backend was configured
-          if grep -q "GraphicsEngineMtl" CMakeCache.txt 2>/dev/null; then
-            echo "Metal backend detected, building..."
-            cmake --build . --config Release -j $(sysctl -n hw.ncpu)
-            # Strip libraries
-            find . -name "*.dylib" -exec strip -u -r {} \;
-          else
-            echo "WARNING: Metal backend not available, trying with Vulkan..."
-            cd ..
-            rm -rf build
-            mkdir build
-            cd build
-            cmake .. \
-              -DCMAKE_BUILD_TYPE=Release \
-              -DCMAKE_OSX_ARCHITECTURES=${{matrix.CMAKE_ARCH}} \
-              -DCMAKE_OSX_DEPLOYMENT_TARGET=${{matrix.OSX_MIN}} \
-              -DDILIGENT_BUILD_SAMPLES=OFF \
-              -DDILIGENT_BUILD_TESTS=OFF \
-              -DDILIGENT_BUILD_UNITY_PLUGIN=OFF \
-              -DDILIGENT_BUILD_TOOLS=OFF \
-              -DDILIGENT_NO_OPENGL=ON \
-              -DDILIGENT_NO_VULKAN=OFF
-            cmake --build . --config Release -j $(sysctl -n hw.ncpu)
-            find . -name "*.dylib" -exec strip -u -r {} \;
-          fi      - name: Prepare artifacts
+            -DDILIGENT_NO_VULKAN=OFF \
+            -DDILIGENT_NO_METAL=ON
+
+          cmake --build . --config Release -j $(sysctl -n hw.ncpu)
+
+          # Strip libraries
+          find . -name "*.dylib" -exec strip -u -r {} \;
+
+      - name: Prepare artifacts
         run: |
           mkdir -p artifacts/${{matrix.ARCH}}/darwin
-          
-          # Copy Diligent libraries (Metal or Vulkan)
+
+          # Copy Diligent libraries (Vulkan only)
           find diligent/build -name "libDiligentCore*.dylib" -exec cp {} artifacts/${{matrix.ARCH}}/darwin/ \;
-          find diligent/build -name "libGraphicsEngineMtl*.dylib" -exec cp {} artifacts/${{matrix.ARCH}}/darwin/ \; 2>/dev/null || true
-          find diligent/build -name "libGraphicsEngineVk*.dylib" -exec cp {} artifacts/${{matrix.ARCH}}/darwin/ \; 2>/dev/null || true
-          
+          find diligent/build -name "libGraphicsEngineVk*.dylib" -exec cp {} artifacts/${{matrix.ARCH}}/darwin/ \;
+
           # List copied files for debugging
           ls -lh artifacts/${{matrix.ARCH}}/darwin/ || echo "No files found"
 
@@ -270,8 +251,8 @@ jobs:
             -DDILIGENT_BUILD_TESTS=OFF ^
             -DDILIGENT_BUILD_UNITY_PLUGIN=OFF ^
             -DDILIGENT_BUILD_TOOLS=OFF ^
-            -DDILIGENT_NO_OPENGL=OFF ^
-            -DDILIGENT_NO_DIRECT3D11=OFF ^
+            -DDILIGENT_NO_OPENGL=ON ^
+            -DDILIGENT_NO_DIRECT3D11=ON ^
             -DDILIGENT_NO_DIRECT3D12=OFF ^
             -DDILIGENT_NO_VULKAN=OFF
           cmake --build . --config Release -j %NUMBER_OF_PROCESSORS%
@@ -280,11 +261,9 @@ jobs:
         run: |
           mkdir artifacts\x64\win32
 
-          REM Copy Diligent DLLs from Release folder
+          REM Copy Diligent DLLs from Release folder (D3D12 and Vulkan only)
           for /r diligent\build %%f in (*DiligentCore*.dll) do copy "%%f" artifacts\x64\win32\ 2>nul
-          for /r diligent\build %%f in (*GraphicsEngineD3D11*.dll) do copy "%%f" artifacts\x64\win32\ 2>nul
           for /r diligent\build %%f in (*GraphicsEngineD3D12*.dll) do copy "%%f" artifacts\x64\win32\ 2>nul
-          for /r diligent\build %%f in (*GraphicsEngineOpenGL*.dll) do copy "%%f" artifacts\x64\win32\ 2>nul
           for /r diligent\build %%f in (*GraphicsEngineVk*.dll) do copy "%%f" artifacts\x64\win32\ 2>nul
 
           REM List copied files for debugging
