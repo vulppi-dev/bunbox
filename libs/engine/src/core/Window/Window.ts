@@ -7,16 +7,11 @@ import {
 import type { EventMap, MergeEventMaps } from '@bunbox/utils';
 import { CString, ptr, type JSCallback, type Pointer } from 'bun:ffi';
 import {
-  BGFX,
-  BGFX_MaximumLimits,
-  BGFX_RenderType,
-  BGFX_Reset,
-  bgfxInitStruct,
-  bgfxPlatformDataStruct,
   buildCallback,
   cstr,
+  getGlfwErrorDescription,
+  getVkErrorDescription,
   GLFW,
-  GLFW_ErrorCodes,
   GLFW_GeneralMacro,
   GLFW_WindowMacro,
   glfwErrorCallback,
@@ -29,13 +24,20 @@ import {
   glfwWindowMaximizeCallback,
   glfwWindowPositionCallback,
   glfwWindowSizeCallback,
+  VK,
+  Vk_Result,
+  Vk_StructureType,
+  VkApplicationInfo,
+  vkGetPhysicalDevice,
+  VkInstanceCreateInfo,
+  vkMakeVersion,
 } from '../../dynamic-libs';
 import { DynamicLibError } from '../../errors';
 import { WindowEvent } from '../../events';
-import { BGFX_DEBUG, GLFW_DEBUG } from '../../singleton/logger';
+import { GLFW_DEBUG, VK_DEBUG } from '../../singleton/logger';
 import { pointerCopyBuffer } from '../../utils/buffer';
 import { Node } from '../Node';
-import { getRendererName, Renderer } from './Renderer';
+import { Renderer } from './Renderer';
 
 import { Node3D } from '../../nodes';
 
@@ -84,43 +86,6 @@ export type WindowEventMap = {
   'window-display-changed': [event: WindowEvent];
 };
 
-function getGLFWErrorDescription(errorCode: number): string {
-  switch (errorCode) {
-    case GLFW_ErrorCodes.API_UNAVAILABLE:
-      return 'GLFW API unavailable';
-    case GLFW_ErrorCodes.CURSOR_UNAVAILABLE:
-      return 'GLFW Cursor unavailable';
-    case GLFW_ErrorCodes.FEATURE_UNAVAILABLE:
-      return 'GLFW Feature unavailable';
-    case GLFW_ErrorCodes.FEATURE_UNIMPLEMENTED:
-      return 'GLFW Feature unimplemented';
-    case GLFW_ErrorCodes.FORMAT_UNAVAILABLE:
-      return 'GLFW Format unavailable';
-    case GLFW_ErrorCodes.INVALID_ENUM:
-      return 'GLFW Invalid enum';
-    case GLFW_ErrorCodes.INVALID_VALUE:
-      return 'GLFW Invalid value';
-    case GLFW_ErrorCodes.NOT_INITIALIZED:
-      return 'GLFW Not initialized';
-    case GLFW_ErrorCodes.NO_CURRENT_CONTEXT:
-      return 'GLFW No current context';
-    case GLFW_ErrorCodes.NO_ERROR:
-      return 'GLFW No error';
-    case GLFW_ErrorCodes.NO_WINDOW_CONTEXT:
-      return 'GLFW No window context';
-    case GLFW_ErrorCodes.OUT_OF_MEMORY:
-      return 'GLFW Out of memory';
-    case GLFW_ErrorCodes.PLATFORM_ERROR:
-      return 'GLFW Platform error';
-    case GLFW_ErrorCodes.PLATFORM_UNAVAILABLE:
-      return 'GLFW Platform unavailable';
-    case GLFW_ErrorCodes.VERSION_UNAVAILABLE:
-      return 'GLFW Version unavailable';
-    default:
-      return `Unknown GLFW error code: ${errorCode}`;
-  }
-}
-
 export class Window<
   P extends Record<string, any> = Record<string, any>,
   M extends Record<string, any> = Record<string, any>,
@@ -129,15 +94,17 @@ export class Window<
   static #isInitialized = false;
   static #windowsList: Set<Window> = new Set();
   static #errorCallback: JSCallback | null = null;
-  #renderer: Renderer;
+  static #vkInstance: Pointer | null = null;
+  static #vkDevice: Pointer | null = null;
 
   static #callInitializeGLFW() {
     if (Window.#isInitialized) return;
+
     GLFW_DEBUG('Initializing GLFW for first window creation');
     Window.#errorCallback = buildCallback(
       glfwErrorCallback,
       (errorCode, description) => {
-        GLFW_DEBUG(getGLFWErrorDescription(errorCode), description);
+        GLFW_DEBUG(getGlfwErrorDescription(errorCode), description);
       },
     );
     GLFW.glfwSetErrorCallback(Window.#errorCallback.ptr);
@@ -150,74 +117,57 @@ export class Window<
     const glfwVersion = GLFW.glfwGetVersionString();
     GLFW_DEBUG(`Version: ${glfwVersion}`);
 
-    /*-------- BGFX Main invisible window --------*/
-    GLFW.glfwWindowHint(GLFW_WindowMacro.CLIENT_API, GLFW_GeneralMacro.FALSE);
-    GLFW.glfwWindowHint(GLFW_WindowMacro.POSITION_X, GLFW_GeneralMacro.FALSE);
-    GLFW.glfwWindowHint(GLFW_WindowMacro.POSITION_Y, GLFW_GeneralMacro.FALSE);
-    GLFW.glfwWindowHint(GLFW_WindowMacro.VISIBLE, GLFW_GeneralMacro.FALSE);
-    BGFX_DEBUG('Creating main invisible window for BGFX context');
+    if (!GLFW.glfwVulkanSupported()) {
+      throw new DynamicLibError('Vulkan is not supported', 'GLFW');
+    }
+    GLFW_DEBUG(`Chose Vulkan as the graphics API`);
 
-    const window = GLFW.glfwCreateWindow(32, 32, cstr(''), null, null);
-    if (!window) {
+    // Start Vulkan instance
+    VK_DEBUG('Starting Vulkan instance for GLFW windows');
+
+    const ptrAux = new BigUint64Array(1);
+    const countAux = new Uint32Array(1);
+
+    const extensionsPtr = GLFW.glfwGetRequiredInstanceExtensions(ptr(countAux));
+    if (!countAux[0] || !extensionsPtr) {
       throw new DynamicLibError(
-        'BGFX main invisible window creation failed',
+        'Failed to get required Vulkan extensions',
         'GLFW',
       );
     }
-    const windowHandler = Renderer.getNativeWindowHandler(window);
-    if (!windowHandler) {
-      throw new DynamicLibError(
-        'BGFX main invisible window native handler retrieval failed',
-        'GLFW',
-      );
+    VK_DEBUG(`Required Vulkan extensions count: ${countAux[0]}`);
+
+    const createInfo = instantiate(VkInstanceCreateInfo);
+    const appInfo = instantiate(VkApplicationInfo);
+
+    appInfo.sType = Vk_StructureType.APPLICATION_INFO;
+    appInfo.pApplicationName = 0n;
+    appInfo.applicationVersion = vkMakeVersion(1, 0, 0);
+    appInfo.pEngineName = BigInt(ptr(cstr('Bunbox Engine')));
+    appInfo.engineVersion = vkMakeVersion(1, 0, 0);
+    // TODO: get supported version
+    appInfo.apiVersion = vkMakeVersion(1, 4, 0);
+
+    createInfo.sType = Vk_StructureType.INSTANCE_CREATE_INFO;
+    createInfo.pApplicationInfo = BigInt(ptr(getInstanceBuffer(appInfo)));
+    createInfo.flags = process.platform === 'darwin' ? 1 : 0;
+    createInfo.enabledExtensionCount = countAux[0];
+    createInfo.ppEnabledExtensionNames = BigInt(extensionsPtr);
+
+    const result = VK.vkCreateInstance(
+      ptr(getInstanceBuffer(createInfo)),
+      null,
+      ptr(ptrAux),
+    );
+    if (result !== Vk_Result.SUCCESS) {
+      new DynamicLibError(getVkErrorDescription(result), 'Vulkan');
     }
-    BGFX_DEBUG('BGFX main invisible window created successfully:', window);
-    BGFX.bgfx_render_frame(-1);
-    BGFX_DEBUG('BGFX render frame initialized');
+    Window.#vkInstance = Number(ptrAux[0]) as Pointer;
+    VK_DEBUG('Vulkan instance created successfully');
 
-    const displayHandler =
-      process.platform === 'linux' ? BigInt(GLFW.glfwGetX11Display()!) : 0n;
-    const platformData = instantiate(bgfxPlatformDataStruct);
-    const initData = instantiate(bgfxInitStruct);
-    BGFX.bgfx_init_ctor(ptr(getInstanceBuffer(initData)));
-    BGFX_DEBUG('BGFX init struct initialized');
+    Window.#vkDevice = vkGetPhysicalDevice(Window.#vkInstance);
 
-    platformData.nwh = BigInt(windowHandler);
-    platformData.ndt = displayHandler;
-    BGFX.bgfx_set_platform_data(ptr(getInstanceBuffer(platformData)));
-    BGFX_DEBUG('BGFX platform data set:', instanceToJSON(platformData));
-
-    const renderersSupportedBfr = new Int32Array(16);
-    const count = BGFX.bgfx_get_supported_renderers(
-      16,
-      ptr(renderersSupportedBfr),
-    );
-    const renderersSupported = Array.from(
-      renderersSupportedBfr.slice(0, count),
-    );
-    BGFX_DEBUG(
-      `Supported renderers: ${renderersSupported
-        .map(getRendererName)
-        .join(', ')}`,
-    );
-
-    initData.platformData = platformData;
-    initData.resolution.width = 32;
-    initData.resolution.height = 32;
-    initData.resolution.reset = BGFX_Reset.VSYNC;
-    initData.type = renderersSupported.includes(BGFX_RenderType.Direct3D12)
-      ? BGFX_RenderType.Direct3D12
-      : renderersSupported.includes(BGFX_RenderType.Metal)
-        ? BGFX_RenderType.Metal
-        : BGFX_RenderType.Vulkan;
-    BGFX_DEBUG(`Selected renderer: ${getRendererName(initData.type)}`);
-
-    if (!BGFX.bgfx_init(ptr(getInstanceBuffer(initData)))) {
-      throw new DynamicLibError('BGFX initialization failed', 'BGFX');
-    }
-    BGFX_DEBUG('BGFX initialized successfully:', instanceToJSON(initData));
-    BGFX.bgfx_set_view_frame_buffer(0, BGFX_MaximumLimits.MAX_UINT16);
-
+    // Start main loop
     Window.#isInitialized = true;
 
     let prev = performance.now();
@@ -232,7 +182,6 @@ export class Window<
         for (const win of Window.#windowsList) {
           win.#appTriggerProcessStack(delta);
         }
-        BGFX.bgfx_frame(false);
         await Bun.sleep(4);
       }
     })();
@@ -240,6 +189,8 @@ export class Window<
 
   #windowPtr: Pointer;
   #monitorPtr: Pointer | null = null;
+
+  #renderer: Renderer;
 
   #title: string;
   #x: number = 0;
@@ -332,7 +283,11 @@ export class Window<
 
     this.#bindWindowCallbacks();
 
-    this.#renderer = new Renderer(this.#windowPtr);
+    this.#renderer = new Renderer(
+      this.#windowPtr,
+      Window.#vkInstance!,
+      Window.#vkDevice!,
+    );
 
     const unsubscribes = [
       this.subscribe('add-child', () => {
@@ -358,6 +313,10 @@ export class Window<
       GLFW.glfwDestroyWindow(this.#windowPtr);
 
       if (Window.#windowsList.size === 0) {
+        VK_DEBUG('No more windows. Terminating Vulkan.');
+        VK.vkDestroyInstance(Window.#vkInstance!, null);
+        Window.#vkInstance = null;
+
         GLFW_DEBUG('No more windows. Terminating GLFW.');
         GLFW.glfwSetErrorCallback(0 as Pointer);
         GLFW.glfwTerminate();
@@ -667,7 +626,7 @@ export class Window<
     const modeStr = instantiate(glfwVideoModeStruct);
     const modeBfr = getInstanceBuffer(modeStr);
     GLFW_DEBUG('Video mode data:', instanceToJSON(modeStr));
-    pointerCopyBuffer(mode, new Uint8Array(modeBfr));
+    pointerCopyBuffer(mode, modeBfr);
 
     this.#x = 0;
     this.#y = 0;
@@ -688,10 +647,10 @@ export class Window<
       GLFW_WindowMacro.POSITION_Y,
       this.#y >= 0 ? this.#y : GLFW_GeneralMacro.ANY_POSITION,
     );
-    // GLFW.glfwWindowHint(
-    //   GLFW_WindowMacro.TRANSPARENT_FRAMEBUFFER,
-    //   GLFW_GeneralMacro.TRUE,
-    // );
+    GLFW.glfwWindowHint(
+      GLFW_WindowMacro.TRANSPARENT_FRAMEBUFFER,
+      GLFW_GeneralMacro.TRUE,
+    );
     GLFW.glfwWindowHint(
       GLFW_WindowMacro.DECORATED,
       this.#borderless ? GLFW_GeneralMacro.FALSE : GLFW_GeneralMacro.TRUE,

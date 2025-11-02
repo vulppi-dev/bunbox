@@ -1,4 +1,4 @@
-export * from './glfw/loader';
-export * from './bgfx/loader';
+export * from './glfw';
+export * from './vk';
 
 export * from './utils';

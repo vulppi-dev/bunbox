@@ -1,4 +1,4 @@
 import { debuglog } from 'util';
 
 export const GLFW_DEBUG = debuglog('glfw');
-export const BGFX_DEBUG = debuglog('bgfx');
+export const VK_DEBUG = debuglog('vk');

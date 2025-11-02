@@ -101,19 +101,13 @@ function serializeValue(value: any): any {
     // Check if it's a struct instance
     const metadata = PROXY_METADATA_MAP.get(value);
     if (metadata) {
-      return instanceToObject(
-        value,
-        metadata.fields,
-        metadata.offsets,
-        metadata.view,
-      );
+      return instanceToObject(metadata.fields, metadata.offsets, metadata.view);
     }
   }
   return value;
 }
 
 function instanceToObject(
-  instance: any,
   fields: Record<string, AllFields>,
   offsets: StructOffsets,
   view: DataView,
@@ -133,9 +127,14 @@ function instanceToObject(
       'isPointer' in childField && childField.isPointer === true;
 
     if (childField.type === 'struct' && !isPointer) {
-      // Access the nested struct through the proxy
-      const nestedValue = instance[key];
-      result[key] = serializeValue(nestedValue);
+      // For inline structs, recursively read directly from buffer
+      const { offsets: childOffsets } = calculateFieldSize(childField, pack);
+      result[key] = instanceToObject(
+        childField.fields,
+        childOffsets!,
+        view,
+        absoluteOffset,
+      );
     } else {
       const value = readFieldValue(childField, view, absoluteOffset, {
         pack,
@@ -153,7 +152,7 @@ function createStructProxy(
   offsets: StructOffsets,
   view: DataView,
   baseOffset: number,
-  proxyCache: WeakMap<object, any>,
+  proxyCache: Map<string, any>,
 ): any {
   const { pack, stringToPointer, pointerToString } = ___STRUCTS_SETUP___!;
   const fieldKeys = Object.keys(fields);
@@ -179,7 +178,11 @@ function createStructProxy(
         const isPointer =
           'isPointer' in childField && childField.isPointer === true;
         if (childField.type === 'struct' && !isPointer) {
-          let cachedProxy = proxyCache.get(childField);
+          // Use a combination of offset and a unique identifier for the field structure
+          // to differentiate between different struct types at the same offset
+          const structId = Object.keys(childField.fields).sort().join(',');
+          const cacheKey = `${absoluteOffset}:${structId}`;
+          let cachedProxy = proxyCache.get(cacheKey);
 
           if (!cachedProxy) {
             cachedProxy = createStructProxyWrapper(
@@ -188,7 +191,7 @@ function createStructProxy(
               absoluteOffset,
               proxyCache,
             );
-            proxyCache.set(childField, cachedProxy);
+            proxyCache.set(cacheKey, cachedProxy);
           }
 
           return cachedProxy;
@@ -214,7 +217,10 @@ function createStructProxy(
         const isPointer =
           'isPointer' in childField && childField.isPointer === true;
         if (childField.type === 'struct' && !isPointer) {
-          proxyCache.delete(childField);
+          // Clear cache using the same key format as in getter
+          const structId = Object.keys(childField.fields).sort().join(',');
+          const cacheKey = `${absoluteOffset}:${structId}`;
+          proxyCache.delete(cacheKey);
         }
 
         return true;
@@ -227,7 +233,7 @@ function createStructProxyWrapper(
   field: StructField<any>,
   view: DataView,
   baseOffset: number,
-  proxyCache: WeakMap<object, any>,
+  proxyCache: Map<string, any>,
 ): any {
   const { pack } = ___STRUCTS_SETUP___!;
   const { offsets } = calculateFieldSize(field, pack);
@@ -253,7 +259,7 @@ export function instantiate<F extends StructField<any>>(
   const { size, offsets } = calculateFieldSize(fieldCopy, pack);
   const buffer = new ArrayBuffer(size);
   const view = new DataView(buffer);
-  const proxyCache = new WeakMap<object, any>();
+  const proxyCache = new Map<string, any>();
 
   const proxy = createStructProxy(
     fieldCopy.fields,
@@ -293,7 +299,6 @@ export function instanceToJSON<I extends Record<string, any>>(instance: I): I {
   }
 
   const obj = instanceToObject(
-    instance,
     metadata.fields,
     metadata.offsets,
     metadata.view,

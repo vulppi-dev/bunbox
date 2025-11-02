@@ -19,6 +19,21 @@ const GLFW_LIBS: Record<string, any> = {
   },
 };
 
+const VK_LIBS: Record<string, any> = {
+  darwin: {
+    arm64: 'libvulkan.1.dylib',
+    x64: 'libvulkan.1.dylib',
+  },
+  linux: {
+    arm64: 'libvulkan.so.1',
+    x64: 'libvulkan.so.1',
+  },
+  win32: {
+    arm64: 'vulkan-1.dll',
+    x64: 'vulkan-1.dll',
+  },
+};
+
 const BGFX_LIBS: Record<string, any> = {
   darwin: {
     arm64: 'assets/arm64/darwin/libbgfx.dylib',
@@ -61,6 +76,9 @@ async function getDynamicLibPath(path?: string) {
 export const GLFW_PATH = await getDynamicLibPath(
   GLFW_LIBS[process.platform]?.[process.arch],
 );
+
+// Don't need getDynamicLibPath for Vulkan, as it should be installed system-wide
+export const VK_PATH = VK_LIBS[process.platform]?.[process.arch];
 
 export const BGFX_PATH = await getDynamicLibPath(
   BGFX_LIBS[process.platform]?.[process.arch],

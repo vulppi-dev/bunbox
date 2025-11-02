@@ -12,7 +12,12 @@ import {
   u8,
   union,
 } from '../src/fields';
-import { instantiate, setupStruct, getInstanceBuffer } from '../src/parser';
+import {
+  instantiate,
+  setupStruct,
+  getInstanceBuffer,
+  instanceToJSON,
+} from '../src/parser';
 
 function createStringCodec() {
   const byValue = new Map<string, bigint>();
@@ -983,5 +988,84 @@ describe('buffer size calculation', () => {
     // inline array (5 bytes) + padding (3 bytes) + pointer (8 bytes) + u8 (1 byte) + padding (7 bytes)
     // Total = 24 bytes
     expect(buffer.byteLength).toBe(24);
+  });
+});
+
+describe('instanceToJSON', () => {
+  it('serializes inline nested structs correctly', () => {
+    const position = struct({
+      x: u8(),
+      y: u8(),
+    });
+
+    const entity = struct({
+      id: u8(),
+      pos: position,
+      name: string(),
+    });
+
+    const instance = instantiate(entity);
+    instance.id = 42;
+    instance.pos.x = 10;
+    instance.pos.y = 20;
+    instance.name = 'Player';
+
+    const json = instanceToJSON(instance);
+
+    expect(json.id).toBe(42);
+    expect(json.pos).toEqual({ x: 10, y: 20 });
+    expect(json.name).toBe('Player');
+  });
+
+  it('handles deeply nested inline structs', () => {
+    const vec2 = struct({
+      x: u8(),
+      y: u8(),
+    });
+
+    const transform = struct({
+      position: vec2,
+      scale: vec2,
+    });
+
+    const gameObject = struct({
+      id: u8(),
+      transform: transform,
+      active: bool(),
+    });
+
+    const instance = instantiate(gameObject);
+    instance.id = 1;
+    instance.transform.position.x = 5;
+    instance.transform.position.y = 10;
+    instance.transform.scale.x = 2;
+    instance.transform.scale.y = 3;
+    instance.active = true;
+
+    const json = instanceToJSON(instance);
+
+    expect(json.id).toBe(1);
+    expect(json.transform).toEqual({
+      position: { x: 5, y: 10 },
+      scale: { x: 2, y: 3 },
+    });
+    expect(json.active).toBe(true);
+  });
+
+  it('serializes pointer structs as bigint strings', () => {
+    const node = struct({
+      value: u8(),
+      next: pointer(struct({ value: u8() })),
+    });
+
+    const instance = instantiate(node);
+    instance.value = 42;
+    instance.next = 0x1234n;
+
+    const json = instanceToJSON(instance) as any;
+
+    expect(json.value).toBe(42);
+    expect(typeof json.next).toBe('string');
+    expect(json.next).toBe('4660'); // 0x1234 in decimal as string
   });
 });

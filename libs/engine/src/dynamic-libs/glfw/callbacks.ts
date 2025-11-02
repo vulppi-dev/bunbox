@@ -238,3 +238,15 @@ export const glfwJoystickCallback = {
   args: ['i32', 'i32'] as [jid: 'i32', event: 'i32'],
   returns: 'void',
 } as const satisfies FFIFunction;
+
+// GLFW MARK: Vulkan
+
+/**
+ * Vulkan API function pointer type.
+ *
+ * C ref: `typedef void(* 	GLFWvkproc) (void)`
+ */
+export const glfwVulkanProcCallback = {
+  args: [] as [],
+  returns: 'void',
+} as const satisfies FFIFunction;

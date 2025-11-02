@@ -1171,3 +1171,64 @@ export const glfwGetTimerFrequency = {
   args: [],
   returns: 'u64',
 } as const satisfies FFIFunction;
+
+// GLFW MARK: Vulkan
+
+/**
+ * Returns whether the Vulkan loader and an ICD have been found.
+ *
+ * C ref: `int glfwVulkanSupported (void)`
+ */
+export const glfwVulkanSupported = {
+  args: [],
+  returns: 'i32',
+} as const satisfies FFIFunction;
+
+/**
+ * Returns the Vulkan instance extensions required by GLFW.
+ *
+ * C ref: `const char ** glfwGetRequiredInstanceExtensions (uint32_t *count)`
+ */
+export const glfwGetRequiredInstanceExtensions = {
+  args: ['ptr'] as [count: 'ptr'],
+  returns: 'ptr',
+} as const satisfies FFIFunction;
+
+/**
+ * Returns the address of the specified Vulkan instance function.
+ *
+ * C ref: `GLFWvkproc glfwGetInstanceProcAddress (VkInstance instance, const char *procname)`
+ */
+export const glfwGetInstanceProcAddress = {
+  args: ['u64', 'cstring'] as [instance: 'u64', procname: 'cstring'],
+  returns: 'ptr',
+} as const satisfies FFIFunction;
+
+/**
+ * Returns whether the specified queue family can present images.
+ *
+ * C ref: `int glfwGetPhysicalDevicePresentationSupport (VkInstance instance, VkPhysicalDevice device, uint32_t queuefamily)`
+ */
+export const glfwGetPhysicalDevicePresentationSupport = {
+  args: ['u64', 'u64', 'u32'] as [
+    instance: 'u64',
+    device: 'u64',
+    queuefamily: 'u32',
+  ],
+  returns: 'i32',
+} as const satisfies FFIFunction;
+
+/**
+ * Creates a Vulkan surface for the specified window.
+ *
+ * C ref: `VkResult glfwCreateWindowSurface (VkInstance instance, GLFWwindow *window, const VkAllocationCallbacks *allocator, VkSurfaceKHR *surface)`
+ */
+export const glfwCreateWindowSurface = {
+  args: ['u64', 'ptr', 'ptr', 'ptr'] as [
+    instance: 'u64',
+    window: 'ptr',
+    allocator: 'ptr',
+    surface: 'ptr',
+  ],
+  returns: 'i32',
+} as const satisfies FFIFunction;
