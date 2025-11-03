@@ -18,7 +18,7 @@ import {
   VkMemoryRequirements,
 } from '../../dynamic-libs';
 import { DynamicLibError } from '../../errors';
-import { TextureImage } from '../../elements';
+import type { TextureImage } from '../../elements';
 import { VK_DEBUG } from '../../singleton/logger';
 import {
   getImageAspectFlags,
@@ -26,7 +26,19 @@ import {
   textureUsageToVulkan,
 } from './helpers/texture-format-mapping';
 
-export class VkTexture extends TextureImage implements Disposable {
+/**
+ * VkTexture - Vulkan-specific texture implementation
+ *
+ * This class is the internal Vulkan representation of a texture.
+ * It does NOT extend TextureImage (elements API).
+ * Instead, it receives a TextureImage as input and creates Vulkan resources.
+ *
+ * The Renderer is responsible for converting TextureImage → VkTexture.
+ */
+export class VkTexture implements Disposable {
+  // Reference to source TextureImage
+  #sourceTexture: TextureImage;
+
   #vkLogicalDevice: Pointer;
   #vkPhysicalDevice: Pointer;
 
@@ -44,9 +56,9 @@ export class VkTexture extends TextureImage implements Disposable {
   constructor(
     vkLogicalDevice: Pointer,
     vkPhysicalDevice: Pointer,
-    desc: ConstructorParameters<typeof TextureImage>[0],
+    sourceTexture: TextureImage,
   ) {
-    super(desc);
+    this.#sourceTexture = sourceTexture;
     this.#vkLogicalDevice = vkLogicalDevice;
     this.#vkPhysicalDevice = vkPhysicalDevice;
     this.#ptr_aux = new BigUint64Array(1);
@@ -54,6 +66,13 @@ export class VkTexture extends TextureImage implements Disposable {
     this.#createImage();
     this.#allocateMemory();
     this.#createImageView();
+  }
+
+  /**
+   * Get the source TextureImage that this VkTexture was created from
+   */
+  get sourceTexture(): TextureImage {
+    return this.#sourceTexture;
   }
 
   get image(): Pointer {
@@ -79,7 +98,9 @@ export class VkTexture extends TextureImage implements Disposable {
   }
 
   dispose(): void | Promise<void> {
-    VK_DEBUG(`Disposing VkTexture: ${this.label || this.id}`);
+    VK_DEBUG(
+      `Disposing VkTexture: ${this.#sourceTexture.label || this.#sourceTexture.id}`,
+    );
 
     // Destroy image view
     if (this.#vkImageView) {
@@ -107,22 +128,24 @@ export class VkTexture extends TextureImage implements Disposable {
 
   #createImage(): void {
     VK_DEBUG(
-      `Creating VkImage: ${this.width}x${this.height}, format=${this.format}, mips=${this.mipLevels}`,
+      `Creating VkImage: ${this.#sourceTexture.width}x${this.#sourceTexture.height}, format=${this.#sourceTexture.format}, mips=${this.#sourceTexture.mipLevels}`,
     );
 
-    const vkFormat = textureFormatToVulkan(this.format);
-    const usage = textureUsageToVulkan(Array.from(this.usage));
+    const vkFormat = textureFormatToVulkan(this.#sourceTexture.format);
+    const usage = textureUsageToVulkan(Array.from(this.#sourceTexture.usage));
 
     const createInfo = instantiate(VkImageCreateInfo);
     createInfo.sType = Vk_StructureType.IMAGE_CREATE_INFO;
     createInfo.imageType = Vk_ImageType.TYPE_2D;
     createInfo.format = vkFormat;
-    createInfo.extent.width = this.width;
-    createInfo.extent.height = this.height;
+    createInfo.extent.width = this.#sourceTexture.width;
+    createInfo.extent.height = this.#sourceTexture.height;
     createInfo.extent.depth = 1;
-    createInfo.mipLevels = this.mipLevels;
+    createInfo.mipLevels = this.#sourceTexture.mipLevels;
     createInfo.arrayLayers = 1;
-    createInfo.samples = this.#sampleCountToVulkan(this.sampleCount);
+    createInfo.samples = this.#sampleCountToVulkan(
+      this.#sourceTexture.sampleCount,
+    );
     createInfo.tiling = Vk_ImageTiling.OPTIMAL;
     createInfo.usage = usage;
     createInfo.sharingMode = Vk_SharingMode.EXCLUSIVE;
@@ -221,8 +244,8 @@ export class VkTexture extends TextureImage implements Disposable {
 
     VK_DEBUG('Creating VkImageView');
 
-    const vkFormat = textureFormatToVulkan(this.format);
-    const aspectMask = getImageAspectFlags(this.format);
+    const vkFormat = textureFormatToVulkan(this.#sourceTexture.format);
+    const aspectMask = getImageAspectFlags(this.#sourceTexture.format);
 
     const createInfo = instantiate(VkImageViewCreateInfo);
     createInfo.sType = Vk_StructureType.IMAGE_VIEW_CREATE_INFO;
@@ -231,7 +254,7 @@ export class VkTexture extends TextureImage implements Disposable {
     createInfo.format = vkFormat;
     createInfo.subresourceRange.aspectMask = aspectMask;
     createInfo.subresourceRange.baseMipLevel = 0;
-    createInfo.subresourceRange.levelCount = this.mipLevels;
+    createInfo.subresourceRange.levelCount = this.#sourceTexture.mipLevels;
     createInfo.subresourceRange.baseArrayLayer = 0;
     createInfo.subresourceRange.layerCount = 1;
 

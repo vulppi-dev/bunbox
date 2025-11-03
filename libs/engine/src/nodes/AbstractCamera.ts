@@ -73,9 +73,9 @@ export abstract class AbstractCamera extends Node3D {
     return this.#frustum!;
   }
 
-  override _update(_deltaTime: number): void {
+  override _process(_deltaTime: number): void {
     if (this.isDirty || this.transform.isDirty) {
-      this._updateProjectionMatrix();
+      this._processProjectionMatrix();
       this.#frustum = null; // Invalidate frustum cache
       this.transform.markAsClean();
       this.markAsClean();
@@ -153,5 +153,5 @@ export abstract class AbstractCamera extends Node3D {
   }
 
   /** Update projection matrix according to subclass parameters. */
-  protected abstract _updateProjectionMatrix(): void;
+  protected abstract _processProjectionMatrix(): void;
 }

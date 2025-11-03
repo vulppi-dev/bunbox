@@ -73,17 +73,17 @@ export class OrthographicCamera extends AbstractCamera {
     this.markAsDirty();
   }
 
-  override _update(deltaTime: number): void {
+  override _process(deltaTime: number): void {
     if (this.#horizontal.isDirty || this.#vertical.isDirty) {
-      this._updateProjectionMatrix();
+      this._processProjectionMatrix();
       this.#horizontal.markAsClean();
       this.#vertical.markAsClean();
     }
 
-    super._update(deltaTime);
+    super._process(deltaTime);
   }
 
-  protected override _updateProjectionMatrix(): void {
+  protected override _processProjectionMatrix(): void {
     // Right-handed orthographic, column-major, NDC Z in [0, 1]
     const l = this.left;
     const r = this.right;

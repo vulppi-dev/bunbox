@@ -38,6 +38,7 @@ import { GLFW_DEBUG, VK_DEBUG } from '../../singleton/logger';
 import { pointerCopyBuffer } from '../../utils/buffer';
 import { Node } from '../Node';
 import { Renderer } from './Renderer';
+import type { RenderPass } from '../../elements/RenderPass';
 import type { AbstractRenderPass } from './RenderPass/AbstractRenderPass';
 import type { Color } from '../../math';
 
@@ -408,8 +409,14 @@ export class Window<
     return this.#renderer.logicalDevice;
   }
 
+  /**
+   * Get all render passes (returns VkRenderPass for backward compatibility)
+   * @deprecated Use public RenderPass API from elements instead
+   */
   get allRenderPasses(): readonly AbstractRenderPass[] {
-    return this.#renderer.allRenderPasses;
+    // Return as AbstractRenderPass for backward compatibility
+    // In reality, these are VkRenderPass instances
+    return this.#renderer.allRenderPasses as any;
   }
 
   get backgroundColor(): Color {
@@ -616,23 +623,37 @@ export class Window<
     GLFW.glfwMaximizeWindow(this.#windowPtr);
   }
 
-  addRenderPass(renderPass: AbstractRenderPass): void {
-    this.#renderer.addRenderPass(renderPass);
+  /**
+   * Add a render pass to the renderer
+   * Accepts both public API (RenderPass) and old API (AbstractRenderPass)
+   */
+  addRenderPass(renderPass: RenderPass | AbstractRenderPass): void {
+    // Cast to RenderPass for new API
+    this.#renderer.addRenderPass(renderPass as RenderPass);
   }
 
-  removeRenderPass(renderPass: AbstractRenderPass): boolean {
-    return this.#renderer.removeRenderPass(renderPass);
+  /**
+   * Remove a render pass from the renderer
+   */
+  removeRenderPass(renderPass: RenderPass | AbstractRenderPass): boolean {
+    return this.#renderer.removeRenderPass(renderPass as RenderPass);
   }
 
   clearRenderPasses(): void {
     this.#renderer.clearAdditionalPasses();
   }
 
+  /**
+   * Replace a render pass with another
+   */
   replaceRenderPass(
-    oldPass: AbstractRenderPass,
-    newPass: AbstractRenderPass,
+    oldPass: RenderPass | AbstractRenderPass,
+    newPass: RenderPass | AbstractRenderPass,
   ): boolean {
-    return this.#renderer.replaceRenderPass(oldPass, newPass);
+    return this.#renderer.replaceRenderPass(
+      oldPass as RenderPass,
+      newPass as RenderPass,
+    );
   }
 
   override _process(_deltaTime: number): void {

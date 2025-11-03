@@ -92,7 +92,7 @@ export class Node3D<
   }
 
   /** Recompose local transform if any component changed since last frame. */
-  override _update(_: number): void {
+  override _process(_delta: number): void {
     if (
       this.#position.isDirty ||
       this.#scale.isDirty ||

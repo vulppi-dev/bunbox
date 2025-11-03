@@ -22,8 +22,9 @@ import {
 import type { CommandBuffer } from './CommandBuffer';
 import { CommandPool } from './CommandPool';
 import { LogicalDevice } from './LogicalDevice';
-import type { AbstractRenderPass } from './RenderPass/AbstractRenderPass';
-import { ClearScreenRenderPass } from './RenderPass/ClearScreenRenderPass';
+import { VkRenderPass } from './VkRenderPass';
+import type { RenderPass } from '../../elements/RenderPass';
+import { ClearScreenRenderPass } from '../../elements/ClearScreenRenderPass';
 import { Swapchain } from './Swapchain';
 
 export class Renderer implements Disposable {
@@ -55,9 +56,17 @@ export class Renderer implements Disposable {
   // Logical device
   #logicalDevice: LogicalDevice | null = null;
 
-  // Render passes
-  #clearScreenPass: ClearScreenRenderPass;
-  #additionalPasses: AbstractRenderPass[] = [];
+  // Render passes - Public API (elements)
+  #publicClearScreenPass: ClearScreenRenderPass;
+  #publicAdditionalPasses: RenderPass[] = [];
+
+  // Render passes - Vulkan implementation (internal)
+  #vkClearScreenPass: VkRenderPass;
+  #vkAdditionalPasses: VkRenderPass[] = [];
+
+  // Cache: RenderPass (public API) → VkRenderPass (Vulkan)
+  #renderPassCache: Map<RenderPass, VkRenderPass> = new Map();
+
   #currentSurfaceFormat: number | null = null;
 
   // Command pool
@@ -115,12 +124,22 @@ export class Renderer implements Disposable {
       'VK_KHR_swapchain',
     ]);
 
-    // Create clear screen render pass (always present)
-    this.#clearScreenPass = new ClearScreenRenderPass();
+    // Create clear screen render pass (PUBLIC API)
+    this.#publicClearScreenPass = new ClearScreenRenderPass();
+
+    // Create Vulkan implementation of clear screen render pass (GENERIC)
+    this.#vkClearScreenPass = new VkRenderPass();
+    this.#vkClearScreenPass.setSourceRenderPass(this.#publicClearScreenPass);
+
+    // Cache the conversion
+    this.#renderPassCache.set(
+      this.#publicClearScreenPass,
+      this.#vkClearScreenPass,
+    );
 
     // Prepare render pass with logical device and surface format
     this.#currentSurfaceFormat = this.#querySurfaceFormat();
-    this.#clearScreenPass[PREPARE_FUNC_SYM](
+    this.#vkClearScreenPass[PREPARE_FUNC_SYM](
       this.#logicalDevice.device,
       this.#currentSurfaceFormat,
     );
@@ -138,66 +157,107 @@ export class Renderer implements Disposable {
     return this.#logicalDevice.device;
   }
 
-  get allRenderPasses(): readonly AbstractRenderPass[] {
-    return Object.freeze([this.#clearScreenPass, ...this.#additionalPasses]);
+  get allRenderPasses(): readonly VkRenderPass[] {
+    return Object.freeze([
+      this.#vkClearScreenPass,
+      ...this.#vkAdditionalPasses,
+    ]);
   }
 
   get clearColor(): Color {
-    return this.#clearScreenPass.clearColor;
+    return this.#publicClearScreenPass.clearColor;
   }
 
   set clearColor(color: Color) {
-    this.#clearScreenPass.clearColor = color;
+    this.#publicClearScreenPass.clearColor = color;
   }
 
-  addRenderPass(renderPass: AbstractRenderPass): void {
+  /**
+   * Add a public RenderPass (elements API)
+   * Renderer will convert it to VkRenderPass internally
+   */
+  addRenderPass(renderPass: RenderPass): void {
     if (!this.#currentSurfaceFormat) {
       throw new DynamicLibError('Renderer not initialized', 'Vulkan');
     }
 
     VK_DEBUG('Adding render pass to renderer');
 
-    if (!renderPass.isPrepared) {
-      renderPass[PREPARE_FUNC_SYM](
+    // Check if already cached
+    let vkRenderPass = this.#renderPassCache.get(renderPass);
+
+    if (!vkRenderPass) {
+      // Create Vulkan implementation based on the public RenderPass type
+      vkRenderPass = this.#createVkRenderPass(renderPass);
+      vkRenderPass.setSourceRenderPass(renderPass);
+      this.#renderPassCache.set(renderPass, vkRenderPass);
+    }
+
+    if (!vkRenderPass.isPrepared) {
+      vkRenderPass[PREPARE_FUNC_SYM](
         this.logicalDevice,
         this.#currentSurfaceFormat,
       );
     }
 
-    this.#additionalPasses.push(renderPass);
+    this.#publicAdditionalPasses.push(renderPass);
+    this.#vkAdditionalPasses.push(vkRenderPass);
+
+    // Sync render targets from public API to Vulkan
+    if (renderPass.hasRenderTargets && renderPass.renderTargets) {
+      vkRenderPass.updateRenderTargets([...renderPass.renderTargets]);
+    }
   }
 
-  removeRenderPass(renderPass: AbstractRenderPass): boolean {
-    const index = this.#additionalPasses.indexOf(renderPass);
+  /**
+   * Remove a public RenderPass
+   */
+  removeRenderPass(renderPass: RenderPass): boolean {
+    const index = this.#publicAdditionalPasses.indexOf(renderPass);
     if (index === -1) {
       VK_DEBUG('RenderPass not found in renderer');
       return false;
     }
 
     VK_DEBUG('Removing render pass from renderer');
-    this.#additionalPasses.splice(index, 1);
-    renderPass[RELEASE_FUNC_SYM]();
+
+    const vkRenderPass = this.#renderPassCache.get(renderPass);
+    if (vkRenderPass) {
+      vkRenderPass[RELEASE_FUNC_SYM]();
+      this.#renderPassCache.delete(renderPass);
+    }
+
+    this.#publicAdditionalPasses.splice(index, 1);
+    this.#vkAdditionalPasses.splice(index, 1);
 
     return true;
   }
 
   clearAdditionalPasses(): void {
     VK_DEBUG(
-      `Clearing ${this.#additionalPasses.length} additional render passes`,
+      `Clearing ${this.#publicAdditionalPasses.length} additional render passes`,
     );
 
-    for (const pass of this.#additionalPasses) {
-      pass[RELEASE_FUNC_SYM]();
+    for (const vkPass of this.#vkAdditionalPasses) {
+      vkPass[RELEASE_FUNC_SYM]();
     }
 
-    this.#additionalPasses = [];
+    this.#renderPassCache.clear();
+    // Re-add clear screen pass to cache
+    this.#renderPassCache.set(
+      this.#publicClearScreenPass,
+      this.#vkClearScreenPass,
+    );
+
+    this.#publicAdditionalPasses = [];
+    this.#vkAdditionalPasses = [];
   }
 
-  replaceRenderPass(
-    oldPass: AbstractRenderPass,
-    newPass: AbstractRenderPass,
-  ): boolean {
-    const index = this.#additionalPasses.indexOf(oldPass);
+  /**
+   * Replace a public RenderPass with another
+   */
+  replaceRenderPass(oldPass: RenderPass, newPass: RenderPass): boolean {
+    const index = this.#publicAdditionalPasses.indexOf(oldPass);
     if (index === -1) {
       VK_DEBUG('Old render pass not found');
       return false;
@@ -205,14 +265,43 @@ export class Renderer implements Disposable {
 
     VK_DEBUG('Replacing render pass');
 
-    if (!newPass.isPrepared && this.#currentSurfaceFormat) {
-      newPass[PREPARE_FUNC_SYM](this.logicalDevice, this.#currentSurfaceFormat);
+    // Get or create Vulkan implementation for new pass
+    let vkNewPass = this.#renderPassCache.get(newPass);
+    if (!vkNewPass) {
+      vkNewPass = this.#createVkRenderPass(newPass);
+      vkNewPass.setSourceRenderPass(newPass);
+      this.#renderPassCache.set(newPass, vkNewPass);
     }
 
-    this.#additionalPasses[index] = newPass;
-    oldPass[RELEASE_FUNC_SYM]();
+    if (!vkNewPass.isPrepared && this.#currentSurfaceFormat) {
+      vkNewPass[PREPARE_FUNC_SYM](
+        this.logicalDevice,
+        this.#currentSurfaceFormat,
+      );
+    }
+
+    // Release old pass
+    const vkOldPass = this.#renderPassCache.get(oldPass);
+    if (vkOldPass) {
+      vkOldPass[RELEASE_FUNC_SYM]();
+      this.#renderPassCache.delete(oldPass);
+    }
+
+    this.#publicAdditionalPasses[index] = newPass;
+    this.#vkAdditionalPasses[index] = vkNewPass;
 
     return true;
+  }
+
+  /**
+   * Create VkRenderPass from public RenderPass
+   * VkRenderPass is a single generic class that works for all RenderPass types
+   * @internal
+   */
+  #createVkRenderPass(_renderPass: RenderPass): VkRenderPass {
+    // Create a generic VkRenderPass instance
+    // It will read configuration from the source RenderPass
+    return new VkRenderPass();
   }
 
   dispose(): void | Promise<void> {
@@ -226,12 +315,14 @@ export class Renderer implements Disposable {
     this.#commandPool?.dispose();
     this.#commandPool = null;
 
-    // Dispose all render passes
-    this.#clearScreenPass[DISPOSE_FUNC_SYM]();
-    for (const pass of this.#additionalPasses) {
-      pass[DISPOSE_FUNC_SYM]();
+    // Dispose all Vulkan render passes
+    this.#vkClearScreenPass[DISPOSE_FUNC_SYM]();
+    for (const vkPass of this.#vkAdditionalPasses) {
+      vkPass[DISPOSE_FUNC_SYM]();
     }
-    this.#additionalPasses = [];
+    this.#vkAdditionalPasses = [];
+    this.#publicAdditionalPasses = [];
+    this.#renderPassCache.clear();
 
     // Dispose logical device
     this.#logicalDevice?.dispose();
@@ -270,13 +361,13 @@ export class Renderer implements Disposable {
     const formatChanged = newFormat !== this.#currentSurfaceFormat;
     this.#currentSurfaceFormat = newFormat;
 
-    // Rebuild all render passes if format changed
+    // Rebuild all Vulkan render passes if format changed
     if (formatChanged) {
       VK_DEBUG('Surface format changed, rebuilding render passes');
-      this.#clearScreenPass[REBUILD_FUNC_SYM](newFormat);
+      this.#vkClearScreenPass[REBUILD_FUNC_SYM](newFormat);
 
-      for (const pass of this.#additionalPasses) {
-        pass[REBUILD_FUNC_SYM](newFormat);
+      for (const vkPass of this.#vkAdditionalPasses) {
+        vkPass[REBUILD_FUNC_SYM](newFormat);
       }
     }
 
@@ -288,7 +379,7 @@ export class Renderer implements Disposable {
         this.#vkPhysicalDevice,
         this.#logicalDevice.device,
         this.#vkSurface,
-        this.#clearScreenPass.renderPass,
+        this.#vkClearScreenPass.vkRenderPass,
         this.#commandPool,
         width,
         height,
@@ -317,19 +408,22 @@ export class Renderer implements Disposable {
     frame.commandBuffer.begin();
 
     // Render to custom targets first (if any additional passes have custom targets)
-    for (const pass of this.#additionalPasses) {
-      if (pass.hasCustomTarget && pass.customFramebuffer) {
-        this.#renderToCustomTarget(frame.commandBuffer, pass);
+    for (let i = 0; i < this.#publicAdditionalPasses.length; i++) {
+      const publicPass = this.#publicAdditionalPasses[i]!;
+      const vkPass = this.#vkAdditionalPasses[i]!;
+
+      if (publicPass.hasRenderTargets && vkPass.vkCustomFramebuffer) {
+        this.#renderToCustomTarget(frame.commandBuffer, vkPass, publicPass);
       }
     }
 
     // Then render to swapchain (main screen)
     frame.commandBuffer.beginRenderPass(
-      this.#clearScreenPass.renderPass,
+      this.#vkClearScreenPass.vkRenderPass,
       frame.framebuffer,
       this.#width[0]!,
       this.#height[0]!,
-      this.#clearScreenPass.clearColor,
+      this.#publicClearScreenPass.clearColor,
     );
 
     // TODO: Record actual rendering commands here for main pass
@@ -351,13 +445,14 @@ export class Renderer implements Disposable {
    */
   #renderToCustomTarget(
     commandBuffer: CommandBuffer,
-    pass: AbstractRenderPass,
+    vkPass: VkRenderPass,
+    publicPass: RenderPass,
   ): void {
-    if (!pass.customFramebuffer) {
+    if (!vkPass.vkCustomFramebuffer) {
       return;
     }
 
-    const fb = pass.customFramebuffer;
+    const fb = vkPass.vkCustomFramebuffer;
 
     VK_DEBUG(
       `Rendering to custom target: ${fb.width}x${fb.height}, ${fb.attachments.length} attachments`,
@@ -376,11 +471,11 @@ export class Renderer implements Disposable {
 
     // Begin render pass with custom framebuffer
     commandBuffer.beginRenderPass(
-      pass.renderPass,
+      vkPass.vkRenderPass,
       fb,
       fb.width,
       fb.height,
-      this.#clearScreenPass.clearColor, // TODO: Allow custom clear color per pass
+      publicPass.clearColor,
     );
 
     // TODO: Record rendering commands for this pass

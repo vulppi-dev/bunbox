@@ -34,7 +34,7 @@ export class PerspectiveCamera extends AbstractCamera {
     return 'PerspectiveCamera';
   }
 
-  protected override _updateProjectionMatrix(): void {
+  protected override _processProjectionMatrix(): void {
     const a = this.#aspect || 1;
     const n = this.near;
     const fFar = this.far;

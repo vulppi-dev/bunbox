@@ -182,7 +182,9 @@ export class CommandBuffer implements Disposable {
     barrier.srcQueueFamilyIndex = ~0; // VK_QUEUE_FAMILY_IGNORED
     barrier.dstQueueFamilyIndex = ~0; // VK_QUEUE_FAMILY_IGNORED
     barrier.image = BigInt(texture.image as number);
-    barrier.subresourceRange.aspectMask = getImageAspectFlags(texture.format);
+    barrier.subresourceRange.aspectMask = getImageAspectFlags(
+      texture.sourceTexture.format,
+    );
     barrier.subresourceRange.baseMipLevel = 0;
     barrier.subresourceRange.levelCount = 1; // TODO: Support mipmaps
     barrier.subresourceRange.baseArrayLayer = 0;
