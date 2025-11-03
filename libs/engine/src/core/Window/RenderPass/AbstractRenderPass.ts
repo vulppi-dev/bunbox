@@ -28,6 +28,8 @@ import {
   RELEASE_FUNC_SYM,
   Resource,
 } from '../../symbols/Resources';
+import type { VkTexture } from '../VkTexture';
+import { Framebuffer } from '../Framebuffer';
 
 type VkAttachmentDescriptionInstance = InferField<
   typeof VkAttachmentDescription
@@ -38,8 +40,13 @@ type VkSubpassDependencyInstance = InferField<typeof VkSubpassDependency>;
 
 export abstract class AbstractRenderPass extends Resource {
   #vkLogicalDevice: Pointer | null = null;
+  #vkPhysicalDevice: Pointer | null = null;
   #renderPass: Pointer | null = null;
   #currentFormat: number | null = null;
+
+  // Custom framebuffer support
+  #customFramebuffer: Framebuffer | null = null;
+  #customAttachments: VkTexture[] | null = null;
 
   get renderPass(): Pointer {
     if (this.#renderPass === null) {
@@ -52,13 +59,32 @@ export abstract class AbstractRenderPass extends Resource {
     return this.#renderPass !== null;
   }
 
-  [PREPARE_FUNC_SYM](vkLogicalDevice: Pointer, surfaceFormat: number): void {
+  get customFramebuffer(): Framebuffer | null {
+    return this.#customFramebuffer;
+  }
+
+  get customAttachments(): readonly VkTexture[] | null {
+    return this.#customAttachments
+      ? Object.freeze([...this.#customAttachments])
+      : null;
+  }
+
+  get hasCustomTarget(): boolean {
+    return this.#customFramebuffer !== null;
+  }
+
+  [PREPARE_FUNC_SYM](
+    vkLogicalDevice: Pointer,
+    surfaceFormat: number,
+    vkPhysicalDevice?: Pointer,
+  ): void {
     if (this.#renderPass !== null) {
       VK_DEBUG('RenderPass already prepared, skipping');
       return;
     }
 
     this.#vkLogicalDevice = vkLogicalDevice;
+    this.#vkPhysicalDevice = vkPhysicalDevice ?? null;
     this.#currentFormat = surfaceFormat;
     this.#createRenderPass();
   }
@@ -83,12 +109,90 @@ export abstract class AbstractRenderPass extends Resource {
       VK.vkDestroyRenderPass(this.#vkLogicalDevice, this.#renderPass, null);
       this.#renderPass = null;
     }
+
+    // Dispose custom framebuffer if it exists
+    if (this.#customFramebuffer !== null) {
+      this.#customFramebuffer.dispose();
+      this.#customFramebuffer = null;
+    }
+
+    this.#customAttachments = null;
   }
 
   [DISPOSE_FUNC_SYM](): void {
     this[RELEASE_FUNC_SYM]();
     this.#vkLogicalDevice = null;
+    this.#vkPhysicalDevice = null;
     this.#currentFormat = null;
+  }
+
+  /**
+   * Set custom render target (framebuffer with attachments)
+   * This allows rendering to textures instead of the swapchain
+   */
+  setCustomTarget(
+    attachments: VkTexture[],
+    width: number,
+    height: number,
+  ): void {
+    if (!this.#vkLogicalDevice || !this.#vkPhysicalDevice) {
+      throw new DynamicLibError(
+        'RenderPass must be prepared before setting custom target',
+        'Vulkan',
+      );
+    }
+
+    if (attachments.length === 0) {
+      throw new DynamicLibError(
+        'At least one attachment is required',
+        'Vulkan',
+      );
+    }
+
+    VK_DEBUG(
+      `Setting custom render target: ${width}x${height}, ${attachments.length} attachments`,
+    );
+
+    // Dispose previous custom framebuffer if exists
+    if (this.#customFramebuffer) {
+      this.#customFramebuffer.dispose();
+    }
+
+    // Store attachments
+    this.#customAttachments = [...attachments];
+
+    // Create new framebuffer
+    this.#customFramebuffer = new Framebuffer(
+      this.#vkLogicalDevice,
+      this.renderPass, // Use getter to ensure non-null
+      attachments,
+      width,
+      height,
+    );
+  }
+
+  /**
+   * Clear custom render target and return to default (swapchain)
+   */
+  clearCustomTarget(): void {
+    if (this.#customFramebuffer) {
+      VK_DEBUG('Clearing custom render target');
+      this.#customFramebuffer.dispose();
+      this.#customFramebuffer = null;
+      this.#customAttachments = null;
+    }
+  }
+
+  /**
+   * Rebuild custom framebuffer with new dimensions
+   */
+  rebuildCustomTarget(width: number, height: number): void {
+    if (!this.#customFramebuffer) {
+      throw new DynamicLibError('No custom target to rebuild', 'Vulkan');
+    }
+
+    VK_DEBUG(`Rebuilding custom target: ${width}x${height}`);
+    this.#customFramebuffer.rebuild(width, height);
   }
 
   #createRenderPass(): void {

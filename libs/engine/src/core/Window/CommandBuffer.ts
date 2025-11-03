@@ -4,17 +4,23 @@ import { getInstanceBuffer, instantiate } from '@bunbox/struct';
 import {
   VK,
   Vk_CommandBufferLevel,
+  Vk_ImageLayout,
+  Vk_PipelineStageFlagBits,
   Vk_Result,
   Vk_StructureType,
   Vk_SubpassContents,
   VkCommandBufferAllocateInfo,
   VkCommandBufferBeginInfo,
+  VkImageMemoryBarrier,
   VkRenderPassBeginInfo,
 } from '../../dynamic-libs';
 import { DynamicLibError } from '../../errors';
 import { type Color } from '../../math';
 import { VK_DEBUG } from '../../singleton/logger';
 import type { CommandPool } from './CommandPool';
+import type { Framebuffer } from './Framebuffer';
+import type { VkTexture } from './VkTexture';
+import { getImageAspectFlags } from './helpers/texture-format-mapping';
 
 export class CommandBuffer implements Disposable {
   #vkLogicalDevice: Pointer;
@@ -89,10 +95,15 @@ export class CommandBuffer implements Disposable {
 
   /**
    * Begin a render pass
+   * @param renderPass - VkRenderPass pointer
+   * @param framebuffer - Either a Framebuffer instance or VkFramebuffer pointer
+   * @param width - Render area width
+   * @param height - Render area height
+   * @param clearColor - Clear color values
    */
   beginRenderPass(
     renderPass: Pointer,
-    framebuffer: Pointer,
+    framebuffer: Framebuffer | Pointer,
     width: number,
     height: number,
     clearColor: Color,
@@ -100,6 +111,14 @@ export class CommandBuffer implements Disposable {
     if (!this.#commandBuffer) {
       throw new DynamicLibError('Command buffer not allocated', 'Vulkan');
     }
+
+    // Extract VkFramebuffer pointer from Framebuffer instance or use directly
+    const vkFramebuffer =
+      framebuffer &&
+      typeof framebuffer === 'object' &&
+      'framebuffer' in framebuffer
+        ? framebuffer.framebuffer
+        : framebuffer;
 
     const clearValues = new Float32Array([
       clearColor.r,
@@ -111,7 +130,7 @@ export class CommandBuffer implements Disposable {
     const renderPassBeginInfo = instantiate(VkRenderPassBeginInfo);
     renderPassBeginInfo.sType = Vk_StructureType.RENDER_PASS_BEGIN_INFO;
     renderPassBeginInfo.renderPass = BigInt(renderPass as number);
-    renderPassBeginInfo.framebuffer = BigInt(framebuffer as number);
+    renderPassBeginInfo.framebuffer = BigInt(vkFramebuffer as number);
     renderPassBeginInfo.renderArea.offset.x = 0;
     renderPassBeginInfo.renderArea.offset.y = 0;
     renderPassBeginInfo.renderArea.extent.width = width;
@@ -135,6 +154,80 @@ export class CommandBuffer implements Disposable {
     }
 
     VK.vkCmdEndRenderPass(this.#commandBuffer);
+  }
+
+  /**
+   * Transition image layout using pipeline barrier
+   * @param texture - VkTexture to transition
+   * @param oldLayout - Current layout
+   * @param newLayout - Target layout
+   * @param srcStage - Source pipeline stage
+   * @param dstStage - Destination pipeline stage
+   */
+  transitionImageLayout(
+    texture: VkTexture,
+    oldLayout: Vk_ImageLayout,
+    newLayout: Vk_ImageLayout,
+    srcStage: Vk_PipelineStageFlagBits = Vk_PipelineStageFlagBits.TOP_OF_PIPE_BIT,
+    dstStage: Vk_PipelineStageFlagBits = Vk_PipelineStageFlagBits.FRAGMENT_SHADER_BIT,
+  ): void {
+    if (!this.#commandBuffer) {
+      throw new DynamicLibError('Command buffer not allocated', 'Vulkan');
+    }
+
+    const barrier = instantiate(VkImageMemoryBarrier);
+    barrier.sType = Vk_StructureType.IMAGE_MEMORY_BARRIER;
+    barrier.oldLayout = oldLayout;
+    barrier.newLayout = newLayout;
+    barrier.srcQueueFamilyIndex = ~0; // VK_QUEUE_FAMILY_IGNORED
+    barrier.dstQueueFamilyIndex = ~0; // VK_QUEUE_FAMILY_IGNORED
+    barrier.image = BigInt(texture.image as number);
+    barrier.subresourceRange.aspectMask = getImageAspectFlags(texture.format);
+    barrier.subresourceRange.baseMipLevel = 0;
+    barrier.subresourceRange.levelCount = 1; // TODO: Support mipmaps
+    barrier.subresourceRange.baseArrayLayer = 0;
+    barrier.subresourceRange.layerCount = 1;
+
+    // Configure access masks based on layouts
+    if (
+      oldLayout === Vk_ImageLayout.UNDEFINED &&
+      newLayout === Vk_ImageLayout.COLOR_ATTACHMENT_OPTIMAL
+    ) {
+      barrier.srcAccessMask = 0;
+      barrier.dstAccessMask = 0x00000002; // VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT
+    } else if (
+      oldLayout === Vk_ImageLayout.COLOR_ATTACHMENT_OPTIMAL &&
+      newLayout === Vk_ImageLayout.SHADER_READ_ONLY_OPTIMAL
+    ) {
+      barrier.srcAccessMask = 0x00000002; // VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT
+      barrier.dstAccessMask = 0x00000020; // VK_ACCESS_SHADER_READ_BIT
+    } else if (
+      oldLayout === Vk_ImageLayout.UNDEFINED &&
+      newLayout === Vk_ImageLayout.DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+    ) {
+      barrier.srcAccessMask = 0;
+      barrier.dstAccessMask = 0x00000200 | 0x00000400; // DEPTH_STENCIL_ATTACHMENT_READ_BIT | WRITE_BIT
+    } else {
+      // Generic transition
+      barrier.srcAccessMask = 0;
+      barrier.dstAccessMask = 0;
+    }
+
+    VK.vkCmdPipelineBarrier(
+      this.#commandBuffer,
+      srcStage,
+      dstStage,
+      0, // dependencyFlags
+      0, // memoryBarrierCount
+      null, // pMemoryBarriers
+      0, // bufferMemoryBarrierCount
+      null, // pBufferMemoryBarriers
+      1, // imageMemoryBarrierCount
+      ptr(getInstanceBuffer(barrier)),
+    );
+
+    // Update texture layout
+    texture.currentLayout = newLayout;
   }
 
   #allocateCommandBuffer(): void {

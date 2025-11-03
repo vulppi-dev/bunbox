@@ -16,7 +16,6 @@ import {
   vkGetSurfaceFormats,
   vkSelectPresentMode,
   VkFenceCreateInfo,
-  VkFramebufferCreateInfo,
   VkImageViewCreateInfo,
   VkPresentInfoKHR,
   VkSemaphoreCreateInfo,
@@ -28,11 +27,13 @@ import { VK_DEBUG } from '../../singleton/logger';
 import { getInstanceBuffer, instantiate } from '@bunbox/struct';
 import { CommandBuffer } from './CommandBuffer';
 import type { CommandPool } from './CommandPool';
+import { Framebuffer } from './Framebuffer';
+import { VkTexture } from './VkTexture';
 
 export type SwapchainFrame = {
   imageIndex: number;
   imageView: Pointer;
-  framebuffer: Pointer;
+  framebuffer: Framebuffer;
   commandBuffer: CommandBuffer;
   imageAvailableSemaphore: Pointer;
   renderFinishedSemaphore: Pointer;
@@ -59,7 +60,8 @@ export class Swapchain implements Disposable {
   #swapchainImages: Pointer[] = [];
   #swapchainImageCount: number = 0;
   #swapchainImageViews: Pointer[] = [];
-  #swapchainFramebuffers: Pointer[] = [];
+  #swapchainFramebuffers: Framebuffer[] = [];
+  #swapchainFormat: number = 0;
 
   // Command buffers
   #commandBuffers: CommandBuffer[] = [];
@@ -643,41 +645,27 @@ export class Swapchain implements Disposable {
     this.#swapchainFramebuffers = [];
 
     for (let i = 0; i < this.#swapchainImageViews.length; i++) {
-      const attachments = new BigUint64Array([
-        BigInt(this.#swapchainImageViews[i] as number),
-      ]);
-
-      const createInfo = instantiate(VkFramebufferCreateInfo);
-      createInfo.sType = Vk_StructureType.FRAMEBUFFER_CREATE_INFO;
-      createInfo.renderPass = BigInt(this.#vkRenderPass as number);
-      createInfo.attachmentCount = 1;
-      createInfo.pAttachments = BigInt(ptr(attachments));
-      createInfo.width = width;
-      createInfo.height = height;
-      createInfo.layers = 1;
-
-      const result = VK.vkCreateFramebuffer(
-        this.#vkLogicalDevice,
-        ptr(getInstanceBuffer(createInfo)),
-        null,
-        ptr(this.#ptr_aux),
+      // Create a VkTexture wrapper for each swapchain image
+      // Note: We don't create the actual VkImage since it already exists in the swapchain
+      // We create a minimal VkTexture that wraps the existing image and image view
+      const swapchainTexture = this.#createSwapchainTextureWrapper(
+        this.#swapchainImages[i]!,
+        this.#swapchainImageViews[i]!,
+        width,
+        height,
       );
 
-      if (result !== Vk_Result.SUCCESS) {
-        // Clean up already created framebuffers
-        for (const fb of this.#swapchainFramebuffers) {
-          VK.vkDestroyFramebuffer(this.#vkLogicalDevice, fb, null);
-        }
-        this.#swapchainFramebuffers = [];
-        throw new DynamicLibError(
-          `Failed to create framebuffer ${i}. VkResult: ${result}`,
-          'Vulkan',
-        );
-      }
+      // Create framebuffer with the swapchain texture as attachment
+      const framebuffer = new Framebuffer(
+        this.#vkLogicalDevice,
+        this.#vkRenderPass,
+        [swapchainTexture],
+        width,
+        height,
+      );
 
-      const framebuffer = Number(this.#ptr_aux[0]) as Pointer;
       this.#swapchainFramebuffers.push(framebuffer);
-      VK_DEBUG(`Framebuffer ${i} created: 0x${framebuffer.toString(16)}`);
+      VK_DEBUG(`Framebuffer ${i} created`);
     }
 
     VK_DEBUG(`All ${this.#swapchainFramebuffers.length} framebuffers created`);
@@ -691,11 +679,54 @@ export class Swapchain implements Disposable {
     VK_DEBUG(`Destroying ${this.#swapchainFramebuffers.length} framebuffers`);
 
     for (const framebuffer of this.#swapchainFramebuffers) {
-      VK.vkDestroyFramebuffer(this.#vkLogicalDevice, framebuffer, null);
+      framebuffer.dispose();
     }
 
     this.#swapchainFramebuffers = [];
     VK_DEBUG('Framebuffers destroyed');
+  }
+
+  /**
+   * Create a minimal VkTexture wrapper for swapchain images
+   * This doesn't create new Vulkan resources, just wraps existing ones
+   */
+  #createSwapchainTextureWrapper(
+    vkImage: Pointer,
+    vkImageView: Pointer,
+    width: number,
+    height: number,
+  ): VkTexture {
+    // Create a VkTexture that wraps the swapchain image
+    // We use a special internal method that doesn't allocate resources
+    const texture = Object.create(VkTexture.prototype);
+
+    // Set internal properties directly (bypassing constructor)
+    // This is safe because we're wrapping existing Vulkan resources
+    Object.defineProperty(texture, 'width', {
+      value: width,
+      writable: false,
+    });
+    Object.defineProperty(texture, 'height', {
+      value: height,
+      writable: false,
+    });
+    Object.defineProperty(texture, 'format', {
+      value: 'bgra8unorm',
+      writable: false,
+    });
+
+    // Expose the existing Vulkan handles through private properties
+    // These will be accessed via getters
+    const imageGetter = () => vkImage;
+    const imageViewGetter = () => vkImageView;
+
+    Object.defineProperty(texture, 'image', { get: imageGetter });
+    Object.defineProperty(texture, 'imageView', { get: imageViewGetter });
+
+    // Override dispose to be a no-op (swapchain manages these resources)
+    texture.dispose = () => {};
+
+    return texture;
   }
 
   #allocateCommandBuffers(): void {

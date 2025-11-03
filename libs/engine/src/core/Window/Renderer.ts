@@ -4,11 +4,13 @@ import {
   GLFW,
   GLFW_GeneralMacro,
   VK,
+  Vk_ImageLayout,
+  Vk_PipelineStageFlagBits,
   Vk_Result,
   vkGetSurfaceFormats,
 } from '../../dynamic-libs';
 import { DynamicLibError } from '../../errors';
-import { type Color, Vector2 } from '../../math';
+import { Vector2, type Color } from '../../math';
 import type { Node3D } from '../../nodes';
 import { VK_DEBUG } from '../../singleton/logger';
 import {
@@ -311,8 +313,31 @@ export class Renderer implements Disposable {
       return;
     }
 
-    // Record command buffer
-    this.#recordCommandBuffer(frame.commandBuffer, frame.framebuffer);
+    // Begin command buffer recording
+    frame.commandBuffer.begin();
+
+    // Render to custom targets first (if any additional passes have custom targets)
+    for (const pass of this.#additionalPasses) {
+      if (pass.hasCustomTarget && pass.customFramebuffer) {
+        this.#renderToCustomTarget(frame.commandBuffer, pass);
+      }
+    }
+
+    // Then render to swapchain (main screen)
+    frame.commandBuffer.beginRenderPass(
+      this.#clearScreenPass.renderPass,
+      frame.framebuffer,
+      this.#width[0]!,
+      this.#height[0]!,
+      this.#clearScreenPass.clearColor,
+    );
+
+    // TODO: Record actual rendering commands here for main pass
+
+    frame.commandBuffer.endRenderPass();
+
+    // End command buffer recording
+    frame.commandBuffer.end();
 
     // Submit and present
     this.#swapchain.present(
@@ -321,29 +346,57 @@ export class Renderer implements Disposable {
     );
   }
 
-  #recordCommandBuffer(
+  /**
+   * Render a pass to its custom target (offscreen texture)
+   */
+  #renderToCustomTarget(
     commandBuffer: CommandBuffer,
-    framebuffer: Pointer,
+    pass: AbstractRenderPass,
   ): void {
-    // Begin command buffer recording
-    commandBuffer.begin();
+    if (!pass.customFramebuffer) {
+      return;
+    }
 
-    // Begin render pass with clear color
-    commandBuffer.beginRenderPass(
-      this.#clearScreenPass.renderPass,
-      framebuffer,
-      this.#width[0]!,
-      this.#height[0]!,
-      this.#clearScreenPass.clearColor,
+    const fb = pass.customFramebuffer;
+
+    VK_DEBUG(
+      `Rendering to custom target: ${fb.width}x${fb.height}, ${fb.attachments.length} attachments`,
     );
 
-    // TODO: Record actual rendering commands here
+    // Transition attachments to COLOR_ATTACHMENT_OPTIMAL layout
+    for (const attachment of fb.attachments) {
+      commandBuffer.transitionImageLayout(
+        attachment,
+        attachment.currentLayout,
+        Vk_ImageLayout.COLOR_ATTACHMENT_OPTIMAL,
+        Vk_PipelineStageFlagBits.TOP_OF_PIPE_BIT,
+        Vk_PipelineStageFlagBits.COLOR_ATTACHMENT_OUTPUT_BIT,
+      );
+    }
 
-    // End render pass
+    // Begin render pass with custom framebuffer
+    commandBuffer.beginRenderPass(
+      pass.renderPass,
+      fb,
+      fb.width,
+      fb.height,
+      this.#clearScreenPass.clearColor, // TODO: Allow custom clear color per pass
+    );
+
+    // TODO: Record rendering commands for this pass
+
     commandBuffer.endRenderPass();
 
-    // End command buffer recording
-    commandBuffer.end();
+    // Transition attachments to SHADER_READ_ONLY_OPTIMAL for sampling
+    for (const attachment of fb.attachments) {
+      commandBuffer.transitionImageLayout(
+        attachment,
+        attachment.currentLayout,
+        Vk_ImageLayout.SHADER_READ_ONLY_OPTIMAL,
+        Vk_PipelineStageFlagBits.COLOR_ATTACHMENT_OUTPUT_BIT,
+        Vk_PipelineStageFlagBits.FRAGMENT_SHADER_BIT,
+      );
+    }
   }
 
   #loadFramebufferSize() {

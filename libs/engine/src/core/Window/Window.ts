@@ -408,7 +408,7 @@ export class Window<
     return this.#renderer.logicalDevice;
   }
 
-  get allRenderPasses(): AbstractRenderPass[] {
+  get allRenderPasses(): readonly AbstractRenderPass[] {
     return this.#renderer.allRenderPasses;
   }
 
