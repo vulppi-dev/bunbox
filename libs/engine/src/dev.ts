@@ -1,32 +1,9 @@
 import { Window } from './core';
 
-try {
-  const win = new Window('Test Window', {});
-  console.log('Window created successfully');
+const win = new Window('Test Window');
 
-  await Bun.sleep(3000)
+win.backgroundColor.setHex(0x3498db); // Set background color to a shade of blue
 
-    .then(() => {
-      win.fullscreen(true);
-      return Bun.sleep(2000);
-    })
-    .then(() => {
-      win.maximize();
-      return Bun.sleep(2000);
-    })
-    .then(() => {
-      win.restore();
-      return Bun.sleep(2000);
-    })
-    .then(() => {
-      win.restore();
-      return Bun.sleep(2000);
-    })
-    .then(() => {
-      win.dispose();
-      return Bun.sleep(2000);
-    });
-} catch (error) {
-  console.error('Error during execution:', error);
-  throw error;
-}
+setTimeout(() => {
+  win.backgroundColor.setHex(0xe74c3c, 0.2); // Change background color to a shade of red after 2 seconds
+}, 2000);

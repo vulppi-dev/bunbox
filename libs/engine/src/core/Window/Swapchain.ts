@@ -9,6 +9,7 @@ import {
   Vk_ImageAspectFlagBits,
   Vk_ImageUsageFlagBits,
   Vk_ImageViewType,
+  Vk_PipelineStageFlagBits,
   Vk_Result,
   Vk_SharingMode,
   Vk_StructureType,
@@ -21,11 +22,13 @@ import {
   VkImageViewCreateInfo,
   VkPresentInfoKHR,
   VkSemaphoreCreateInfo,
+  VkSubmitInfo,
   VkSwapchainCreateInfoKHR,
 } from '../../dynamic-libs';
 import { DynamicLibError } from '../../errors';
 import { VK_DEBUG } from '../../singleton/logger';
 import { getInstanceBuffer, instantiate } from '@bunbox/struct';
+import type { CommandPool } from './CommandPool';
 
 export type SwapchainFrame = {
   imageIndex: number;
@@ -45,7 +48,7 @@ export class Swapchain implements Disposable {
   #vkLogicalDevice: Pointer;
   #vkSurface: Pointer;
   #vkRenderPass: Pointer;
-  #vkCommandPool: Pointer;
+  #commandPool: CommandPool;
 
   // Surface capabilities and configuration
   #surfaceCapabilities: any = null;
@@ -78,7 +81,7 @@ export class Swapchain implements Disposable {
     vkLogicalDevice: Pointer,
     vkSurface: Pointer,
     vkRenderPass: Pointer,
-    vkCommandPool: Pointer,
+    commandPool: CommandPool,
     width: number,
     height: number,
   ) {
@@ -86,7 +89,7 @@ export class Swapchain implements Disposable {
     this.#vkLogicalDevice = vkLogicalDevice;
     this.#vkSurface = vkSurface;
     this.#vkRenderPass = vkRenderPass;
-    this.#vkCommandPool = vkCommandPool;
+    this.#commandPool = commandPool;
 
     this.#ptr_aux = new BigUint64Array(1);
     this.#fence_aux = new BigUint64Array(1);
@@ -279,26 +282,68 @@ export class Swapchain implements Disposable {
 
     VK_DEBUG(`Presenting image ${imageIndex} (frame ${this.#currentFrame})`);
 
+    const imageAvailableSemaphore =
+      this.#imageAvailableSemaphores[this.#currentFrame]!;
     const renderFinishedSemaphore =
       this.#renderFinishedSemaphores[this.#currentFrame]!;
+    const fence = this.#inFlightFences[this.#currentFrame]!;
+    const commandBuffer = this.#commandBuffers[imageIndex]!;
 
+    // Submit command buffer to graphics queue
     const waitSemaphores = new BigUint64Array([
+      BigInt(imageAvailableSemaphore),
+    ]);
+    const waitStages = new Uint32Array([
+      Vk_PipelineStageFlagBits.COLOR_ATTACHMENT_OUTPUT_BIT,
+    ]);
+    const commandBuffers = new BigUint64Array([BigInt(commandBuffer)]);
+    const signalSemaphores = new BigUint64Array([
       BigInt(renderFinishedSemaphore),
     ]);
+
+    const submitInfo = instantiate(VkSubmitInfo);
+    submitInfo.sType = Vk_StructureType.SUBMIT_INFO;
+    submitInfo.waitSemaphoreCount = 1;
+    submitInfo.pWaitSemaphores = BigInt(ptr(waitSemaphores));
+    submitInfo.pWaitDstStageMask = BigInt(ptr(waitStages));
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = BigInt(ptr(commandBuffers));
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pSignalSemaphores = BigInt(ptr(signalSemaphores));
+
+    VK_DEBUG('Submitting command buffer to graphics queue');
+    const submitResult = VK.vkQueueSubmit(
+      vkGraphicsQueue,
+      1,
+      ptr(getInstanceBuffer(submitInfo)),
+      fence,
+    );
+
+    if (submitResult !== Vk_Result.SUCCESS) {
+      throw new DynamicLibError(
+        `Failed to submit command buffer. VkResult: ${submitResult}`,
+        'Vulkan',
+      );
+    }
+
+    // Present the image
     const swapchains = new BigUint64Array([BigInt(this.#swapchain)]);
     const imageIndices = new Uint32Array([imageIndex]);
+    const presentWaitSemaphores = new BigUint64Array([
+      BigInt(renderFinishedSemaphore),
+    ]);
 
     const presentInfo = instantiate(VkPresentInfoKHR);
     presentInfo.sType = Vk_StructureType.PRESENT_INFO_KHR;
     presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = BigInt(ptr(waitSemaphores));
+    presentInfo.pWaitSemaphores = BigInt(ptr(presentWaitSemaphores));
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = BigInt(ptr(swapchains));
     presentInfo.pImageIndices = BigInt(ptr(imageIndices));
     presentInfo.pResults = 0n;
 
-    // Present the image
-    const result = VK.vkQueuePresentKHR(
+    VK_DEBUG('Presenting image to swapchain');
+    const presentResult = VK.vkQueuePresentKHR(
       vkGraphicsQueue,
       ptr(getInstanceBuffer(presentInfo)),
     );
@@ -310,16 +355,16 @@ export class Swapchain implements Disposable {
       (this.#currentFrame + 1) % Swapchain.#MAX_FRAMES_IN_FLIGHT;
 
     if (
-      result === Vk_Result.ERROR_OUT_OF_DATE_KHR ||
-      result === Vk_Result.SUBOPTIMAL_KHR
+      presentResult === Vk_Result.ERROR_OUT_OF_DATE_KHR ||
+      presentResult === Vk_Result.SUBOPTIMAL_KHR
     ) {
       VK_DEBUG('Swapchain out of date or suboptimal, needs rebuild');
       return false;
     }
 
-    if (result !== Vk_Result.SUCCESS) {
+    if (presentResult !== Vk_Result.SUCCESS) {
       throw new DynamicLibError(
-        `Failed to present swapchain image. VkResult: ${result}`,
+        `Failed to present swapchain image. VkResult: ${presentResult}`,
         'Vulkan',
       );
     }
@@ -662,7 +707,7 @@ export class Swapchain implements Disposable {
 
     const allocInfo = instantiate(VkCommandBufferAllocateInfo);
     allocInfo.sType = Vk_StructureType.COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.commandPool = BigInt(this.#vkCommandPool as number);
+    allocInfo.commandPool = BigInt(this.#commandPool.pool as number);
     allocInfo.level = Vk_CommandBufferLevel.PRIMARY;
     allocInfo.commandBufferCount = bufferCount;
 
@@ -702,7 +747,7 @@ export class Swapchain implements Disposable {
 
     VK.vkFreeCommandBuffers(
       this.#vkLogicalDevice,
-      this.#vkCommandPool,
+      this.#commandPool.pool,
       this.#commandBuffers.length,
       ptr(buffers),
     );

@@ -1,30 +1,32 @@
 import { type Disposable } from '@bunbox/utils';
 import { ptr, type Pointer } from 'bun:ffi';
+import { getInstanceBuffer, instantiate } from '@bunbox/struct';
 import {
   GLFW,
   GLFW_GeneralMacro,
   VK,
-  Vk_AttachmentLoadOp,
-  Vk_AttachmentStoreOp,
-  Vk_CommandPoolCreateFlagBits,
-  Vk_ImageLayout,
   Vk_Result,
-  Vk_SampleCountFlagBits,
   Vk_StructureType,
+  Vk_SubpassContents,
   vkGetSurfaceFormats,
-  VkAttachmentDescription,
-  VkAttachmentReference,
-  VkCommandPoolCreateInfo,
-  VkRenderPassCreateInfo,
-  VkSubpassDescription,
+  VkCommandBufferBeginInfo,
+  VkRenderPassBeginInfo,
 } from '../../dynamic-libs';
 import { DynamicLibError } from '../../errors';
-import { Vector2 } from '../../math';
+import { type Color, Vector2 } from '../../math';
 import type { Node3D } from '../../nodes';
 import { VK_DEBUG } from '../../singleton/logger';
-import { getInstanceBuffer, instantiate } from '@bunbox/struct';
-import { Swapchain } from './Swapchain';
+import {
+  DISPOSE_FUNC_SYM,
+  PREPARE_FUNC_SYM,
+  REBUILD_FUNC_SYM,
+  RELEASE_FUNC_SYM,
+} from '../symbols/Resources';
+import { CommandPool } from './CommandPool';
 import { LogicalDevice } from './LogicalDevice';
+import type { AbstractRenderPass } from './RenderPass/AbstractRenderPass';
+import { ClearScreenRenderPass } from './RenderPass/ClearScreenRenderPass';
+import { Swapchain } from './Swapchain';
 
 export class Renderer implements Disposable {
   static getNativeWindowHandler(window: Pointer): Pointer | null {
@@ -55,11 +57,13 @@ export class Renderer implements Disposable {
   // Logical device
   #logicalDevice: LogicalDevice | null = null;
 
-  // Render pass
-  #renderPass: Pointer | null = null;
+  // Render passes
+  #clearScreenPass: ClearScreenRenderPass;
+  #additionalPasses: AbstractRenderPass[] = [];
+  #currentSurfaceFormat: number | null = null;
 
   // Command pool
-  #commandPool: Pointer | null = null;
+  #commandPool: CommandPool | null = null;
 
   // Swapchain
   #swapchain: Swapchain | null = null;
@@ -113,26 +117,129 @@ export class Renderer implements Disposable {
       'VK_KHR_swapchain',
     ]);
 
-    this.#createRenderPass();
-    this.#createCommandPool();
+    // Create clear screen render pass (always present)
+    this.#clearScreenPass = new ClearScreenRenderPass();
+
+    // Prepare render pass with logical device and surface format
+    this.#currentSurfaceFormat = this.#querySurfaceFormat();
+    this.#clearScreenPass[PREPARE_FUNC_SYM](
+      this.#logicalDevice.device,
+      this.#currentSurfaceFormat,
+    );
+
+    // Create command pool
+    this.#commandPool = new CommandPool(this.#logicalDevice.device);
 
     this.rebuildFrame();
+  }
+
+  get primaryRenderPass(): Pointer {
+    return this.#clearScreenPass.renderPass;
+  }
+
+  get logicalDevice(): Pointer {
+    if (!this.#logicalDevice) {
+      throw new DynamicLibError('Logical device not initialized', 'Vulkan');
+    }
+    return this.#logicalDevice.device;
+  }
+
+  get allRenderPasses(): AbstractRenderPass[] {
+    return [this.#clearScreenPass, ...this.#additionalPasses];
+  }
+
+  get clearColor(): Color {
+    return this.#clearScreenPass.clearColor;
+  }
+
+  set clearColor(color: Color) {
+    this.#clearScreenPass.clearColor = color;
+  }
+
+  addRenderPass(renderPass: AbstractRenderPass): void {
+    if (!this.#currentSurfaceFormat) {
+      throw new DynamicLibError('Renderer not initialized', 'Vulkan');
+    }
+
+    VK_DEBUG('Adding render pass to renderer');
+
+    if (!renderPass.isPrepared) {
+      renderPass[PREPARE_FUNC_SYM](
+        this.logicalDevice,
+        this.#currentSurfaceFormat,
+      );
+    }
+
+    this.#additionalPasses.push(renderPass);
+  }
+
+  removeRenderPass(renderPass: AbstractRenderPass): boolean {
+    const index = this.#additionalPasses.indexOf(renderPass);
+    if (index === -1) {
+      VK_DEBUG('RenderPass not found in renderer');
+      return false;
+    }
+
+    VK_DEBUG('Removing render pass from renderer');
+    this.#additionalPasses.splice(index, 1);
+    renderPass[RELEASE_FUNC_SYM]();
+
+    return true;
+  }
+
+  clearAdditionalPasses(): void {
+    VK_DEBUG(
+      `Clearing ${this.#additionalPasses.length} additional render passes`,
+    );
+
+    for (const pass of this.#additionalPasses) {
+      pass[RELEASE_FUNC_SYM]();
+    }
+
+    this.#additionalPasses = [];
+  }
+
+  replaceRenderPass(
+    oldPass: AbstractRenderPass,
+    newPass: AbstractRenderPass,
+  ): boolean {
+    const index = this.#additionalPasses.indexOf(oldPass);
+    if (index === -1) {
+      VK_DEBUG('Old render pass not found');
+      return false;
+    }
+
+    VK_DEBUG('Replacing render pass');
+
+    if (!newPass.isPrepared && this.#currentSurfaceFormat) {
+      newPass[PREPARE_FUNC_SYM](this.logicalDevice, this.#currentSurfaceFormat);
+    }
+
+    this.#additionalPasses[index] = newPass;
+    oldPass[RELEASE_FUNC_SYM]();
+
+    return true;
   }
 
   dispose(): void | Promise<void> {
     VK_DEBUG('Disposing Renderer resources');
 
-    // Destroy swapchain
+    // Dispose swapchain
     this.#swapchain?.dispose();
     this.#swapchain = null;
 
-    // Destroy command pool
-    this.#destroyCommandPool();
+    // Dispose command pool
+    this.#commandPool?.dispose();
+    this.#commandPool = null;
 
-    // Destroy render pass
-    this.#destroyRenderPass();
+    // Dispose all render passes
+    this.#clearScreenPass[DISPOSE_FUNC_SYM]();
+    for (const pass of this.#additionalPasses) {
+      pass[DISPOSE_FUNC_SYM]();
+    }
+    this.#additionalPasses = [];
 
-    // Destroy logical device
+    // Dispose logical device
     this.#logicalDevice?.dispose();
     this.#logicalDevice = null;
 
@@ -159,9 +266,24 @@ export class Renderer implements Disposable {
       return;
     }
 
-    if (!this.#logicalDevice || !this.#renderPass || !this.#commandPool) {
+    if (!this.#logicalDevice || !this.#commandPool) {
       VK_DEBUG('Required Vulkan resources not created yet');
       return;
+    }
+
+    // Check if surface format changed
+    const newFormat = this.#querySurfaceFormat();
+    const formatChanged = newFormat !== this.#currentSurfaceFormat;
+    this.#currentSurfaceFormat = newFormat;
+
+    // Rebuild all render passes if format changed
+    if (formatChanged) {
+      VK_DEBUG('Surface format changed, rebuilding render passes');
+      this.#clearScreenPass[REBUILD_FUNC_SYM](newFormat);
+
+      for (const pass of this.#additionalPasses) {
+        pass[REBUILD_FUNC_SYM](newFormat);
+      }
     }
 
     // Create or rebuild swapchain
@@ -172,7 +294,7 @@ export class Renderer implements Disposable {
         this.#vkPhysicalDevice,
         this.#logicalDevice.device,
         this.#vkSurface,
-        this.#renderPass,
+        this.primaryRenderPass,
         this.#commandPool,
         width,
         height,
@@ -197,13 +319,75 @@ export class Renderer implements Disposable {
       return;
     }
 
-    // TODO: Record command buffer with actual rendering commands
-    // For now, just present the frame
+    // Record command buffer
+    this.#recordCommandBuffer(frame.commandBuffer, frame.framebuffer);
 
+    // Submit and present
     this.#swapchain.present(
       frame.imageIndex,
       this.#logicalDevice.graphicsQueue,
     );
+  }
+
+  #recordCommandBuffer(commandBuffer: Pointer, framebuffer: Pointer): void {
+    // Begin command buffer
+    const beginInfo = instantiate(VkCommandBufferBeginInfo);
+    beginInfo.sType = Vk_StructureType.COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = 0;
+    beginInfo.pInheritanceInfo = 0n;
+
+    let result = VK.vkBeginCommandBuffer(
+      commandBuffer,
+      ptr(getInstanceBuffer(beginInfo)),
+    );
+
+    if (result !== Vk_Result.SUCCESS) {
+      throw new DynamicLibError(
+        `Failed to begin command buffer. VkResult: ${result}`,
+        'Vulkan',
+      );
+    }
+
+    // Begin render pass
+    const clearColor = this.#clearScreenPass.clearColor;
+    const clearValues = new Float32Array([
+      clearColor.r,
+      clearColor.g,
+      clearColor.b,
+      clearColor.a,
+    ]);
+
+    const renderPassBeginInfo = instantiate(VkRenderPassBeginInfo);
+    renderPassBeginInfo.sType = Vk_StructureType.RENDER_PASS_BEGIN_INFO;
+    renderPassBeginInfo.renderPass = BigInt(this.primaryRenderPass as number);
+    renderPassBeginInfo.framebuffer = BigInt(framebuffer as number);
+    renderPassBeginInfo.renderArea.offset.x = 0;
+    renderPassBeginInfo.renderArea.offset.y = 0;
+    renderPassBeginInfo.renderArea.extent.width = this.#width[0]!;
+    renderPassBeginInfo.renderArea.extent.height = this.#height[0]!;
+    renderPassBeginInfo.clearValueCount = 1;
+    renderPassBeginInfo.pClearValues = BigInt(ptr(clearValues));
+
+    VK.vkCmdBeginRenderPass(
+      commandBuffer,
+      ptr(getInstanceBuffer(renderPassBeginInfo)),
+      Vk_SubpassContents.INLINE,
+    );
+
+    // TODO: Record actual rendering commands here
+
+    // End render pass
+    VK.vkCmdEndRenderPass(commandBuffer);
+
+    // End command buffer
+    result = VK.vkEndCommandBuffer(commandBuffer);
+
+    if (result !== Vk_Result.SUCCESS) {
+      throw new DynamicLibError(
+        `Failed to end command buffer. VkResult: ${result}`,
+        'Vulkan',
+      );
+    }
   }
 
   #loadFramebufferSize() {
@@ -217,14 +401,7 @@ export class Renderer implements Disposable {
     );
   }
 
-  #createRenderPass(): void {
-    if (!this.#logicalDevice) {
-      throw new DynamicLibError('Logical device not created', 'Vulkan');
-    }
-
-    VK_DEBUG('Creating render pass');
-
-    // Query surface formats to get the format
+  #querySurfaceFormat(): number {
     const surfaceFormats = vkGetSurfaceFormats(
       this.#vkPhysicalDevice,
       this.#vkSurface,
@@ -233,120 +410,6 @@ export class Renderer implements Disposable {
     if (format === undefined) {
       throw new DynamicLibError('No surface format available', 'Vulkan');
     }
-
-    // Color attachment description
-    const colorAttachment = instantiate(VkAttachmentDescription);
-    colorAttachment.flags = 0;
-    colorAttachment.format = format;
-    colorAttachment.samples = Vk_SampleCountFlagBits.COUNT_1_BIT;
-    colorAttachment.loadOp = Vk_AttachmentLoadOp.CLEAR;
-    colorAttachment.storeOp = Vk_AttachmentStoreOp.STORE;
-    colorAttachment.stencilLoadOp = Vk_AttachmentLoadOp.DONT_CARE;
-    colorAttachment.stencilStoreOp = Vk_AttachmentStoreOp.DONT_CARE;
-    colorAttachment.initialLayout = Vk_ImageLayout.UNDEFINED;
-    colorAttachment.finalLayout = Vk_ImageLayout.PRESENT_SRC_KHR;
-
-    // Color attachment reference
-    const colorAttachmentRef = instantiate(VkAttachmentReference);
-    colorAttachmentRef.attachment = 0;
-    colorAttachmentRef.layout = Vk_ImageLayout.COLOR_ATTACHMENT_OPTIMAL;
-
-    // Subpass description
-    const subpass = instantiate(VkSubpassDescription);
-    subpass.flags = 0;
-    subpass.pipelineBindPoint = 0; // VK_PIPELINE_BIND_POINT_GRAPHICS
-    subpass.inputAttachmentCount = 0;
-    subpass.pInputAttachments = 0n;
-    subpass.colorAttachmentCount = 1;
-    subpass.pColorAttachments = BigInt(
-      ptr(getInstanceBuffer(colorAttachmentRef)),
-    );
-    subpass.pResolveAttachments = 0n;
-    subpass.pDepthStencilAttachment = 0n;
-    subpass.preserveAttachmentCount = 0;
-    subpass.pPreserveAttachments = 0n;
-
-    // Render pass create info
-    const createInfo = instantiate(VkRenderPassCreateInfo);
-    createInfo.sType = Vk_StructureType.RENDER_PASS_CREATE_INFO;
-    createInfo.attachmentCount = 1;
-    createInfo.pAttachments = BigInt(ptr(getInstanceBuffer(colorAttachment)));
-    createInfo.subpassCount = 1;
-    createInfo.pSubpasses = BigInt(ptr(getInstanceBuffer(subpass)));
-    createInfo.dependencyCount = 0;
-    createInfo.pDependencies = 0n;
-
-    const result = VK.vkCreateRenderPass(
-      this.#logicalDevice.device,
-      ptr(getInstanceBuffer(createInfo)),
-      null,
-      ptr(this.#ptr_aux),
-    );
-
-    if (result !== Vk_Result.SUCCESS) {
-      throw new DynamicLibError(
-        `Failed to create render pass. VkResult: ${result}`,
-        'Vulkan',
-      );
-    }
-
-    this.#renderPass = Number(this.#ptr_aux[0]) as Pointer;
-    VK_DEBUG(`Render pass created: 0x${this.#renderPass.toString(16)}`);
-  }
-
-  #destroyRenderPass(): void {
-    if (!this.#logicalDevice || !this.#renderPass) {
-      return;
-    }
-
-    VK_DEBUG(`Destroying render pass: 0x${this.#renderPass.toString(16)}`);
-    VK.vkDestroyRenderPass(this.#logicalDevice.device, this.#renderPass, null);
-    this.#renderPass = null;
-    VK_DEBUG('Render pass destroyed');
-  }
-
-  #createCommandPool(): void {
-    if (!this.#logicalDevice) {
-      throw new DynamicLibError('Logical device not created', 'Vulkan');
-    }
-
-    VK_DEBUG('Creating command pool');
-
-    const createInfo = instantiate(VkCommandPoolCreateInfo);
-    createInfo.sType = Vk_StructureType.COMMAND_POOL_CREATE_INFO;
-    createInfo.flags = Vk_CommandPoolCreateFlagBits.RESET_COMMAND_BUFFER_BIT;
-    createInfo.queueFamilyIndex = 0; // Using first queue family
-
-    const result = VK.vkCreateCommandPool(
-      this.#logicalDevice.device,
-      ptr(getInstanceBuffer(createInfo)),
-      null,
-      ptr(this.#ptr_aux),
-    );
-
-    if (result !== Vk_Result.SUCCESS) {
-      throw new DynamicLibError(
-        `Failed to create command pool. VkResult: ${result}`,
-        'Vulkan',
-      );
-    }
-
-    this.#commandPool = Number(this.#ptr_aux[0]) as Pointer;
-    VK_DEBUG(`Command pool created: 0x${this.#commandPool.toString(16)}`);
-  }
-
-  #destroyCommandPool(): void {
-    if (!this.#logicalDevice || !this.#commandPool) {
-      return;
-    }
-
-    VK_DEBUG(`Destroying command pool: 0x${this.#commandPool.toString(16)}`);
-    VK.vkDestroyCommandPool(
-      this.#logicalDevice.device,
-      this.#commandPool,
-      null,
-    );
-    this.#commandPool = null;
-    VK_DEBUG('Command pool destroyed');
+    return format;
   }
 }

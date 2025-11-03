@@ -38,6 +38,8 @@ import { GLFW_DEBUG, VK_DEBUG } from '../../singleton/logger';
 import { pointerCopyBuffer } from '../../utils/buffer';
 import { Node } from '../Node';
 import { Renderer } from './Renderer';
+import type { AbstractRenderPass } from './RenderPass/AbstractRenderPass';
+import type { Color } from '../../math';
 
 import { Node3D } from '../../nodes';
 
@@ -314,7 +316,7 @@ export class Window<
 
       if (Window.#windowsList.size === 0) {
         VK_DEBUG('No more windows. Terminating Vulkan.');
-        VK.vkDestroyInstance(Window.#vkInstance!, null);
+        VK.vkDestroyInstance(Window.#vkInstance, null);
         Window.#vkInstance = null;
 
         GLFW_DEBUG('No more windows. Terminating GLFW.');
@@ -402,10 +404,26 @@ export class Window<
     return this.#state;
   }
 
+  get logicalDevice(): Pointer {
+    return this.#renderer.logicalDevice;
+  }
+
+  get allRenderPasses(): AbstractRenderPass[] {
+    return this.#renderer.allRenderPasses;
+  }
+
+  get backgroundColor(): Color {
+    return this.#renderer.clearColor;
+  }
+
   set title(value: string) {
     this.#title = value;
     if (this.#windowPtr)
       GLFW.glfwSetWindowTitle(this.#windowPtr, cstr(this.#title));
+  }
+
+  set backgroundColor(color: Color) {
+    this.#renderer.clearColor = color;
   }
 
   set opacity(value: number) {
@@ -596,6 +614,25 @@ export class Window<
     }
 
     GLFW.glfwMaximizeWindow(this.#windowPtr);
+  }
+
+  addRenderPass(renderPass: AbstractRenderPass): void {
+    this.#renderer.addRenderPass(renderPass);
+  }
+
+  removeRenderPass(renderPass: AbstractRenderPass): boolean {
+    return this.#renderer.removeRenderPass(renderPass);
+  }
+
+  clearRenderPasses(): void {
+    this.#renderer.clearAdditionalPasses();
+  }
+
+  replaceRenderPass(
+    oldPass: AbstractRenderPass,
+    newPass: AbstractRenderPass,
+  ): boolean {
+    return this.#renderer.replaceRenderPass(oldPass, newPass);
   }
 
   override _process(_deltaTime: number): void {

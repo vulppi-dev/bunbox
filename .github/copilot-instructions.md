@@ -25,3 +25,14 @@ Use bons nomes de variáveis para não ser necessário o uso de comentários.
 - Variáveis e métodos do tipo `protected` devem ser iniciadas com '\_';
 - Variáveis e métodos do tipo `private` devem ser iniciadas com '#';
 - Métodos estáticos devem ser criados antes do construtor;
+
+### Gerenciamento de Recursos
+
+- **Todas as classes que gerenciam recursos Vulkan/GLFW devem implementar `Disposable`** do `@bunbox/utils`;
+- **Evitar Factory Pattern**: Use métodos `prepare()` ou `rebuild()` para construção/reconstrução de recursos;
+- **Liberação de recursos antes de reconstruir**: Use métodos `release()` para liberar recursos internos sem destruir a instância;
+- **Nomenclatura**:
+  - `prepare()`: Inicializar/preparar recursos pela primeira vez
+  - `rebuild()`: Reconstruir recursos existentes (chama `release()` internamente se necessário)
+  - `release()`: Liberar recursos internos sem destruir a instância
+  - `dispose()`: Destruição final completa (da interface `Disposable`)
