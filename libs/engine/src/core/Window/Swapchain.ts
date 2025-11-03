@@ -2,7 +2,6 @@ import { type Disposable } from '@bunbox/utils';
 import { ptr, type Pointer } from 'bun:ffi';
 import {
   VK,
-  Vk_CommandBufferLevel,
   Vk_ComponentSwizzle,
   Vk_CompositeAlphaFlagBitsKHR,
   Vk_FenceCreateFlagBits,
@@ -16,7 +15,6 @@ import {
   vkGetSurfaceCapabilities,
   vkGetSurfaceFormats,
   vkSelectPresentMode,
-  VkCommandBufferAllocateInfo,
   VkFenceCreateInfo,
   VkFramebufferCreateInfo,
   VkImageViewCreateInfo,
@@ -28,13 +26,14 @@ import {
 import { DynamicLibError } from '../../errors';
 import { VK_DEBUG } from '../../singleton/logger';
 import { getInstanceBuffer, instantiate } from '@bunbox/struct';
+import { CommandBuffer } from './CommandBuffer';
 import type { CommandPool } from './CommandPool';
 
 export type SwapchainFrame = {
   imageIndex: number;
   imageView: Pointer;
   framebuffer: Pointer;
-  commandBuffer: Pointer;
+  commandBuffer: CommandBuffer;
   imageAvailableSemaphore: Pointer;
   renderFinishedSemaphore: Pointer;
   fence: Pointer;
@@ -63,7 +62,7 @@ export class Swapchain implements Disposable {
   #swapchainFramebuffers: Pointer[] = [];
 
   // Command buffers
-  #commandBuffers: Pointer[] = [];
+  #commandBuffers: CommandBuffer[] = [];
 
   // Synchronization objects (for MAX_FRAMES_IN_FLIGHT frames)
   #imageAvailableSemaphores: Pointer[] = [];
@@ -259,7 +258,7 @@ export class Swapchain implements Disposable {
     VK_DEBUG(`Fence 0x${fence.toString(16)} reset`);
 
     VK_DEBUG(
-      `Frame ${this.#currentFrame} ready: image=${imageIndex}, cmd=0x${this.#commandBuffers[imageIndex]!.toString(16)}`,
+      `Frame ${this.#currentFrame} ready: image=${imageIndex}, cmd=0x${this.#commandBuffers[imageIndex]!.buffer.toString(16)}`,
     );
 
     return {
@@ -280,23 +279,26 @@ export class Swapchain implements Disposable {
       return false;
     }
 
-    VK_DEBUG(`Presenting image ${imageIndex} (frame ${this.#currentFrame})`);
-
+    const currentFrame = this.#currentFrame;
+    const commandBuffer = this.#commandBuffers[imageIndex]!.buffer;
     const imageAvailableSemaphore =
-      this.#imageAvailableSemaphores[this.#currentFrame]!;
+      this.#imageAvailableSemaphores[currentFrame]!;
     const renderFinishedSemaphore =
-      this.#renderFinishedSemaphores[this.#currentFrame]!;
-    const fence = this.#inFlightFences[this.#currentFrame]!;
-    const commandBuffer = this.#commandBuffers[imageIndex]!;
+      this.#renderFinishedSemaphores[currentFrame]!;
+    const fence = this.#inFlightFences[currentFrame]!;
 
-    // Submit command buffer to graphics queue
-    const waitSemaphores = new BigUint64Array([
-      BigInt(imageAvailableSemaphore),
-    ]);
+    VK_DEBUG(
+      `Presenting frame ${currentFrame}, image ${imageIndex}, cmd=0x${commandBuffer.toString(16)}`,
+    );
+
+    // Submit command buffer
     const waitStages = new Uint32Array([
       Vk_PipelineStageFlagBits.COLOR_ATTACHMENT_OUTPUT_BIT,
     ]);
     const commandBuffers = new BigUint64Array([BigInt(commandBuffer)]);
+    const waitSemaphores = new BigUint64Array([
+      BigInt(imageAvailableSemaphore),
+    ]);
     const signalSemaphores = new BigUint64Array([
       BigInt(renderFinishedSemaphore),
     ]);
@@ -312,67 +314,62 @@ export class Swapchain implements Disposable {
     submitInfo.pSignalSemaphores = BigInt(ptr(signalSemaphores));
 
     VK_DEBUG('Submitting command buffer to graphics queue');
-    const submitResult = VK.vkQueueSubmit(
+    let result = VK.vkQueueSubmit(
       vkGraphicsQueue,
       1,
       ptr(getInstanceBuffer(submitInfo)),
       fence,
     );
 
-    if (submitResult !== Vk_Result.SUCCESS) {
+    if (result !== Vk_Result.SUCCESS) {
       throw new DynamicLibError(
-        `Failed to submit command buffer. VkResult: ${submitResult}`,
+        `Failed to submit command buffer. VkResult: ${result}`,
         'Vulkan',
       );
     }
+    VK_DEBUG('Command buffer submitted successfully');
 
-    // Present the image
+    // Present image
     const swapchains = new BigUint64Array([BigInt(this.#swapchain)]);
-    const imageIndices = new Uint32Array([imageIndex]);
-    const presentWaitSemaphores = new BigUint64Array([
+    const indices = new Uint32Array([imageIndex]);
+    const signalSemaphoresPresent = new BigUint64Array([
       BigInt(renderFinishedSemaphore),
     ]);
 
     const presentInfo = instantiate(VkPresentInfoKHR);
     presentInfo.sType = Vk_StructureType.PRESENT_INFO_KHR;
     presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = BigInt(ptr(presentWaitSemaphores));
+    presentInfo.pWaitSemaphores = BigInt(ptr(signalSemaphoresPresent));
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = BigInt(ptr(swapchains));
-    presentInfo.pImageIndices = BigInt(ptr(imageIndices));
-    presentInfo.pResults = 0n;
+    presentInfo.pImageIndices = BigInt(ptr(indices));
 
-    VK_DEBUG('Presenting image to swapchain');
-    const presentResult = VK.vkQueuePresentKHR(
+    VK_DEBUG('Presenting image to screen');
+    result = VK.vkQueuePresentKHR(
       vkGraphicsQueue,
       ptr(getInstanceBuffer(presentInfo)),
     );
-
-    const previousFrame = this.#currentFrame;
 
     // Advance to next frame
     this.#currentFrame =
       (this.#currentFrame + 1) % Swapchain.#MAX_FRAMES_IN_FLIGHT;
 
     if (
-      presentResult === Vk_Result.ERROR_OUT_OF_DATE_KHR ||
-      presentResult === Vk_Result.SUBOPTIMAL_KHR
+      result === Vk_Result.ERROR_OUT_OF_DATE_KHR ||
+      result === Vk_Result.SUBOPTIMAL_KHR
     ) {
-      VK_DEBUG('Swapchain out of date or suboptimal, needs rebuild');
+      VK_DEBUG('Swapchain suboptimal or out of date after present');
       return false;
     }
 
-    if (presentResult !== Vk_Result.SUCCESS) {
+    if (result !== Vk_Result.SUCCESS) {
       throw new DynamicLibError(
-        `Failed to present swapchain image. VkResult: ${presentResult}`,
+        `Failed to present swapchain image. VkResult: ${result}`,
         'Vulkan',
       );
     }
 
-    VK_DEBUG(
-      `Image ${imageIndex} presented successfully (frame ${previousFrame} -> ${this.#currentFrame})`,
-    );
-
+    VK_DEBUG('Frame presented successfully');
     return true;
   }
 
@@ -705,32 +702,17 @@ export class Swapchain implements Disposable {
     const bufferCount = this.#swapchainImageCount;
     VK_DEBUG(`Allocating ${bufferCount} command buffers`);
 
-    const allocInfo = instantiate(VkCommandBufferAllocateInfo);
-    allocInfo.sType = Vk_StructureType.COMMAND_BUFFER_ALLOCATE_INFO;
-    allocInfo.commandPool = BigInt(this.#commandPool.pool as number);
-    allocInfo.level = Vk_CommandBufferLevel.PRIMARY;
-    allocInfo.commandBufferCount = bufferCount;
-
-    const commandBuffers = new BigUint64Array(bufferCount);
-
-    const result = VK.vkAllocateCommandBuffers(
-      this.#vkLogicalDevice,
-      ptr(getInstanceBuffer(allocInfo)),
-      ptr(commandBuffers),
-    );
-
-    if (result !== Vk_Result.SUCCESS) {
-      throw new DynamicLibError(
-        `Failed to allocate command buffers. VkResult: ${result}`,
-        'Vulkan',
+    this.#commandBuffers = [];
+    for (let i = 0; i < bufferCount; i++) {
+      const commandBuffer = new CommandBuffer(
+        this.#vkLogicalDevice,
+        this.#commandPool,
       );
+      this.#commandBuffers.push(commandBuffer);
     }
 
-    this.#commandBuffers = Array.from(commandBuffers).map(
-      (cb) => Number(cb) as Pointer,
-    );
     VK_DEBUG(
-      `Command buffers allocated: ${this.#commandBuffers.map((cb) => `0x${cb.toString(16)}`).join(', ')}`,
+      `Command buffers allocated: ${this.#commandBuffers.map((cb) => `0x${cb.buffer.toString(16)}`).join(', ')}`,
     );
   }
 
@@ -741,16 +723,9 @@ export class Swapchain implements Disposable {
 
     VK_DEBUG(`Freeing ${this.#commandBuffers.length} command buffers`);
 
-    const buffers = new BigUint64Array(
-      this.#commandBuffers.map((cb) => BigInt(cb as number)),
-    );
-
-    VK.vkFreeCommandBuffers(
-      this.#vkLogicalDevice,
-      this.#commandPool.pool,
-      this.#commandBuffers.length,
-      ptr(buffers),
-    );
+    for (const commandBuffer of this.#commandBuffers) {
+      commandBuffer.dispose();
+    }
 
     this.#commandBuffers = [];
     VK_DEBUG('Command buffers freed');

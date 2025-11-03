@@ -1,16 +1,11 @@
 import { type Disposable } from '@bunbox/utils';
 import { ptr, type Pointer } from 'bun:ffi';
-import { getInstanceBuffer, instantiate } from '@bunbox/struct';
 import {
   GLFW,
   GLFW_GeneralMacro,
   VK,
   Vk_Result,
-  Vk_StructureType,
-  Vk_SubpassContents,
   vkGetSurfaceFormats,
-  VkCommandBufferBeginInfo,
-  VkRenderPassBeginInfo,
 } from '../../dynamic-libs';
 import { DynamicLibError } from '../../errors';
 import { type Color, Vector2 } from '../../math';
@@ -22,6 +17,7 @@ import {
   REBUILD_FUNC_SYM,
   RELEASE_FUNC_SYM,
 } from '../symbols/Resources';
+import type { CommandBuffer } from './CommandBuffer';
 import { CommandPool } from './CommandPool';
 import { LogicalDevice } from './LogicalDevice';
 import type { AbstractRenderPass } from './RenderPass/AbstractRenderPass';
@@ -133,10 +129,6 @@ export class Renderer implements Disposable {
     this.rebuildFrame();
   }
 
-  get primaryRenderPass(): Pointer {
-    return this.#clearScreenPass.renderPass;
-  }
-
   get logicalDevice(): Pointer {
     if (!this.#logicalDevice) {
       throw new DynamicLibError('Logical device not initialized', 'Vulkan');
@@ -144,8 +136,8 @@ export class Renderer implements Disposable {
     return this.#logicalDevice.device;
   }
 
-  get allRenderPasses(): AbstractRenderPass[] {
-    return [this.#clearScreenPass, ...this.#additionalPasses];
+  get allRenderPasses(): readonly AbstractRenderPass[] {
+    return Object.freeze([this.#clearScreenPass, ...this.#additionalPasses]);
   }
 
   get clearColor(): Color {
@@ -294,7 +286,7 @@ export class Renderer implements Disposable {
         this.#vkPhysicalDevice,
         this.#logicalDevice.device,
         this.#vkSurface,
-        this.primaryRenderPass,
+        this.#clearScreenPass.renderPass,
         this.#commandPool,
         width,
         height,
@@ -329,65 +321,29 @@ export class Renderer implements Disposable {
     );
   }
 
-  #recordCommandBuffer(commandBuffer: Pointer, framebuffer: Pointer): void {
-    // Begin command buffer
-    const beginInfo = instantiate(VkCommandBufferBeginInfo);
-    beginInfo.sType = Vk_StructureType.COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = 0;
-    beginInfo.pInheritanceInfo = 0n;
+  #recordCommandBuffer(
+    commandBuffer: CommandBuffer,
+    framebuffer: Pointer,
+  ): void {
+    // Begin command buffer recording
+    commandBuffer.begin();
 
-    let result = VK.vkBeginCommandBuffer(
-      commandBuffer,
-      ptr(getInstanceBuffer(beginInfo)),
-    );
-
-    if (result !== Vk_Result.SUCCESS) {
-      throw new DynamicLibError(
-        `Failed to begin command buffer. VkResult: ${result}`,
-        'Vulkan',
-      );
-    }
-
-    // Begin render pass
-    const clearColor = this.#clearScreenPass.clearColor;
-    const clearValues = new Float32Array([
-      clearColor.r,
-      clearColor.g,
-      clearColor.b,
-      clearColor.a,
-    ]);
-
-    const renderPassBeginInfo = instantiate(VkRenderPassBeginInfo);
-    renderPassBeginInfo.sType = Vk_StructureType.RENDER_PASS_BEGIN_INFO;
-    renderPassBeginInfo.renderPass = BigInt(this.primaryRenderPass as number);
-    renderPassBeginInfo.framebuffer = BigInt(framebuffer as number);
-    renderPassBeginInfo.renderArea.offset.x = 0;
-    renderPassBeginInfo.renderArea.offset.y = 0;
-    renderPassBeginInfo.renderArea.extent.width = this.#width[0]!;
-    renderPassBeginInfo.renderArea.extent.height = this.#height[0]!;
-    renderPassBeginInfo.clearValueCount = 1;
-    renderPassBeginInfo.pClearValues = BigInt(ptr(clearValues));
-
-    VK.vkCmdBeginRenderPass(
-      commandBuffer,
-      ptr(getInstanceBuffer(renderPassBeginInfo)),
-      Vk_SubpassContents.INLINE,
+    // Begin render pass with clear color
+    commandBuffer.beginRenderPass(
+      this.#clearScreenPass.renderPass,
+      framebuffer,
+      this.#width[0]!,
+      this.#height[0]!,
+      this.#clearScreenPass.clearColor,
     );
 
     // TODO: Record actual rendering commands here
 
     // End render pass
-    VK.vkCmdEndRenderPass(commandBuffer);
+    commandBuffer.endRenderPass();
 
-    // End command buffer
-    result = VK.vkEndCommandBuffer(commandBuffer);
-
-    if (result !== Vk_Result.SUCCESS) {
-      throw new DynamicLibError(
-        `Failed to end command buffer. VkResult: ${result}`,
-        'Vulkan',
-      );
-    }
+    // End command buffer recording
+    commandBuffer.end();
   }
 
   #loadFramebufferSize() {
