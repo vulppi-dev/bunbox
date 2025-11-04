@@ -16,10 +16,10 @@ import {
   VkImageViewCreateInfo,
   VkMemoryAllocateInfo,
   VkMemoryRequirements,
-} from '../../dynamic-libs';
-import { DynamicLibError } from '../../errors';
-import type { TextureImage } from '../../elements';
-import { VK_DEBUG } from '../../singleton/logger';
+} from '../dynamic-libs';
+import { DynamicLibError } from '../errors';
+import type { TextureImage } from '../elements';
+import { VK_DEBUG } from '../singleton/logger';
 import {
   getImageAspectFlags,
   textureFormatToVulkan,

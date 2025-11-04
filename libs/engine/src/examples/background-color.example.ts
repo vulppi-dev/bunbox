@@ -5,7 +5,7 @@
  * using the Color class.
  */
 
-import { Window } from '../core/Window';
+import { Window } from '../core';
 import { Color } from '../math/Color';
 
 // Create a window

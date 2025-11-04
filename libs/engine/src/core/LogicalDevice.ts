@@ -7,9 +7,9 @@ import {
   Vk_StructureType,
   VkDeviceCreateInfo,
   VkDeviceQueueCreateInfo,
-} from '../../dynamic-libs';
-import { DynamicLibError } from '../../errors';
-import { VK_DEBUG } from '../../singleton/logger';
+} from '../dynamic-libs';
+import { DynamicLibError } from '../errors';
+import { VK_DEBUG } from '../singleton/logger';
 import { getInstanceBuffer, instantiate, instanceToJSON } from '@bunbox/struct';
 
 export class LogicalDevice implements Disposable {

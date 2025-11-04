@@ -4,7 +4,6 @@ import {
   instantiate,
   setupStruct,
 } from '@bunbox/struct';
-import type { EventMap, MergeEventMaps } from '@bunbox/utils';
 import { CString, ptr, type JSCallback, type Pointer } from 'bun:ffi';
 import {
   buildCallback,
@@ -31,18 +30,18 @@ import {
   vkGetPhysicalDevice,
   VkInstanceCreateInfo,
   vkMakeVersion,
-} from '../../dynamic-libs';
-import { DynamicLibError } from '../../errors';
-import { WindowEvent } from '../../events';
-import { GLFW_DEBUG, VK_DEBUG } from '../../singleton/logger';
-import { pointerCopyBuffer } from '../../utils/buffer';
-import { Node } from '../Node';
+} from '../dynamic-libs';
+import { DynamicLibError } from '../errors';
+import { WindowEvent } from '../events';
+import type { Color } from '../math';
+import { GLFW_DEBUG, VK_DEBUG } from '../singleton/logger';
+import { pointerCopyBuffer } from '../utils/buffer';
+import { Node } from './Node';
 import { Renderer } from './Renderer';
-import type { RenderPass } from '../../elements/RenderPass';
-import type { AbstractRenderPass } from './RenderPass/AbstractRenderPass';
-import type { Color } from '../../math';
+import type { RenderPassConfig } from './RenderPassConfig';
+import type { VkRenderPass } from './VkRenderPass';
 
-import { Node3D } from '../../nodes';
+import { Node3D } from '../nodes';
 
 // Setup struct pointer/string conversions globally
 setupStruct({
@@ -89,11 +88,7 @@ export type WindowEventMap = {
   'window-display-changed': [event: WindowEvent];
 };
 
-export class Window<
-  P extends Record<string, any> = Record<string, any>,
-  M extends Record<string, any> = Record<string, any>,
-  T extends EventMap = {},
-> extends Node<P, M, MergeEventMaps<T, WindowEventMap>> {
+export class Window extends Node<never, never, WindowEventMap> {
   static #isInitialized = false;
   static #windowsList: Set<Window> = new Set();
   static #errorCallback: JSCallback | null = null;
@@ -213,6 +208,7 @@ export class Window<
   #resizable: boolean = true;
   #alwaysOnTop: boolean = false;
   #isFocused: boolean = false;
+  #isVisible: boolean = true;
   #state: WindowState = 'windowed';
 
   #stack: Node[] = [];
@@ -400,6 +396,16 @@ export class Window<
     return this.#isFocused;
   }
 
+  /** Whether the window is shown. */
+  get isShown(): boolean {
+    return this.#isVisible;
+  }
+
+  /** Whether the window is hidden. */
+  get isHidden(): boolean {
+    return !this.#isVisible;
+  }
+
   /** Current window state. */
   get state(): WindowState {
     return this.#state;
@@ -410,13 +416,10 @@ export class Window<
   }
 
   /**
-   * Get all render passes (returns VkRenderPass for backward compatibility)
-   * @deprecated Use public RenderPass API from elements instead
+   * Get all render passes
    */
-  get allRenderPasses(): readonly AbstractRenderPass[] {
-    // Return as AbstractRenderPass for backward compatibility
-    // In reality, these are VkRenderPass instances
-    return this.#renderer.allRenderPasses as any;
+  get allRenderPasses(): readonly VkRenderPass[] {
+    return this.#renderer.allRenderPasses;
   }
 
   get backgroundColor(): Color {
@@ -623,20 +626,32 @@ export class Window<
     GLFW.glfwMaximizeWindow(this.#windowPtr);
   }
 
-  /**
-   * Add a render pass to the renderer
-   * Accepts both public API (RenderPass) and old API (AbstractRenderPass)
-   */
-  addRenderPass(renderPass: RenderPass | AbstractRenderPass): void {
-    // Cast to RenderPass for new API
-    this.#renderer.addRenderPass(renderPass as RenderPass);
+  show() {
+    if (!this.#windowPtr) return;
+    this.#isVisible = true;
+    GLFW.glfwShowWindow(this.#windowPtr);
+    this.#dispatchEvent('window-shown');
+  }
+
+  hide() {
+    if (!this.#windowPtr) return;
+    this.#isVisible = false;
+    GLFW.glfwHideWindow(this.#windowPtr);
+    this.#dispatchEvent('window-hidden');
   }
 
   /**
-   * Remove a render pass from the renderer
+   * Add a render pass using configuration
    */
-  removeRenderPass(renderPass: RenderPass | AbstractRenderPass): boolean {
-    return this.#renderer.removeRenderPass(renderPass as RenderPass);
+  addRenderPass(config: RenderPassConfig): VkRenderPass {
+    return this.#renderer.addRenderPass(config);
+  }
+
+  /**
+   * Remove a render pass
+   */
+  removeRenderPass(vkRenderPass: VkRenderPass): boolean {
+    return this.#renderer.removeRenderPass(vkRenderPass);
   }
 
   clearRenderPasses(): void {
@@ -644,16 +659,13 @@ export class Window<
   }
 
   /**
-   * Replace a render pass with another
+   * Replace a render pass with another configuration
    */
   replaceRenderPass(
-    oldPass: RenderPass | AbstractRenderPass,
-    newPass: RenderPass | AbstractRenderPass,
+    oldPass: VkRenderPass,
+    newConfig: RenderPassConfig,
   ): boolean {
-    return this.#renderer.replaceRenderPass(
-      oldPass as RenderPass,
-      newPass as RenderPass,
-    );
+    return this.#renderer.replaceRenderPass(oldPass, newConfig);
   }
 
   override _process(_deltaTime: number): void {

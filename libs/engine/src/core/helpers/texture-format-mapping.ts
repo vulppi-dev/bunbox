@@ -2,8 +2,8 @@ import {
   Vk_Format,
   Vk_ImageAspectFlagBits,
   Vk_ImageUsageFlagBits,
-} from '../../../dynamic-libs';
-import type { TextureFormat, TextureUsage } from '../../../elements';
+} from '../../dynamic-libs';
+import type { TextureFormat, TextureUsage } from '../../elements';
 
 /**
  * Maps TextureFormat to VkFormat
