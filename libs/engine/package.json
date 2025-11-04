@@ -36,6 +36,7 @@
     "lint:fix": "eslint . --ext .ts --fix"
   },
   "dependencies": {
+    "@bunbox/naga": "^0.1.0",
     "@bunbox/tree": "^0.1.5",
     "@bunbox/utils": "^0.0.6",
     "@ffmpeg/ffmpeg": "^0.12.15",

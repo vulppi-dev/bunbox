@@ -1,22 +1,25 @@
 # @bunbox/tree
 
-Lightweight, event-driven, TypeScript-first tree structure used in the Bunbox ecosystem. It provides a base `AbstractNode` with unique identity, acyclic parent/child management with safe reparenting, reactive dirty-state, name/type indexing for fast lookups, and a configurable traversal that skips disabled nodes by default.
+Lightweight, event-driven, TypeScript-first tree structure for the Bunbox ecosystem. Features unique node identity, acyclic parent/child management with safe reparenting, reactive dirty-state tracking, centralized indexing via `Root` for fast lookups, and configurable traversal that respects node enabled state.
 
-- Acyclic with safe reparenting
-- Event chaining (child events are re-emitted by ancestors)
-- Reactive properties mark the node as dirty automatically
-- Global lookup by `id`, `name`, and `type`
-- `isEnabled` state to toggle nodes and their subtrees
-- `traverse()` with `pre`/`post` order and option to include disabled nodes
+## Features
+
+- ✅ Acyclic tree structure with safe reparenting
+- ✅ Event-driven architecture (child events bubble up to ancestors)
+- ✅ Reactive properties that automatically mark nodes as dirty
+- ✅ Centralized indexing via `Root` for O(1) lookup by ID and name
+- ✅ `isEnabled` state to control node visibility in traversals
+- ✅ Flexible traversal with pre/post-order and optional disabled node inclusion
+- ✅ Full TypeScript support with generics for properties, metadata, and events
 
 ## Installation
 
 ```sh
-# npm
-npm install @bunbox/tree
-
 # bun
 bun add @bunbox/tree
+
+# npm
+npm install @bunbox/tree
 ```
 
 Requirements:
@@ -24,180 +27,316 @@ Requirements:
 - Node >= 20 or Bun >= 1.2
 - TypeScript >= 5 (recommended)
 
-## Concepts
+## Quick Start
 
-- `AbstractNode<P, M, T>`: generic base class.
-  - `P`: shape of the reactive `properties` bag (mutations mark the node as dirty).
-  - `M`: shape of `metadata` (free-form, non-reactive by default).
-  - `T`: additional events merged into the built-in node events.
-- `Node`: default concrete implementation when you don’t need a custom subclass.
+```typescript
+import { BaseNode, Root } from '@bunbox/tree';
 
-## Core API (at a glance)
+// Create a Root to manage the tree indices
+const scene = new Root('MainScene');
 
-Properties and getters:
+// Create nodes
+const camera = new BaseNode('camera');
+const player = new BaseNode('player');
+const enemy = new BaseNode('enemy');
 
-- `id: string` — node ULID
-- `name: string` — indexed name (used by `findByName`)
-- `parent: AbstractNode | null` — node parent
-- `children: readonly AbstractNode[]` — read-only snapshot of direct children
-- `properties: P` — reactive bag (set/delete marks dirty)
-- `metadata: Partial<M>` — free-form metadata (non-reactive by default)
-- `isEnabled: boolean` — enablement state
+// Build the tree
+scene.addChild(camera);
+scene.addChild(player);
+player.addChild(enemy);
 
-Structural methods:
+// Fast lookups via Root
+console.log(scene.nodeCount); // 4 (scene + camera + player + enemy)
 
-- `addChild(child)` — attach child (reparent if needed)
-- `removeChild(child)` — detach child
-- `getRoot()` — walk up to the root
+const foundEnemy = scene.getById(enemy.id);
+console.log(foundEnemy?.name); // 'enemy'
 
-Lookup/indexing:
-
-- `getById(id)` — direct lookup by id
-- `findByName(name)` — all nodes currently indexed by that name
-- `findByType(Ctor)` — all nodes whose constructor has `Ctor.name`
-
-Enablement:
-
-- `enable()` / `disable()` / `setEnabled(boolean)` — toggles `isEnabled` and emits `enabled-change`
-
-Traversal:
-
-- `traverse(visitor, options?)` — walk the tree
-  - `options.includeDisabled?: boolean` (default: `false`)
-  - `options.order?: 'pre' | 'post'` (default: `'pre'`)
-  - By default, disabled nodes and their subtrees are skipped
-
-Events:
-
-- `'add-child'`: [child]
-- `'remove-child'`: [child]
-- `'rename'`: [node, prevName, nextName]
-- `'enabled-change'`: [node]
-
-Note: events emitted by children are re-emitted by ancestors, so you can listen at the top of the tree if desired. Full event API provided by `EventEmitter` (`on`, `off`, `once`, `emit`, `subscribe`, etc.).
-
-## Examples
-
-### Creating nodes and structure
-
-```ts
-import { Node } from '@bunbox/tree';
-
-const root = new Node('root');
-const player = new Node('Player');
-const enemy = new Node('Enemy');
-
-root.addChild(player);
-enemy.name = 'EnemyBoss';
-root.addChild(enemy);
+const enemies = scene.findByName('enemy');
+console.log(enemies.length); // 1
 ```
 
-### Reactive properties and dirty-state
+## API Reference
 
-```ts
-// Define properties shape via generics if you want
-type Props = { hp: number; speed?: number };
+### `BaseNode<P, M, T>`
 
-class Character extends Node<Props> {}
+Base class for all tree nodes.
 
-const c = new Character('char');
-c.properties.hp = 100; // marks dirty
-delete c.properties.speed; // marks dirty
+**Type Parameters:**
+
+- `P` - Shape of the reactive `properties` object
+- `M` - Shape of the `metadata` object (non-reactive)
+- `T` - Additional event types to merge with built-in events
+
+**Properties:**
+
+| Property     | Type                  | Description                 |
+| ------------ | --------------------- | --------------------------- |
+| `id`         | `string`              | Unique identifier (ULID)    |
+| `name`       | `string`              | Node name (indexed by Root) |
+| `parent`     | `BaseNode \| null`    | Parent node                 |
+| `children`   | `readonly BaseNode[]` | Read-only array of children |
+| `properties` | `P`                   | Reactive properties bag     |
+| `metadata`   | `Partial<M>`          | Non-reactive metadata       |
+| `isEnabled`  | `boolean`             | Whether node is enabled     |
+
+**Methods:**
+
+```typescript
+// Structural
+addChild(child: BaseNode): boolean
+removeChild(child: BaseNode): boolean
+
+// Lookup (delegates to Root if in tree)
+getById(id: string): BaseNode | null
+findByName(name: string): BaseNode[]
+getRoot(): BaseNode | Root
+
+// State
+enable(): this
+disable(): this
+setEnabled(enabled: boolean): this
+
+// Traversal
+traverse(
+  visitor: (node: BaseNode) => void,
+  options?: {
+    includeDisabled?: boolean;
+    order?: 'pre' | 'post';
+    ignoreType?: Ctor;
+  }
+): void
+
+// Lifecycle hook
+protected _ready(): void
 ```
 
-### Events
+**Events:**
 
-```ts
-root.subscribe('add-child', (child) => {
-  console.log('Child added:', child.name);
-});
+- `add-child: [child: BaseNode]` - Emitted when a child is added
+- `remove-child: [child: BaseNode]` - Emitted when a child is removed
+- `rename: [node: BaseNode, oldName: string, newName: string]` - Emitted when a node is renamed
+- `enabled-change: [node: BaseNode]` - Emitted when enabled state changes
 
-root.subscribe('rename', (node, prev, next) => {
-  console.log(`Renamed ${prev} -> ${next}`);
-});
+### `Root<P, M, T>`
 
-root.subscribe('enabled-change', (node) => {
-  console.log(`Enabled changed for: ${node.name}`);
-});
+Extends `BaseNode` and manages global indices for all nodes in the tree.
+
+**Additional Properties:**
+
+| Property    | Type     | Description                      |
+| ----------- | -------- | -------------------------------- |
+| `nodeCount` | `number` | Total number of registered nodes |
+
+**Additional Methods:**
+
+```typescript
+// Index management (public for internal use)
+_registerNode(node: BaseNode): void
+_unregisterNode(node: BaseNode): void
+_updateNodeName(node: BaseNode, oldName: string, newName: string): void
+
+// Query methods
+getById(id: string): BaseNode | null  // Overrides BaseNode
+findByName(name: string): BaseNode[]  // Overrides BaseNode
+getAllIds(): string[]
+getAllNames(): string[]
 ```
 
-### Enable/Disable and Traverse
+## Usage Examples
 
-```ts
-// Disable a node to skip it in default traversal
-enemy.disable();
+### Basic Tree Structure
 
-// Pre-order (default), skips disabled by default
+```typescript
+import { BaseNode, Root } from '@bunbox/tree';
+
+const root = new Root('app');
+const node1 = new BaseNode('node1');
+const node2 = new BaseNode('node2');
+
+root.addChild(node1);
+root.addChild(node2);
+
+console.log(root.children); // [node1, node2]
+console.log(node1.parent === root); // true
+```
+
+### Reactive Properties
+
+```typescript
+interface PlayerProps {
+  health: number;
+  position: { x: number; y: number };
+}
+
+const player = new BaseNode<PlayerProps>('player');
+
+// Setting properties marks the node as dirty
+player.properties.health = 100;
+player.properties.position = { x: 10, y: 20 };
+
+console.log(player.isDirty); // true
+player.markAsClean();
+console.log(player.isDirty); // false
+```
+
+### Fast Lookups
+
+```typescript
+const scene = new Root('scene');
+const camera = new BaseNode('camera');
+const player = new BaseNode('player');
+const enemy1 = new BaseNode('enemy');
+const enemy2 = new BaseNode('enemy');
+
+scene.addChild(camera);
+scene.addChild(player);
+player.addChild(enemy1);
+player.addChild(enemy2);
+
+// Find by ID (O(1))
+const foundCamera = scene.getById(camera.id);
+
+// Find by name (O(1))
+const enemies = scene.findByName('enemy');
+console.log(enemies.length); // 2
+
+// Total nodes
+console.log(scene.nodeCount); // 5
+```
+
+### Tree Traversal
+
+```typescript
+const root = new Root('root');
+const child1 = new BaseNode('child1');
+const child2 = new BaseNode('child2');
+const grandChild = new BaseNode('grandchild');
+
+root.addChild(child1);
+root.addChild(child2);
+child1.addChild(grandChild);
+
+// Pre-order traversal (default)
 root.traverse((node) => {
-  console.log('visit:', node.name);
+  console.log(node.name);
 });
+// Output: root, child1, grandchild, child2
+
+// Post-order traversal
+root.traverse(
+  (node) => {
+    console.log(node.name);
+  },
+  { order: 'post' },
+);
+// Output: grandchild, child1, child2, root
+```
+
+### Enabled State
+
+```typescript
+const root = new Root('root');
+const enabled = new BaseNode('enabled');
+const disabled = new BaseNode('disabled');
+
+root.addChild(enabled);
+root.addChild(disabled);
+disabled.disable();
+
+// By default, disabled nodes are skipped
+root.traverse((node) => {
+  console.log(node.name);
+});
+// Output: root, enabled
 
 // Include disabled nodes
 root.traverse(
   (node) => {
-    console.log('visit including disabled:', node.name);
+    console.log(node.name);
   },
   { includeDisabled: true },
 );
-
-// Post-order
-root.traverse(
-  (node) => {
-    console.log('post visit:', node.name);
-  },
-  { order: 'post' },
-);
+// Output: root, enabled, disabled
 ```
 
-### Lookups
+### Event Handling
 
-```ts
-// By name
-const enemies = root.findByName('EnemyBoss');
+```typescript
+const root = new Root('root');
+const child = new BaseNode('child');
 
-// By type (constructor)
-class EnemyNode extends Node {}
-const e1 = new EnemyNode('E1');
-root.addChild(e1);
+// Listen to add-child events
+root.on('add-child', (addedChild) => {
+  console.log(`Child ${addedChild.name} was added`);
+});
 
-const found = root.findByType(EnemyNode); // [e1]
+root.addChild(child); // Logs: "Child child was added"
+
+// Events bubble up
+child.on('rename', (node, oldName, newName) => {
+  console.log(`Renamed from ${oldName} to ${newName}`);
+});
+
+root.on('rename', (node, oldName, newName) => {
+  console.log(`Child renamed: ${oldName} -> ${newName}`);
+});
+
+child.name = 'newName';
+// Logs both handlers
 ```
 
-### Safe reparenting
+### Re-parenting
 
-```ts
-const arm = new Node('Arm');
-player.addChild(arm);
+```typescript
+const root = new Root('root');
+const parent1 = new BaseNode('parent1');
+const parent2 = new BaseNode('parent2');
+const child = new BaseNode('child');
 
-// Move `arm` under `enemy` (reparenting)
-enemy.addChild(arm); // detaches from `player` and attaches to `enemy`
+root.addChild(parent1);
+root.addChild(parent2);
+parent1.addChild(child);
+
+console.log(child.parent === parent1); // true
+
+// Re-parent from parent1 to parent2
+parent2.addChild(child);
+
+console.log(child.parent === parent2); // true
+console.log(parent1.children.length); // 0
+console.log(parent2.children.length); // 1
 ```
 
-## Design Notes
+## Architecture
 
-- The structure is acyclic: you cannot create cycles (an ancestor cannot be added as a child).
-- `properties` is a reactive `Proxy`: set/delete marks the node as dirty.
-- `metadata` is free-form (does not mark dirty by default) — useful for auxiliary data.
-- The `'enabled-change'` event sends only the node as payload.
-- Global indexing by `id`, `name`, and `type` accelerates lookups. Indices are automatically updated on rename/attach/detach/dispose.
+### Centralized Index Management
 
-## TypeScript
+The `Root` class maintains two internal maps:
 
-The API is fully typed and supports specialization via generics:
+- `NODE_ID_MAP`: Maps node IDs to node instances (O(1) lookup)
+- `NODE_NAME_MAP`: Maps names to sets of nodes with that name (O(1) lookup)
 
-```ts
-class MyNode extends Node<{ health: number }, { team?: string }> {}
+When nodes are added to or removed from the tree:
 
-const n = new MyNode('hero');
-n.properties.health = 50; // typed
-n.metadata.team = 'blue'; // typed
-```
+1. The `Root` automatically registers/unregisters the node and all its descendants
+2. Name changes are tracked and indices are updated accordingly
+3. Lookups via `getById()` and `findByName()` on any node delegate to the `Root`
 
-## Build/Dev
+### Event Propagation
 
-- `bun run dev` — Type checking in watch mode
-- `bun run build` — Bundle + types in `dist/`
+Events emitted by a node are automatically propagated to all ancestors:
+
+- `add-child`, `remove-child`, `rename`, `enabled-change`
+- Custom events can be added via the generic parameter `T`
+
+### Dirty State
+
+Nodes track whether they've been modified since last marked clean:
+
+- Setting/deleting properties marks the node as dirty
+- Structural changes (add/remove child, rename) mark the node as dirty
+- Use `markAsClean()` after processing changes
 
 ## License
 
-MIT © Vulppi — see [LICENSE](/LICENSE.md)
+MIT License - see [LICENSE.md](./LICENSE.md) for details.

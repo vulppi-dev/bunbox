@@ -1,10 +1,20 @@
 {
-  "exclude": ["node_modules", "dist", "example"],
-  "include": ["src/**/*.ts"],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "example"
+  ],
+  "include": [
+    "src/**/*.ts",
+    "bin/**/*.ts",
+    "test/**/*.ts",
+  ],
   "compilerOptions": {
     // Environment setup & latest features
-    "lib": ["ESNext"],
-    "target": "ESNext",
+    "lib": [
+      "ESNext"
+    ],
+    "target": "esnext",
     "module": "Preserve",
     "moduleDetection": "force",
     "jsx": "react-jsx",
@@ -13,6 +23,8 @@
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
+    "declaration": true,
+    "emitDeclarationOnly": true,
     // Best practices
     "strict": true,
     "skipLibCheck": true,
@@ -23,10 +35,8 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false,
-    "declaration": true,
-    "emitDeclarationOnly": true,
-    "rootDir": "./src",
     "outDir": "./dist",
-    "declarationDir": "./dist"
+    "declarationDir": "./dist",
+    "paths": {}
   }
 }
