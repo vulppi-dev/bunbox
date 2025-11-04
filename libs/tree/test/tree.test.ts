@@ -1,3 +1,4 @@
+/// <reference types="@types/bun" />
 import { describe, expect, test } from 'bun:test';
 import { BaseNode, Root } from '../src/index';
 

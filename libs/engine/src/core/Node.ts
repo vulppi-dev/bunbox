@@ -1,4 +1,4 @@
-import { AbstractNode } from '@bunbox/tree';
+import { BaseNode } from '@bunbox/tree';
 import type { EventMap, MergeEventMaps } from '@bunbox/utils';
 import type { InputsEventMap } from '../events';
 
@@ -13,7 +13,7 @@ export class Node<
   P extends Record<string, any> = Record<string, any>,
   M extends Record<string, any> = Record<string, any>,
   T extends EventMap = {},
-> extends AbstractNode<P, M, MergeEventMaps<InputsEventMap, T>> {
+> extends BaseNode<P, M, MergeEventMaps<InputsEventMap, T>> {
   /**
    * Game logic/update hook running as frequently as possible (event loop).
    * Use for input, AI, timers, etc.
@@ -21,9 +21,5 @@ export class Node<
    */
   _process(_deltaTime: number): void {
     // Override in subclasses
-  }
-
-  protected override _getType(): string {
-    return 'Node';
   }
 }

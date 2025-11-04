@@ -6,8 +6,6 @@
   ],
   "include": [
     "src/**/*.ts",
-    "bin/**/*.ts",
-    "test/**/*.ts",
   ],
   "compilerOptions": {
     // Environment setup & latest features

@@ -42,6 +42,7 @@ import type { RenderPassConfig } from './RenderPassConfig';
 import type { VkRenderPass } from './VkRenderPass';
 
 import { Node3D } from '../nodes';
+import { Root } from '@bunbox/tree';
 
 // Setup struct pointer/string conversions globally
 setupStruct({
@@ -88,7 +89,7 @@ export type WindowEventMap = {
   'window-display-changed': [event: WindowEvent];
 };
 
-export class Window extends Node<never, never, WindowEventMap> {
+export class Window extends Root<never, never, WindowEventMap> {
   static #isInitialized = false;
   static #windowsList: Set<Window> = new Set();
   static #errorCallback: JSCallback | null = null;
@@ -668,18 +669,6 @@ export class Window extends Node<never, never, WindowEventMap> {
     return this.#renderer.replaceRenderPass(oldPass, newConfig);
   }
 
-  override _process(_deltaTime: number): void {
-    // if (this.isDisposed) return;
-    if (GLFW.glfwWindowShouldClose(this.#windowPtr)) {
-      // this.dispose();
-      return;
-    }
-  }
-
-  protected override _getType(): string {
-    return 'Window';
-  }
-
   #updateMainMonitorData(setMonitor: boolean = false) {
     GLFW_DEBUG('Updating main monitor data for fullscreen mode');
     const monitor = GLFW.glfwGetPrimaryMonitor();
@@ -964,10 +953,6 @@ export class Window extends Node<never, never, WindowEventMap> {
   #appTriggerProcessStack(delta: number) {
     if (!this.isEnabled || this.isDisposed) return;
     if (this.#scheduleDirty) this.#rebuildStacks();
-
-    this._process(delta);
-
-    if (this.isDisposed) return;
 
     for (const node of this.#stack) {
       if (node.isEnabled) {
