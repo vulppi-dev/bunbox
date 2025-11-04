@@ -3,13 +3,18 @@ node_modules
 
 # input
 .vscode/
-.scripts/
 .github/
 .ref/
 .old/
+scripts/
 
 # code
+src/
 rust/
+
+# Docker
+Dockerfile
+.dockerignore
 
 
 # code coverage
