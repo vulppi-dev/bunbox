@@ -111,8 +111,4 @@ export class Node3D<
       this.#rotationQ?.markAsClean();
     }
   }
-
-  protected override _getType(): string {
-    return 'Node3D';
-  }
 }

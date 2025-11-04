@@ -15,8 +15,4 @@ export class PointLight extends AbstractLight {
     this.#range = value;
     this.markAsDirty();
   }
-
-  protected override _getType(): string {
-    return 'PointLight';
-  }
 }

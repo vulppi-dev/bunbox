@@ -17,8 +17,4 @@ export class DirectionalLight extends AbstractLight {
     this.markAsDirty();
     this.#direction.markAsDirty();
   }
-
-  protected override _getType(): string {
-    return 'DirectionalLight';
-  }
 }

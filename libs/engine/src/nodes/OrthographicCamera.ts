@@ -112,8 +112,4 @@ export class OrthographicCamera extends AbstractCamera {
       -(r + l) / dh, -(t + b) / dv, n * invNF, 1,
     ]);
   }
-
-  protected override _getType(): string {
-    return 'OrthographicCamera';
-  }
 }

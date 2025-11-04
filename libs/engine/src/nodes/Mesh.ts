@@ -29,8 +29,4 @@ export class Mesh extends Node3D {
     this.#material = value;
     this.markAsDirty();
   }
-
-  protected override _getType(): string {
-    return 'Mesh';
-  }
 }

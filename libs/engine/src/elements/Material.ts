@@ -1,4 +1,4 @@
-import { validate_wgsl } from '@bunbox/naga';
+import { isWgslValid } from '@bunbox/naga';
 import { DirtyState } from '@bunbox/utils';
 import { sha } from 'bun';
 import { Rasterizer } from './Rasterizer';
@@ -57,9 +57,8 @@ export class Material extends DirtyState {
   }
   set shader(src: string) {
     if (this.#shader === src) return;
-    try {
-      validate_wgsl(src);
-    } catch {
+    const valid = isWgslValid(src);
+    if (!valid) {
       throw new Error('Invalid WGSL');
     }
     this.#shader = src;

@@ -71,8 +71,4 @@ export class Viewport<
     this.#height = value;
     this.markAsDirty();
   }
-
-  protected override _getType(): string {
-    return 'Viewport';
-  }
 }

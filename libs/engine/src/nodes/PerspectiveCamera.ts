@@ -30,10 +30,6 @@ export class PerspectiveCamera extends AbstractCamera {
     this.markAsDirty();
   }
 
-  protected override _getType(): string {
-    return 'PerspectiveCamera';
-  }
-
   protected override _processProjectionMatrix(): void {
     const a = this.#aspect || 1;
     const n = this.near;
