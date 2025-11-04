@@ -8,6 +8,10 @@ node_modules
 .ref/
 .old/
 
+# code
+rust/
+
+
 # code coverage
 coverage
 *.lcov

@@ -1,6 +1,6 @@
 {
   "name": "@bunbox/naga",
-  "version": "0.0.6",
+  "version": "0.1.0",
   "description": "Simple WGSL parser for TypeScript",
   "author": {
     "name": "Renato Rodrigues",
@@ -16,22 +16,33 @@
   "keywords": [
     "naga",
     "wgsl",
-    "spir-v",
-    "msl"
+    "spir-v"
   ],
   "type": "module",
-  "main": "./src/naga_wasm.js",
-  "types": "./src/naga_wasm.d.ts",
+  "main": "./dist/naga_wasm.js",
+  "types": "./dist/naga_wasm.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/naga_wasm.d.ts",
+      "import": "./dist/naga_wasm.js",
+      "default": "./dist/naga_wasm.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
-    "dev": "tsc --watch --noEmit true --emitDeclarationOnly false",
+    "build": "pwsh -File build.ps1",
+    "build:sh": "sh build.sh",
+    "build:web": "pwsh -Command \"docker build -t naga-wasm-builder . && docker run --rm -v ${PWD}/rust:/workspace -v ${PWD}/dist:/output naga-wasm-builder build --target web --out-dir /output\"",
     "pub": "npm publish --access=public --tag=latest",
     "format": "prettier --write ."
   },
   "dependencies": {},
   "devDependencies": {
-    "@types/node": "^24.3.3",
+    "@types/node": "^24.10.0",
     "prettier": "^3.6.2",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.3"
   },
   "engines": {
     "node": ">=20.0.0",

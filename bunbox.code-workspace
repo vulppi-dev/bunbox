@@ -17,6 +17,10 @@
       "path": "./libs/tree"
     },
     {
+      "name": "naga",
+      "path": "./libs/naga"
+    },
+    {
       "name": "engine",
       "path": "./libs/engine"
     },
