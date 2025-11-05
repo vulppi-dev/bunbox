@@ -1,15 +1,6 @@
 import { type Disposable } from '@bunbox/utils';
 import { ptr, type Pointer } from 'bun:ffi';
-import {
-  GLFW,
-  GLFW_GeneralMacro,
-  WGPU,
-  wgpuInstanceDescriptorStruct,
-  wgpuSurfaceDescriptorStruct,
-  wgpuSurfaceSourceWaylandSurfaceStruct,
-  wgpuSurfaceSourceWindowsHWNDStruct,
-  wgpuSurfaceSourceXlibWindowStruct,
-} from '../dynamic-libs';
+import { GLFW, GLFW_GeneralMacro } from '../dynamic-libs';
 import { DynamicLibError } from '../errors';
 import { Color, Vector2 } from '../math';
 import type { Mesh } from '../nodes';
@@ -26,15 +17,15 @@ export class Renderer implements Disposable {
       return Renderer.#instancePtr;
     }
 
-    const instanceDescriptor = instantiate(wgpuInstanceDescriptorStruct);
-    const instancePtr = WGPU.wgpuCreateInstance(
-      ptr(getInstanceBuffer(instanceDescriptor)),
-    );
-    if (!instancePtr) {
-      throw new DynamicLibError('Failed to create WGPU instance', 'WGPU');
-    }
-    Renderer.#instancePtr = instancePtr;
-    return instancePtr;
+    // const instanceDescriptor = instantiate(wgpuInstanceDescriptorStruct);
+    // const instancePtr = WGPU.wgpuCreateInstance(
+    //   ptr(getInstanceBuffer(instanceDescriptor)),
+    // );
+    // if (!instancePtr) {
+    //   throw new DynamicLibError('Failed to create WGPU instance', 'WGPU');
+    // }
+    // Renderer.#instancePtr = instancePtr;
+    // return instancePtr;
   }
 
   static isWayland(): boolean {
@@ -43,40 +34,48 @@ export class Renderer implements Disposable {
   }
 
   static getSurfaceDescriptor(window: Pointer) {
-    switch (process.platform) {
-      case 'win32': {
-        const desc = instantiate(wgpuSurfaceSourceWindowsHWNDStruct);
-        desc.hwnd = BigInt(GLFW.glfwGetWin32Window(window) || 0);
-        return desc;
-      }
-      case 'linux': {
-        if (Renderer.isWayland()) {
-          const desc = instantiate(wgpuSurfaceSourceWaylandSurfaceStruct);
-          desc.surface = BigInt(GLFW.glfwGetWaylandWindow(window) || 0);
-          desc.display = BigInt(GLFW.glfwGetWaylandDisplay() || 0);
-          return desc;
-        } else {
-          const desc = instantiate(wgpuSurfaceSourceXlibWindowStruct);
-          desc.window = BigInt(GLFW.glfwGetX11Window(window) || 0);
-          desc.display = BigInt(GLFW.glfwGetX11Display() || 0);
-          return desc;
-        }
-      }
-      case 'darwin': {
-        const desc = instantiate(wgpuSurfaceSourceWindowsHWNDStruct);
-        desc.hwnd = BigInt(GLFW.glfwGetCocoaWindow(window) || 0);
-        return desc;
-      }
-      default:
-        throw new DynamicLibError(
-          `Unsupported platform: ${process.platform}`,
-          'GLFW',
-        );
-    }
+    // switch (process.platform) {
+    //   case 'win32': {
+    //     const desc = instantiate(wgpuSurfaceSourceWindowsHWNDStruct);
+    //     desc.chain.sType = WGPU_SType.SurfaceSourceWindowsHWND;
+    //     desc.hinstance = 0n;
+    //     desc.hwnd = BigInt(GLFW.glfwGetWin32Window(window) || 0);
+    //     return desc;
+    //   }
+    //   case 'linux': {
+    //     if (Renderer.isWayland()) {
+    //       const desc = instantiate(wgpuSurfaceSourceWaylandSurfaceStruct);
+    //       desc.chain.sType = WGPU_SType.SurfaceSourceWaylandSurface;
+    //       desc.display = BigInt(GLFW.glfwGetWaylandDisplay() || 0);
+    //       desc.surface = BigInt(GLFW.glfwGetWaylandWindow(window) || 0);
+    //       return desc;
+    //     } else {
+    //       const desc = instantiate(wgpuSurfaceSourceXlibWindowStruct);
+    //       desc.chain.sType = WGPU_SType.SurfaceSourceXlibWindow;
+    //       desc.display = BigInt(GLFW.glfwGetX11Display() || 0);
+    //       desc.window = BigInt(GLFW.glfwGetX11Window(window) || 0);
+    //       return desc;
+    //     }
+    //   }
+    //   case 'darwin': {
+    //     const desc = instantiate(wgpuSurfaceSourceMetalLayerStruct);
+    //     desc.chain.sType = WGPU_SType.SurfaceSourceMetalLayer;
+    //     desc.layer = BigInt(GLFW.glfwGetCocoaWindow(window) || 0);
+    //     return desc;
+    //   }
+    //   default:
+    //     throw new DynamicLibError(
+    //       `Unsupported platform: ${process.platform}`,
+    //       'GLFW',
+    //     );
+    // }
   }
 
   #windowPtr: Pointer;
   #surfacePtr: Pointer;
+
+  // Async initialized pointers
+  #adapterPtr: Pointer | null = null;
 
   // Cached window framebuffer size
   #width: Int32Array;
@@ -112,11 +111,20 @@ export class Renderer implements Disposable {
 
     Renderer.#rendererCount++;
     this.rebuildFrame();
+
+    this.prepare();
   }
 
   dispose(): void | Promise<void> {
     Renderer.#rendererCount--;
     WGPU_DEBUG('Disposing renderer for window:');
+
+    if (this.#adapterPtr) {
+      WGPU_DEBUG(`  Adapter pointer: 0x${this.#adapterPtr.toString(16)}`);
+      WGPU.wgpuAdapterRelease(this.#adapterPtr);
+      this.#adapterPtr = null;
+    }
+
     WGPU_DEBUG(`  Surface pointer: 0x${this.#surfacePtr.toString(16)}`);
     WGPU.wgpuSurfaceRelease(this.#surfacePtr);
 
@@ -147,6 +155,11 @@ export class Renderer implements Disposable {
    */
   replaceRenderPass(oldPass: any, newConfig: RenderPassConfig): boolean {
     return true;
+  }
+
+  async prepare() {
+    const adapter = await requestAdapter(this.#windowPtr, this.#surfacePtr);
+    this.#adapterPtr = adapter;
   }
 
   rebuildFrame(): void {
