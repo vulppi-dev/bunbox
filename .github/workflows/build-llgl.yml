@@ -3,7 +3,8 @@ name: Build LLGL
 on:
   workflow_dispatch:
   push:
-    branches: [ master ]
+    branches:
+      - master
     paths:
       - '.github/workflows/build-llgl.yml'
 
@@ -13,7 +14,8 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
-        with: { fetch-depth: 3 }
+        with:
+          fetch-depth: 3
 
       - name: Install build deps (X11/Xrandr + Vulkan)
         run: |
@@ -37,15 +39,89 @@ jobs:
             -DLLGL_BUILD_RENDERER_DIRECT3D12=OFF \
             -DLLGL_BUILD_RENDERER_METAL=OFF
           cmake --build build --config Release
+          # strip libs (se existirem)
           find build -type f -name "libLLGL*.so*" -exec strip -S {} + || true
 
       - name: Prepare artifacts
         run: |
           mkdir -p artifacts/x64/linux
-          find llgl/build -type f -name "libLLGL*.so*" -exec cp {} artifacts/x64/linux/ \; || true
+          # Copia todas as .so relevantes
+          find llgl/build -type f \( -name "libLLGL*.so*" -o -name "*Vulkan*.so*" -o -name "*C99*.so*" \) -exec cp {} artifacts/x64/linux/ \; || true
 
-      - uses: actions/upload-artifact@v4
-        with: { name: linux-x64, path: artifacts/, retention-days: 7 }
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-x64
+          path: artifacts/
+          retention-days: 7
+
+  linux-arm64:
+    name: Linux ARM64 (cross)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 3
+
+      - name: Install cross toolchain
+        run: |
+          sudo apt-get -y update
+          sudo apt-get -y install cmake gcc-aarch64-linux-gnu g++-aarch64-linux-gnu libc6-dev-arm64-cross
+
+      - name: Enable arm64 apt sources
+        run: |
+          sudo dpkg --add-architecture arm64
+          sudo apt-get update || true
+
+      - name: Install arm64 deps (X11/Xrandr + Vulkan)
+        run: |
+          sudo apt-get -y install \
+            libx11-dev:arm64 libxrandr-dev:arm64 libxext-dev:arm64 libxi-dev:arm64 \
+            libvulkan-dev:arm64 || true
+
+      - name: Clone and try to build LLGL for arm64
+        run: |
+          git clone --depth 1 https://github.com/LukasBanana/LLGL.git llgl
+          cd llgl
+          cat > toolchain-aarch64.cmake << 'EOF'
+          set(CMAKE_SYSTEM_NAME Linux)
+          set(CMAKE_SYSTEM_PROCESSOR aarch64)
+          set(CMAKE_C_COMPILER aarch64-linux-gnu-gcc)
+          set(CMAKE_CXX_COMPILER aarch64-linux-gnu-g++)
+          set(CMAKE_FIND_ROOT_PATH /usr/aarch64-linux-gnu /usr)
+          set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+          set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+          set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+          EOF
+          cmake -S . -B build \
+            -DCMAKE_TOOLCHAIN_FILE=toolchain-aarch64.cmake \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_SHARED_LIBS=ON \
+            -DLLGL_BUILD_EXAMPLES=OFF \
+            -DLLGL_BUILD_WRAPPER_C99=ON \
+            -DLLGL_BUILD_RENDERER_VULKAN=ON \
+            -DLLGL_BUILD_RENDERER_OPENGL=OFF \
+            -DLLGL_BUILD_RENDERER_DIRECT3D11=OFF \
+            -DLLGL_BUILD_RENDERER_DIRECT3D12=OFF \
+            -DLLGL_BUILD_RENDERER_METAL=OFF || echo "Configure failed (expected on cross): continuing"
+          cmake --build build --config Release || echo "Build failed: continuing"
+
+      - name: Prepare artifacts
+        run: |
+          mkdir -p artifacts/arm64/linux
+          if compgen -G "llgl/build/**/*.so*" > /dev/null; then
+            find llgl/build -type f -name "*.so*" -exec cp {} artifacts/arm64/linux/ \;
+          else
+            # Mantém layout de pasta mesmo se falhar
+            touch artifacts/arm64/linux/placeholder.txt
+          fi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-arm64
+          path: artifacts/
+          retention-days: 7
 
   macos:
     name: macOS
@@ -56,22 +132,24 @@ jobs:
         ARCH: [x64, arm64]
         include:
           - ARCH: x64
+            PLATFORM: osx-x64
             CMAKE_ARCH: x86_64
             OSX_MIN: '10.15.4'
           - ARCH: arm64
+            PLATFORM: osx-arm64
             CMAKE_ARCH: arm64
             OSX_MIN: '11.0'
     steps:
       - uses: actions/checkout@v4
-        with: { fetch-depth: 3 }
-
-      # Em vez de baixar o SDK completo, constrói Headers+Loader e seta VULKAN_SDK
-      - name: Setup Vulkan SDK (headers+loader)
-        uses: humbletim/setup-vulkan-sdk@v1.2.1
         with:
-          vulkan-query-version: 1.4.304.1
-          vulkan-components: Vulkan-Headers, Vulkan-Loader
-          vulkan-use-cache: true
+          fetch-depth: 3
+
+      # Instala Vulkan SDK (inclui MoltenVK) na VM do macOS
+      - name: Install Vulkan SDK
+        uses: humbletim/install-vulkan-sdk@v1.2
+        with:
+          version: latest
+          cache: true
 
       - name: Clone and build LLGL (shared + C99 + Vulkan only)
         run: |
@@ -97,48 +175,58 @@ jobs:
           mkdir -p artifacts/${{matrix.ARCH}}/darwin
           find llgl/build -type f -name "libLLGL*.dylib" -exec cp {} artifacts/${{matrix.ARCH}}/darwin/ \; || true
 
-      - uses: actions/upload-artifact@v4
-        with: { name: macos-${{matrix.ARCH}}, path: artifacts/, retention-days: 7 }
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{matrix.ARCH}}
+          path: artifacts/
+          retention-days: 7
 
   windows-x64:
     name: Windows x64
     runs-on: windows-2022
-    defaults: { run: { shell: cmd } }
     steps:
       - uses: actions/checkout@v4
-        with: { fetch-depth: 3 }
+        with:
+          fetch-depth: 3
 
       - uses: ilammy/msvc-dev-cmd@v1
-        with: { arch: amd64 }
-
-      # Prepara Headers+Loader e exporta VULKAN_SDK para o job
-      - name: Setup Vulkan SDK (headers+loader)
-        uses: humbletim/setup-vulkan-sdk@v1.2.1
         with:
-          vulkan-query-version: 1.4.304.1
-          vulkan-components: Vulkan-Headers, Vulkan-Loader
-          vulkan-use-cache: true
+          arch: amd64
+
+      - name: Install Vulkan SDK
+        shell: pwsh
+        run: |
+          choco install vulkan-sdk -y
 
       - name: Clone and build LLGL (shared + C99 + Vulkan only)
+        shell: pwsh
         run: |
           git clone --depth 1 https://github.com/LukasBanana/LLGL.git llgl
           cd llgl
-          cmake -S . -B build ^
-            -DCMAKE_BUILD_TYPE=Release ^
-            -DBUILD_SHARED_LIBS=ON ^
-            -DLLGL_BUILD_EXAMPLES=OFF ^
-            -DLLGL_BUILD_WRAPPER_C99=ON ^
-            -DLLGL_BUILD_RENDERER_VULKAN=ON ^
-            -DLLGL_BUILD_RENDERER_OPENGL=OFF ^
-            -DLLGL_BUILD_RENDERER_DIRECT3D11=OFF ^
-            -DLLGL_BUILD_RENDERER_DIRECT3D12=OFF ^
+          cmake -S . -B build `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DBUILD_SHARED_LIBS=ON `
+            -DLLGL_BUILD_EXAMPLES=OFF `
+            -DLLGL_BUILD_WRAPPER_C99=ON `
+            -DLLGL_BUILD_RENDERER_VULKAN=ON `
+            -DLLGL_BUILD_RENDERER_OPENGL=OFF `
+            -DLLGL_BUILD_RENDERER_DIRECT3D11=OFF `
+            -DLLGL_BUILD_RENDERER_DIRECT3D12=OFF `
             -DLLGL_BUILD_RENDERER_METAL=OFF
           cmake --build build --config Release
 
       - name: Prepare artifacts
+        shell: pwsh
         run: |
-          mkdir artifacts\x64\win32\
-          for /r llgl\build %%F in (*.dll) do copy "%%F" artifacts\x64\win32\ >NUL
+          New-Item -ItemType Directory -Force -Path artifacts/x64/win32
+          Get-ChildItem -Path llgl/build -Recurse -Filter *.dll | ForEach-Object {
+            Copy-Item $_.FullName -Destination artifacts/x64/win32/
+          }
 
-      - uses: actions/upload-artifact@v4
-        with: { name: windows-x64, path: artifacts/, retention-days: 7 }
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-x64
+          path: artifacts/
+          retention-days: 7
