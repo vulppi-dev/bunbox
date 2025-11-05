@@ -391,6 +391,282 @@ export enum WGPUNativeTextureFormat {
   P010 = 0x00030008,
 }
 
+export enum WGPURequestAdapterStatus {
+  Success = 0x00000001,
+  InstanceDropped = 0x00000002,
+  Unavailable = 0x00000003,
+  Error = 0x00000004,
+  Unknown = 0x00000005,
+}
+
+export enum WGPURequestDeviceStatus {
+  Success = 0x00000001,
+  InstanceDropped = 0x00000002,
+  Error = 0x00000003,
+  Unknown = 0x00000004,
+}
+
+export enum WGPUSType {
+  ShaderSourceSPIRV = 0x00000001,
+  ShaderSourceWGSL = 0x00000002,
+  RenderPassMaxDrawCount = 0x00000003,
+  SurfaceSourceMetalLayer = 0x00000004,
+  SurfaceSourceWindowsHWND = 0x00000005,
+  SurfaceSourceXlibWindow = 0x00000006,
+  SurfaceSourceWaylandSurface = 0x00000007,
+  SurfaceSourceAndroidNativeWindow = 0x00000008,
+  SurfaceSourceXCBWindow = 0x00000009,
+}
+
+export enum WGPUSamplerBindingType {
+  BindingNotUsed = 0x00000000,
+  Undefined = 0x00000001,
+  Filtering = 0x00000002,
+  NonFiltering = 0x00000003,
+  Comparison = 0x00000004,
+}
+
+export enum WGPUStatus {
+  Success = 0x00000001,
+  Error = 0x00000002,
+}
+
+export enum WGPUStencilOperation {
+  Undefined = 0x00000000,
+  Keep = 0x00000001,
+  Zero = 0x00000002,
+  Replace = 0x00000003,
+  Invert = 0x00000004,
+  IncrementClamp = 0x00000005,
+  DecrementClamp = 0x00000006,
+  IncrementWrap = 0x00000007,
+  DecrementWrap = 0x00000008,
+}
+
+export enum WGPUStorageTextureAccess {
+  BindingNotUsed = 0x00000000,
+  Undefined = 0x00000001,
+  WriteOnly = 0x00000002,
+  ReadOnly = 0x00000003,
+  ReadWrite = 0x00000004,
+}
+
+export enum WGPUStoreOp {
+  Undefined = 0x00000000,
+  Store = 0x00000001,
+  Discard = 0x00000002,
+}
+
+export enum WGPUSurfaceGetCurrentTextureStatus {
+  SuccessOptimal = 0x00000001,
+  SuccessSuboptimal = 0x00000002,
+  Timeout = 0x00000003,
+  Outdated = 0x00000004,
+  Lost = 0x00000005,
+  OutOfMemory = 0x00000006,
+  DeviceLost = 0x00000007,
+  Error = 0x00000008,
+}
+
+export enum WGPUTextureAspect {
+  Undefined = 0x00000000,
+  All = 0x00000001,
+  StencilOnly = 0x00000002,
+  DepthOnly = 0x00000003,
+}
+
+export enum WGPUTextureDimension {
+  Undefined = 0x00000000,
+  _1D = 0x00000001,
+  _2D = 0x00000002,
+  _3D = 0x00000003,
+}
+
+export enum WGPUTextureFormat {
+  Undefined = 0x00000000,
+  R8Unorm = 0x00000001,
+  R8Snorm = 0x00000002,
+  R8Uint = 0x00000003,
+  R8Sint = 0x00000004,
+  R16Uint = 0x00000005,
+  R16Sint = 0x00000006,
+  R16Float = 0x00000007,
+  RG8Unorm = 0x00000008,
+  RG8Snorm = 0x00000009,
+  RG8Uint = 0x0000000a,
+  RG8Sint = 0x0000000b,
+  R32Float = 0x0000000c,
+  R32Uint = 0x0000000d,
+  R32Sint = 0x0000000e,
+  RG16Uint = 0x0000000f,
+  RG16Sint = 0x00000010,
+  RG16Float = 0x00000011,
+  RGBA8Unorm = 0x00000012,
+  RGBA8UnormSrgb = 0x00000013,
+  RGBA8Snorm = 0x00000014,
+  RGBA8Uint = 0x00000015,
+  RGBA8Sint = 0x00000016,
+  BGRA8Unorm = 0x00000017,
+  BGRA8UnormSrgb = 0x00000018,
+  RGB10A2Uint = 0x00000019,
+  RGB10A2Unorm = 0x0000001a,
+  RG11B10Ufloat = 0x0000001b,
+  RGB9E5Ufloat = 0x0000001c,
+  RG32Float = 0x0000001d,
+  RG32Uint = 0x0000001e,
+  RG32Sint = 0x0000001f,
+  RGBA16Uint = 0x00000020,
+  RGBA16Sint = 0x00000021,
+  RGBA16Float = 0x00000022,
+  RGBA32Float = 0x00000023,
+  RGBA32Uint = 0x00000024,
+  RGBA32Sint = 0x00000025,
+  Stencil8 = 0x00000026,
+  Depth16Unorm = 0x00000027,
+  Depth24Plus = 0x00000028,
+  Depth24PlusStencil8 = 0x00000029,
+  Depth32Float = 0x0000002a,
+  Depth32FloatStencil8 = 0x0000002b,
+  BC1RGBAUnorm = 0x0000002c,
+  BC1RGBAUnormSrgb = 0x0000002d,
+  BC2RGBAUnorm = 0x0000002e,
+  BC2RGBAUnormSrgb = 0x0000002f,
+  BC3RGBAUnorm = 0x00000030,
+  BC3RGBAUnormSrgb = 0x00000031,
+  BC4RUnorm = 0x00000032,
+  BC4RSnorm = 0x00000033,
+  BC5RGUnorm = 0x00000034,
+  BC5RGSnorm = 0x00000035,
+  BC6HRGBUfloat = 0x00000036,
+  BC6HRGBFloat = 0x00000037,
+  BC7RGBAUnorm = 0x00000038,
+  BC7RGBAUnormSrgb = 0x00000039,
+  ETC2RGB8Unorm = 0x0000003a,
+  ETC2RGB8UnormSrgb = 0x0000003b,
+  ETC2RGB8A1Unorm = 0x0000003c,
+  ETC2RGB8A1UnormSrgb = 0x0000003d,
+  ETC2RGBA8Unorm = 0x0000003e,
+  ETC2RGBA8UnormSrgb = 0x0000003f,
+  EACR11Unorm = 0x00000040,
+  EACR11Snorm = 0x00000041,
+  EACRG11Unorm = 0x00000042,
+  EACRG11Snorm = 0x00000043,
+  ASTC4x4Unorm = 0x00000044,
+  ASTC4x4UnormSrgb = 0x00000045,
+  ASTC5x4Unorm = 0x00000046,
+  ASTC5x4UnormSrgb = 0x00000047,
+  ASTC5x5Unorm = 0x00000048,
+  ASTC5x5UnormSrgb = 0x00000049,
+  ASTC6x5Unorm = 0x0000004a,
+  ASTC6x5UnormSrgb = 0x0000004b,
+  ASTC6x6Unorm = 0x0000004c,
+  ASTC6x6UnormSrgb = 0x0000004d,
+  ASTC8x5Unorm = 0x0000004e,
+  ASTC8x5UnormSrgb = 0x0000004f,
+  ASTC8x6Unorm = 0x00000050,
+  ASTC8x6UnormSrgb = 0x00000051,
+  ASTC8x8Unorm = 0x00000052,
+  ASTC8x8UnormSrgb = 0x00000053,
+  ASTC10x5Unorm = 0x00000054,
+  ASTC10x5UnormSrgb = 0x00000055,
+  ASTC10x6Unorm = 0x00000056,
+  ASTC10x6UnormSrgb = 0x00000057,
+  ASTC10x8Unorm = 0x00000058,
+  ASTC10x8UnormSrgb = 0x00000059,
+  ASTC10x10Unorm = 0x0000005a,
+  ASTC10x10UnormSrgb = 0x0000005b,
+  ASTC12x10Unorm = 0x0000005c,
+  ASTC12x10UnormSrgb = 0x0000005d,
+  ASTC12x12Unorm = 0x0000005e,
+  ASTC12x12UnormSrgb = 0x0000005f,
+}
+
+export enum WGPUTextureSampleType {
+  BindingNotUsed = 0x00000000,
+  Undefined = 0x00000001,
+  Float = 0x00000002,
+  UnfilterableFloat = 0x00000003,
+  Depth = 0x00000004,
+  Sint = 0x00000005,
+  Uint = 0x00000006,
+}
+
+export enum WGPUTextureViewDimension {
+  Undefined = 0x00000000,
+  _1D = 0x00000001,
+  _2D = 0x00000002,
+  _2DArray = 0x00000003,
+  Cube = 0x00000004,
+  CubeArray = 0x00000005,
+  _3D = 0x00000006,
+}
+
+export enum WGPUVertexFormat {
+  Uint8 = 0x00000001,
+  Uint8x2 = 0x00000002,
+  Uint8x4 = 0x00000003,
+  Sint8 = 0x00000004,
+  Sint8x2 = 0x00000005,
+  Sint8x4 = 0x00000006,
+  Unorm8 = 0x00000007,
+  Unorm8x2 = 0x00000008,
+  Unorm8x4 = 0x00000009,
+  Snorm8 = 0x0000000a,
+  Snorm8x2 = 0x0000000b,
+  Snorm8x4 = 0x0000000c,
+  Uint16 = 0x0000000d,
+  Uint16x2 = 0x0000000e,
+  Uint16x4 = 0x0000000f,
+  Sint16 = 0x00000010,
+  Sint16x2 = 0x00000011,
+  Sint16x4 = 0x00000012,
+  Unorm16 = 0x00000013,
+  Unorm16x2 = 0x00000014,
+  Unorm16x4 = 0x00000015,
+  Snorm16 = 0x00000016,
+  Snorm16x2 = 0x00000017,
+  Snorm16x4 = 0x00000018,
+  Float16 = 0x00000019,
+  Float16x2 = 0x0000001a,
+  Float16x4 = 0x0000001b,
+  Float32 = 0x0000001c,
+  Float32x2 = 0x0000001d,
+  Float32x3 = 0x0000001e,
+  Float32x4 = 0x0000001f,
+  Uint32 = 0x00000020,
+  Uint32x2 = 0x00000021,
+  Uint32x3 = 0x00000022,
+  Uint32x4 = 0x00000023,
+  Sint32 = 0x00000024,
+  Sint32x2 = 0x00000025,
+  Sint32x3 = 0x00000026,
+  Sint32x4 = 0x00000027,
+  Unorm10_10_10_2 = 0x00000028,
+  Unorm8x4BGRA = 0x00000029,
+}
+
+export enum WGPUVertexStepMode {
+  VertexBufferNotUsed = 0x00000000,
+  Undefined = 0x00000001,
+  Vertex = 0x00000002,
+  Instance = 0x00000003,
+}
+
+export enum WGPUWGSLLanguageFeatureName {
+  ReadonlyAndReadwriteStorageTextures = 0x00000001,
+  Packed4x8IntegerDotProduct = 0x00000002,
+  UnrestrictedPointerParameters = 0x00000003,
+  PointerCompositeAccess = 0x00000004,
+}
+
+export enum WGPUWaitStatus {
+  Success = 0x00000001,
+  TimedOut = 0x00000002,
+  UnsupportedTimeout = 0x00000003,
+  UnsupportedCount = 0x00000004,
+  UnsupportedMixedSources = 0x00000005,
+}
+
 // Constants
 export const WGPU_ARRAY_LAYER_COUNT_UNDEFINED = 0xffffffff;
 export const WGPU_COPY_STRIDE_UNDEFINED = 0xffffffff;

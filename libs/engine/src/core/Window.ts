@@ -25,7 +25,7 @@ import {
 } from '../dynamic-libs';
 import { DynamicLibError } from '../errors';
 import { WindowEvent } from '../events';
-import type { Color } from '../math';
+import { Color } from '../math';
 import { GLFW_DEBUG } from '../singleton/logger';
 import { pointerCopyBuffer } from '../utils/buffer';
 import { Node } from './Node';
@@ -348,7 +348,7 @@ export class Window extends Root<never, never, WindowEventMap> {
   }
 
   get backgroundColor(): Color {
-    return this.#renderer.clearColor;
+    return new Color();
   }
 
   set title(value: string) {
@@ -357,9 +357,7 @@ export class Window extends Root<never, never, WindowEventMap> {
       GLFW.glfwSetWindowTitle(this.#windowPtr, cstr(this.#title));
   }
 
-  set backgroundColor(color: Color) {
-    this.#renderer.clearColor = color;
-  }
+  set backgroundColor(color: Color) {}
 
   set opacity(value: number) {
     this.#opacity = value;

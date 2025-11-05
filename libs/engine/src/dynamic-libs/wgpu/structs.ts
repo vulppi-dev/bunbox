@@ -2,6 +2,16 @@ import { f32, f64, i32, ptrAny, struct, u32, u64 } from '@bunbox/struct';
 
 // Core WebGPU Structs
 
+export const wgpuChainedStructStruct = struct({
+  next: ptrAny(),
+  sType: u32(),
+});
+
+export const wgpuChainedStructOutStruct = struct({
+  next: ptrAny(),
+  sType: u32(),
+});
+
 export const wgpuStringViewStruct = struct({
   data: ptrAny(),
   length: u64(),
@@ -27,6 +37,7 @@ export const wgpuExtent3DStruct = struct({
 });
 
 export const wgpuLimitsStruct = struct({
+  nextInChain: ptrAny(),
   maxTextureDimension1D: u32(),
   maxTextureDimension2D: u32(),
   maxTextureDimension3D: u32(),
@@ -49,7 +60,6 @@ export const wgpuLimitsStruct = struct({
   maxBufferSize: u64(),
   maxVertexAttributes: u32(),
   maxVertexBufferArrayStride: u32(),
-  maxInterStageShaderComponents: u32(),
   maxInterStageShaderVariables: u32(),
   maxColorAttachments: u32(),
   maxColorAttachmentBytesPerSample: u32(),
@@ -76,11 +86,42 @@ export const wgpuAdapterInfoStruct = struct({
 
 export const wgpuRequestAdapterOptionsStruct = struct({
   nextInChain: ptrAny(),
-  compatibleSurface: ptrAny(),
-  powerPreference: u32(),
-  backendType: u32(),
-  forceFallbackAdapter: u32(),
   featureLevel: u32(),
+  powerPreference: u32(),
+  forceFallbackAdapter: u32(),
+  backendType: u32(),
+  compatibleSurface: ptrAny(),
+});
+
+export const wgpuInstanceCapabilitiesStruct = struct({
+  nextInChain: ptrAny(),
+  timedWaitAnyEnable: u32(),
+  timedWaitAnyMaxCount: u64(),
+});
+
+export const wgpuInstanceDescriptorStruct = struct({
+  nextInChain: ptrAny(),
+  features: wgpuInstanceCapabilitiesStruct,
+});
+
+export const wgpuQueueDescriptorStruct = struct({
+  nextInChain: ptrAny(),
+  label: wgpuStringViewStruct,
+});
+
+export const wgpuDeviceLostCallbackInfoStruct = struct({
+  nextInChain: ptrAny(),
+  mode: u32(),
+  callback: ptrAny(),
+  userdata1: ptrAny(),
+  userdata2: ptrAny(),
+});
+
+export const wgpuUncapturedErrorCallbackInfoStruct = struct({
+  nextInChain: ptrAny(),
+  callback: ptrAny(),
+  userdata1: ptrAny(),
+  userdata2: ptrAny(),
 });
 
 export const wgpuDeviceDescriptorStruct = struct({
@@ -89,10 +130,9 @@ export const wgpuDeviceDescriptorStruct = struct({
   requiredFeatureCount: u64(),
   requiredFeatures: ptrAny(),
   requiredLimits: ptrAny(),
-  defaultQueue: ptrAny(),
-  deviceLostCallback: ptrAny(),
-  deviceLostUserdata: ptrAny(),
-  uncapturedErrorCallbackInfo: ptrAny(),
+  defaultQueue: wgpuQueueDescriptorStruct,
+  deviceLostCallbackInfo: wgpuDeviceLostCallbackInfoStruct,
+  uncapturedErrorCallbackInfo: wgpuUncapturedErrorCallbackInfoStruct,
 });
 
 export const wgpuBufferDescriptorStruct = struct({
@@ -378,6 +418,52 @@ export const wgpuRenderPassDescriptorStruct = struct({
   timestampWrites: ptrAny(),
 });
 
+export const wgpuComputePassTimestampWritesStruct = struct({
+  querySet: ptrAny(),
+  beginningOfPassWriteIndex: u32(),
+  endOfPassWriteIndex: u32(),
+});
+
+export const wgpuComputePassDescriptorStruct = struct({
+  nextInChain: ptrAny(),
+  label: wgpuStringViewStruct,
+  timestampWrites: ptrAny(),
+});
+
+export const wgpuConstantEntryStruct = struct({
+  nextInChain: ptrAny(),
+  key: wgpuStringViewStruct,
+  value: f64(),
+});
+
+export const wgpuFutureStruct = struct({
+  id: u64(),
+});
+
+export const wgpuFutureWaitInfoStruct = struct({
+  future: wgpuFutureStruct,
+  completed: u32(),
+});
+
+export const wgpuCompilationMessageStruct = struct({
+  nextInChain: ptrAny(),
+  message: wgpuStringViewStruct,
+  type: u32(),
+  lineNum: u64(),
+  linePos: u64(),
+  offset: u64(),
+  length: u64(),
+  utf16LinePos: u64(),
+  utf16Offset: u64(),
+  utf16Length: u64(),
+});
+
+export const wgpuCompilationInfoStruct = struct({
+  nextInChain: ptrAny(),
+  messageCount: u64(),
+  messages: ptrAny(),
+});
+
 export const wgpuSurfaceDescriptorStruct = struct({
   nextInChain: ptrAny(),
   label: wgpuStringViewStruct,
@@ -397,9 +483,175 @@ export const wgpuSurfaceConfigurationStruct = struct({
 });
 
 export const wgpuSurfaceTextureStruct = struct({
+  nextInChain: ptrAny(),
   texture: ptrAny(),
-  suboptimal: u32(),
   status: u32(),
+});
+
+export const wgpuSupportedFeaturesStruct = struct({
+  featureCount: u64(),
+  features: ptrAny(),
+});
+
+export const wgpuSupportedWGSLLanguageFeaturesStruct = struct({
+  featureCount: u64(),
+  features: ptrAny(),
+});
+
+export const wgpuSurfaceCapabilitiesStruct = struct({
+  nextInChain: ptrAny(),
+  usages: u32(),
+  formatCount: u64(),
+  formats: ptrAny(),
+  presentModeCount: u64(),
+  presentModes: ptrAny(),
+  alphaModeCount: u64(),
+  alphaModes: ptrAny(),
+});
+
+export const wgpuSurfaceSourceAndroidNativeWindowStruct = struct({
+  chain: wgpuChainedStructStruct,
+  window: ptrAny(),
+});
+
+export const wgpuSurfaceSourceMetalLayerStruct = struct({
+  chain: wgpuChainedStructStruct,
+  layer: ptrAny(),
+});
+
+export const wgpuSurfaceSourceWaylandSurfaceStruct = struct({
+  chain: wgpuChainedStructStruct,
+  display: ptrAny(),
+  surface: ptrAny(),
+});
+
+export const wgpuSurfaceSourceWindowsHWNDStruct = struct({
+  chain: wgpuChainedStructStruct,
+  hinstance: ptrAny(),
+  hwnd: ptrAny(),
+});
+
+export const wgpuSurfaceSourceXCBWindowStruct = struct({
+  chain: wgpuChainedStructStruct,
+  connection: ptrAny(),
+  window: u32(),
+});
+
+export const wgpuSurfaceSourceXlibWindowStruct = struct({
+  chain: wgpuChainedStructStruct,
+  display: ptrAny(),
+  window: u64(),
+});
+
+export const wgpuTexelCopyBufferLayoutStruct = struct({
+  nextInChain: ptrAny(),
+  offset: u64(),
+  bytesPerRow: u32(),
+  rowsPerImage: u32(),
+});
+
+export const wgpuTexelCopyBufferInfoStruct = struct({
+  layout: wgpuTexelCopyBufferLayoutStruct,
+  buffer: ptrAny(),
+});
+
+export const wgpuTexelCopyTextureInfoStruct = struct({
+  texture: ptrAny(),
+  mipLevel: u32(),
+  origin: wgpuOrigin3DStruct,
+  aspect: u32(),
+});
+
+export const wgpuQuerySetDescriptorStruct = struct({
+  nextInChain: ptrAny(),
+  label: wgpuStringViewStruct,
+  type: u32(),
+  count: u32(),
+});
+
+export const wgpuRenderBundleDescriptorStruct = struct({
+  nextInChain: ptrAny(),
+  label: wgpuStringViewStruct,
+});
+
+export const wgpuRenderBundleEncoderDescriptorStruct = struct({
+  nextInChain: ptrAny(),
+  label: wgpuStringViewStruct,
+  colorFormatCount: u64(),
+  colorFormats: ptrAny(),
+  depthStencilFormat: u32(),
+  sampleCount: u32(),
+  depthReadOnly: u32(),
+  stencilReadOnly: u32(),
+});
+
+export const wgpuRenderPassMaxDrawCountStruct = struct({
+  chain: wgpuChainedStructStruct,
+  maxDrawCount: u64(),
+});
+
+export const wgpuBufferMapCallbackInfoStruct = struct({
+  nextInChain: ptrAny(),
+  mode: u32(),
+  callback: ptrAny(),
+  userdata1: ptrAny(),
+  userdata2: ptrAny(),
+});
+
+export const wgpuCompilationInfoCallbackInfoStruct = struct({
+  nextInChain: ptrAny(),
+  mode: u32(),
+  callback: ptrAny(),
+  userdata1: ptrAny(),
+  userdata2: ptrAny(),
+});
+
+export const wgpuCreateComputePipelineAsyncCallbackInfoStruct = struct({
+  nextInChain: ptrAny(),
+  mode: u32(),
+  callback: ptrAny(),
+  userdata1: ptrAny(),
+  userdata2: ptrAny(),
+});
+
+export const wgpuCreateRenderPipelineAsyncCallbackInfoStruct = struct({
+  nextInChain: ptrAny(),
+  mode: u32(),
+  callback: ptrAny(),
+  userdata1: ptrAny(),
+  userdata2: ptrAny(),
+});
+
+export const wgpuPopErrorScopeCallbackInfoStruct = struct({
+  nextInChain: ptrAny(),
+  mode: u32(),
+  callback: ptrAny(),
+  userdata1: ptrAny(),
+  userdata2: ptrAny(),
+});
+
+export const wgpuQueueWorkDoneCallbackInfoStruct = struct({
+  nextInChain: ptrAny(),
+  mode: u32(),
+  callback: ptrAny(),
+  userdata1: ptrAny(),
+  userdata2: ptrAny(),
+});
+
+export const wgpuRequestAdapterCallbackInfoStruct = struct({
+  nextInChain: ptrAny(),
+  mode: u32(),
+  callback: ptrAny(),
+  userdata1: ptrAny(),
+  userdata2: ptrAny(),
+});
+
+export const wgpuRequestDeviceCallbackInfoStruct = struct({
+  nextInChain: ptrAny(),
+  mode: u32(),
+  callback: ptrAny(),
+  userdata1: ptrAny(),
+  userdata2: ptrAny(),
 });
 
 // WGPU Native Extensions
@@ -531,4 +783,16 @@ export const wgpuPrimitiveStateExtrasStruct = struct({
   chain: ptrAny(),
   polygonMode: u32(),
   conservative: u32(),
+});
+
+export const wgpuRenderPassTimestampWritesStruct = struct({
+  querySet: ptrAny(),
+  beginningOfPassWriteIndex: u32(),
+  endOfPassWriteIndex: u32(),
+});
+
+export const wgpuShaderSourceSPIRVStruct = struct({
+  chain: ptrAny(),
+  codeSize: u32(),
+  code: ptrAny(),
 });

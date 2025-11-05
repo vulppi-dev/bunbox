@@ -1,24 +1,72 @@
 import { type Disposable } from '@bunbox/utils';
 import { ptr, type Pointer } from 'bun:ffi';
-import { GLFW, GLFW_GeneralMacro } from '../dynamic-libs';
+import {
+  GLFW,
+  GLFW_GeneralMacro,
+  WGPU,
+  wgpuInstanceDescriptorStruct,
+  wgpuSurfaceDescriptorStruct,
+  wgpuSurfaceSourceWaylandSurfaceStruct,
+  wgpuSurfaceSourceWindowsHWNDStruct,
+  wgpuSurfaceSourceXlibWindowStruct,
+} from '../dynamic-libs';
 import { DynamicLibError } from '../errors';
 import { Color, Vector2 } from '../math';
 import type { Mesh } from '../nodes';
 import type { RenderPassConfig } from './RenderPassConfig';
+import { getInstanceBuffer, instantiate } from '@bunbox/struct';
+import { WGPU_DEBUG } from '../singleton/logger';
 
 export class Renderer implements Disposable {
-  static getNativeWindowHandler(window: Pointer): Pointer | null {
-    switch (process.platform) {
-      case 'win32':
-        return GLFW.glfwGetWin32Window(window);
-      case 'linux':
-        const p = GLFW.glfwGetPlatform();
+  static #instancePtr: Pointer = 0 as Pointer;
+  static #rendererCount = 0;
 
-        return GLFW_GeneralMacro.PLATFORM_WAYLAND === p
-          ? GLFW.glfwGetWaylandWindow(window)
-          : GLFW.glfwGetX11Window(window);
-      case 'darwin':
-        return GLFW.glfwGetCocoaWindow(window);
+  static #getInstance(): Pointer {
+    if (Renderer.#instancePtr) {
+      return Renderer.#instancePtr;
+    }
+
+    const instanceDescriptor = instantiate(wgpuInstanceDescriptorStruct);
+    const instancePtr = WGPU.wgpuCreateInstance(
+      ptr(getInstanceBuffer(instanceDescriptor)),
+    );
+    if (!instancePtr) {
+      throw new DynamicLibError('Failed to create WGPU instance', 'WGPU');
+    }
+    Renderer.#instancePtr = instancePtr;
+    return instancePtr;
+  }
+
+  static isWayland(): boolean {
+    const platform = GLFW.glfwGetPlatform();
+    return platform === GLFW_GeneralMacro.PLATFORM_WAYLAND;
+  }
+
+  static getSurfaceDescriptor(window: Pointer) {
+    switch (process.platform) {
+      case 'win32': {
+        const desc = instantiate(wgpuSurfaceSourceWindowsHWNDStruct);
+        desc.hwnd = BigInt(GLFW.glfwGetWin32Window(window) || 0);
+        return desc;
+      }
+      case 'linux': {
+        if (Renderer.isWayland()) {
+          const desc = instantiate(wgpuSurfaceSourceWaylandSurfaceStruct);
+          desc.surface = BigInt(GLFW.glfwGetWaylandWindow(window) || 0);
+          desc.display = BigInt(GLFW.glfwGetWaylandDisplay() || 0);
+          return desc;
+        } else {
+          const desc = instantiate(wgpuSurfaceSourceXlibWindowStruct);
+          desc.window = BigInt(GLFW.glfwGetX11Window(window) || 0);
+          desc.display = BigInt(GLFW.glfwGetX11Display() || 0);
+          return desc;
+        }
+      }
+      case 'darwin': {
+        const desc = instantiate(wgpuSurfaceSourceWindowsHWNDStruct);
+        desc.hwnd = BigInt(GLFW.glfwGetCocoaWindow(window) || 0);
+        return desc;
+      }
       default:
         throw new DynamicLibError(
           `Unsupported platform: ${process.platform}`,
@@ -28,9 +76,7 @@ export class Renderer implements Disposable {
   }
 
   #windowPtr: Pointer;
-
-  // Base window clear surface
-  #clearColor: Color = new Color(0, 0, 0, 1);
+  #surfacePtr: Pointer;
 
   // Cached window framebuffer size
   #width: Int32Array;
@@ -49,15 +95,37 @@ export class Renderer implements Disposable {
     // Initialize window
     this.#windowPtr = window;
 
+    WGPU_DEBUG('Creating renderer for window:');
+    const instance = Renderer.#getInstance();
+    const surfaceDesc = Renderer.getSurfaceDescriptor(this.#windowPtr);
+    const surfaceDescriptor = instantiate(wgpuSurfaceDescriptorStruct);
+    surfaceDescriptor.nextInChain = BigInt(ptr(getInstanceBuffer(surfaceDesc)));
+    const surfacePtr = WGPU.wgpuInstanceCreateSurface(
+      instance,
+      ptr(getInstanceBuffer(surfaceDescriptor)),
+    );
+    if (!surfacePtr) {
+      throw new DynamicLibError('Failed to create WGPU surface', 'WGPU');
+    }
+    WGPU_DEBUG(`  Surface pointer: 0x${surfacePtr.toString(16)}`);
+    this.#surfacePtr = surfacePtr;
+
+    Renderer.#rendererCount++;
     this.rebuildFrame();
   }
 
-  get clearColor(): Color {
-    return this.#clearColor;
-  }
+  dispose(): void | Promise<void> {
+    Renderer.#rendererCount--;
+    WGPU_DEBUG('Disposing renderer for window:');
+    WGPU_DEBUG(`  Surface pointer: 0x${this.#surfacePtr.toString(16)}`);
+    WGPU.wgpuSurfaceRelease(this.#surfacePtr);
 
-  set clearColor(color: Color) {
-    this.#clearColor = color;
+    if (!Renderer.#rendererCount && !Renderer.#instancePtr) {
+      WGPU_DEBUG('Disposing WGPU instance:');
+      WGPU_DEBUG(`  Instance pointer: 0x${Renderer.#instancePtr.toString(16)}`);
+      WGPU.wgpuInstanceRelease(Renderer.#instancePtr);
+      Renderer.#instancePtr = 0 as Pointer;
+    }
   }
 
   /**
@@ -80,8 +148,6 @@ export class Renderer implements Disposable {
   replaceRenderPass(oldPass: any, newConfig: RenderPassConfig): boolean {
     return true;
   }
-
-  dispose(): void | Promise<void> {}
 
   rebuildFrame(): void {
     this.#loadFramebufferSize();
