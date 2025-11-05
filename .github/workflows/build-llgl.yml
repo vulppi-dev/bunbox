@@ -92,6 +92,10 @@ jobs:
           set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
           set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
           set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+          set(CMAKE_LIBRARY_ARCHITECTURE aarch64-linux-gnu)
+          # Set Vulkan paths for cross-compilation
+          set(Vulkan_INCLUDE_DIR /usr/include CACHE PATH "Vulkan include directory")
+          set(Vulkan_LIBRARY /usr/lib/aarch64-linux-gnu/libvulkan.so CACHE FILEPATH "Vulkan library")
           EOF
           cmake -S . -B build \
             -DCMAKE_TOOLCHAIN_FILE=toolchain-aarch64.cmake \
@@ -103,17 +107,22 @@ jobs:
             -DLLGL_BUILD_RENDERER_OPENGL=OFF \
             -DLLGL_BUILD_RENDERER_DIRECT3D11=OFF \
             -DLLGL_BUILD_RENDERER_DIRECT3D12=OFF \
-            -DLLGL_BUILD_RENDERER_METAL=OFF || echo "Configure failed (expected on cross): continuing"
-          cmake --build build --config Release || echo "Build failed: continuing"
+            -DLLGL_BUILD_RENDERER_METAL=OFF
+          cmake --build build --config Release
+          # Strip libs if built
+          find build -type f -name "*.so*" -exec aarch64-linux-gnu-strip -S {} + || true
 
       - name: Prepare artifacts
         run: |
           mkdir -p artifacts/arm64/linux
-          if compgen -G "llgl/build/**/*.so*" > /dev/null; then
-            find llgl/build -type f -name "*.so*" -exec cp {} artifacts/arm64/linux/ \;
+          # Copy all .so files found
+          if find llgl/build -type f -name "*.so*" -print -quit | grep -q .; then
+            find llgl/build -type f -name "*.so*" -exec cp -v {} artifacts/arm64/linux/ \;
+            echo "ARM64 build completed successfully:"
+            ls -lh artifacts/arm64/linux/
           else
-            # Mantém layout de pasta mesmo se falhar
-            touch artifacts/arm64/linux/placeholder.txt
+            echo "ERROR: No .so files found - build failed"
+            exit 1
           fi
 
       - name: Upload artifacts
@@ -147,7 +156,12 @@ jobs:
       - name: Install Vulkan SDK
         run: |
           brew install vulkan-headers vulkan-loader molten-vk
-          echo "VULKAN_SDK=$(brew --prefix molten-vk)" >> $GITHUB_ENV
+          # Set VULKAN_SDK to MoltenVK location
+          if [ "${{matrix.CMAKE_ARCH}}" = "arm64" ]; then
+            echo "VULKAN_SDK=/opt/homebrew/opt/molten-vk" >> $GITHUB_ENV
+          else
+            echo "VULKAN_SDK=/usr/local/opt/molten-vk" >> $GITHUB_ENV
+          fi
 
       - name: Clone and build LLGL (shared + C99 + Vulkan only)
         run: |
@@ -198,8 +212,16 @@ jobs:
 
       - name: Setup Vulkan SDK
         run: |
-          echo VULKAN_SDK=C:\VulkanSDK\1.3.290.0>> %GITHUB_ENV%
-          echo C:\VulkanSDK\1.3.290.0\Bin>> %GITHUB_PATH%
+          if exist "C:\VulkanSDK\1.3.290.0" (
+            echo VULKAN_SDK=C:\VulkanSDK\1.3.290.0>> %GITHUB_ENV%
+            echo C:\VulkanSDK\1.3.290.0\Bin>> %GITHUB_PATH%
+          ) else if exist "C:\VulkanSDK\1.3.283.0" (
+            echo VULKAN_SDK=C:\VulkanSDK\1.3.283.0>> %GITHUB_ENV%
+            echo C:\VulkanSDK\1.3.283.0\Bin>> %GITHUB_PATH%
+          ) else (
+            echo Warning: Vulkan SDK not found in expected locations
+            dir C:\VulkanSDK\
+          )
         shell: cmd
 
       - name: Clone and build LLGL (shared + C99 + Vulkan only)
