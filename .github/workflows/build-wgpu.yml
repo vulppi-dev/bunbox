@@ -1,0 +1,100 @@
+name: Build WGPU
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+    paths:
+      - '.github/workflows/build-wgpu.yml'
+
+env:
+  DAWN_VERSION: v20251030.221451
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+
+      matrix:
+        os: [macos-14, ubuntu-22.04, windows-2022]
+        build_type: [Release]
+        toolchain: [gcc, clang, msvc]
+        include:
+          - os: macos-14
+            toolchain: clang
+            c_compiler: $(brew --prefix llvm@15)/bin/clang
+            cpp_compiler: $(brew --prefix llvm@15)/bin/clang++
+            env:
+              MACOSX_DEPLOYMENT_TARGET: '11.0'
+            container: null
+          - os: windows-2022
+            toolchain: msvc
+            c_compiler: cl
+            cpp_compiler: cl
+            container: null
+          - os: ubuntu-22.04
+            toolchain: gcc
+            c_compiler: gcc
+            cpp_compiler: g++
+            container: dockcross/manylinux_2_28-x64:latest
+        exclude:
+          - os: macos-14
+            toolchain: msvc
+          - os: macos-14
+            toolchain: gcc
+          - os: ubuntu-22.04
+            toolchain: msvc
+          - os: ubuntu-22.04
+            toolchain: clang
+          - os: windows-2022
+            toolchain: clang
+          - os: windows-2022
+            toolchain: gcc
+    name: build-${{ matrix.os }}-${{ matrix.build_type }}-${{ matrix.toolchain }}
+    runs-on: ${{ matrix.os }}
+    container: ${{ matrix.container }}
+    env:
+      SCCACHE_GHA_ENABLED: 'true'
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: google/dawn
+          ref: ${{ env.DAWN_VERSION }}
+          submodules: recursive
+
+      - name: Use sccache-cache
+        uses: mozilla-actions/sccache-action@v0.0.3
+
+      - name: Set up dependencies on linux
+        if: matrix.container == 'dockcross/manylinux_2_28-x64:latest'
+        run: >
+          dnf install -y libxcb libxcb-devel libX11-xcb libxkbcommon libxkbcommon-devel libxkbcommon-x11-devel mesa-vulkan-drivers
+
+      - name: Configure CMake
+        run: >
+          cmake -B build
+          -DCMAKE_CXX_COMPILER=${{ matrix.cpp_compiler }}
+          -DCMAKE_C_COMPILER=${{ matrix.c_compiler }}
+          -DCMAKE_C_COMPILER_LAUNCHER=sccache
+          -DCMAKE_CXX_COMPILER_LAUNCHER=sccache
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+          -S .
+
+      - name: Build
+        run: cmake --build build --config ${{ matrix.build_type }}
+
+      - name: Package
+        run: >
+          cpack --config build/CPackConfig.cmake
+          -G ZIP
+          -C ${{ matrix.build_type }}
+          -B dist
+
+      - name: Upload package artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.os }}-${{ matrix.build_type }}
+          path: dist
+          retention-days: 7
