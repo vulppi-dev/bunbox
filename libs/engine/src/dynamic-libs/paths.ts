@@ -19,6 +19,21 @@ const GLFW_LIBS: Record<string, any> = {
   },
 };
 
+const DILIGENT_LIBS: Record<string, any> = {
+  darwin: {
+    arm64: 'assets/arm64/darwin/libGraphicsEngine.dylib',
+    x64: 'assets/x64/darwin/libGraphicsEngine.dylib',
+  },
+  linux: {
+    arm64: 'assets/arm64/linux/libGraphicsEngine.so',
+    x64: 'assets/x64/linux/libGraphicsEngine.so',
+  },
+  win32: {
+    arm64: 'assets/arm64/win32/GraphicsEngine.dll',
+    x64: 'assets/x64/win32/GraphicsEngine.dll',
+  },
+};
+
 const FREE_TYPE_LIBS: Record<string, any> = {
   darwin: {
     arm64: 'assets/arm64/darwin/libfreetype.dylib',
@@ -45,6 +60,10 @@ async function getDynamicLibPath(path?: string) {
 
 export const GLFW_PATH = await getDynamicLibPath(
   GLFW_LIBS[process.platform]?.[process.arch],
+);
+
+export const DILIGENT_PATH = await getDynamicLibPath(
+  DILIGENT_LIBS[process.platform]?.[process.arch],
 );
 
 export const FREE_TYPE_PATH = await getDynamicLibPath(
