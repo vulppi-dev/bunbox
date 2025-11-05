@@ -217,85 +217,23 @@ jobs:
         with:
           arch: amd64
 
-      - name: Cache Vulkan SDK
-        id: cache-vulkan
-        uses: actions/cache@v4
-        with:
-          path: C:\VulkanSDK\1.3.290.0
-          key: vulkan-sdk-1.3.290.0-windows-minimal
-
-      - name: Setup Vulkan SDK
-        if: steps.cache-vulkan.outputs.cache-hit != 'true'
+      - name: Install Vulkan SDK
         shell: pwsh
         run: |
-          Write-Host "Setting up Vulkan SDK 1.3.290.0..."
-          $ProgressPreference = 'SilentlyContinue'
-          $targetPath = "C:\VulkanSDK\1.3.290.0"
+          Write-Host "Installing Vulkan SDK via winget..."
+          winget install --id KhronosGroup.VulkanSDK --version 1.4.328.1 --silent --accept-package-agreements --accept-source-agreements
 
-          # Create directory structure
-          New-Item -ItemType Directory -Force -Path "$targetPath\Include\vulkan" | Out-Null
-          New-Item -ItemType Directory -Force -Path "$targetPath\Include\vk_video" | Out-Null
-          New-Item -ItemType Directory -Force -Path "$targetPath\Lib" | Out-Null
-          New-Item -ItemType Directory -Force -Path "$targetPath\Bin" | Out-Null
+          # Wait for installation to complete
+          Start-Sleep -Seconds 10
 
-          Write-Host "Downloading Vulkan headers..."
-          # Download essential Vulkan headers
-          $headers = @(
-            "vulkan.h",
-            "vulkan_core.h",
-            "vulkan_win32.h",
-            "vk_platform.h"
-          )
-
-          foreach ($header in $headers) {
-            $url = "https://raw.githubusercontent.com/KhronosGroup/Vulkan-Headers/v1.3.290/include/vulkan/$header"
-            try {
-              Invoke-WebRequest -Uri $url -OutFile "$targetPath\Include\vulkan\$header" -TimeoutSec 60
-              Write-Host "  Downloaded $header"
-            } catch {
-              Write-Warning "  Failed to download $header (continuing)"
-            }
-          }
-
-          Write-Host "Downloading Vulkan loader library..."
-          # Download vulkan-1.lib from NuGet package (faster and reliable)
-          $nugetUrl = "https://www.nuget.org/api/v2/package/Vulkan.Loader/1.3.290"
-          $nugetZip = "$env:TEMP\vulkan-loader.zip"
-          $extractPath = "$env:TEMP\vulkan-extract"
-
-          try {
-            Invoke-WebRequest -Uri $nugetUrl -OutFile $nugetZip -TimeoutSec 120
-            Expand-Archive -Path $nugetZip -DestinationPath $extractPath -Force
-            
-            # Copy lib and dll files
-            if (Test-Path "$extractPath\build\native\lib\x64\vulkan-1.lib") {
-              Copy-Item "$extractPath\build\native\lib\x64\vulkan-1.lib" "$targetPath\Lib\" -Force
-              Write-Host "  Copied vulkan-1.lib"
-            }
-            if (Test-Path "$extractPath\build\native\bin\x64\vulkan-1.dll") {
-              Copy-Item "$extractPath\build\native\bin\x64\vulkan-1.dll" "$targetPath\Bin\" -Force
-              Write-Host "  Copied vulkan-1.dll"
-            }
-          } catch {
-            Write-Warning "Failed to download Vulkan loader from NuGet"
-            Write-Host "Creating stub library for build..."
-            # Create a minimal stub lib file (CMake just needs it to exist)
-            Set-Content -Path "$targetPath\Lib\vulkan-1.lib" -Value "" -NoNewline
-          }
-
-          Write-Host "Vulkan SDK setup completed at: $targetPath"
-          Get-ChildItem -Path $targetPath -Recurse | Select-Object FullName
-
-      - name: Configure Vulkan SDK Environment
-        shell: pwsh
-        run: |
-          $vulkanPath = "C:\VulkanSDK\1.3.290.0"
-          if (Test-Path $vulkanPath) {
-            echo "VULKAN_SDK=$vulkanPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-            echo "$vulkanPath\Bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
-            Write-Host "Vulkan SDK configured: $vulkanPath"
+          # Find installed SDK
+          $vulkanPath = Get-ChildItem "C:\VulkanSDK" -Directory | Sort-Object Name -Descending | Select-Object -First 1
+          if ($vulkanPath) {
+            Write-Host "Vulkan SDK installed at: $($vulkanPath.FullName)"
+            echo "VULKAN_SDK=$($vulkanPath.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            echo "$($vulkanPath.FullName)\Bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
           } else {
-            Write-Error "Vulkan SDK not found at $vulkanPath"
+            Write-Error "Vulkan SDK installation failed"
             exit 1
           }
 
