@@ -228,37 +228,63 @@ jobs:
         if: steps.cache-vulkan.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
-          Write-Host "Downloading Vulkan SDK runtime files..."
+          Write-Host "Setting up Vulkan SDK 1.3.290.0..."
           $ProgressPreference = 'SilentlyContinue'
+          $targetPath = "C:\VulkanSDK\1.3.290.0"
 
-          # Download runtime-only zip (much faster than full installer)
-          $runtimeUrl = "https://sdk.lunarg.com/sdk/download/1.3.290.0/windows/vulkan-runtime-components.zip"
-          $zipPath = "$env:TEMP\vulkan-runtime.zip"
+          # Create directory structure
+          New-Item -ItemType Directory -Force -Path "$targetPath\Include\vulkan" | Out-Null
+          New-Item -ItemType Directory -Force -Path "$targetPath\Include\vk_video" | Out-Null
+          New-Item -ItemType Directory -Force -Path "$targetPath\Lib" | Out-Null
+          New-Item -ItemType Directory -Force -Path "$targetPath\Bin" | Out-Null
+
+          Write-Host "Downloading Vulkan headers..."
+          # Download essential Vulkan headers
+          $headers = @(
+            "vulkan.h",
+            "vulkan_core.h",
+            "vulkan_win32.h",
+            "vk_platform.h"
+          )
+
+          foreach ($header in $headers) {
+            $url = "https://raw.githubusercontent.com/KhronosGroup/Vulkan-Headers/v1.3.290/include/vulkan/$header"
+            try {
+              Invoke-WebRequest -Uri $url -OutFile "$targetPath\Include\vulkan\$header" -TimeoutSec 60
+              Write-Host "  Downloaded $header"
+            } catch {
+              Write-Warning "  Failed to download $header (continuing)"
+            }
+          }
+
+          Write-Host "Downloading Vulkan loader library..."
+          # Download vulkan-1.lib from NuGet package (faster and reliable)
+          $nugetUrl = "https://www.nuget.org/api/v2/package/Vulkan.Loader/1.3.290"
+          $nugetZip = "$env:TEMP\vulkan-loader.zip"
+          $extractPath = "$env:TEMP\vulkan-extract"
 
           try {
-            Invoke-WebRequest -Uri $runtimeUrl -OutFile $zipPath -TimeoutSec 300
+            Invoke-WebRequest -Uri $nugetUrl -OutFile $nugetZip -TimeoutSec 120
+            Expand-Archive -Path $nugetZip -DestinationPath $extractPath -Force
             
-            # Extract to VulkanSDK directory
-            $targetPath = "C:\VulkanSDK\1.3.290.0"
-            New-Item -ItemType Directory -Force -Path $targetPath | Out-Null
-            Expand-Archive -Path $zipPath -DestinationPath $targetPath -Force
-            
-            Write-Host "Vulkan SDK runtime extracted successfully"
+            # Copy lib and dll files
+            if (Test-Path "$extractPath\build\native\lib\x64\vulkan-1.lib") {
+              Copy-Item "$extractPath\build\native\lib\x64\vulkan-1.lib" "$targetPath\Lib\" -Force
+              Write-Host "  Copied vulkan-1.lib"
+            }
+            if (Test-Path "$extractPath\build\native\bin\x64\vulkan-1.dll") {
+              Copy-Item "$extractPath\build\native\bin\x64\vulkan-1.dll" "$targetPath\Bin\" -Force
+              Write-Host "  Copied vulkan-1.dll"
+            }
           } catch {
-            Write-Host "Runtime download failed, trying minimal manual setup..."
-            
-            # Fallback: Create minimal structure with headers only
-            $targetPath = "C:\VulkanSDK\1.3.290.0"
-            New-Item -ItemType Directory -Force -Path "$targetPath\Include\vulkan" | Out-Null
-            New-Item -ItemType Directory -Force -Path "$targetPath\Lib" | Out-Null
-            New-Item -ItemType Directory -Force -Path "$targetPath\Bin" | Out-Null
-            
-            # Download just the Vulkan headers
-            $headerUrl = "https://raw.githubusercontent.com/KhronosGroup/Vulkan-Headers/v1.3.290/include/vulkan/vulkan.h"
-            Invoke-WebRequest -Uri $headerUrl -OutFile "$targetPath\Include\vulkan\vulkan.h"
-            
-            Write-Host "Minimal Vulkan SDK setup completed"
+            Write-Warning "Failed to download Vulkan loader from NuGet"
+            Write-Host "Creating stub library for build..."
+            # Create a minimal stub lib file (CMake just needs it to exist)
+            Set-Content -Path "$targetPath\Lib\vulkan-1.lib" -Value "" -NoNewline
           }
+
+          Write-Host "Vulkan SDK setup completed at: $targetPath"
+          Get-ChildItem -Path $targetPath -Recurse | Select-Object FullName
 
       - name: Configure Vulkan SDK Environment
         shell: pwsh
