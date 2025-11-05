@@ -1,12 +1,3 @@
-import {
-  Vk_AttachmentLoadOp,
-  Vk_AttachmentStoreOp,
-  Vk_ImageLayout,
-  Vk_SampleCountFlagBits,
-  Vk_PipelineBindPoint,
-  Vk_PipelineStageFlagBits,
-  Vk_AccessFlagBits,
-} from '../dynamic-libs';
 import type {
   RenderPassConfig,
   AttachmentConfig,

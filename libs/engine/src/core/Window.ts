@@ -9,7 +9,6 @@ import {
   buildCallback,
   cstr,
   getGlfwErrorDescription,
-  getVkErrorDescription,
   GLFW,
   GLFW_GeneralMacro,
   GLFW_WindowMacro,
@@ -23,26 +22,17 @@ import {
   glfwWindowMaximizeCallback,
   glfwWindowPositionCallback,
   glfwWindowSizeCallback,
-  VK,
-  Vk_Result,
-  Vk_StructureType,
-  VkApplicationInfo,
-  vkGetPhysicalDevice,
-  VkInstanceCreateInfo,
-  vkMakeVersion,
 } from '../dynamic-libs';
 import { DynamicLibError } from '../errors';
 import { WindowEvent } from '../events';
 import type { Color } from '../math';
-import { GLFW_DEBUG, VK_DEBUG } from '../singleton/logger';
+import { GLFW_DEBUG } from '../singleton/logger';
 import { pointerCopyBuffer } from '../utils/buffer';
 import { Node } from './Node';
 import { Renderer } from './Renderer';
-import type { RenderPassConfig } from './RenderPassConfig';
-import type { VkRenderPass } from './VkRenderPass';
 
-import { Node3D } from '../nodes';
 import { Root } from '@bunbox/tree';
+import { Mesh } from '../nodes';
 
 // Setup struct pointer/string conversions globally
 setupStruct({
@@ -93,8 +83,6 @@ export class Window extends Root<never, never, WindowEventMap> {
   static #isInitialized = false;
   static #windowsList: Set<Window> = new Set();
   static #errorCallback: JSCallback | null = null;
-  static #vkInstance: Pointer | null = null;
-  static #vkDevice: Pointer | null = null;
 
   static #callInitializeGLFW() {
     if (Window.#isInitialized) return;
@@ -120,51 +108,6 @@ export class Window extends Root<never, never, WindowEventMap> {
       throw new DynamicLibError('Vulkan is not supported', 'GLFW');
     }
     GLFW_DEBUG(`Chose Vulkan as the graphics API`);
-
-    // Start Vulkan instance
-    VK_DEBUG('Starting Vulkan instance for GLFW windows');
-
-    const ptrAux = new BigUint64Array(1);
-    const countAux = new Uint32Array(1);
-
-    const extensionsPtr = GLFW.glfwGetRequiredInstanceExtensions(ptr(countAux));
-    if (!countAux[0] || !extensionsPtr) {
-      throw new DynamicLibError(
-        'Failed to get required Vulkan extensions',
-        'GLFW',
-      );
-    }
-    VK_DEBUG(`Required Vulkan extensions count: ${countAux[0]}`);
-
-    const createInfo = instantiate(VkInstanceCreateInfo);
-    const appInfo = instantiate(VkApplicationInfo);
-
-    appInfo.sType = Vk_StructureType.APPLICATION_INFO;
-    appInfo.pApplicationName = 0n;
-    appInfo.applicationVersion = vkMakeVersion(1, 0, 0);
-    appInfo.pEngineName = BigInt(ptr(cstr('Bunbox Engine')));
-    appInfo.engineVersion = vkMakeVersion(1, 0, 0);
-    // TODO: get supported version
-    appInfo.apiVersion = vkMakeVersion(1, 4, 0);
-
-    createInfo.sType = Vk_StructureType.INSTANCE_CREATE_INFO;
-    createInfo.pApplicationInfo = BigInt(ptr(getInstanceBuffer(appInfo)));
-    createInfo.flags = process.platform === 'darwin' ? 1 : 0;
-    createInfo.enabledExtensionCount = countAux[0];
-    createInfo.ppEnabledExtensionNames = BigInt(extensionsPtr);
-
-    const result = VK.vkCreateInstance(
-      ptr(getInstanceBuffer(createInfo)),
-      null,
-      ptr(ptrAux),
-    );
-    if (result !== Vk_Result.SUCCESS) {
-      new DynamicLibError(getVkErrorDescription(result), 'Vulkan');
-    }
-    Window.#vkInstance = Number(ptrAux[0]) as Pointer;
-    VK_DEBUG('Vulkan instance created successfully');
-
-    Window.#vkDevice = vkGetPhysicalDevice(Window.#vkInstance);
 
     // Start main loop
     Window.#isInitialized = true;
@@ -213,7 +156,7 @@ export class Window extends Root<never, never, WindowEventMap> {
   #state: WindowState = 'windowed';
 
   #stack: Node[] = [];
-  #stack3D: Node3D[] = [];
+  #drawStack: Mesh[] = [];
 
   #scheduleDirty: boolean = true;
 
@@ -283,11 +226,7 @@ export class Window extends Root<never, never, WindowEventMap> {
 
     this.#bindWindowCallbacks();
 
-    this.#renderer = new Renderer(
-      this.#windowPtr,
-      Window.#vkInstance!,
-      Window.#vkDevice!,
-    );
+    this.#renderer = new Renderer(this.#windowPtr);
 
     const unsubscribes = [
       this.subscribe('add-child', () => {
@@ -313,10 +252,6 @@ export class Window extends Root<never, never, WindowEventMap> {
       GLFW.glfwDestroyWindow(this.#windowPtr);
 
       if (Window.#windowsList.size === 0) {
-        VK_DEBUG('No more windows. Terminating Vulkan.');
-        VK.vkDestroyInstance(Window.#vkInstance, null);
-        Window.#vkInstance = null;
-
         GLFW_DEBUG('No more windows. Terminating GLFW.');
         GLFW.glfwSetErrorCallback(0 as Pointer);
         GLFW.glfwTerminate();
@@ -412,17 +347,6 @@ export class Window extends Root<never, never, WindowEventMap> {
     return this.#state;
   }
 
-  get logicalDevice(): Pointer {
-    return this.#renderer.logicalDevice;
-  }
-
-  /**
-   * Get all render passes
-   */
-  get allRenderPasses(): readonly VkRenderPass[] {
-    return this.#renderer.allRenderPasses;
-  }
-
   get backgroundColor(): Color {
     return this.#renderer.clearColor;
   }
@@ -500,7 +424,6 @@ export class Window extends Root<never, never, WindowEventMap> {
     }
     this.#width = width;
     this.#height = height;
-    // TODO: Teste change resolution;
     GLFW.glfwSetWindowSize(this.#windowPtr, this.#width, this.#height);
   }
 
@@ -641,32 +564,8 @@ export class Window extends Root<never, never, WindowEventMap> {
     this.#dispatchEvent('window-hidden');
   }
 
-  /**
-   * Add a render pass using configuration
-   */
-  addRenderPass(config: RenderPassConfig): VkRenderPass {
-    return this.#renderer.addRenderPass(config);
-  }
-
-  /**
-   * Remove a render pass
-   */
-  removeRenderPass(vkRenderPass: VkRenderPass): boolean {
-    return this.#renderer.removeRenderPass(vkRenderPass);
-  }
-
   clearRenderPasses(): void {
     this.#renderer.clearAdditionalPasses();
-  }
-
-  /**
-   * Replace a render pass with another configuration
-   */
-  replaceRenderPass(
-    oldPass: VkRenderPass,
-    newConfig: RenderPassConfig,
-  ): boolean {
-    return this.#renderer.replaceRenderPass(oldPass, newConfig);
   }
 
   #updateMainMonitorData(setMonitor: boolean = false) {
@@ -933,20 +832,20 @@ export class Window extends Root<never, never, WindowEventMap> {
 
   #rebuildStacks() {
     const nextStack: Node[] = [];
-    const nextStack3D: Node3D[] = [];
+    const nextDrawStack: Mesh[] = [];
     this.traverse(
       (n) => {
         if (n !== this && n instanceof Node) {
           nextStack.push(n as Node);
-          if (n instanceof Node3D) {
-            nextStack3D.push(n as Node3D);
+          if (n instanceof Mesh) {
+            nextDrawStack.push(n);
           }
         }
       },
-      { ignoreType: Window as any },
+      { ignoreType: Window, includeDisabled: true },
     );
     this.#stack = nextStack;
-    this.#stack3D = nextStack3D;
+    this.#drawStack = nextDrawStack;
     this.#scheduleDirty = false;
   }
 
@@ -964,6 +863,6 @@ export class Window extends Root<never, never, WindowEventMap> {
       this.#renderer.rebuildFrame();
       this.markAsClean();
     }
-    this.#renderer.render(this.#stack3D);
+    this.#renderer.render(this.#drawStack, delta);
   }
 }

@@ -19,21 +19,6 @@ const GLFW_LIBS: Record<string, any> = {
   },
 };
 
-const VK_LIBS: Record<string, any> = {
-  darwin: {
-    arm64: 'libvulkan.1.dylib',
-    x64: 'libvulkan.1.dylib',
-  },
-  linux: {
-    arm64: 'libvulkan.so.1',
-    x64: 'libvulkan.so.1',
-  },
-  win32: {
-    arm64: 'vulkan-1.dll',
-    x64: 'vulkan-1.dll',
-  },
-};
-
 const FREE_TYPE_LIBS: Record<string, any> = {
   darwin: {
     arm64: 'assets/arm64/darwin/libfreetype.dylib',
@@ -46,6 +31,21 @@ const FREE_TYPE_LIBS: Record<string, any> = {
   win32: {
     arm64: 'assets/arm64/win32/freetype.dll',
     x64: 'assets/x64/win32/freetype.dll',
+  },
+};
+
+const WGPU_LIBS: Record<string, any> = {
+  darwin: {
+    arm64: 'assets/arm64/darwin/libwgpu_native.dylib',
+    x64: 'assets/x64/darwin/libwgpu_native.dylib',
+  },
+  linux: {
+    arm64: 'assets/arm64/linux/libwgpu_native.so',
+    x64: 'assets/x64/linux/libwgpu_native.so',
+  },
+  win32: {
+    arm64: 'assets/arm64/win32/wgpu_native.dll',
+    x64: 'assets/x64/win32/wgpu_native.dll',
   },
 };
 
@@ -62,9 +62,10 @@ export const GLFW_PATH = await getDynamicLibPath(
   GLFW_LIBS[process.platform]?.[process.arch],
 );
 
-// Don't need getDynamicLibPath for Vulkan, as it should be installed system-wide
-export const VK_PATH = VK_LIBS[process.platform]?.[process.arch];
-
 export const FREE_TYPE_PATH = await getDynamicLibPath(
   FREE_TYPE_LIBS[process.platform]?.[process.arch],
+);
+
+export const WGPU_PATH = await getDynamicLibPath(
+  WGPU_LIBS[process.platform]?.[process.arch],
 );

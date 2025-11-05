@@ -1,14 +1,3 @@
-import type {
-  Vk_AttachmentLoadOp,
-  Vk_AttachmentStoreOp,
-  Vk_ImageLayout,
-  Vk_SampleCountFlagBits,
-  Vk_PipelineBindPoint,
-  Vk_PipelineStageFlagBits,
-  Vk_AccessFlagBits,
-  Vk_DependencyFlagBits,
-} from '../dynamic-libs';
-
 /**
  * Attachment configuration for RenderPass
  * Defines how an image attachment behaves in the render pass
@@ -22,45 +11,38 @@ export interface AttachmentConfig {
 
   /**
    * Number of samples for multisampling
-   * @default Vk_SampleCountFlagBits.COUNT_1_BIT
    */
-  samples?: Vk_SampleCountFlagBits;
+  samples?: any;
 
   /**
    * Load operation at the start of the render pass
-   * @default Vk_AttachmentLoadOp.CLEAR
    */
-  loadOp?: Vk_AttachmentLoadOp;
+  loadOp?: any;
 
   /**
    * Store operation at the end of the render pass
-   * @default Vk_AttachmentStoreOp.STORE
    */
-  storeOp?: Vk_AttachmentStoreOp;
+  storeOp?: any;
 
   /**
    * Load operation for stencil (if depth/stencil format)
-   * @default Vk_AttachmentLoadOp.DONT_CARE
    */
-  stencilLoadOp?: Vk_AttachmentLoadOp;
+  stencilLoadOp?: any;
 
   /**
    * Store operation for stencil (if depth/stencil format)
-   * @default Vk_AttachmentStoreOp.DONT_CARE
    */
-  stencilStoreOp?: Vk_AttachmentStoreOp;
+  stencilStoreOp?: any;
 
   /**
    * Initial layout before render pass begins
-   * @default Vk_ImageLayout.UNDEFINED
    */
-  initialLayout?: Vk_ImageLayout;
+  initialLayout?: any;
 
   /**
    * Final layout after render pass ends
-   * @default Vk_ImageLayout.COLOR_ATTACHMENT_OPTIMAL or DEPTH_STENCIL_ATTACHMENT_OPTIMAL
    */
-  finalLayout?: Vk_ImageLayout;
+  finalLayout?: any;
 
   /**
    * Optional clear value for this attachment
@@ -87,7 +69,7 @@ export interface AttachmentReference {
   /**
    * Layout the attachment will be in during the subpass
    */
-  layout: Vk_ImageLayout;
+  layout: any;
 }
 
 /**
@@ -101,9 +83,9 @@ export type PreserveAttachment = number;
 export interface SubpassConfig {
   /**
    * Pipeline bind point
-   * @default Vk_PipelineBindPoint.GRAPHICS
+   * @default any.GRAPHICS
    */
-  pipelineBindPoint?: Vk_PipelineBindPoint;
+  pipelineBindPoint?: any;
 
   /**
    * Color attachments for this subpass
@@ -149,28 +131,28 @@ export interface SubpassDependency {
   /**
    * Source pipeline stage mask
    */
-  srcStageMask: Vk_PipelineStageFlagBits | number;
+  srcStageMask: number;
 
   /**
    * Destination pipeline stage mask
    */
-  dstStageMask: Vk_PipelineStageFlagBits | number;
+  dstStageMask: number;
 
   /**
    * Source access mask
    */
-  srcAccessMask: Vk_AccessFlagBits | number;
+  srcAccessMask: number;
 
   /**
    * Destination access mask
    */
-  dstAccessMask: Vk_AccessFlagBits | number;
+  dstAccessMask: number;
 
   /**
    * Dependency flags
    * @default 0
    */
-  dependencyFlags?: Vk_DependencyFlagBits;
+  dependencyFlags?: any;
 }
 
 /**
