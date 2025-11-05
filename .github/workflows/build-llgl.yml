@@ -230,11 +230,11 @@ jobs:
         run: |
           Write-Host "Downloading Vulkan SDK runtime files..."
           $ProgressPreference = 'SilentlyContinue'
-          
+
           # Download runtime-only zip (much faster than full installer)
           $runtimeUrl = "https://sdk.lunarg.com/sdk/download/1.3.290.0/windows/vulkan-runtime-components.zip"
           $zipPath = "$env:TEMP\vulkan-runtime.zip"
-          
+
           try {
             Invoke-WebRequest -Uri $runtimeUrl -OutFile $zipPath -TimeoutSec 300
             
@@ -271,7 +271,9 @@ jobs:
           } else {
             Write-Error "Vulkan SDK not found at $vulkanPath"
             exit 1
-          }      - name: Clone and build LLGL (shared + C99 + Vulkan only)
+          }
+
+      - name: Clone and build LLGL (shared + C99 + Vulkan only)
         run: |
           git clone --depth 1 --branch release-0.04b https://github.com/LukasBanana/LLGL.git llgl
           cd llgl
