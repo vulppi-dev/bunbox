@@ -26,7 +26,7 @@ jobs:
 
       - name: Clone and build LLGL (shared + C99 + Vulkan only)
         run: |
-          git clone --depth 1 https://github.com/LukasBanana/LLGL.git llgl
+          git clone --depth 1 --branch release-0.04b https://github.com/LukasBanana/LLGL.git llgl
           cd llgl
           cmake -S . -B build \
             -DCMAKE_BUILD_TYPE=Release \
@@ -81,7 +81,7 @@ jobs:
 
       - name: Clone and try to build LLGL for arm64
         run: |
-          git clone --depth 1 https://github.com/LukasBanana/LLGL.git llgl
+          git clone --depth 1 --branch release-0.04b https://github.com/LukasBanana/LLGL.git llgl
           cd llgl
           cat > toolchain-aarch64.cmake << 'EOF'
           set(CMAKE_SYSTEM_NAME Linux)
@@ -146,14 +146,18 @@ jobs:
 
       # Instala Vulkan SDK (inclui MoltenVK) na VM do macOS
       - name: Install Vulkan SDK
-        uses: humbletim/install-vulkan-sdk@v1.2
-        with:
-          version: latest
-          cache: true
+        run: |
+          wget -O vulkan_sdk.dmg https://sdk.lunarg.com/sdk/download/latest/mac/vulkan-sdk.dmg
+          hdiutil attach vulkan_sdk.dmg
+          sudo /Volumes/vulkansdk-macos-*/InstallVulkan.app/Contents/MacOS/InstallVulkan \
+            --accept-licenses --default-answer --confirm-command install
+          hdiutil detach /Volumes/vulkansdk-macos-*
+          echo "VULKAN_SDK=$HOME/VulkanSDK/$(ls $HOME/VulkanSDK)/macOS" >> $GITHUB_ENV
+          echo "$HOME/VulkanSDK/$(ls $HOME/VulkanSDK)/macOS/bin" >> $GITHUB_PATH
 
       - name: Clone and build LLGL (shared + C99 + Vulkan only)
         run: |
-          git clone --depth 1 https://github.com/LukasBanana/LLGL.git llgl
+          git clone --depth 1 --branch release-0.04b https://github.com/LukasBanana/LLGL.git llgl
           cd llgl
           cmake -S . -B build \
             -DCMAKE_BUILD_TYPE=Release \
@@ -197,12 +201,17 @@ jobs:
       - name: Install Vulkan SDK
         shell: pwsh
         run: |
-          choco install vulkan-sdk -y
+          $ProgressPreference = 'SilentlyContinue'
+          Invoke-WebRequest -Uri "https://sdk.lunarg.com/sdk/download/latest/windows/vulkan-sdk.exe" -OutFile "$env:TEMP\vulkan-sdk-installer.exe"
+          Start-Process -Wait -FilePath "$env:TEMP\vulkan-sdk-installer.exe" -ArgumentList "/S"
+          $vulkanPath = Get-ChildItem "C:\VulkanSDK" | Select-Object -First 1
+          echo "VULKAN_SDK=$($vulkanPath.FullName)" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          echo "$($vulkanPath.FullName)\Bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
 
       - name: Clone and build LLGL (shared + C99 + Vulkan only)
         shell: pwsh
         run: |
-          git clone --depth 1 https://github.com/LukasBanana/LLGL.git llgl
+          git clone --depth 1 --branch release-0.04b https://github.com/LukasBanana/LLGL.git llgl
           cd llgl
           cmake -S . -B build `
             -DCMAKE_BUILD_TYPE=Release `
