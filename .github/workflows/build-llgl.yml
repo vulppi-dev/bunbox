@@ -71,13 +71,21 @@ jobs:
       - name: Enable arm64 apt sources
         run: |
           sudo dpkg --add-architecture arm64
+          sudo sed -i 's/^deb /deb [arch=amd64] /' /etc/apt/sources.list
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ $(lsb_release -sc) main restricted universe multiverse" | sudo tee /etc/apt/sources.list.d/arm64.list
+          echo "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports/ $(lsb_release -sc)-updates main restricted universe multiverse" | sudo tee -a /etc/apt/sources.list.d/arm64.list
           sudo apt-get update || true
 
       - name: Install arm64 deps (X11/Xrandr + Vulkan)
         run: |
-          sudo apt-get -y install \
-            libx11-dev:arm64 libxrandr-dev:arm64 libxext-dev:arm64 libxi-dev:arm64 \
-            libvulkan-dev:arm64 || true
+          sudo apt-get -y install --allow-unauthenticated \
+            libx11-dev:arm64 \
+            libxrandr-dev:arm64 \
+            libxext-dev:arm64 \
+            libxi-dev:arm64 \
+            libvulkan-dev:arm64 \
+            libxinerama-dev:arm64 \
+            libxcursor-dev:arm64 || echo "Some packages may have failed"
 
       - name: Clone and try to build LLGL for arm64
         run: |
@@ -134,20 +142,21 @@ jobs:
 
   macos:
     name: macOS
-    runs-on: macos-14
     strategy:
       fail-fast: false
       matrix:
-        ARCH: [x64, arm64]
         include:
           - ARCH: x64
             PLATFORM: osx-x64
             CMAKE_ARCH: x86_64
             OSX_MIN: '10.15.4'
+            RUNNER: macos-13
           - ARCH: arm64
             PLATFORM: osx-arm64
             CMAKE_ARCH: arm64
             OSX_MIN: '11.0'
+            RUNNER: macos-14
+    runs-on: ${{matrix.RUNNER}}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -156,12 +165,10 @@ jobs:
       - name: Install Vulkan SDK
         run: |
           brew install vulkan-headers vulkan-loader molten-vk
-          # Set VULKAN_SDK to MoltenVK location
-          if [ "${{matrix.CMAKE_ARCH}}" = "arm64" ]; then
-            echo "VULKAN_SDK=/opt/homebrew/opt/molten-vk" >> $GITHUB_ENV
-          else
-            echo "VULKAN_SDK=/usr/local/opt/molten-vk" >> $GITHUB_ENV
-          fi
+          VULKAN_SDK_PATH=$(brew --prefix molten-vk)
+          echo "VULKAN_SDK=$VULKAN_SDK_PATH" >> $GITHUB_ENV
+          echo "Vulkan SDK installed at: $VULKAN_SDK_PATH"
+          ls -la "$VULKAN_SDK_PATH/lib/" || true
 
       - name: Clone and build LLGL (shared + C99 + Vulkan only)
         run: |
@@ -211,18 +218,45 @@ jobs:
           arch: amd64
 
       - name: Setup Vulkan SDK
+        shell: pwsh
         run: |
-          if exist "C:\VulkanSDK\1.3.290.0" (
-            echo VULKAN_SDK=C:\VulkanSDK\1.3.290.0>> %GITHUB_ENV%
-            echo C:\VulkanSDK\1.3.290.0\Bin>> %GITHUB_PATH%
-          ) else if exist "C:\VulkanSDK\1.3.283.0" (
-            echo VULKAN_SDK=C:\VulkanSDK\1.3.283.0>> %GITHUB_ENV%
-            echo C:\VulkanSDK\1.3.283.0\Bin>> %GITHUB_PATH%
-          ) else (
-            echo Warning: Vulkan SDK not found in expected locations
-            dir C:\VulkanSDK\
-          )
-        shell: cmd
+          # Check for existing Vulkan SDK installations
+          $vulkanPath = $null
+          if (Test-Path "C:\VulkanSDK") {
+            $versions = Get-ChildItem "C:\VulkanSDK" -Directory | Sort-Object Name -Descending
+            if ($versions) {
+              $vulkanPath = $versions[0].FullName
+              Write-Host "Found Vulkan SDK: $vulkanPath"
+            }
+          }
+
+          # If no SDK found, install it
+          if (-not $vulkanPath) {
+            Write-Host "No Vulkan SDK found, installing..."
+            $ProgressPreference = 'SilentlyContinue'
+            $installerUrl = "https://sdk.lunarg.com/sdk/download/1.3.290.0/windows/VulkanSDK-1.3.290.0-Installer.exe"
+            $installerPath = "$env:TEMP\vulkan-installer.exe"
+            Invoke-WebRequest -Uri $installerUrl -OutFile $installerPath
+            Start-Process -Wait -FilePath $installerPath -ArgumentList "/S"
+            Start-Sleep -Seconds 10
+            
+            # Find installed SDK
+            if (Test-Path "C:\VulkanSDK") {
+              $versions = Get-ChildItem "C:\VulkanSDK" -Directory | Sort-Object Name -Descending
+              if ($versions) {
+                $vulkanPath = $versions[0].FullName
+              }
+            }
+          }
+
+          if ($vulkanPath) {
+            echo "VULKAN_SDK=$vulkanPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+            echo "$vulkanPath\Bin" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+            Write-Host "Vulkan SDK configured: $vulkanPath"
+          } else {
+            Write-Error "Failed to setup Vulkan SDK"
+            exit 1
+          }
 
       - name: Clone and build LLGL (shared + C99 + Vulkan only)
         run: |
