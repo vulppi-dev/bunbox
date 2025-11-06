@@ -1,4 +1,4 @@
 export * from './glfw';
-export * from './diligent';
+export * from './llgl';
 
 export * from './utils';

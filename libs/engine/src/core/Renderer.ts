@@ -1,18 +1,10 @@
 import { type Disposable } from '@bunbox/utils';
 import { ptr, type Pointer } from 'bun:ffi';
-import {
-  DILIGENT,
-  DILIGENT_RenderDeviceType,
-  diligentSwapChainDescStruct,
-  GLFW,
-  GLFW_GeneralMacro,
-} from '../dynamic-libs';
+import { GLFW, GLFW_GeneralMacro } from '../dynamic-libs';
 import { DynamicLibError } from '../errors';
-import { Color, Vector2 } from '../math';
+import { Vector2 } from '../math';
 import type { Mesh } from '../nodes';
 import type { RenderPassConfig } from './RenderPassConfig';
-import { getInstanceBuffer, instantiate } from '@bunbox/struct';
-import { DILIGENT_DEBUG } from '../singleton/logger';
 
 type ContextHandler = {
   device: Pointer;

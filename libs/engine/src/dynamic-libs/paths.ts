@@ -49,6 +49,21 @@ const FREE_TYPE_LIBS: Record<string, any> = {
   },
 };
 
+const LLGL_LIBS: Record<string, any> = {
+  darwin: {
+    arm64: 'assets/arm64/darwin/libLLGL.dylib',
+    x64: 'assets/x64/darwin/libLLGL.dylib',
+  },
+  linux: {
+    arm64: 'assets/arm64/linux/libLLGL.so',
+    x64: 'assets/x64/linux/libLLGL.so',
+  },
+  win32: {
+    arm64: 'assets/arm64/win32/LLGL.dll',
+    x64: 'assets/x64/win32/LLGL.dll',
+  },
+};
+
 async function getDynamicLibPath(path?: string) {
   if (!path) return null;
   const relative = join('../..', path);
@@ -68,4 +83,8 @@ export const DILIGENT_PATH = await getDynamicLibPath(
 
 export const FREE_TYPE_PATH = await getDynamicLibPath(
   FREE_TYPE_LIBS[process.platform]?.[process.arch],
+);
+
+export const LLGL_PATH = await getDynamicLibPath(
+  LLGL_LIBS[process.platform]?.[process.arch],
 );
