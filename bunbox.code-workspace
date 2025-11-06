@@ -21,6 +21,14 @@
       "path": "./libs/naga"
     },
     {
+      "name": "glfw",
+      "path": "./libs/glfw"
+    },
+    {
+      "name": "vulkan",
+      "path": "./libs/vk"
+    },
+    {
       "name": "engine",
       "path": "./libs/engine"
     },
