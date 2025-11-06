@@ -1,33 +1,12 @@
 import { DirtyState } from '@bunbox/utils';
 import { sha } from 'bun';
-
-/** Texture min/mag filter. */
-export type FilterMode = 'nearest' | 'linear';
-
-/** Mipmap level filter. */
-export type MipmapFilter = 'nearest' | 'linear';
-
-/** Addressing (wrap) mode per axis. */
-export type AddressMode =
-  | 'repeat'
-  | 'mirror-repeat'
-  | 'clamp-to-edge'
-  | 'clamp-to-border';
-
-/** Optional depth-compare function (null means no comparison). */
-export type CompareFunction =
-  | 'never'
-  | 'less'
-  | 'less-equal'
-  | 'greater'
-  | 'greater-equal'
-  | 'equal'
-  | 'not-equal'
-  | 'always'
-  | null;
-
-/** Border color used when addressMode is clamp-to-border. */
-export type BorderColor = 'transparent-black' | 'opaque-black' | 'opaque-white';
+import type {
+  FilterMode,
+  MipmapFilter,
+  AddressMode,
+  CompareFunction,
+  BorderColor,
+} from './types';
 
 export type SamplerDescriptor = {
   label?: string;
@@ -51,7 +30,7 @@ export type SamplerDescriptor = {
   lodMaxClamp?: number;
 
   /** Depth comparison; null disables compare. @default null */
-  compare?: CompareFunction;
+  compare?: CompareFunction | null;
 
   /** 1..16 typical. @default 1 */
   maxAnisotropy?: number;
@@ -80,7 +59,7 @@ export class Sampler extends DirtyState {
   #lodMinClamp = 0;
   #lodMaxClamp = 32;
 
-  #compare: CompareFunction = null;
+  #compare: CompareFunction | null = null;
   #maxAnisotropy = 1;
   #normalizedCoordinates = true;
   #borderColor: BorderColor = 'opaque-black';
@@ -202,7 +181,7 @@ export class Sampler extends DirtyState {
   get lodMaxClamp() {
     return this.#lodMaxClamp;
   }
-  get compare() {
+  get compare(): CompareFunction | null {
     return this.#compare;
   }
   get maxAnisotropy() {
@@ -287,7 +266,7 @@ export class Sampler extends DirtyState {
     }
     this.markAsDirty();
   }
-  set compare(v: CompareFunction) {
+  set compare(v: CompareFunction | null) {
     if (this.#compare === v) return;
     this.#compare = v;
     this.markAsDirty();

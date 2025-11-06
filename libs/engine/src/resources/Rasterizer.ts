@@ -1,33 +1,14 @@
 import { DirtyState } from '@bunbox/utils';
 import { sha } from 'bun';
 import { MaskHelper } from './MaskHelper';
-
-export type RasterizerFillMode = 'fill' | 'line' | 'point';
-
-export type RasterizerCullMode = 'none' | 'front' | 'back' | 'all';
-
-export type RasterizerFrontFace = 'cw' | 'ccw';
-
-// Depth/Stencil
-export type CompareFunction =
-  | 'never'
-  | 'less'
-  | 'equal'
-  | 'less-equal'
-  | 'greater'
-  | 'not-equal'
-  | 'greater-equal'
-  | 'always';
-
-export type StencilOperation =
-  | 'keep'
-  | 'zero'
-  | 'replace'
-  | 'invert'
-  | 'increment-clamp'
-  | 'decrement-clamp'
-  | 'increment-wrap'
-  | 'decrement-wrap';
+import type {
+  RasterizerFillMode,
+  RasterizerCullMode,
+  RasterizerFrontFace,
+  CompareFunction,
+  StencilOperation,
+  DepthStencilFormat,
+} from './types';
 
 export type DepthStencilFaceState = {
   compare: CompareFunction;
@@ -35,11 +16,6 @@ export type DepthStencilFaceState = {
   depthFailOp: StencilOperation;
   passOp: StencilOperation;
 };
-
-export type DepthStencilFormat =
-  | 'depth24plus'
-  | 'depth24plus-stencil8'
-  | 'depth32float';
 
 export type DepthStencilState = {
   format: DepthStencilFormat;

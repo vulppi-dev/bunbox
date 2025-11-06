@@ -1,67 +1,7 @@
 import { DirtyState } from '@bunbox/utils';
 import { sha } from 'bun';
 import { ulid } from 'ulid';
-
-export type TextureFormat =
-  // Color Formats - 8-bit normalized
-  | 'rgba8unorm' // Standard 8-bit RGBA (most common)
-  | 'rgba8unorm-srgb' // SRGB color space (for diffuse/albedo textures)
-  | 'bgra8unorm' // Platform-specific (Windows/Metal prefer BGRA)
-  | 'bgra8unorm-srgb' // SRGB BGRA variant
-  | 'rgba8snorm' // Signed normalized (for normal maps)
-
-  // Color Formats - 16-bit float (HDR)
-  | 'rgba16float' // HDR color, good balance
-  | 'r16float' // Single channel HDR (shadows, height maps)
-  | 'rg16float' // Two channel HDR (normal maps, flow maps)
-
-  // Color Formats - 32-bit float (high precision)
-  | 'rgba32float' // Maximum precision, compute buffers
-  | 'r32float' // Single channel high precision
-
-  // Color Formats - packed/compressed
-  | 'rgb10a2unorm' // 10-bit color, 2-bit alpha (HDR displays)
-  | 'rg11b10float' // Packed HDR without alpha
-
-  // Single/Dual Channel
-  | 'r8unorm' // Grayscale, masks
-  | 'rg8unorm' // Dual channel (2D vectors, flow)
-
-  // Compressed Formats - BC (DirectX/Vulkan)
-  | 'bc1-rgba-unorm' // DXT1 - Color, 1-bit alpha (6:1 compression)
-  | 'bc1-rgba-unorm-srgb' // DXT1 SRGB
-  | 'bc3-rgba-unorm' // DXT5 - Color + alpha (4:1 compression)
-  | 'bc3-rgba-unorm-srgb' // DXT5 SRGB
-  | 'bc4-r-unorm' // Single channel (height, roughness)
-  | 'bc5-rg-unorm' // Two channel (normal maps)
-  | 'bc7-rgba-unorm' // High quality RGB/RGBA (4:1)
-  | 'bc7-rgba-unorm-srgb' // BC7 SRGB
-  | 'bc6h-rgb-ufloat' // HDR compressed
-
-  // Compressed Formats - ASTC (Mobile/Vulkan)
-  | 'astc-4x4-unorm' // High quality (8:1)
-  | 'astc-4x4-unorm-srgb' // ASTC SRGB
-  | 'astc-6x6-unorm' // Medium quality (11.1:1)
-  | 'astc-8x8-unorm' // Lower quality (16:1)
-
-  // Depth/Stencil Formats
-  | 'depth16unorm' // Basic depth (mobile friendly)
-  | 'depth24plus' // 24-bit depth (standard)
-  | 'depth32float' // High precision depth (shadows)
-  | 'depth24plus-stencil8' // Depth + stencil
-  | 'depth32float-stencil8'; // High precision depth + stencil
-
-export type SampleCount = 1 | 2 | 4 | 8;
-
-// Stringly-typed usage for clarity across APIs
-export type TextureUsage =
-  | 'sampler'
-  | 'color-target'
-  | 'depth-stencil-target'
-  | 'graphics-storage-read'
-  | 'compute-storage-read'
-  | 'compute-storage-write'
-  | 'compute-storage-rw';
+import type { TextureFormat, SampleCount, TextureUsage } from './types';
 
 export interface TextureBaseDescriptor {
   label?: string;
