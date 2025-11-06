@@ -1,13 +1,4 @@
 import {
-  getInstanceBuffer,
-  instanceToJSON,
-  instantiate,
-  setupStruct,
-} from '@bunbox/struct';
-import { CString, ptr, type JSCallback, type Pointer } from 'bun:ffi';
-import {
-  buildCallback,
-  cstr,
   getGlfwErrorDescription,
   GLFW,
   GLFW_GeneralMacro,
@@ -22,17 +13,22 @@ import {
   glfwWindowMaximizeCallback,
   glfwWindowPositionCallback,
   glfwWindowSizeCallback,
-} from '../dynamic-libs';
-import { DynamicLibError } from '../errors';
+} from '@bunbox/glfw';
+import {
+  getInstanceBuffer,
+  instanceToJSON,
+  instantiate,
+  setupStruct,
+} from '@bunbox/struct';
+import { Root } from '@bunbox/tree';
+import { CString, ptr, type JSCallback, type Pointer } from 'bun:ffi';
+import { DynamicLibError, EngineError } from '../errors';
 import { WindowEvent } from '../events';
 import { Color } from '../math';
 import { GLFW_DEBUG } from '../singleton/logger';
-import { pointerCopyBuffer } from '../utils/buffer';
-import { Node } from './Node';
-import { Renderer } from './Renderer';
-
-import { Root } from '@bunbox/tree';
-import { Mesh } from '../nodes';
+import { buildCallback, cstr, pointerCopyBuffer } from '../utils/buffer';
+import type { AbstractRenderer } from './AbstractRenderer';
+import { VkRenderer } from './vulkan/VkRenderer';
 
 // Setup struct pointer/string conversions globally
 setupStruct({
@@ -61,6 +57,7 @@ export type WindowProperties = {
   opacity?: number;
   state?: WindowState;
   alwaysOnTop?: boolean;
+  backend?: 'vulkan';
 };
 
 export type WindowEventMap = {
@@ -132,7 +129,7 @@ export class Window extends Root<never, never, WindowEventMap> {
   #windowPtr: Pointer;
   #monitorPtr: Pointer | null = null;
 
-  #renderer: Renderer;
+  #renderer: AbstractRenderer;
 
   #title: string;
   #x: number = 0;
@@ -155,8 +152,8 @@ export class Window extends Root<never, never, WindowEventMap> {
   #isVisible: boolean = true;
   #state: WindowState = 'windowed';
 
-  #stack: Node[] = [];
-  #drawStack: Mesh[] = [];
+  // #stack: Node[] = [];
+  // #drawStack: Mesh[] = [];
 
   #scheduleDirty: boolean = true;
 
@@ -180,6 +177,7 @@ export class Window extends Root<never, never, WindowEventMap> {
       opacity = 1.0,
       state = 'windowed',
       alwaysOnTop = false,
+      backend = 'vulkan',
     } = props || {};
 
     this.#title = title;
@@ -226,7 +224,11 @@ export class Window extends Root<never, never, WindowEventMap> {
 
     this.#bindWindowCallbacks();
 
-    this.#renderer = new Renderer(this.#windowPtr);
+    if (backend === 'vulkan') {
+      this.#renderer = new VkRenderer(this.#windowPtr);
+    } else {
+      throw new EngineError(`unsupported backend: ${backend}`, 'Window');
+    }
 
     const unsubscribes = [
       this.subscribe('add-child', () => {
@@ -246,7 +248,6 @@ export class Window extends Root<never, never, WindowEventMap> {
       this.#renderer.dispose();
 
       unsubscribes.forEach((fn) => fn());
-      this.#stack = [];
 
       this.#disposeCallbacks?.();
       GLFW.glfwDestroyWindow(this.#windowPtr);
@@ -562,10 +563,6 @@ export class Window extends Root<never, never, WindowEventMap> {
     this.#dispatchEvent('window-hidden');
   }
 
-  clearRenderPasses(): void {
-    this.#renderer.clearAdditionalPasses();
-  }
-
   #updateMainMonitorData(setMonitor: boolean = false) {
     GLFW_DEBUG('Updating main monitor data for fullscreen mode');
     const monitor = GLFW.glfwGetPrimaryMonitor();
@@ -829,21 +826,21 @@ export class Window extends Root<never, never, WindowEventMap> {
   }
 
   #rebuildStacks() {
-    const nextStack: Node[] = [];
-    const nextDrawStack: Mesh[] = [];
-    this.traverse(
-      (n) => {
-        if (n !== this && n instanceof Node) {
-          nextStack.push(n as Node);
-          if (n instanceof Mesh) {
-            nextDrawStack.push(n);
-          }
-        }
-      },
-      { ignoreType: Window, includeDisabled: true },
-    );
-    this.#stack = nextStack;
-    this.#drawStack = nextDrawStack;
+    // const nextStack: Node[] = [];
+    // const nextDrawStack: Mesh[] = [];
+    // this.traverse(
+    //   (n) => {
+    //     if (n !== this && n instanceof Node) {
+    //       nextStack.push(n as Node);
+    //       if (n instanceof Mesh) {
+    //         nextDrawStack.push(n);
+    //       }
+    //     }
+    //   },
+    //   { ignoreType: Window, includeDisabled: true },
+    // );
+    // this.#stack = nextStack;
+    // this.#drawStack = nextDrawStack;
     this.#scheduleDirty = false;
   }
 
@@ -851,16 +848,17 @@ export class Window extends Root<never, never, WindowEventMap> {
     if (!this.isEnabled || this.isDisposed) return;
     if (this.#scheduleDirty) this.#rebuildStacks();
 
-    for (const node of this.#stack) {
-      if (node.isEnabled) {
-        node._process(delta);
-      }
-    }
+    // for (const node of this.#stack) {
+    //   if (node.isEnabled) {
+    //     node._process(delta);
+    //   }
+    // }
 
     if (this.isDirty) {
       this.#renderer.rebuildFrame();
       this.markAsClean();
     }
-    this.#renderer.render(this.#drawStack, delta);
+    // this.#renderer.render(this.#drawStack, delta);
+    this.#renderer.render([], delta);
   }
 }

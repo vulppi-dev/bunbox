@@ -36,9 +36,12 @@
     "lint:fix": "eslint . --ext .ts --fix"
   },
   "dependencies": {
+    "@bunbox/glfw": "^0.0.1",
     "@bunbox/naga": "^0.1.0",
+    "@bunbox/struct": "^2.1.1",
     "@bunbox/tree": "^0.2.1",
     "@bunbox/utils": "^0.0.6",
+    "@bunbox/vk": "^0.0.1",
     "@ffmpeg/ffmpeg": "^0.12.15",
     "@jsquash/avif": "^2.1.1",
     "@jsquash/jpeg": "^1.6.0",

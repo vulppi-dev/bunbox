@@ -14,9 +14,9 @@ import {
   VkImageMemoryBarrier,
   VkRenderPassBeginInfo,
 } from '../dynamic-libs';
-import { DynamicLibError } from '../errors';
-import { type Color } from '../math';
-import { VK_DEBUG } from '../singleton/logger';
+import { DynamicLibError } from '../../errors';
+import { type Color } from '../../math';
+import { VK_DEBUG } from '../../singleton/logger';
 import type { CommandPool } from './CommandPool';
 import type { Framebuffer } from './Framebuffer';
 import type { VkTexture } from './VkTexture';

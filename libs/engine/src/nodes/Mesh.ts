@@ -1,4 +1,4 @@
-import type { Geometry, Material } from '../elements';
+import type { Geometry, Material } from '../resources';
 import { Node3D } from './Node3D';
 
 /**

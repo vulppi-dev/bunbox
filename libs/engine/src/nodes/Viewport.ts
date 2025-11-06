@@ -1,6 +1,6 @@
 import type { EventMap } from '@bunbox/utils';
 import { Node } from '../core';
-import type { TextureImage } from '../elements';
+import type { TextureImage } from '../resources';
 /**
  * Logical render surface that owns a render target texture and viewport rectangle.
  * A child Camera renders into this target; Window can composite multiple viewports.

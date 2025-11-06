@@ -1,48 +1,67 @@
+import type {
+  AccessMask,
+  DependencyFlag,
+  Format,
+  ImageLayout,
+  LoadOp,
+  PipelineBindPoint,
+  SampleCount,
+  StageMask,
+  StoreOp,
+} from './RenderPassTypes';
+
 /**
  * Attachment configuration for RenderPass
  * Defines how an image attachment behaves in the render pass
  */
 export interface AttachmentConfig {
   /**
-   * Format of the attachment (VkFormat)
+   * Format of the attachment
    * Can be swapchain format token or specific format
    */
-  format: number | 'swapchain';
+  format: Format;
 
   /**
    * Number of samples for multisampling
+   * @default 1
    */
-  samples?: any;
+  samples?: SampleCount;
 
   /**
    * Load operation at the start of the render pass
+   * @default 'dont-care'
    */
-  loadOp?: any;
+  loadOp?: LoadOp;
 
   /**
    * Store operation at the end of the render pass
+   * @default 'dont-care'
    */
-  storeOp?: any;
+  storeOp?: StoreOp;
 
   /**
    * Load operation for stencil (if depth/stencil format)
+   * @default 'dont-care'
    */
-  stencilLoadOp?: any;
+  stencilLoadOp?: LoadOp;
 
   /**
    * Store operation for stencil (if depth/stencil format)
+   * @default 'dont-care'
    */
-  stencilStoreOp?: any;
+  stencilStoreOp?: StoreOp;
 
   /**
    * Initial layout before render pass begins
+   * @default 'undefined'
    */
-  initialLayout?: any;
+  initialLayout?: ImageLayout;
 
   /**
    * Final layout after render pass ends
+   * @default 'color-attachment' for color, 'depth-stencil-attachment' for depth
    */
-  finalLayout?: any;
+  finalLayout?: ImageLayout;
 
   /**
    * Optional clear value for this attachment
@@ -69,7 +88,7 @@ export interface AttachmentReference {
   /**
    * Layout the attachment will be in during the subpass
    */
-  layout: any;
+  layout: ImageLayout;
 }
 
 /**
@@ -83,9 +102,9 @@ export type PreserveAttachment = number;
 export interface SubpassConfig {
   /**
    * Pipeline bind point
-   * @default any.GRAPHICS
+   * @default 'graphics'
    */
-  pipelineBindPoint?: any;
+  pipelineBindPoint?: PipelineBindPoint;
 
   /**
    * Color attachments for this subpass
@@ -131,28 +150,28 @@ export interface SubpassDependency {
   /**
    * Source pipeline stage mask
    */
-  srcStageMask: number;
+  srcStageMask: StageMask;
 
   /**
    * Destination pipeline stage mask
    */
-  dstStageMask: number;
+  dstStageMask: StageMask;
 
   /**
    * Source access mask
    */
-  srcAccessMask: number;
+  srcAccessMask: AccessMask;
 
   /**
    * Destination access mask
    */
-  dstAccessMask: number;
+  dstAccessMask: AccessMask;
 
   /**
    * Dependency flags
-   * @default 0
+   * @default undefined
    */
-  dependencyFlags?: any;
+  dependencyFlags?: DependencyFlag | DependencyFlag[];
 }
 
 /**
@@ -180,8 +199,3 @@ export interface RenderPassConfig {
    */
   name?: string;
 }
-
-/**
- * VK_SUBPASS_EXTERNAL constant
- */
-export const SUBPASS_EXTERNAL = 0xffffffff;

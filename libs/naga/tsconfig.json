@@ -33,6 +33,7 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noPropertyAccessFromIndexSignature": false,
+    "rootDir": ".",
     "outDir": "./dist",
     "declarationDir": "./dist",
     "paths": {}

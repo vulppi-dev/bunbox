@@ -7,8 +7,8 @@ import {
   Vk_StructureType,
   VkFramebufferCreateInfo,
 } from '../dynamic-libs';
-import { DynamicLibError } from '../errors';
-import { VK_DEBUG } from '../singleton/logger';
+import { DynamicLibError } from '../../errors';
+import { VK_DEBUG } from '../../singleton/logger';
 import type { VkTexture } from './VkTexture';
 
 export class Framebuffer implements Disposable {

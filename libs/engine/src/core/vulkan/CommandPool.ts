@@ -7,8 +7,8 @@ import {
   Vk_StructureType,
   VkCommandPoolCreateInfo,
 } from '../dynamic-libs';
-import { DynamicLibError } from '../errors';
-import { VK_DEBUG } from '../singleton/logger';
+import { DynamicLibError } from '../../errors';
+import { VK_DEBUG } from '../../singleton/logger';
 import { getInstanceBuffer, instantiate } from '@bunbox/struct';
 
 export class CommandPool implements Disposable {

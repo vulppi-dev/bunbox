@@ -1,6 +1,6 @@
 import type { EventMap } from '@bunbox/utils';
 import { Node } from '../core';
-import { MaskHelper } from '../elements';
+import { MaskHelper } from '../resources';
 import { Euler, Matrix, type Quaternion, Vector3 } from '../math';
 
 /**

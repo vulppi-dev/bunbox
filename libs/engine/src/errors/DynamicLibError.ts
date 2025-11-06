@@ -3,7 +3,7 @@ export class DynamicLibError extends Error {
     message: string,
     public readonly libName: string,
   ) {
-    super(`[${libName}] ${message}`);
+    super(`[lib:${libName}] ${message}`);
     this.name = 'DynamicLibError';
   }
 
