@@ -4,7 +4,7 @@
  */
 
 import type { Sampler } from '../resources/Sampler';
-import type { TextureImage, TextureCube, Texture3D } from '../resources/index';
+import type { TexturePointer } from '../managers';
 
 /**
  * Scalar value types (float, int, uint, bool)
@@ -37,20 +37,15 @@ export type Color4 = readonly [number, number, number, number];
 export type ColorValue = Color3 | Color4;
 
 /**
- * Texture types
- */
-export type TextureValue = TextureImage | TextureCube | Texture3D;
-
-/**
  * Sampler type
  */
 export type SamplerValue = Sampler;
 
 /**
- * Combined texture + sampler binding
+ * Combined texture pointer + sampler binding
  */
-export type TextureSamplerBinding = {
-  readonly texture: TextureValue;
+export type TexturePointerSamplerBinding = {
+  readonly texture: TexturePointer;
   readonly sampler: SamplerValue;
 };
 
@@ -62,9 +57,9 @@ export type PropertyValue =
   | VectorValue
   | MatrixValue
   | ColorValue
-  | TextureValue
+  | TexturePointer
   | SamplerValue
-  | TextureSamplerBinding;
+  | TexturePointerSamplerBinding;
 
 /**
  * Property type discriminators for runtime type checking
@@ -79,9 +74,9 @@ export enum PropertyType {
   Mat4 = 'mat4',
   Color3 = 'color3',
   Color4 = 'color4',
-  Texture = 'texture',
+  Texture = 'texture-ptr',
   Sampler = 'sampler',
-  TextureSampler = 'texture-sampler',
+  TextureSampler = 'texture-ptr-sampler',
 }
 
 /**
@@ -97,9 +92,9 @@ export interface PropertyTypeMap {
   [PropertyType.Mat4]: Mat4;
   [PropertyType.Color3]: Color3;
   [PropertyType.Color4]: Color4;
-  [PropertyType.Texture]: TextureValue;
+  [PropertyType.Texture]: TexturePointer;
   [PropertyType.Sampler]: SamplerValue;
-  [PropertyType.TextureSampler]: TextureSamplerBinding;
+  [PropertyType.TextureSampler]: TexturePointerSamplerBinding;
 }
 
 /**
@@ -197,7 +192,7 @@ export const property = {
   }),
 
   texture: (
-    defaultValue?: TextureValue,
+    defaultValue?: TexturePointer,
     label?: string,
   ): PropertyDefinition<PropertyType.Texture> => ({
     type: PropertyType.Texture,
@@ -215,7 +210,7 @@ export const property = {
   }),
 
   textureSampler: (
-    defaultValue?: TextureSamplerBinding,
+    defaultValue?: TexturePointerSamplerBinding,
     label?: string,
   ): PropertyDefinition<PropertyType.TextureSampler> => ({
     type: PropertyType.TextureSampler,
@@ -249,22 +244,22 @@ export const isColor3 = (value: unknown): value is Color3 => isVec3(value);
 
 export const isColor4 = (value: unknown): value is Color4 => isVec4(value);
 
-export const isTexture = (value: unknown): value is TextureValue =>
-  value instanceof Object &&
-  ('width' in value || 'height' in value || 'format' in value);
+export const isTexture = (value: unknown): value is TexturePointer =>
+  typeof value === 'symbol' &&
+  value.description?.startsWith('texture:') === true;
 
 export const isSampler = (value: unknown): value is SamplerValue =>
   value instanceof Object && 'minFilter' in value && 'magFilter' in value;
 
 export const isTextureSampler = (
   value: unknown,
-): value is TextureSamplerBinding =>
+): value is TexturePointerSamplerBinding =>
   value !== null &&
   typeof value === 'object' &&
   'texture' in value &&
   'sampler' in value &&
-  isTexture((value as TextureSamplerBinding).texture) &&
-  isSampler((value as TextureSamplerBinding).sampler);
+  isTexture((value as TexturePointerSamplerBinding).texture) &&
+  isSampler((value as TexturePointerSamplerBinding).sampler);
 
 /**
  * Validate property value against its type definition

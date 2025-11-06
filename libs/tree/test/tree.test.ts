@@ -386,3 +386,154 @@ describe('Tags', () => {
     expect(allTags).toContain('tag3');
   });
 });
+
+describe('BaseNode dispose', () => {
+  test('should remove itself from parent when disposed', async () => {
+    const root = new Root('root');
+    const child = new BaseNode('child');
+
+    root.addChild(child);
+    expect(root.children.length).toBe(1);
+    expect(child.parent).toBe(root);
+
+    await child.dispose();
+
+    expect(root.children.length).toBe(0);
+    expect(child.parent).toBeNull();
+    expect(child.isDisposed).toBe(true);
+  });
+
+  test('should dispose children in post-order (leaf to root)', async () => {
+    const disposalOrder: string[] = [];
+    const root = new Root('root');
+    const child1 = new BaseNode('child1');
+    const child2 = new BaseNode('child2');
+    const grandChild1 = new BaseNode('grandchild1');
+    const grandChild2 = new BaseNode('grandchild2');
+
+    root.addChild(child1);
+    root.addChild(child2);
+    child1.addChild(grandChild1);
+    child1.addChild(grandChild2);
+
+    // Track disposal order
+    grandChild1.on('dispose', () => disposalOrder.push('grandchild1'));
+    grandChild2.on('dispose', () => disposalOrder.push('grandchild2'));
+    child1.on('dispose', () => disposalOrder.push('child1'));
+    child2.on('dispose', () => disposalOrder.push('child2'));
+
+    await child1.dispose();
+
+    // Grandchildren should be disposed before their parent
+    expect(disposalOrder).toEqual(['grandchild1', 'grandchild2', 'child1']);
+    expect(grandChild1.isDisposed).toBe(true);
+    expect(grandChild2.isDisposed).toBe(true);
+    expect(child1.isDisposed).toBe(true);
+    expect(child2.isDisposed).toBe(false); // child2 was not disposed
+  });
+
+  test('should unregister all nodes from root when disposed', async () => {
+    const root = new Root('root');
+    const child = new BaseNode('child');
+    const grandChild = new BaseNode('grandchild');
+
+    root.addChild(child);
+    child.addChild(grandChild);
+
+    expect(root.nodeCount).toBe(3); // root + child + grandchild
+    expect(root.getById(child.id)).toBe(child);
+    expect(root.getById(grandChild.id)).toBe(grandChild);
+
+    await child.dispose();
+
+    expect(root.nodeCount).toBe(1); // Only root remains
+    expect(root.getById(child.id)).toBeNull();
+    expect(root.getById(grandChild.id)).toBeNull();
+  });
+
+  test('should emit dispose event', async () => {
+    const root = new Root('root');
+    const child = new BaseNode('child');
+    let disposeEmitted = false;
+
+    root.addChild(child);
+    child.on('dispose', () => {
+      disposeEmitted = true;
+    });
+
+    await child.dispose();
+
+    expect(disposeEmitted).toBe(true);
+    expect(child.isDisposed).toBe(true);
+  });
+
+  test('should handle disposal of entire subtree', async () => {
+    const root = new Root('root');
+    const parent = new BaseNode('parent');
+    const child1 = new BaseNode('child1');
+    const child2 = new BaseNode('child2');
+    const grandChild1 = new BaseNode('grandchild1');
+    const grandChild2 = new BaseNode('grandchild2');
+
+    root.addChild(parent);
+    parent.addChild(child1);
+    parent.addChild(child2);
+    child1.addChild(grandChild1);
+    child2.addChild(grandChild2);
+
+    expect(root.nodeCount).toBe(6); // root + parent + 2 children + 2 grandchildren
+
+    await parent.dispose();
+
+    expect(root.nodeCount).toBe(1); // Only root remains
+    expect(parent.isDisposed).toBe(true);
+    expect(child1.isDisposed).toBe(true);
+    expect(child2.isDisposed).toBe(true);
+    expect(grandChild1.isDisposed).toBe(true);
+    expect(grandChild2.isDisposed).toBe(true);
+  });
+
+  test('should clear children set after disposal', async () => {
+    const root = new Root('root');
+    const parent = new BaseNode('parent');
+    const child1 = new BaseNode('child1');
+    const child2 = new BaseNode('child2');
+
+    root.addChild(parent);
+    parent.addChild(child1);
+    parent.addChild(child2);
+
+    expect(parent.children.length).toBe(2);
+
+    await parent.dispose();
+
+    expect(parent.children.length).toBe(0);
+  });
+
+  test('should not fail when disposing node without parent', async () => {
+    const orphanNode = new BaseNode('orphan');
+
+    // Should not throw any error
+    await orphanNode.dispose();
+    expect(orphanNode.isDisposed).toBe(true);
+  });
+
+  test('should handle name and tag cleanup on disposal', async () => {
+    const root = new Root('root');
+    const child = new BaseNode('namedChild');
+    child.addTag('tag1');
+    child.addTag('tag2');
+
+    root.addChild(child);
+
+    expect(root.findByName('namedChild').length).toBe(1);
+    expect(root.findByTag('tag1').length).toBe(1);
+    expect(root.findByTag('tag2').length).toBe(1);
+
+    await child.dispose();
+
+    expect(root.findByName('namedChild').length).toBe(0);
+    expect(root.findByTag('tag1').length).toBe(0);
+    expect(root.findByTag('tag2').length).toBe(0);
+  });
+});

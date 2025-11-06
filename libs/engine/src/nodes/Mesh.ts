@@ -1,15 +1,16 @@
-import type { Geometry, Material } from '../resources';
+import type { Material } from '../builders';
+import type { GeometryPointer } from '../managers';
 import { Node3D } from './Node3D';
 
 /**
  * Renderable 3D object binding a Geometry and a Material.
  */
 export class Mesh extends Node3D {
-  #geometry: Geometry | null = null;
+  #geometry: GeometryPointer | null = null;
   #material: Material | null = null;
 
   /** Geometry to be rendered (vertex/index data). */
-  get geometry(): Geometry | null {
+  get geometry(): GeometryPointer | null {
     return this.#geometry;
   }
 
@@ -19,7 +20,7 @@ export class Mesh extends Node3D {
   }
 
   /** Set geometry; marks node as dirty. */
-  set geometry(value: Geometry | null) {
+  set geometry(value: GeometryPointer | null) {
     this.#geometry = value;
     this.markAsDirty();
   }

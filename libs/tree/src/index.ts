@@ -76,18 +76,6 @@ export class BaseNode<
     if (name) {
       this.#name = name;
     }
-
-    this.on('dispose', () => {
-      if (this.#parent) {
-        this.#parent.removeChild(this as BaseNode);
-      }
-
-      const snapshot = [...this.#children];
-      for (const child of snapshot) {
-        child.dispose();
-      }
-      this.#children.clear();
-    });
   }
 
   /**
@@ -249,7 +237,6 @@ export class BaseNode<
    * - Throws if attempting to add itself or create a cycle (ancestor as child).
    * - If the child had a previous parent, it will be re-parented.
    * - Emits `add-child` on this node and re-emits child events up the chain.
-   * - Invokes the child's protected `_ready()` hook after binding.
    * @returns `true` when the child is attached or already present.
    */
   addChild(child: BaseNode) {
@@ -299,8 +286,6 @@ export class BaseNode<
     this.#bindMap.set(child.id, () => {
       for (const off of unsubscribe) off();
     });
-
-    child._ready();
 
     return true;
   }
@@ -448,8 +433,29 @@ export class BaseNode<
     if (order === 'post') visitor(this as BaseNode);
   }
 
-  protected _ready(): void {
-    // Override in subclasses
+  /**
+   * Dispose this node, removing it from the tree and recursively disposing all children.
+   *
+   * Process:
+   * 1. Removes itself from parent (if any)
+   * 2. Traverses children in post-order (reverse) and disposes each one
+   * 3. Calls parent dispose() to emit 'dispose' event and clean up
+   */
+  override async dispose(): Promise<void> {
+    // Step 1: Remove from parent tree
+    if (this.#parent) {
+      this.#parent.removeChild(this as BaseNode);
+    }
+
+    // Step 2: Dispose children in post-order (leaf to root)
+    const snapshot = [...this.#children];
+    for (const child of snapshot) {
+      await child.dispose();
+    }
+    this.#children.clear();
+
+    // Step 3: Dispose self (emits 'dispose' event and marks as disposed)
+    await super.dispose();
   }
 }
 

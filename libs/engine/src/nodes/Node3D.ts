@@ -1,7 +1,7 @@
 import type { EventMap } from '@bunbox/utils';
-import { Node } from '../core';
 import { MaskHelper } from '../resources';
 import { Euler, Matrix, type Quaternion, Vector3 } from '../math';
+import { Node } from './Node';
 
 /**
  * Base 3D node with transform and layer mask support.
