@@ -4,14 +4,36 @@ import { Euler, Matrix, type Quaternion, Vector3 } from '../math';
 import { Node } from './Node';
 
 /**
- * Base 3D node with transform and layer mask support.
+ * Base 3D node with spatial transform and layer mask support.
  *
- * Conventions:
- * - Right-handed orientation; rotations follow engine defaults (Euler ZYX by default elsewhere; this node uses 'yzx' initial order).
- * - Matrices are 4x4 column-major.
+ * Provides position, rotation (Euler or Quaternion), and scale in 3D space.
+ * Automatically maintains a transform matrix from these components.
  *
- * Lifecycle:
- * - On `_update`, if any component of the transform is dirty, the local matrix is recomposed.
+ * **Conventions:**
+ * - Right-handed coordinate system
+ * - Default Euler order: YZX (yaw-pitch-roll)
+ * - Matrices are 4x4 column-major
+ * - Position units are in meters
+ * - Rotation units are in radians
+ *
+ * **Lifecycle:**
+ * - On each frame (_process), automatically recomposes the transform matrix
+ *   if position, scale, or rotation changed (dirty tracking)
+ *
+ * @template P - Properties type
+ * @template M - Metadata type
+ * @template T - Additional event map
+ *
+ * @example
+ * ```ts
+ * const node = new Node3D();
+ * node.position.set(10, 5, 0);
+ * node.rotation.set(0, Math.PI / 2, 0); // Rotate 90° on Y axis
+ * node.scale.set(2, 2, 2); // Double size
+ *
+ * // Access composed transform matrix
+ * const matrix = node.transform;
+ * ```
  */
 export class Node3D<
   P extends Record<string, any> = Record<string, any>,
@@ -26,72 +48,142 @@ export class Node3D<
 
   #layer: MaskHelper = new MaskHelper();
 
-  /** Local transform matrix (compose of position, scale, rotation). */
+  /**
+   * Local transform matrix composed from position, rotation, and scale.
+   *
+   * Automatically updated each frame when components change.
+   * Can be replaced entirely if needed (marks node dirty).
+   *
+   * @readonly Use position/rotation/scale setters to modify transform
+   */
   get transform(): Matrix {
     return this.#matrix;
   }
 
-  /** Local position (meters). */
+  /**
+   * Local position in 3D space (meters).
+   *
+   * Modifying this vector marks the node dirty and triggers matrix recomposition.
+   */
   get position(): Vector3 {
     return this.#position;
   }
 
-  /** Local non-uniform scale. */
+  /**
+   * Local non-uniform scale.
+   *
+   * Default: (1, 1, 1)
+   * Values < 1 shrink, > 1 enlarge.
+   */
   get scale(): Vector3 {
     return this.#scale;
   }
 
-  /** Local Euler rotation (radians). */
+  /**
+   * Local Euler rotation in radians.
+   *
+   * Default order: YZX (yaw-pitch-roll)
+   * If rotationQ is set, quaternion takes priority.
+   */
   get rotation(): Euler {
     return this.#rotation;
   }
 
-  /** Optional local Quaternion rotation (if set, overrides Euler on compose). */
+  /**
+   * Optional local Quaternion rotation.
+   *
+   * When set, overrides Euler rotation during matrix composition.
+   * Set to null to revert to Euler mode.
+   *
+   * @remarks Use quaternions to avoid gimbal lock and for smooth interpolation
+   */
   get rotationQ(): Quaternion | null {
     return this.#rotationQ;
   }
 
-  /** Layer mask helper to include/exclude from specific render passes. */
+  /**
+   * Layer mask helper for render pass filtering.
+   *
+   * Use to include/exclude this node from specific render passes or cameras.
+   *
+   * @example
+   * ```ts
+   * node.layer.enable(1); // Enable layer 1
+   * node.layer.disable(0); // Disable layer 0
+   * ```
+   */
   get layer(): MaskHelper {
     return this.#layer;
   }
 
-  /** Replace the local transform matrix. Marks node and matrix dirty. */
+  /**
+   * Replace the local transform matrix entirely.
+   *
+   * Marks both node and matrix as dirty.
+   *
+   * @param transform - New transform matrix
+   */
   set transform(transform: Matrix) {
     this.#matrix = transform;
     this.markAsDirty();
     this.#matrix.markAsDirty();
   }
 
-  /** Set local position and mark as dirty. */
+  /**
+   * Set local position and mark as dirty.
+   *
+   * @param position - New position vector
+   */
   set position(position: Vector3) {
     this.#position = position;
     this.markAsDirty();
     this.#position.markAsDirty();
   }
 
-  /** Set local scale and mark as dirty. */
+  /**
+   * Set local scale and mark as dirty.
+   *
+   * @param scale - New scale vector
+   */
   set scale(scale: Vector3) {
     this.#scale = scale;
     this.markAsDirty();
     this.#scale.markAsDirty();
   }
 
-  /** Set local Euler rotation and mark as dirty. */
+  /**
+   * Set local Euler rotation and mark as dirty.
+   *
+   * @param rotation - New Euler rotation
+   */
   set rotation(rotation: Euler) {
     this.#rotation = rotation;
     this.markAsDirty();
     this.#rotation.markAsDirty();
   }
 
-  /** Set local Quaternion rotation; passing null reverts to Euler. */
+  /**
+   * Set local Quaternion rotation.
+   *
+   * Pass null to revert to Euler rotation mode.
+   *
+   * @param rotationQ - New quaternion rotation or null
+   */
   set rotationQ(rotationQ: Quaternion | null) {
     this.#rotationQ = rotationQ;
     this.markAsDirty();
     this.#rotationQ?.markAsDirty();
   }
 
-  /** Recompose local transform if any component changed since last frame. */
+  /**
+   * Recompose local transform matrix if any component changed.
+   *
+   * Called automatically each frame. Checks dirty state of position,
+   * scale, rotation, and rotationQ, then recomposes matrix if needed.
+   *
+   * @param _delta - Time since last frame (unused)
+   * @override
+   */
   override _process(_delta: number): void {
     if (
       this.#position.isDirty ||

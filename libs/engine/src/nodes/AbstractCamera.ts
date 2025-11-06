@@ -11,8 +11,28 @@ import {
 import { Node3D } from './Node3D';
 
 /**
- * Base camera node holding view/projection matrices and near/far planes.
- * Subclasses implement `_updateProjectionMatrix()`.
+ * Abstract base class for camera nodes.
+ *
+ * Provides common camera functionality:
+ * - Near/far clipping planes
+ * - Projection matrix (subclasses must implement)
+ * - View frustum calculation for culling
+ * - lookAt() helper for camera orientation
+ *
+ * **Subclass responsibilities:**
+ * - Implement `_processProjectionMatrix()` to compute projection based on camera type
+ *
+ * @abstract
+ *
+ * @example
+ * ```ts
+ * class MyCamera extends AbstractCamera {
+ *   protected _processProjectionMatrix(): void {
+ *     // Custom projection math
+ *     this.projectionMatrix.set([...]);
+ *   }
+ * }
+ * ```
  */
 export abstract class AbstractCamera extends Node3D {
   #near: number = 0.1;
@@ -21,29 +41,71 @@ export abstract class AbstractCamera extends Node3D {
   #projectionMatrix: Matrix = new Matrix();
   #frustum: Frustum | null = null;
 
-  /** Near clipping plane distance (meters). */
+  /**
+   * Near clipping plane distance in meters.
+   *
+   * Objects closer than this are not rendered.
+   * Default: 0.1
+   */
   get near(): number {
     return this.#near;
   }
-  /** Far clipping plane distance (meters). */
+
+  /**
+   * Far clipping plane distance in meters.
+   *
+   * Objects farther than this are not rendered.
+   * Default: 1000
+   */
   get far(): number {
     return this.#far;
   }
-  /** Projection matrix (camera to clip/NDC). */
+
+  /**
+   * Projection matrix transforming from camera space to clip space (NDC).
+   *
+   * Automatically updated when camera parameters change.
+   *
+   * @readonly Computed by subclass via _processProjectionMatrix()
+   */
   get projectionMatrix(): Matrix {
     return this.#projectionMatrix;
   }
 
+  /**
+   * Set near clipping plane distance.
+   *
+   * @param value - Distance in meters (must be > 0)
+   */
   set near(value: number) {
     this.#near = value;
     this.markAsDirty();
   }
+
+  /**
+   * Set far clipping plane distance.
+   *
+   * @param value - Distance in meters (must be > near)
+   */
   set far(value: number) {
     this.#far = value;
     this.markAsDirty();
   }
 
-  /** Point the camera towards a target in world space, preserving position. */
+  /**
+   * Orient the camera to look at a target position in world space.
+   *
+   * Preserves the camera's position, only adjusts rotation.
+   * Updates either rotationQ (if set) or rotation (Euler).
+   *
+   * @param target - World-space position to look at
+   *
+   * @example
+   * ```ts
+   * camera.position.set(10, 5, 10);
+   * camera.lookAt(new Vector3(0, 0, 0)); // Look at origin
+   * ```
+   */
   lookAt(target: Vector3): void {
     const eye = this.position.clone();
     this.transform.lookAt(eye, target);
@@ -60,10 +122,25 @@ export abstract class AbstractCamera extends Node3D {
   }
 
   /**
-   * Get the view frustum for this camera.
-   * The frustum is computed from view and projection matrices.
-   * @param viewMatrix The view matrix (world to camera space)
-   * @returns Frustum for culling
+   * Get the view frustum for culling.
+   *
+   * The frustum represents the 6 planes that bound the camera's visible volume.
+   * Used for frustum culling to skip rendering objects outside the view.
+   *
+   * Frustum is cached and recomputed only when camera or view changes.
+   *
+   * @param viewMatrix - View matrix (world to camera space transform)
+   * @returns Frustum containing 6 bounding planes
+   *
+   * @example
+   * ```ts
+   * const viewMatrix = camera.transform.clone().invert();
+   * const frustum = camera.getFrustum(viewMatrix);
+   *
+   * if (frustum.intersectsSphere(objectPos, objectRadius)) {
+   *   // Object is visible, render it
+   * }
+   * ```
    */
   getFrustum(viewMatrix: Matrix): Frustum {
     // Recompute frustum if dirty or not yet created
@@ -73,6 +150,15 @@ export abstract class AbstractCamera extends Node3D {
     return this.#frustum!;
   }
 
+  /**
+   * Per-frame processing for camera updates.
+   *
+   * Recomputes projection matrix when camera parameters change.
+   * Invalidates frustum cache to force recomputation.
+   *
+   * @param _deltaTime - Time since last frame (unused)
+   * @override
+   */
   override _process(_deltaTime: number): void {
     if (this.isDirty || this.transform.isDirty) {
       this._processProjectionMatrix();
@@ -84,7 +170,12 @@ export abstract class AbstractCamera extends Node3D {
 
   /**
    * Update frustum planes from view and projection matrices.
-   * Extracts the 6 frustum planes from the view-projection matrix.
+   *
+   * Extracts the 6 frustum planes from the combined view-projection matrix.
+   * Planes are in world space and can be used for culling.
+   *
+   * @param viewMatrix - View matrix (world to camera transform)
+   * @protected
    */
   protected _updateFrustum(viewMatrix: Matrix): void {
     // Compute view-projection matrix
@@ -152,6 +243,23 @@ export abstract class AbstractCamera extends Node3D {
     );
   }
 
-  /** Update projection matrix according to subclass parameters. */
+  /**
+   * Update projection matrix according to camera-specific parameters.
+   *
+   * Subclasses must implement this to compute their projection matrix
+   * (e.g., perspective, orthographic, etc.).
+   *
+   * @abstract
+   * @protected
+   *
+   * @example
+   * ```ts
+   * protected _processProjectionMatrix(): void {
+   *   // Compute perspective projection
+   *   const f = 1 / Math.tan(this.fov * 0.5);
+   *   this.projectionMatrix.set([...]);
+   * }
+   * ```
+   */
   protected abstract _processProjectionMatrix(): void;
 }
