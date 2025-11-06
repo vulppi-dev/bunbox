@@ -3,25 +3,89 @@ import { sha } from 'bun';
 import { ulid } from 'ulid';
 import type { TextureFormat, SampleCount, TextureUsage } from './types';
 
+/**
+ * Descriptor for creating texture instances.
+ *
+ * Defines the properties needed to configure a texture resource for GPU usage.
+ */
 export interface TextureBaseDescriptor {
+  /** Optional label for debugging purposes */
   label?: string;
+  /** Texture width in pixels (minimum 1) */
   width: number;
+  /** Texture height in pixels (minimum 1) */
   height: number;
-  /** @default 1 */
+  /**
+   * Number of mip levels for mipmapping.
+   * Use {@link TextureBase.computeMaxMipLevels} to calculate maximum.
+   * @default 1
+   */
   mipLevels?: number;
-  /** @default 1 */
+  /**
+   * Number of samples for multisampling (MSAA).
+   * Valid values: 1, 4
+   * @default 1
+   */
   sampleCount?: SampleCount;
-  /** @default rgba8unorm */
+  /**
+   * Pixel format of the texture data.
+   * Common formats: 'rgba8unorm', 'bgra8unorm', 'depth24plus'
+   * @default 'rgba8unorm'
+   */
   format?: TextureFormat;
   /**
    * Bitmask defining allowed usages of the texture.
-   * Represented as string usages for clarity.
+   * Multiple usages can be combined.
    * @default ['sampler', 'color-target']
    */
   usage?: TextureUsage[];
 }
 
+/**
+ * Abstract base class for all texture types (2D, 3D, Cube, Image).
+ *
+ * Provides common texture properties and functionality including:
+ * - Dimensions (width, height, depth for 3D textures)
+ * - Mipmap configuration
+ * - Pixel format and multisampling
+ * - Usage flags for GPU operations
+ * - Content hashing for resource deduplication
+ *
+ * **Texture Types:**
+ * - {@link TextureImage}: 2D texture loaded from image file
+ * - {@link Texture3D}: 3D volumetric texture
+ * - {@link TextureCube}: Cubemap for environment mapping
+ *
+ * **Mipmapping:**
+ * Use {@link computeMaxMipLevels} to calculate the maximum number of mip levels
+ * based on texture dimensions. Mipmaps improve rendering quality and performance.
+ *
+ * @extends {DirtyState}
+ *
+ * @example
+ * ```ts
+ * // Calculate max mip levels for a 1024x512 texture
+ * const maxMips = TextureBase.computeMaxMipLevels(1024, 512); // Returns 11
+ * ```
+ */
 export abstract class TextureBase extends DirtyState {
+  /**
+   * Calculate maximum number of mip levels for given dimensions.
+   *
+   * Mip levels are successive half-resolution versions of the texture
+   * down to 1x1 pixel. Useful for texture filtering at different distances.
+   *
+   * @param w - Width in pixels
+   * @param h - Height in pixels
+   * @param d - Depth in pixels (for 3D textures, default: 1)
+   * @returns Maximum number of mip levels (including base level)
+   *
+   * @example
+   * ```ts
+   * TextureBase.computeMaxMipLevels(512, 512);  // Returns 10 (512→256→...→1)
+   * TextureBase.computeMaxMipLevels(1024, 256); // Returns 11 (1024→512→...→1)
+   * ```
+   */
   static computeMaxMipLevels(w: number, h: number, d: number = 1): number {
     const maxDim = Math.max(1, w | 0, h | 0, d | 0);
     return Math.floor(Math.log2(maxDim)) + 1;
@@ -50,34 +114,69 @@ export abstract class TextureBase extends DirtyState {
       : ['sampler', 'color-target'];
   }
 
+  /** Unique identifier generated at creation time */
   get id() {
     return this.#id;
   }
+
+  /** Debug label for resource tracking */
   get label() {
     return this.#label;
   }
+
+  /** Texture width in pixels */
   get width() {
     return this.#width;
   }
+
+  /** Texture height in pixels */
   get height() {
     return this.#height;
   }
+
+  /** Number of mip levels (1 = no mipmaps) */
   get mipLevels() {
     return this.#mipLevels;
   }
+
+  /**
+   * Number of samples for multisampling (MSAA).
+   * 1 = no MSAA, 4 = 4x MSAA
+   */
   get sampleCount() {
     return this.#sampleCount;
   }
+
+  /**
+   * Pixel format of texture data.
+   * Examples: 'rgba8unorm', 'bgra8unorm', 'depth24plus'
+   */
   get format() {
     return this.#format;
   }
-  // Usage as string array + numeric mapper
+
+  /**
+   * Array of usage flags defining how texture can be used.
+   * Returns a frozen copy for immutability.
+   */
   get usage(): readonly TextureUsage[] {
     return Object.freeze(this.#usage.slice());
   }
+  /**
+   * Check if texture format is a depth format.
+   * Depth textures are used for depth/stencil attachments in render passes.
+   */
   get isDepthFormat(): boolean {
     return this.#format.startsWith('depth');
   }
+  /**
+   * Compute content hash for resource deduplication.
+   *
+   * Two textures with identical properties will produce the same hash.
+   * Includes all texture parameters and subclass-specific extensions.
+   *
+   * @returns Hex string representing texture configuration
+   */
   get hash(): string {
     const key = {
       label: this.#label,

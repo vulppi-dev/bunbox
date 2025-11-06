@@ -8,40 +8,136 @@ import type {
   BorderColor,
 } from './types';
 
+/**
+ * Configuration descriptor for texture sampling behavior.
+ *
+ * Defines how textures are filtered, wrapped, and sampled by the GPU.
+ */
 export type SamplerDescriptor = {
+  /** Optional label for debugging */
   label?: string;
-  /** @default 'linear' */
+
+  /**
+   * Minification filter (when texture is smaller on screen than source).
+   * @default 'linear'
+   */
   minFilter?: FilterMode;
-  /** @default 'linear' */
+
+  /**
+   * Magnification filter (when texture is larger on screen than source).
+   * @default 'linear'
+   */
   magFilter?: FilterMode;
-  /** @default 'linear' */
+
+  /**
+   * Mipmap filtering mode (interpolation between mip levels).
+   * @default 'linear'
+   */
   mipmapFilter?: MipmapFilter;
 
-  /** @default 'repeat' */
+  /**
+   * Texture wrapping mode for U (horizontal) coordinate.
+   * @default 'repeat'
+   */
   addressModeU?: AddressMode;
-  /** @default 'repeat' */
+
+  /**
+   * Texture wrapping mode for V (vertical) coordinate.
+   * @default 'repeat'
+   */
   addressModeV?: AddressMode;
-  /** @default 'repeat' */
+
+  /**
+   * Texture wrapping mode for W (depth) coordinate.
+   * @default 'repeat'
+   */
   addressModeW?: AddressMode;
 
-  /** @default 0 */
+  /**
+   * Minimum LOD (level of detail) clamp.
+   * @default 0
+   */
   lodMinClamp?: number;
-  /** @default 32 */
+
+  /**
+   * Maximum LOD (level of detail) clamp.
+   * @default 32
+   */
   lodMaxClamp?: number;
 
-  /** Depth comparison; null disables compare. @default null */
+  /**
+   * Depth comparison function for shadow mapping.
+   * Set to null to disable depth comparison.
+   * @default null
+   */
   compare?: CompareFunction | null;
 
-  /** 1..16 typical. @default 1 */
+  /**
+   * Maximum anisotropic filtering level (1-16 typical).
+   * Higher values improve quality at oblique angles but cost performance.
+   * @default 1
+   */
   maxAnisotropy?: number;
 
-  /** Whether UVs are normalized (0..1). @default true */
+  /**
+   * Whether UV coordinates are normalized to [0, 1] range.
+   * @default true
+   */
   normalizedCoordinates?: boolean;
 
-  /** Used only with clamp-to-border. @default 'opaque-black' */
+  /**
+   * Border color for 'clamp-to-border' address mode.
+   * @default 'opaque-black'
+   */
   borderColor?: BorderColor;
 };
 
+/**
+ * Texture sampler defining filtering and wrapping behavior.
+ *
+ * Samplers control how the GPU reads texture data:
+ * - **Filtering**: How pixels are interpolated (nearest, linear, anisotropic)
+ * - **Address Modes**: How out-of-range UV coordinates are handled (repeat, clamp, mirror)
+ * - **Mipmapping**: LOD (level of detail) selection for distance-based quality
+ * - **Comparison**: Depth comparison for shadow mapping
+ *
+ * **Global Caching:**
+ * Equivalent samplers are automatically deduplicated to reduce GPU resource usage.
+ * Cache key is based on all parameters except label.
+ *
+ * **Common Presets:**
+ * - {@link linearRepeat}: Standard filtering with tiling (default for most textures)
+ * - {@link linearClamp}: Standard filtering without tiling (UI, skyboxes)
+ * - {@link nearestRepeat}: Pixel-perfect rendering with tiling (pixel art, voxels)
+ * - {@link nearestClamp}: Pixel-perfect rendering without tiling
+ * - {@link anisotropic}: High-quality filtering for oblique viewing angles
+ *
+ * @extends {DirtyState}
+ *
+ * @example
+ * ```ts
+ * // Use a preset
+ * const sampler = Sampler.linearRepeat();
+ *
+ * // Custom configuration
+ * const customSampler = new Sampler({
+ *   minFilter: 'linear',
+ *   magFilter: 'linear',
+ *   addressModeU: 'clamp-to-edge',
+ *   addressModeV: 'clamp-to-edge',
+ *   maxAnisotropy: 16
+ * });
+ *
+ * // Shadow map sampler
+ * const shadowSampler = new Sampler({
+ *   minFilter: 'linear',
+ *   magFilter: 'linear',
+ *   addressModeU: 'clamp-to-edge',
+ *   addressModeV: 'clamp-to-edge',
+ *   compare: 'less'  // Enable depth comparison
+ * });
+ * ```
+ */
 export class Sampler extends DirtyState {
   // Global cache to deduplicate equivalent samplers (label is not part of the key)
   static #cache: Map<string, Sampler> = new Map();
@@ -65,7 +161,15 @@ export class Sampler extends DirtyState {
   #borderColor: BorderColor = 'opaque-black';
 
   // ----------- Presets for plug & play -----------
-  /** Linear filtering with mipmaps, repeat wrap on all axes (common default). */
+
+  /**
+   * Linear filtering with mipmaps and repeat wrapping (common default).
+   *
+   * Best for: Most standard textures (diffuse, normal maps, etc.)
+   *
+   * @param extra - Optional overrides for specific parameters
+   * @returns Cached sampler instance
+   */
   static linearRepeat(extra: SamplerDescriptor = {}): Sampler {
     return new Sampler({
       minFilter: 'linear',
@@ -78,7 +182,14 @@ export class Sampler extends DirtyState {
     });
   }
 
-  /** Nearest filtering, repeat wrap on all axes (pixel-art). */
+  /**
+   * Nearest filtering with repeat wrapping (pixel-perfect rendering).
+   *
+   * Best for: Pixel art, voxel textures, retro-style games
+   *
+   * @param extra - Optional overrides for specific parameters
+   * @returns Cached sampler instance
+   */
   static nearestRepeat(extra: SamplerDescriptor = {}): Sampler {
     return new Sampler({
       minFilter: 'nearest',
@@ -91,7 +202,16 @@ export class Sampler extends DirtyState {
     });
   }
 
-  /** Linear filtering with mipmaps, clamp to edge on all axes (UI/atlas borders). */
+  /**
+   * Linear filtering with clamp-to-edge wrapping (UI and atlases).
+   *
+   * Prevents texture bleeding at edges, essential for sprite atlases and UI elements.
+   *
+   * Best for: UI textures, sprite sheets, skyboxes
+   *
+   * @param extra - Optional overrides for specific parameters
+   * @returns Cached sampler instance
+   */
   static linearClamp(extra: SamplerDescriptor = {}): Sampler {
     return new Sampler({
       minFilter: 'linear',
@@ -104,7 +224,16 @@ export class Sampler extends DirtyState {
     });
   }
 
-  /** Trilinear repeat with mild anisotropy (terrain/surfaces). */
+  /**
+   * Trilinear filtering with anisotropy (high-quality surfaces).
+   *
+   * Improves quality for surfaces viewed at oblique angles like terrain.
+   *
+   * Best for: Terrain, floors, walls viewed at angles
+   *
+   * @param extra - Optional overrides for specific parameters
+   * @returns Cached sampler instance
+   */
   static trilinearRepeat(extra: SamplerDescriptor = {}): Sampler {
     return new Sampler({
       minFilter: 'linear',
@@ -118,7 +247,16 @@ export class Sampler extends DirtyState {
     });
   }
 
-  /** Depth compare sampler for shadow mapping. */
+  /**
+   * Depth comparison sampler for shadow mapping.
+   *
+   * Enables PCF (Percentage Closer Filtering) for smooth shadow edges.
+   *
+   * Best for: Shadow maps, depth-based effects
+   *
+   * @param extra - Optional overrides for specific parameters
+   * @returns Cached sampler instance
+   */
   static shadowClamp(extra: SamplerDescriptor = {}): Sampler {
     return new Sampler({
       minFilter: 'linear',
