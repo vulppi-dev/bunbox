@@ -19,15 +19,9 @@ const {
   close: vkClose,
 } = dlopen(VK_PATH, {
   ...VK_FUNCTIONS,
-  ...((process.platform === 'win32'
-    ? WINDOWS_FUNCTIONS
-    : {}) as typeof WINDOWS_FUNCTIONS),
-  ...((process.platform === 'linux'
-    ? LINUX_FUNCTIONS
-    : {}) as typeof LINUX_FUNCTIONS),
-  ...((process.platform === 'darwin'
-    ? DARWIN_FUNCTIONS
-    : {}) as typeof DARWIN_FUNCTIONS),
+  ...(process.platform === 'win32' ? WINDOWS_FUNCTIONS : {}),
+  ...(process.platform === 'linux' ? LINUX_FUNCTIONS : {}),
+  ...(process.platform === 'darwin' ? DARWIN_FUNCTIONS : {}),
 });
 
 process.on('beforeExit', () => {
