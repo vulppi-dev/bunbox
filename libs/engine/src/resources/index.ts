@@ -3,6 +3,7 @@ export * from './Geometry';
 export * from './MaskHelper';
 export * from './Rasterizer';
 export * from './Sampler';
+export * from './ShadowConfig';
 export * from './TextureBase';
 export * from './TextureImage';
 export * from './TextureCube';
