@@ -1,6 +1,6 @@
 {
   "name": "@bunbox/vk",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Vulkan module for Bunbox using Bun FFI",
   "author": {
     "name": "Renato Rodrigues",
