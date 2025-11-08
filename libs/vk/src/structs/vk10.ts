@@ -34,6 +34,13 @@ export const vkInstanceCreateInfo = struct({
   ppEnabledExtensionNames: ptrAny(),
 });
 
+export const vkLayerProperties = struct({
+  layerName: array(i8(), 256),
+  specVersion: u32(),
+  implementationVersion: u32(),
+  description: array(i8(), 256),
+});
+
 export const vkAllocationCallbacks = struct({
   pUserData: ptrAny(),
   pfnAllocation: ptrAny(),
