@@ -8,6 +8,9 @@ node_modules
 .old/
 scripts/
 
+# Include build output
+!assets/
+!src/
 
 # code coverage
 coverage

@@ -9,6 +9,9 @@ node_modules
 .old/
 src/
 
+# Include build output
+!dist/
+
 # code coverage
 coverage
 *.lcov

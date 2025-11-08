@@ -10,6 +10,9 @@ node_modules
 src/
 test/
 
+# Include build output
+!dist/
+
 # code coverage
 coverage
 *.lcov
