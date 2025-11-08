@@ -722,3 +722,30 @@ export const vkSamplerCreateInfo = struct({
   borderColor: i32(),
   unnormalizedCoordinates: u32(),
 });
+
+// MARK: Extension Structures - EXT_debug_utils
+
+export const vkDebugUtilsMessengerCreateInfoEXT = struct({
+  sType: i32(),
+  pNext: ptrAny(),
+  flags: u32(),
+  messageSeverity: u32(),
+  messageType: u32(),
+  pfnUserCallback: ptrAny(),
+  pUserData: ptrAny(),
+});
+
+export const vkDebugUtilsMessengerCallbackDataEXT = struct({
+  sType: i32(),
+  pNext: ptrAny(),
+  flags: u32(),
+  pMessageIdName: string(),
+  messageIdNumber: i32(),
+  pMessage: string(),
+  queueLabelCount: u32(),
+  pQueueLabels: ptrAny(),
+  cmdBufLabelCount: u32(),
+  pCmdBufLabels: ptrAny(),
+  objectCount: u32(),
+  pObjects: ptrAny(),
+});

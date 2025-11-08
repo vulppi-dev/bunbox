@@ -76,6 +76,9 @@ export enum VkStructureType {
   MEMORY_BARRIER = 46,
   LOADER_INSTANCE_CREATE_INFO = 47,
   LOADER_DEVICE_CREATE_INFO = 48,
+
+  // Extension: VK_EXT_debug_utils
+  DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT = 1000128004,
 }
 
 // MARK: System Allocation Scope
@@ -563,4 +566,19 @@ export enum VkObjectType {
   DESCRIPTOR_SET = 23,
   FRAMEBUFFER = 24,
   COMMAND_POOL = 25,
+}
+
+// MARK: Extension Enums - VK_EXT_debug_utils
+
+export enum VkDebugUtilsMessageSeverityFlagsEXT {
+  VERBOSE = 0x00000001,
+  INFO = 0x00000010,
+  WARNING = 0x00000100,
+  ERROR = 0x00001000,
+}
+
+export enum VkDebugUtilsMessageTypeFlagsEXT {
+  GENERAL = 0x00000001,
+  VALIDATION = 0x00000002,
+  PERFORMANCE = 0x00000004,
 }
