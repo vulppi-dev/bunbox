@@ -249,6 +249,8 @@ function createStructProxyWrapper(
 
 export function instantiate<F extends StructField<any>>(
   field: F,
+  copyBuffer?: ArrayBuffer | Uint8Array,
+  index: number = 0,
 ): InferField<F> {
   if (typeof ___STRUCTS_SETUP___ === 'undefined') {
     throw new Error('Structs not setup. Please call setupStruct first.');
@@ -257,9 +259,43 @@ export function instantiate<F extends StructField<any>>(
   const { pack } = ___STRUCTS_SETUP___!;
   const fieldCopy = structuredClone(field);
   const { size, offsets } = calculateFieldSize(fieldCopy, pack);
+
   const buffer = new ArrayBuffer(size);
   const view = new DataView(buffer);
   const proxyCache = new Map<string, any>();
+
+  // Validations if copyBuffer is provided
+  if (copyBuffer !== undefined) {
+    const sourceBuffer =
+      copyBuffer instanceof ArrayBuffer
+        ? copyBuffer
+        : copyBuffer.buffer.slice(
+            copyBuffer.byteOffset,
+            copyBuffer.byteOffset + copyBuffer.byteLength,
+          );
+
+    // Validate buffer is multiple of struct size
+    if (sourceBuffer.byteLength % size !== 0) {
+      throw new Error(
+        `Buffer size (${sourceBuffer.byteLength}) is not a multiple of struct size (${size}).`,
+      );
+    }
+
+    // Calculate actual offset in buffer
+    const actualOffset = index * size;
+
+    // Validate index is within buffer bounds
+    if (actualOffset + size > sourceBuffer.byteLength) {
+      throw new Error(
+        `Index ${index} out of bounds. Required ${actualOffset + size} bytes, but buffer has ${sourceBuffer.byteLength} bytes.`,
+      );
+    }
+
+    // Create buffer and copy data from source
+    const targetView = new Uint8Array(buffer);
+    const sourceView = new Uint8Array(sourceBuffer, actualOffset, size);
+    targetView.set(sourceView);
+  }
 
   const proxy = createStructProxy(
     fieldCopy.fields,
