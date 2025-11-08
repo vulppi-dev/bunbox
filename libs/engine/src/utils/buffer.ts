@@ -22,6 +22,15 @@ export function cstr(str: string) {
   return Buffer.from(str + '\0', 'utf8');
 }
 
+export function undoCstr(bfr: Uint8Array | number[]) {
+  const nullIndex = bfr.indexOf(0);
+  if (nullIndex === -1) {
+    return Buffer.from(bfr).toString('utf8').trim();
+  } else {
+    return Buffer.from(bfr.slice(0, nullIndex)).toString('utf8').trim();
+  }
+}
+
 export function buildCallback<
   F extends FFIFunction,
   Fn extends InferFFIFunction<F>,

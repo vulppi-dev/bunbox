@@ -7,13 +7,13 @@ import { Vector2 } from '../math';
 export abstract class AbstractRenderer implements Disposable {
   static #rendererCount = new Map<string, number>();
 
-  protected static _increaseRendererCount(systemType: string) {
+  static #increaseRendererCount(systemType: string) {
     const currentCount = AbstractRenderer.#rendererCount.get(systemType) || 0;
     AbstractRenderer.#rendererCount.set(systemType, currentCount + 1);
     return currentCount + 1;
   }
 
-  protected static _decreaseRendererCount(systemType: string) {
+  static #decreaseRendererCount(systemType: string) {
     const currentCount = AbstractRenderer.#rendererCount.get(systemType) || 0;
     if (currentCount > 0) {
       AbstractRenderer.#rendererCount.set(systemType, currentCount - 1);
@@ -26,7 +26,7 @@ export abstract class AbstractRenderer implements Disposable {
     return platform === GLFW_GeneralMacro.PLATFORM_WAYLAND;
   }
 
-  protected static _getNativeWindow(window: Pointer) {
+  protected static _getNativeWindow(window: Pointer): [bigint, bigint] {
     switch (process.platform) {
       case 'win32': {
         return [BigInt(GLFW.glfwGetWin32Window(window) || 0), 0n];
@@ -68,7 +68,7 @@ export abstract class AbstractRenderer implements Disposable {
     // Initialize window
     this.#windowPtr = window;
 
-    AbstractRenderer._increaseRendererCount(this._systemType());
+    AbstractRenderer.#increaseRendererCount(this._systemType());
 
     if (!this._isSystemLoaded()) {
       this._initiateSystem();
@@ -78,7 +78,7 @@ export abstract class AbstractRenderer implements Disposable {
   }
 
   dispose(): void | Promise<void> {
-    const count = AbstractRenderer._decreaseRendererCount(this._systemType());
+    const count = AbstractRenderer.#decreaseRendererCount(this._systemType());
 
     if (count === 0) {
       this._releaseSystem();
@@ -101,6 +101,10 @@ export abstract class AbstractRenderer implements Disposable {
       ptr(this.#width),
       ptr(this.#height),
     );
+  }
+
+  protected _getNativeWindow() {
+    return AbstractRenderer._getNativeWindow(this.#windowPtr);
   }
 
   abstract render(meshes: any[], delta: number): void;

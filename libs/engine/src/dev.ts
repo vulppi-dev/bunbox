@@ -1,4 +1,4 @@
-import { Window } from './core';
+import { Window } from './index';
 
 const win = new Window('Test Window');
 
