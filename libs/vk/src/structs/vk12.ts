@@ -1,4 +1,4 @@
-import { array, i32, i8, ptrAny, struct, u32, u64 } from '@bunbox/struct';
+import { array, i32, i8, ptrAny, struct, u32, u64, u8 } from '@bunbox/struct';
 
 // MARK: Vulkan 1.2 Structures
 
@@ -22,9 +22,9 @@ export const vkPhysicalDeviceVulkan11Features = struct({
 export const vkPhysicalDeviceVulkan11Properties = struct({
   sType: i32(),
   pNext: ptrAny(),
-  deviceUUID: array(u32(), 4),
-  driverUUID: array(u32(), 4),
-  deviceLUID: array(u32(), 2),
+  deviceUUID: array(u8(), 16),
+  driverUUID: array(u8(), 16),
+  deviceLUID: array(u8(), 8),
   deviceNodeMask: u32(),
   deviceLUIDValid: u32(),
   subgroupSize: u32(),

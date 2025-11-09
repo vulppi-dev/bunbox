@@ -5,22 +5,6 @@ import { DynamicLibError } from '../errors';
 import { Vector2 } from '../math';
 
 export abstract class AbstractRenderer implements Disposable {
-  static #rendererCount = new Map<string, number>();
-
-  static #increaseRendererCount(systemType: string) {
-    const currentCount = AbstractRenderer.#rendererCount.get(systemType) || 0;
-    AbstractRenderer.#rendererCount.set(systemType, currentCount + 1);
-    return currentCount + 1;
-  }
-
-  static #decreaseRendererCount(systemType: string) {
-    const currentCount = AbstractRenderer.#rendererCount.get(systemType) || 0;
-    if (currentCount > 0) {
-      AbstractRenderer.#rendererCount.set(systemType, currentCount - 1);
-    }
-    return currentCount - 1;
-  }
-
   protected static _isWayland(): boolean {
     const platform = GLFW.glfwGetPlatform();
     return platform === GLFW_GeneralMacro.PLATFORM_WAYLAND;
@@ -67,22 +51,8 @@ export abstract class AbstractRenderer implements Disposable {
 
     // Initialize window
     this.#windowPtr = window;
-
-    AbstractRenderer.#increaseRendererCount(this._systemType());
-
-    if (!this._isSystemLoaded()) {
-      this._initiateSystem();
-    }
-
+    this._prepare();
     this.rebuildFrame();
-  }
-
-  dispose(): void | Promise<void> {
-    const count = AbstractRenderer.#decreaseRendererCount(this._systemType());
-
-    if (count === 0) {
-      this._releaseSystem();
-    }
   }
 
   rebuildFrame(): void {
@@ -103,14 +73,16 @@ export abstract class AbstractRenderer implements Disposable {
     );
   }
 
+  protected _getWindow() {
+    return this.#windowPtr;
+  }
+
   protected _getNativeWindow() {
     return AbstractRenderer._getNativeWindow(this.#windowPtr);
   }
 
+  abstract dispose(): void | Promise<void>;
   abstract render(meshes: any[], delta: number): void;
-  protected abstract _systemType(): string;
-  protected abstract _isSystemLoaded(): boolean;
+  protected abstract _prepare(): void | Promise<void>;
   protected abstract _rebuildSwapChain(width: number, height: number): void;
-  protected abstract _initiateSystem(): void;
-  protected abstract _releaseSystem(): void;
 }

@@ -1068,4 +1068,79 @@ describe('instanceToJSON', () => {
     expect(typeof json.next).toBe('string');
     expect(json.next).toBe('4660'); // 0x1234 in decimal as string
   });
+
+  it('serializes subproxy (nested struct) directly', () => {
+    const vec2 = struct({
+      x: u8(),
+      y: u8(),
+    });
+
+    const entity = struct({
+      id: u8(),
+      position: vec2,
+      velocity: vec2,
+    });
+
+    const instance = instantiate(entity);
+    instance.id = 1;
+    instance.position.x = 10;
+    instance.position.y = 20;
+    instance.velocity.x = 5;
+    instance.velocity.y = 8;
+
+    // Serialize the entire instance
+    const fullJson = instanceToJSON(instance);
+    expect(fullJson.id).toBe(1);
+    expect(fullJson.position).toEqual({ x: 10, y: 20 });
+    expect(fullJson.velocity).toEqual({ x: 5, y: 8 });
+
+    // Serialize only the nested position subproxy
+    const positionJson = instanceToJSON(instance.position);
+    expect(positionJson).toEqual({ x: 10, y: 20 });
+
+    // Serialize only the nested velocity subproxy
+    const velocityJson = instanceToJSON(instance.velocity);
+    expect(velocityJson).toEqual({ x: 5, y: 8 });
+  });
+
+  it('serializes deeply nested subproxy', () => {
+    const vec2 = struct({
+      x: u8(),
+      y: u8(),
+    });
+
+    const transform = struct({
+      position: vec2,
+      scale: vec2,
+    });
+
+    const gameObject = struct({
+      id: u8(),
+      transform: transform,
+      active: bool(),
+    });
+
+    const instance = instantiate(gameObject);
+    instance.id = 42;
+    instance.transform.position.x = 100;
+    instance.transform.position.y = 200;
+    instance.transform.scale.x = 2;
+    instance.transform.scale.y = 3;
+    instance.active = true;
+
+    // Serialize nested transform subproxy
+    const transformJson = instanceToJSON(instance.transform);
+    expect(transformJson).toEqual({
+      position: { x: 100, y: 200 },
+      scale: { x: 2, y: 3 },
+    });
+
+    // Serialize deeply nested position subproxy
+    const positionJson = instanceToJSON(instance.transform.position);
+    expect(positionJson).toEqual({ x: 100, y: 200 });
+
+    // Serialize deeply nested scale subproxy
+    const scaleJson = instanceToJSON(instance.transform.scale);
+    expect(scaleJson).toEqual({ x: 2, y: 3 });
+  });
 });

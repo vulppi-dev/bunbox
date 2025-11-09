@@ -87,6 +87,7 @@ const PROXY_METADATA_MAP = new WeakMap<
     fields: Record<string, AllFields>;
     offsets: StructOffsets;
     view: DataView;
+    baseOffset: number;
   }
 >();
 
@@ -101,7 +102,12 @@ function serializeValue(value: any): any {
     // Check if it's a struct instance
     const metadata = PROXY_METADATA_MAP.get(value);
     if (metadata) {
-      return instanceToObject(metadata.fields, metadata.offsets, metadata.view);
+      return instanceToObject(
+        metadata.fields,
+        metadata.offsets,
+        metadata.view,
+        metadata.baseOffset,
+      );
     }
   }
   return value;
@@ -238,13 +244,23 @@ function createStructProxyWrapper(
   const { pack } = ___STRUCTS_SETUP___!;
   const { offsets } = calculateFieldSize(field, pack);
 
-  return createStructProxy(
+  const proxy = createStructProxy(
     field.fields,
     offsets!,
     view,
     baseOffset,
     proxyCache,
   );
+
+  // Store metadata for subproxies to support instanceToJSON
+  PROXY_METADATA_MAP.set(proxy, {
+    fields: field.fields,
+    offsets: offsets!,
+    view,
+    baseOffset,
+  });
+
+  return proxy;
 }
 
 export function instantiate<F extends StructField<any>>(
@@ -311,6 +327,7 @@ export function instantiate<F extends StructField<any>>(
     fields: fieldCopy.fields,
     offsets: offsets!,
     view,
+    baseOffset: 0,
   });
 
   return proxy;
@@ -338,6 +355,7 @@ export function instanceToJSON<I extends Record<string, any>>(instance: I): I {
     metadata.fields,
     metadata.offsets,
     metadata.view,
+    metadata.baseOffset,
   );
 
   return obj as I;

@@ -1,17 +1,23 @@
 import { i32, ptrAny, struct, u32, u64 } from '@bunbox/struct';
+import {
+  vkPhysicalDeviceFeatures,
+  vkPhysicalDeviceMemoryProperties,
+  vkPhysicalDeviceProperties,
+  vkQueueFamilyProperties,
+} from './vk10';
 
 // MARK: Vulkan 1.1 Structures
 
 export const vkPhysicalDeviceFeatures2 = struct({
   sType: i32(),
   pNext: ptrAny(),
-  features: ptrAny(),
+  features: vkPhysicalDeviceFeatures,
 });
 
 export const vkPhysicalDeviceProperties2 = struct({
   sType: i32(),
   pNext: ptrAny(),
-  properties: ptrAny(),
+  properties: vkPhysicalDeviceProperties,
 });
 
 export const vkFormatProperties2 = struct({
@@ -53,13 +59,13 @@ export const vkPhysicalDeviceImageFormatInfo2 = struct({
 export const vkQueueFamilyProperties2 = struct({
   sType: i32(),
   pNext: ptrAny(),
-  queueFamilyProperties: ptrAny(),
+  queueFamilyProperties: vkQueueFamilyProperties,
 });
 
 export const vkPhysicalDeviceMemoryProperties2 = struct({
   sType: i32(),
   pNext: ptrAny(),
-  memoryProperties: ptrAny(),
+  memoryProperties: vkPhysicalDeviceMemoryProperties,
 });
 
 export const vkBindBufferMemoryInfo = struct({

@@ -12,6 +12,8 @@ A linguagem utilizada será typescript em sua maioria, apenas que especificament
 A linguagem, e os comentários criados nela, devem ser escritos em inglês.
 A conversação com o usuário e explicações serão em português brasil.
 Use bons nomes de variáveis para não ser necessário o uso de comentários.
+Somente caso a semântica do código não esteja clara, adicione comentários de linha explicativos em inglês.
+Somente funções/métodos públicos/exportados devem ter comentários de documentação (JSDoc) em inglês.
 
 ### Padrões de código
 
@@ -31,7 +33,7 @@ Use bons nomes de variáveis para não ser necessário o uso de comentários.
 - **Todas as classes que gerenciam recursos Vulkan/GLFW devem implementar `Disposable`** do `@bunbox/utils`;
 - **Evitar Factory Pattern**: Use métodos `prepare()` ou `rebuild()` para construção/reconstrução de recursos;
 - **Liberação de recursos antes de reconstruir**: Use métodos `release()` para liberar recursos internos sem destruir a instância;
-- **Nomenclatura**:
+- **Nomenclatura de recursos reusáveis**:
   - `prepare()`: Inicializar/preparar recursos pela primeira vez
   - `rebuild()`: Reconstruir recursos existentes (chama `release()` internamente se necessário)
   - `release()`: Liberar recursos internos sem destruir a instância

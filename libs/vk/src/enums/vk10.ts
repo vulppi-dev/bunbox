@@ -79,6 +79,21 @@ export enum VkStructureType {
 
   // Extension: VK_EXT_debug_utils
   DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT = 1000128004,
+
+  // Extension: VK_KHR_win32_surface
+  WIN32_SURFACE_CREATE_INFO_KHR = 1000009000,
+
+  // Extension: VK_KHR_xlib_surface
+  XLIB_SURFACE_CREATE_INFO_KHR = 1000004000,
+
+  // Extension: VK_KHR_xcb_surface
+  XCB_SURFACE_CREATE_INFO_KHR = 1000005000,
+
+  // Extension: VK_KHR_wayland_surface
+  WAYLAND_SURFACE_CREATE_INFO_KHR = 1000006000,
+
+  // Extension: VK_EXT_metal_surface
+  METAL_SURFACE_CREATE_INFO_EXT = 1000217000,
 }
 
 // MARK: System Allocation Scope
@@ -264,6 +279,16 @@ export enum VkQueryType {
   OCCLUSION = 0,
   PIPELINE_STATISTICS = 1,
   TIMESTAMP = 2,
+}
+
+// MARK: Queue Flags
+
+export enum VkQueueFlagBits {
+  GRAPHICS_BIT = 0x00000001,
+  COMPUTE_BIT = 0x00000002,
+  TRANSFER_BIT = 0x00000004,
+  SPARSE_BINDING_BIT = 0x00000008,
+  PROTECTED_BIT = 0x00000010,
 }
 
 // MARK: Sharing Mode
