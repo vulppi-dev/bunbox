@@ -184,6 +184,44 @@ export const vkDestroyImageView = {
   returns: 'void',
 } as const satisfies FFIFunction;
 
+// MARK: Shader Module
+
+/**
+ * Create a new shader module object
+ *
+ * C ref: `VkResult vkCreateShaderModule(
+ *   VkDevice device,
+ *   const VkShaderModuleCreateInfo* pCreateInfo,
+ *   const VkAllocationCallbacks* pAllocator,
+ *   VkShaderModule* pShaderModule)`
+ */
+export const vkCreateShaderModule = {
+  args: ['ptr', 'ptr', 'ptr', 'ptr'] as [
+    device: 'ptr',
+    pCreateInfo: 'ptr',
+    pAllocator: 'ptr',
+    pShaderModule: 'ptr',
+  ],
+  returns: 'i32',
+} as const satisfies FFIFunction;
+
+/**
+ * Destroy a shader module object
+ *
+ * C ref: `void vkDestroyShaderModule(
+ *   VkDevice device,
+ *   VkShaderModule shaderModule,
+ *   const VkAllocationCallbacks* pAllocator)`
+ */
+export const vkDestroyShaderModule = {
+  args: ['ptr', 'ptr', 'ptr'] as [
+    device: 'ptr',
+    shaderModule: 'ptr',
+    pAllocator: 'ptr',
+  ],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
 // MARK: Command Pool and Buffer
 
 /**
