@@ -5,40 +5,6 @@ import { DynamicLibError } from '../errors';
 import { Vector2 } from '../math';
 
 export abstract class AbstractRenderer implements Disposable {
-  protected static _isWayland(): boolean {
-    const platform = GLFW.glfwGetPlatform();
-    return platform === GLFW_GeneralMacro.PLATFORM_WAYLAND;
-  }
-
-  protected static _getNativeWindow(window: Pointer): [bigint, bigint] {
-    switch (process.platform) {
-      case 'win32': {
-        return [BigInt(GLFW.glfwGetWin32Window(window) || 0), 0n];
-      }
-      case 'linux': {
-        if (AbstractRenderer._isWayland()) {
-          return [
-            BigInt(GLFW.glfwGetWaylandWindow(window) || 0),
-            BigInt(GLFW.glfwGetWaylandDisplay() || 0),
-          ];
-        } else {
-          return [
-            BigInt(GLFW.glfwGetX11Window(window) || 0),
-            BigInt(GLFW.glfwGetX11Display() || 0),
-          ];
-        }
-      }
-      case 'darwin': {
-        return [BigInt(GLFW.glfwGetCocoaWindow(window) || 0), 0n];
-      }
-      default:
-        throw new DynamicLibError(
-          `Unsupported platform: ${process.platform}`,
-          'GLFW',
-        );
-    }
-  }
-
   #windowPtr: Pointer;
 
   #width: Int32Array;
@@ -75,10 +41,6 @@ export abstract class AbstractRenderer implements Disposable {
 
   protected _getWindow() {
     return this.#windowPtr;
-  }
-
-  protected _getNativeWindow() {
-    return AbstractRenderer._getNativeWindow(this.#windowPtr);
   }
 
   abstract dispose(): void | Promise<void>;

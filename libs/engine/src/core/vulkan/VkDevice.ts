@@ -12,11 +12,15 @@ import {
   vkInstanceCreateInfo,
   vkLayerProperties,
   vkMetalSurfaceCreateInfoEXT,
+  vkPhysicalDeviceFeatures,
   vkPhysicalDeviceProperties,
+  VkPhysicalDeviceType,
   vkQueueFamilyProperties,
   VkQueueFlagBits,
   VkResult,
   VkStructureType,
+  vkSurfaceCapabilitiesKHR,
+  vkSurfaceFormatKHR,
   vkWaylandSurfaceCreateInfoKHR,
   vkWin32SurfaceCreateInfoKHR,
   vkXcbSurfaceCreateInfoKHR,
@@ -37,7 +41,7 @@ import {
 } from '../../utils/buffer';
 import { VK_DEBUG } from '../../singleton/logger';
 import { getEnv } from '../../utils/env';
-import { GLFW } from '@bunbox/glfw';
+import { GLFW, isWayland } from '@bunbox/glfw';
 import { DynamicLibError } from '../../errors';
 import type { Disposable } from '@bunbox/utils';
 import {
@@ -46,7 +50,12 @@ import {
   increaseCounter,
 } from '../../global/counter';
 
-const VALIDATION_LAYERS = ['VK_LAYER_KHRONOS_validation'];
+const VALIDATION_LAYERS = [
+  'VK_LAYER_KHRONOS_validation',
+];
+const VALIDATION_DEVICE_EXTENSIONS = [
+  'VK_KHR_swapchain',
+];
 
 type PhysicalDeviceProps = {
   deviceName: string;
@@ -64,8 +73,12 @@ type PhysicalDeviceProps = {
 type QueueFamilyIndices = {
   graphicsFamily: number;
   presentFamily: number;
+  computeFamily: number;
+  transferFamily: number;
   graphicsFamilyHasValue: boolean;
   presentFamilyHasValue: boolean;
+  computeFamilyHasValue: boolean;
+  transferFamilyHasValue: boolean;
 };
 
 export class VkDevice implements Disposable {
@@ -148,7 +161,6 @@ export class VkDevice implements Disposable {
   static #destroyInstance() {
     if (!VkDevice.#instance) return;
 
-    // Destroy debug messenger if it exists
     if (VK_DEBUG.enabled && VkDevice.#debugMessenger[0]) {
       const funcPtr = VK.vkGetInstanceProcAddr(
         VkDevice.#instance,
@@ -174,12 +186,10 @@ export class VkDevice implements Disposable {
       VkDevice.#debugMessenger[0] = 0n;
     }
 
-    // Destroy Vulkan instance
     VK.vkDestroyInstance(VkDevice.#instance, null);
     VK_DEBUG('Destroyed Vulkan instance');
     VkDevice.#instance = null;
 
-    // Clean up error callback
     if (VkDevice.#errorCallback) {
       VkDevice.#errorCallback.close();
       VkDevice.#errorCallback = null;
@@ -286,16 +296,14 @@ export class VkDevice implements Disposable {
 
   // MARK: Instance Properties
 
-  #window: Pointer;
   #nativeWindow: bigint;
   #display: bigint;
   #surface: Pointer | null = null;
 
-  #physicalDevices: Pointer[] = [];
-  #physicalDevicesProperties: PhysicalDeviceProps[] = [];
+  #physicalDevice: Pointer | null = null;
+  #physicalDeviceProperties: PhysicalDeviceProps | null = null;
 
-  constructor(window: Pointer, nativeWindow: bigint, display: bigint) {
-    this.#window = window;
+  constructor(nativeWindow: bigint, display: bigint) {
     this.#nativeWindow = nativeWindow;
     this.#display = display;
 
@@ -304,6 +312,14 @@ export class VkDevice implements Disposable {
     this.#pickPhysicalDevice();
 
     increaseCounter('VkDevice');
+  }
+
+  get physicalDevice() {
+    return this.#physicalDevice;
+  }
+
+  get physicalDeviceProperties() {
+    return this.#physicalDeviceProperties;
   }
 
   dispose() {
@@ -341,8 +357,7 @@ export class VkDevice implements Disposable {
         ptr(surfacePtr),
       );
     } else if (process.platform === 'linux') {
-      // Try Wayland first
-      if (this.#display) {
+      if (isWayland()) {
         const createInfo = instantiate(vkWaylandSurfaceCreateInfoKHR);
         createInfo.sType = VkStructureType.WAYLAND_SURFACE_CREATE_INFO_KHR;
         createInfo.pNext = 0n;
@@ -357,7 +372,6 @@ export class VkDevice implements Disposable {
           ptr(surfacePtr),
         );
       } else {
-        // Fallback to Xlib
         const createInfo = instantiate(vkXlibSurfaceCreateInfoKHR);
         createInfo.sType = VkStructureType.XLIB_SURFACE_CREATE_INFO_KHR;
         createInfo.pNext = 0n;
@@ -428,41 +442,86 @@ export class VkDevice implements Disposable {
       throw new DynamicLibError('Failed to find a suitable GPU!', 'Vulkan');
     }
 
-    this.#physicalDevices = usableDevices;
-    this.#physicalDevicesProperties = usableDevices.map((device) => {
-      const props = instantiate(vkPhysicalDeviceProperties);
-      VK.vkGetPhysicalDeviceProperties(device, ptr(getInstanceBuffer(props)));
+    if (usableDevices.length === 1) {
+      VK_DEBUG('Only one suitable GPU found, selecting it by default.');
+      this.#physicalDevice = usableDevices[0]!;
+      this.#physicalDeviceProperties = this.#getDeviceProperties(
+        this.#physicalDevice,
+      );
+      return;
+    }
 
-      return {
-        deviceName: undoCstr(props.deviceName),
-        deviceType: props.deviceType,
-        deviceID: props.deviceID,
-        vendorID: props.vendorID,
-        apiVersion: props.apiVersion,
-        driverVersion: props.driverVersion,
-        limit: instanceToJSON(props.limits),
-        sparseProperties: instanceToJSON(props.sparseProperties),
-      };
-    });
+    const devicesProperties = usableDevices.map((device) =>
+      this.#getDeviceProperties(device),
+    );
+    let bestDeviceIndex = -1;
+    let bestScore = 0;
+    const deviceTypeScore = (type: number) => {
+      switch (type) {
+        case VkPhysicalDeviceType.DISCRETE_GPU:
+          return 3;
+        case VkPhysicalDeviceType.INTEGRATED_GPU:
+          return 2;
+        case VkPhysicalDeviceType.VIRTUAL_GPU:
+          return 1;
+        default:
+          return 0;
+      }
+    };
+
+    // Pick device with best type `(discrete GPU > integrated > virtual/CPU) * 2 weight` and greatest vram.
+    for (let i = 0; i < devicesProperties.length; i++) {
+      if (bestDeviceIndex === -1) {
+        bestDeviceIndex = i;
+        bestScore =
+          deviceTypeScore(devicesProperties[i]!.deviceType) * 2 +
+          devicesProperties[i]!.limit.maxMemoryAllocationCount / 1024 / 1024;
+        continue;
+      }
+
+      const currentDevice = devicesProperties[i]!;
+      const currentScore =
+        deviceTypeScore(currentDevice.deviceType) * 2 +
+        currentDevice.limit.maxMemoryAllocationCount / 1024 / 1024;
+
+      if (bestScore < currentScore) {
+        bestScore = currentScore;
+        bestDeviceIndex = i;
+        continue;
+      }
+    }
+    this.#physicalDevice = usableDevices[bestDeviceIndex]!;
+    this.#physicalDeviceProperties = devicesProperties[bestDeviceIndex]!;
   }
 
   #isDeviceSuitable(device: Pointer): boolean {
     if (!this.#surface) return false;
     const indices = this.#findQueueFamilies(device, this.#surface);
 
-    // QueueFamilyIndices indices = findQueueFamilies(device);
-    // bool extensionsSupported = checkDeviceExtensionSupport(device);
-    // bool swapChainAdequate = false;
-    // if (extensionsSupported) {
-    //   SwapChainSupportDetails swapChainSupport = querySwapChainSupport(device);
-    //   swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
-    // }
-    // VkPhysicalDeviceFeatures supportedFeatures;
-    // vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
-    // return indices.isComplete() && extensionsSupported && swapChainAdequate &&
-    //        supportedFeatures.samplerAnisotropy;
+    if (
+      !(
+        indices.graphicsFamilyHasValue &&
+        indices.presentFamilyHasValue &&
+        indices.computeFamilyHasValue &&
+        indices.transferFamilyHasValue
+      )
+    )
+      return false;
 
-    // TODO: Implement device suitability check
+    const extensionsSupported = this.#isDeviceExtensionSupported(device);
+    if (!extensionsSupported) return false;
+
+    const details = this.#getSwapChainSupport(device);
+    if (details.formats.length === 0 || details.presentModes.length === 0)
+      return false;
+
+    const supportedFeatures = instantiate(vkPhysicalDeviceFeatures);
+    VK.vkGetPhysicalDeviceFeatures(
+      device,
+      ptr(getInstanceBuffer(supportedFeatures)),
+    );
+    if (!supportedFeatures.samplerAnisotropy) return false;
+
     return true;
   }
 
@@ -470,8 +529,12 @@ export class VkDevice implements Disposable {
     const indices: QueueFamilyIndices = {
       graphicsFamily: -1,
       presentFamily: -1,
+      computeFamily: -1,
+      transferFamily: -1,
       graphicsFamilyHasValue: false,
       presentFamilyHasValue: false,
+      computeFamilyHasValue: false,
+      transferFamilyHasValue: false,
     };
 
     const count = new Uint32Array(1);
@@ -493,13 +556,22 @@ export class VkDevice implements Disposable {
 
     for (let i = 0; i < queueFamilies.length; i++) {
       const queueFamily = queueFamilies[i]!;
-      if (
-        queueFamily.queueCount > 0 &&
-        queueFamily.queueFlags & VkQueueFlagBits.GRAPHICS_BIT
-      ) {
-        VK_DEBUG(`Found graphics queue family at index ${i}`);
-        indices.graphicsFamily = i;
-        indices.graphicsFamilyHasValue = true;
+      if (queueFamily.queueCount > 0) {
+        if (queueFamily.queueFlags & VkQueueFlagBits.GRAPHICS_BIT) {
+          VK_DEBUG(`Found graphics queue family at index ${i}`);
+          indices.graphicsFamily = i;
+          indices.graphicsFamilyHasValue = true;
+        }
+        if (queueFamily.queueFlags & VkQueueFlagBits.COMPUTE_BIT) {
+          VK_DEBUG(`Found compute queue family at index ${i}`);
+          indices.computeFamily = i;
+          indices.computeFamilyHasValue = true;
+        }
+        if (queueFamily.queueFlags & VkQueueFlagBits.TRANSFER_BIT) {
+          VK_DEBUG(`Found transfer queue family at index ${i}`);
+          indices.transferFamily = i;
+          indices.transferFamilyHasValue = true;
+        }
       }
       const presentSupport = new Uint8Array(1);
       VK.vkGetPhysicalDeviceSurfaceSupportKHR(
@@ -508,16 +580,135 @@ export class VkDevice implements Disposable {
         surface,
         ptr(presentSupport),
       );
-      if (queueFamily.queueCount > 0 && !presentSupport[0]) {
+      if (queueFamily.queueCount > 0 && presentSupport[0]) {
         VK_DEBUG(`Found present queue family at index ${i}`);
         indices.presentFamily = i;
         indices.presentFamilyHasValue = true;
       }
-      if (indices.graphicsFamilyHasValue && indices.presentFamilyHasValue) {
+      if (
+        indices.graphicsFamilyHasValue &&
+        indices.presentFamilyHasValue &&
+        indices.computeFamilyHasValue &&
+        indices.transferFamilyHasValue
+      ) {
         break;
       }
     }
 
     return indices;
+  }
+
+  #isDeviceExtensionSupported(device: Pointer) {
+    const counter = new Uint32Array(1);
+    VK.vkEnumerateDeviceExtensionProperties(device, null, ptr(counter), null);
+
+    const size = sizeOf(vkLayerProperties);
+    const buffer = new Uint8Array(counter[0]! * size);
+
+    VK.vkEnumerateDeviceExtensionProperties(
+      device,
+      null,
+      ptr(counter),
+      ptr(buffer),
+    );
+
+    const extensions: string[] = [];
+    for (let i = 0; i < counter[0]!; i++) {
+      const extension = instantiate(vkLayerProperties, buffer, i);
+      extensions.push(undoCstr(extension.layerName));
+    }
+
+    return VALIDATION_DEVICE_EXTENSIONS.every((ext) =>
+      extensions.includes(ext),
+    );
+  }
+
+  #getDeviceProperties(device: Pointer) {
+    const props = instantiate(vkPhysicalDeviceProperties);
+    VK.vkGetPhysicalDeviceProperties(device, ptr(getInstanceBuffer(props)));
+
+    return {
+      deviceName: undoCstr(props.deviceName),
+      deviceType: props.deviceType,
+      deviceID: props.deviceID,
+      vendorID: props.vendorID,
+      apiVersion: props.apiVersion,
+      driverVersion: props.driverVersion,
+      limit: instanceToJSON(props.limits),
+      sparseProperties: instanceToJSON(props.sparseProperties),
+    };
+  }
+
+  #getSwapChainSupport(device: Pointer) {
+    const capabilities = instantiate(vkSurfaceCapabilitiesKHR);
+    VK.vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
+      device,
+      this.#surface!,
+      ptr(getInstanceBuffer(capabilities)),
+    );
+
+    const count = new Uint32Array(1);
+    VK.vkGetPhysicalDeviceSurfaceFormatsKHR(
+      device,
+      this.#surface!,
+      ptr(count),
+      null,
+    );
+
+    if (!count[0]) {
+      return {
+        capabilities,
+        formats: [],
+        presentModes: [],
+      };
+    }
+    const formatSize = sizeOf(vkSurfaceFormatKHR);
+    const formatBuffer = new Uint8Array(count[0]! * formatSize);
+    VK.vkGetPhysicalDeviceSurfaceFormatsKHR(
+      device,
+      this.#surface!,
+      ptr(count),
+      ptr(formatBuffer),
+    );
+
+    const formats: InferField<typeof vkSurfaceFormatKHR>[] = [];
+    for (let i = 0; i < count[0]!; i++) {
+      const format = instantiate(vkSurfaceFormatKHR, formatBuffer, i);
+      formats.push(format);
+    }
+
+    count[0] = 0;
+    VK.vkGetPhysicalDeviceSurfacePresentModesKHR(
+      device,
+      this.#surface!,
+      ptr(count),
+      null,
+    );
+
+    if (!count[0]) {
+      return {
+        capabilities,
+        formats,
+        presentModes: [],
+      };
+    }
+    const presentModeBuffer = new Uint32Array(count[0]!);
+    VK.vkGetPhysicalDeviceSurfacePresentModesKHR(
+      device,
+      this.#surface!,
+      ptr(count),
+      ptr(presentModeBuffer),
+    );
+
+    const presentModes: number[] = [];
+    for (let i = 0; i < count[0]!; i++) {
+      presentModes.push(presentModeBuffer[i]!);
+    }
+
+    return {
+      capabilities,
+      formats,
+      presentModes,
+    };
   }
 }

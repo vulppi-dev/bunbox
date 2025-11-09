@@ -1,4 +1,6 @@
-import { GLFW_ErrorCodes } from './enums';
+import type { Pointer } from 'bun:ffi';
+import { GLFW_ErrorCodes, GLFW_GeneralMacro } from './enums';
+import { GLFW } from './loader';
 
 export function getGlfwErrorDescription(errorCode: GLFW_ErrorCodes): string {
   switch (errorCode) {
@@ -34,5 +36,36 @@ export function getGlfwErrorDescription(errorCode: GLFW_ErrorCodes): string {
       return 'GLFW Version unavailable';
     default:
       return `Unknown GLFW error code: ${errorCode}`;
+  }
+}
+
+export function isWayland(): boolean {
+  const platform = GLFW.glfwGetPlatform();
+  return platform === GLFW_GeneralMacro.PLATFORM_WAYLAND;
+}
+
+export function getNativeWindow(window: Pointer): [bigint, bigint] {
+  switch (process.platform) {
+    case 'win32': {
+      return [BigInt(GLFW.glfwGetWin32Window(window) || 0), 0n];
+    }
+    case 'linux': {
+      if (isWayland()) {
+        return [
+          BigInt(GLFW.glfwGetWaylandWindow(window) || 0),
+          BigInt(GLFW.glfwGetWaylandDisplay() || 0),
+        ];
+      } else {
+        return [
+          BigInt(GLFW.glfwGetX11Window(window) || 0),
+          BigInt(GLFW.glfwGetX11Display() || 0),
+        ];
+      }
+    }
+    case 'darwin': {
+      return [BigInt(GLFW.glfwGetCocoaWindow(window) || 0), 0n];
+    }
+    default:
+      return [0n, 0n];
   }
 }

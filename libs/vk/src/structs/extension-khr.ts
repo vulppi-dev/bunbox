@@ -1,4 +1,29 @@
-import { i32, ptrAny, struct, u32, u64 } from '@bunbox/struct';
+import { array, i32, ptrAny, struct, u32, u64 } from '@bunbox/struct';
+
+// MARK: VK_KHR_surface
+
+export const vkExtent2D = struct({
+  width: u32(),
+  height: u32(),
+});
+
+export const vkSurfaceCapabilitiesKHR = struct({
+  minImageCount: u32(),
+  maxImageCount: u32(),
+  currentExtent: vkExtent2D,
+  minImageExtent: vkExtent2D,
+  maxImageExtent: vkExtent2D,
+  maxImageArrayLayers: u32(),
+  supportedTransforms: u32(),
+  currentTransform: i32(),
+  supportedCompositeAlpha: u32(),
+  supportedUsageFlags: u32(),
+});
+
+export const vkSurfaceFormatKHR = struct({
+  format: i32(),
+  colorSpace: i32(),
+});
 
 // MARK: VK_KHR_win32_surface
 
