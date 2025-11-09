@@ -548,6 +548,14 @@ export enum VkCommandBufferLevel {
   SECONDARY = 1,
 }
 
+// MARK: Command Pool Create Flags
+
+export enum VkCommandPoolCreateFlagBits {
+  TRANSIENT_BIT = 0x00000001,
+  RESET_COMMAND_BUFFER_BIT = 0x00000002,
+  PROTECTED_BIT = 0x00000004,
+}
+
 // MARK: Index Type
 
 export enum VkIndexType {

@@ -17,7 +17,7 @@ import {
 import { DynamicLibError } from '../../errors';
 import { type Color } from '../../math';
 import { VK_DEBUG } from '../../singleton/logger';
-import type { CommandPool } from './CommandPool';
+import type { CommandPool } from './VkCommandPool';
 import type { Framebuffer } from './Framebuffer';
 import type { VkTexture } from './VkTexture';
 import { getImageAspectFlags } from './helpers/texture-format-mapping';

@@ -18,8 +18,14 @@ type InferFFIFunction<F extends FFIFunction> = (
   ? undefined
   : FFITypeToReturnsType[ToFFIType<NonNullable<F['returns']>>];
 
-export function cstr(str: string) {
-  return Buffer.from(str + '\0', 'utf8');
+export function cstr(str: string, fixedLength?: number) {
+  const strBuf = Buffer.from(str + '\0', 'utf8');
+  if (fixedLength && fixedLength >= 1) {
+    const buf = new Uint8Array(fixedLength);
+    buf.set(strBuf.subarray(0, fixedLength));
+    return buf;
+  }
+  return strBuf;
 }
 
 export function undoCstr(bfr: Uint8Array | number[]) {

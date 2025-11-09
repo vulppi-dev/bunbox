@@ -1,7 +1,6 @@
-import { GLFW, GLFW_GeneralMacro } from '@bunbox/glfw';
+import { GLFW } from '@bunbox/glfw';
 import { type Disposable } from '@bunbox/utils';
 import { ptr, type Pointer } from 'bun:ffi';
-import { DynamicLibError } from '../errors';
 import { Vector2 } from '../math';
 
 export abstract class AbstractRenderer implements Disposable {
