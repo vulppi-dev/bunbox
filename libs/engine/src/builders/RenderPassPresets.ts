@@ -264,4 +264,96 @@ export class RenderPassPresets {
       })
       .build();
   }
+
+  /**
+   * Depth pre-pass
+   * Renders only depth to optimize early-z rejection in forward pass
+   *
+   * Attachments:
+   * - 0: Depth (d32-sfloat)
+   *
+   * Note: Use this before forward rendering to cull occluded fragments early
+   */
+  static depthPrePass(): RenderPassConfig {
+    return new RenderPassBuilder()
+      .setName('Depth Pre-Pass')
+      .addDepthAttachment({
+        format: 'd32-sfloat',
+        loadOp: 'clear',
+        storeOp: 'store',
+        finalLayout: 'shader-read-only',
+        clearValue: { depthStencil: { depth: 1.0 } },
+      })
+      .build();
+  }
+
+  /**
+   * Light culling compute pass target
+   * Creates a buffer for visible light indices per tile
+   *
+   * Attachments:
+   * - 0: Light list (r32-uint)
+   *
+   * Note: Typically used with compute shaders for tiled/clustered lighting
+   */
+  static lightCulling(): RenderPassConfig {
+    return new RenderPassBuilder()
+      .setName('Light Culling')
+      .addColorAttachment({
+        format: 'r32-uint',
+        loadOp: 'dont-care',
+        storeOp: 'store',
+        finalLayout: 'shader-read-only',
+      })
+      .build();
+  }
+
+  /**
+   * Transparency rendering pass
+   * Renders transparent objects with alpha blending
+   *
+   * Attachments:
+   * - 0: Color (r16g16b16a16-sfloat)
+   * - 1: Depth (d32-sfloat, load existing depth)
+   *
+   * Note: Should be rendered after opaque geometry with depth testing enabled
+   */
+  static transparency(): RenderPassConfig {
+    return new RenderPassBuilder()
+      .setName('Transparency Pass')
+      .addColorAttachment({
+        format: 'r16g16b16a16-sfloat',
+        loadOp: 'load',
+        storeOp: 'store',
+        finalLayout: 'shader-read-only',
+      })
+      .addDepthAttachment({
+        format: 'd32-sfloat',
+        loadOp: 'load',
+        storeOp: 'store',
+        finalLayout: 'shader-read-only',
+      })
+      .build();
+  }
+
+  /**
+   * Final composition pass to swapchain
+   * Combines all previous passes and outputs to presentation
+   *
+   * Attachments:
+   * - 0: Swapchain color
+   *
+   * Note: Last pass in the render pipeline
+   */
+  static finalComposite(): RenderPassConfig {
+    return new RenderPassBuilder()
+      .setName('Final Composite')
+      .addColorAttachment({
+        format: 'swapchain',
+        loadOp: 'dont-care',
+        storeOp: 'store',
+        finalLayout: 'present-src',
+      })
+      .build();
+  }
 }

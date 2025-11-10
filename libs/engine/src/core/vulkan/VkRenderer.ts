@@ -1,24 +1,24 @@
 import { getNativeWindow } from '@bunbox/glfw';
-import { AbstractRenderer } from '../AbstractRenderer';
+import { AbstractRenderer, type RendererOptions } from '../AbstractRenderer';
 import { VkDevice } from './VkDevice';
 import { VkCommandPool } from './VkCommandPool';
-import { createSimpleMaterial, RenderPassPresets } from '../../builders';
-import { VkRenderPass } from './VkRenderPass';
 import { VkSwapchain } from './VkSwapchain';
 import { VkImageView } from './VkImageView';
-import { TextureImage } from '../../resources';
-import { VkImage } from './VkImage';
 import { VkCommandBuffer } from './VkCommandBuffer';
 import { VkSync } from './VkSync';
+import {
+  VkRenderPipeline,
+  type CustomPostProcessConfig,
+} from './VkRenderPipeline';
+import type { SampleCount } from '../../resources/types';
 
 export class VkRenderer extends AbstractRenderer {
   #device: VkDevice | null = null;
 
   #swapchain: VkSwapchain | null = null;
-  #depthStencilTexture: TextureImage | null = null;
-  #depthStencilImages: VkImage[] = [];
   #swapchainViews: VkImageView[] = [];
-  #depthStencilImageViews: VkImageView[] = [];
+
+  #pipeline: VkRenderPipeline | null = null;
 
   #sync: VkSync | null = null;
   #commandPool: VkCommandPool | null = null;
@@ -27,12 +27,11 @@ export class VkRenderer extends AbstractRenderer {
   #swapCount: number = 0;
   #frameCount: number = 0;
 
+  #msaa: SampleCount = 1;
+
   override dispose(): void | Promise<void> {
-    this.#depthStencilImageViews.forEach((view) => view.dispose());
-    this.#depthStencilImageViews = [];
-    this.#depthStencilImages.forEach((image) => image.dispose());
-    this.#depthStencilImages = [];
-    this.#depthStencilTexture = null;
+    this.#pipeline?.dispose();
+    this.#pipeline = null;
     this.#swapchainViews.forEach((view) => view.dispose());
     this.#swapchainViews = [];
     this.#swapchain?.dispose();
@@ -41,6 +40,8 @@ export class VkRenderer extends AbstractRenderer {
     this.#commandPool = null;
     this.#commandBuffers.forEach((buffer) => buffer.dispose());
     this.#commandBuffers = [];
+    this.#sync?.dispose();
+    this.#sync = null;
     this.#swapCount = 0;
     this.#frameCount = 0;
     this.#device?.dispose();
@@ -48,12 +49,82 @@ export class VkRenderer extends AbstractRenderer {
   }
 
   override render(meshes: any[], delta: number): void {
-    if (!this.#device || !this.#swapchain) {
+    if (!this.#device || !this.#swapchain || !this.#pipeline) {
       return;
     }
+
+    // TODO: Implement actual rendering with the pipeline
+    // Example usage of VkGeometry:
+    //
+    // 1. Create VkGeometry from Geometry:
+    //    const vkGeometry = new VkGeometry(
+    //      this.#device.logicalDevice,
+    //      this.#device.physicalDevice,
+    //      mesh.geometry
+    //    );
+    //
+    // 2. Update buffers if geometry changed:
+    //    vkGeometry.update();
+    //
+    // 3. In command buffer recording:
+    //    commandBuffer.begin();
+    //    commandBuffer.beginRenderPass(...);
+    //    commandBuffer.bindPipeline(pipeline);
+    //
+    //    // Bind vertex buffers (position, normal, uv)
+    //    const vertexBuffers = [vkGeometry.vertexBuffer, vkGeometry.normalBuffer];
+    //    if (vkGeometry.uvBuffers.length > 0) {
+    //      vertexBuffers.push(vkGeometry.uvBuffers[0]);
+    //    }
+    //    commandBuffer.bindVertexBuffers(0, vertexBuffers.filter(b => b !== null));
+    //
+    //    // Bind index buffer
+    //    if (vkGeometry.indexBuffer) {
+    //      commandBuffer.bindIndexBuffer(vkGeometry.indexBuffer);
+    //      commandBuffer.drawIndexed(vkGeometry.indexCount);
+    //    } else {
+    //      commandBuffer.draw(vkGeometry.vertexCount);
+    //    }
+    //
+    //    commandBuffer.endRenderPass();
+    //    commandBuffer.end();
+    //
+    // 4. Dispose when done:
+    //    vkGeometry.dispose();
   }
 
-  protected override _prepare(): void | Promise<void> {
+  /**
+   * Set MSAA sample count (1 = disabled)
+   */
+  setMSAA(sampleCount: SampleCount): void {
+    this.#msaa = sampleCount;
+    this.#pipeline?.setMSAA(sampleCount > 1, sampleCount);
+  }
+
+  /**
+   * Add a custom post-process stage
+   */
+  addCustomPostProcess(config: CustomPostProcessConfig): void {
+    this.#pipeline?.addCustomPostProcess(config);
+  }
+
+  /**
+   * Remove a custom post-process stage by name
+   */
+  removeCustomPostProcess(name: string): boolean {
+    return this.#pipeline?.removeCustomPostProcess(name) ?? false;
+  }
+
+  /**
+   * Clear all custom post-process stages
+   */
+  clearCustomPostProcess(): void {
+    this.#pipeline?.clearCustomPostProcess();
+  }
+
+  protected override _prepare(options?: RendererOptions): void | Promise<void> {
+    this.#msaa = options?.msaa ?? 1;
+
     const [nWindow, display] = getNativeWindow(this._getWindow());
     this.#device = new VkDevice(nWindow, display);
     const indices = this.#device.findQueueFamilies();
@@ -61,31 +132,17 @@ export class VkRenderer extends AbstractRenderer {
       this.#device.logicalDevice,
       indices.graphicsFamily,
     );
-
-    this.#depthStencilTexture = new TextureImage({
-      label: 'Depth/Stencil Texture',
-      width: 1,
-      height: 1,
-      sampleCount: 1,
-      format: 'depth32float-stencil8',
-      usage: ['depth-stencil-target'],
-      mipLevels: 1,
-    });
-    this.#depthStencilTexture.markAsDirty();
   }
 
   protected override _rebuildSwapChain(width: number, height: number): void {
-    if (!this.#device || !this.#depthStencilTexture) {
+    if (!this.#device) {
       return;
     }
-    if (this.#swapchain) {
-      this.#depthStencilImageViews.forEach((view) => view.dispose());
-      this.#depthStencilImageViews = [];
-      this.#depthStencilImages.forEach((image) => image.dispose());
-      this.#depthStencilImages = [];
+
+    if (this.#pipeline) {
       this.#swapchainViews.forEach((view) => view.dispose());
       this.#swapchainViews = [];
-      this.#swapchain.dispose();
+      this.#swapchain?.dispose();
       this.#swapchain = null;
     }
 
@@ -108,25 +165,26 @@ export class VkRenderer extends AbstractRenderer {
         }),
     );
 
-    this.#depthStencilTexture.width = this.#swapchain.width;
-    this.#depthStencilTexture.height = this.#swapchain.height;
-
-    for (let i = 0; i < this.#swapCount; i++) {
-      const depthStencilImage = new VkImage(
-        this.#device.logicalDevice,
-        this.#device.physicalDevice,
-        this.#depthStencilTexture,
+    if (!this.#pipeline) {
+      this.#pipeline = new VkRenderPipeline(
+        this.#device,
+        width,
+        height,
+        this.#swapchain.format,
+        this.#swapchain.images,
+        this.#swapchainViews,
       );
-      this.#depthStencilImages.push(depthStencilImage);
-      const depthStencilImageView = new VkImageView({
-        device: this.#device.logicalDevice,
-        format: depthStencilImage.format,
-        image: depthStencilImage.instance,
-        mask: ['depth', 'stencil'],
-      });
-      this.#depthStencilImageViews.push(depthStencilImageView);
+
+      if (this.#msaa > 1) {
+        this.#pipeline.setMSAA(true, this.#msaa);
+      }
+    } else {
+      this.#pipeline.updateSwapchain(
+        this.#swapchain.images,
+        this.#swapchainViews,
+      );
+      this.#pipeline.rebuild(width, height);
     }
-    this.#depthStencilTexture.markAsClean();
 
     if (this.#frameCount === this.#commandBuffers.length) {
       if (!this.#sync) {

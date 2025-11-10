@@ -58,6 +58,7 @@ export type WindowProperties = {
   state?: WindowState;
   alwaysOnTop?: boolean;
   backend?: 'vulkan';
+  msaa?: 1 | 2 | 4 | 8;
 };
 
 export type WindowEventMap = {
@@ -178,6 +179,7 @@ export class Window extends Root<never, never, WindowEventMap> {
       state = 'windowed',
       alwaysOnTop = false,
       backend = 'vulkan',
+      msaa = 1,
     } = props || {};
 
     this.#title = title;
@@ -225,7 +227,9 @@ export class Window extends Root<never, never, WindowEventMap> {
     this.#bindWindowCallbacks();
 
     if (backend === 'vulkan') {
-      this.#renderer = new VkRenderer(this.#windowPtr);
+      this.#renderer = new VkRenderer(this.#windowPtr, {
+        msaa,
+      });
     } else {
       throw new EngineError(`unsupported backend: ${backend}`, 'Window');
     }
@@ -350,6 +354,48 @@ export class Window extends Root<never, never, WindowEventMap> {
 
   get backgroundColor(): Color {
     return new Color();
+  }
+
+  /**
+   * Set MSAA (Multi-Sample Anti-Aliasing) sample count
+   * @param sampleCount Number of samples (1 = disabled, 2, 4, or 8)
+   */
+  setMSAA(sampleCount: 1 | 2 | 4 | 8): void {
+    if (this.#renderer && 'setMSAA' in this.#renderer) {
+      (this.#renderer as any).setMSAA(sampleCount);
+    }
+  }
+
+  /**
+   * Add a custom post-process effect to the render pipeline
+   * @param name Unique identifier for this post-process effect
+   * @param config RenderPassConfig defining the post-process pass
+   */
+  addPostProcessEffect(name: string, config: any): void {
+    if (this.#renderer && 'addCustomPostProcess' in this.#renderer) {
+      (this.#renderer as any).addCustomPostProcess({ name, config });
+    }
+  }
+
+  /**
+   * Remove a custom post-process effect from the render pipeline
+   * @param name Identifier of the effect to remove
+   * @returns true if the effect was removed, false if not found
+   */
+  removePostProcessEffect(name: string): boolean {
+    if (this.#renderer && 'removeCustomPostProcess' in this.#renderer) {
+      return (this.#renderer as any).removeCustomPostProcess(name);
+    }
+    return false;
+  }
+
+  /**
+   * Clear all custom post-process effects
+   */
+  clearPostProcessEffects(): void {
+    if (this.#renderer && 'clearCustomPostProcess' in this.#renderer) {
+      (this.#renderer as any).clearCustomPostProcess();
+    }
   }
 
   set title(value: string) {

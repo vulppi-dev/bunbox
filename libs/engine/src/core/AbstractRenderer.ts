@@ -3,20 +3,24 @@ import { type Disposable } from '@bunbox/utils';
 import { ptr, type Pointer } from 'bun:ffi';
 import { Vector2 } from '../math';
 
+export interface RendererOptions {
+  msaa?: 1 | 2 | 4 | 8;
+}
+
 export abstract class AbstractRenderer implements Disposable {
   #windowPtr: Pointer;
 
   #width: Int32Array;
   #height: Int32Array;
 
-  constructor(window: Pointer) {
+  constructor(window: Pointer, options?: RendererOptions) {
     // Prepare auxiliary buffers
     this.#width = new Int32Array(1);
     this.#height = new Int32Array(1);
 
     // Initialize window
     this.#windowPtr = window;
-    this._prepare();
+    this._prepare(options);
     this.rebuildFrame();
   }
 
@@ -44,6 +48,6 @@ export abstract class AbstractRenderer implements Disposable {
 
   abstract dispose(): void | Promise<void>;
   abstract render(meshes: any[], delta: number): void;
-  protected abstract _prepare(): void | Promise<void>;
+  protected abstract _prepare(options?: RendererOptions): void | Promise<void>;
   protected abstract _rebuildSwapChain(width: number, height: number): void;
 }

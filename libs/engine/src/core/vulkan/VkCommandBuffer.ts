@@ -6,6 +6,7 @@ import {
   vkCommandBufferAllocateInfo,
   vkCommandBufferBeginInfo,
   VkCommandBufferLevel,
+  VkIndexType,
   VkPipelineBindPoint,
   vkRect2D,
   vkRenderPassBeginInfo,
@@ -18,6 +19,7 @@ import { DynamicLibError } from '../../errors';
 import { Color } from '../../math/Color';
 import { Rect } from '../../math/Rect';
 import { VK_DEBUG } from '../../singleton/logger';
+import type { VkBuffer } from './VkBuffer';
 
 /**
  * Wrapper for Vulkan VkCommandBuffer
@@ -177,6 +179,77 @@ export class VkCommandBuffer implements Disposable {
       VkPipelineBindPoint.GRAPHICS,
       pipeline,
     );
+  }
+
+  /**
+   * Bind vertex buffers
+   */
+  bindVertexBuffers(
+    firstBinding: number,
+    buffers: VkBuffer[],
+    offsets?: bigint[],
+  ): void {
+    if (!this.#isRecording) {
+      throw new DynamicLibError(
+        'Cannot bind vertex buffers: command buffer is not recording',
+        'Vulkan',
+      );
+    }
+
+    if (buffers.length === 0) {
+      return;
+    }
+
+    VK_DEBUG(`Binding ${buffers.length} vertex buffer(s)`);
+
+    const bufferPointers = new BigUint64Array(buffers.length);
+    for (let i = 0; i < buffers.length; i++) {
+      bufferPointers[i] = BigInt(buffers[i]!.instance);
+    }
+
+    const offsetArray = offsets
+      ? new BigUint64Array(offsets)
+      : new BigUint64Array(buffers.length).fill(0n);
+
+    VK.vkCmdBindVertexBuffers(
+      this.#instance,
+      firstBinding,
+      buffers.length,
+      ptr(bufferPointers),
+      ptr(offsetArray),
+    );
+
+    VK_DEBUG('Vertex buffers bound');
+  }
+
+  /**
+   * Bind an index buffer
+   */
+  bindIndexBuffer(
+    buffer: VkBuffer,
+    offset: bigint = 0n,
+    indexType: 'uint16' | 'uint32' = 'uint32',
+  ): void {
+    if (!this.#isRecording) {
+      throw new DynamicLibError(
+        'Cannot bind index buffer: command buffer is not recording',
+        'Vulkan',
+      );
+    }
+
+    VK_DEBUG(`Binding index buffer: 0x${buffer.instance.toString(16)}`);
+
+    const vkIndexType =
+      indexType === 'uint16' ? VkIndexType.UINT16 : VkIndexType.UINT32;
+
+    VK.vkCmdBindIndexBuffer(
+      this.#instance,
+      buffer.instance,
+      offset,
+      vkIndexType,
+    );
+
+    VK_DEBUG('Index buffer bound');
   }
 
   /**
