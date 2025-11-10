@@ -1,4 +1,5 @@
 import { i32, ptrAny, struct, u32, u64 } from '@bunbox/struct';
+import { VkStructureType11 } from '../enums';
 import {
   vkPhysicalDeviceFeatures,
   vkPhysicalDeviceMemoryProperties,
@@ -9,19 +10,19 @@ import {
 // MARK: Vulkan 1.1 Structures
 
 export const vkPhysicalDeviceFeatures2 = struct({
-  sType: i32(),
+  sType: i32(VkStructureType11.PHYSICAL_DEVICE_FEATURES_2),
   pNext: ptrAny(),
   features: vkPhysicalDeviceFeatures,
 });
 
 export const vkPhysicalDeviceProperties2 = struct({
-  sType: i32(),
+  sType: i32(VkStructureType11.PHYSICAL_DEVICE_PROPERTIES_2),
   pNext: ptrAny(),
   properties: vkPhysicalDeviceProperties,
 });
 
 export const vkFormatProperties2 = struct({
-  sType: i32(),
+  sType: i32(VkStructureType11.FORMAT_PROPERTIES_2),
   pNext: ptrAny(),
   formatProperties: struct({
     linearTilingFeatures: u32(),
@@ -31,7 +32,7 @@ export const vkFormatProperties2 = struct({
 });
 
 export const vkImageFormatProperties2 = struct({
-  sType: i32(),
+  sType: i32(VkStructureType11.IMAGE_FORMAT_PROPERTIES_2),
   pNext: ptrAny(),
   imageFormatProperties: struct({
     maxExtent: struct({
@@ -47,7 +48,7 @@ export const vkImageFormatProperties2 = struct({
 });
 
 export const vkPhysicalDeviceImageFormatInfo2 = struct({
-  sType: i32(),
+  sType: i32(VkStructureType11.PHYSICAL_DEVICE_IMAGE_FORMAT_INFO_2),
   pNext: ptrAny(),
   format: i32(),
   type: i32(),
@@ -57,19 +58,19 @@ export const vkPhysicalDeviceImageFormatInfo2 = struct({
 });
 
 export const vkQueueFamilyProperties2 = struct({
-  sType: i32(),
+  sType: i32(VkStructureType11.QUEUE_FAMILY_PROPERTIES_2),
   pNext: ptrAny(),
   queueFamilyProperties: vkQueueFamilyProperties,
 });
 
 export const vkPhysicalDeviceMemoryProperties2 = struct({
-  sType: i32(),
+  sType: i32(VkStructureType11.PHYSICAL_DEVICE_MEMORY_PROPERTIES_2),
   pNext: ptrAny(),
   memoryProperties: vkPhysicalDeviceMemoryProperties,
 });
 
 export const vkBindBufferMemoryInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType11.BIND_BUFFER_MEMORY_INFO),
   pNext: ptrAny(),
   buffer: ptrAny(),
   memory: ptrAny(),
@@ -77,7 +78,7 @@ export const vkBindBufferMemoryInfo = struct({
 });
 
 export const vkBindImageMemoryInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType11.BIND_IMAGE_MEMORY_INFO),
   pNext: ptrAny(),
   image: ptrAny(),
   memory: ptrAny(),
@@ -85,7 +86,7 @@ export const vkBindImageMemoryInfo = struct({
 });
 
 export const vkPhysicalDevice16BitStorageFeatures = struct({
-  sType: i32(),
+  sType: i32(VkStructureType11.PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES),
   pNext: ptrAny(),
   storageBuffer16BitAccess: u32(),
   uniformAndStorageBuffer16BitAccess: u32(),
@@ -94,47 +95,47 @@ export const vkPhysicalDevice16BitStorageFeatures = struct({
 });
 
 export const vkMemoryDedicatedRequirements = struct({
-  sType: i32(),
+  sType: i32(VkStructureType11.MEMORY_DEDICATED_REQUIREMENTS),
   pNext: ptrAny(),
   prefersDedicatedAllocation: u32(),
   requiresDedicatedAllocation: u32(),
 });
 
 export const vkMemoryDedicatedAllocateInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType11.MEMORY_DEDICATED_ALLOCATE_INFO),
   pNext: ptrAny(),
   image: ptrAny(),
   buffer: ptrAny(),
 });
 
 export const vkMemoryAllocateFlagsInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType11.MEMORY_ALLOCATE_FLAGS_INFO),
   pNext: ptrAny(),
   flags: u32(),
   deviceMask: u32(),
 });
 
 export const vkDeviceGroupDeviceCreateInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType11.DEVICE_GROUP_DEVICE_CREATE_INFO),
   pNext: ptrAny(),
   physicalDeviceCount: u32(),
   pPhysicalDevices: ptrAny(),
 });
 
 export const vkBufferMemoryRequirementsInfo2 = struct({
-  sType: i32(),
+  sType: i32(VkStructureType11.BUFFER_MEMORY_REQUIREMENTS_INFO_2),
   pNext: ptrAny(),
   buffer: ptrAny(),
 });
 
 export const vkImageMemoryRequirementsInfo2 = struct({
-  sType: i32(),
+  sType: i32(VkStructureType11.IMAGE_MEMORY_REQUIREMENTS_INFO_2),
   pNext: ptrAny(),
   image: ptrAny(),
 });
 
 export const vkMemoryRequirements2 = struct({
-  sType: i32(),
+  sType: i32(VkStructureType11.MEMORY_REQUIREMENTS_2),
   pNext: ptrAny(),
   memoryRequirements: struct({
     size: u64(),
@@ -144,7 +145,7 @@ export const vkMemoryRequirements2 = struct({
 });
 
 export const vkSamplerYcbcrConversionCreateInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType11.SAMPLER_YCBCR_CONVERSION_CREATE_INFO),
   pNext: ptrAny(),
   format: i32(),
   ycbcrModel: i32(),
@@ -162,13 +163,13 @@ export const vkSamplerYcbcrConversionCreateInfo = struct({
 });
 
 export const vkSamplerYcbcrConversionInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType11.SAMPLER_YCBCR_CONVERSION_INFO),
   pNext: ptrAny(),
   conversion: ptrAny(),
 });
 
 export const vkDescriptorUpdateTemplateCreateInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType11.DESCRIPTOR_UPDATE_TEMPLATE_CREATE_INFO),
   pNext: ptrAny(),
   flags: u32(),
   descriptorUpdateEntryCount: u32(),
@@ -187,19 +188,19 @@ export const vkExternalMemoryProperties = struct({
 });
 
 export const vkPhysicalDeviceExternalImageFormatInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType11.PHYSICAL_DEVICE_EXTERNAL_IMAGE_FORMAT_INFO),
   pNext: ptrAny(),
   handleType: u32(),
 });
 
 export const vkExternalImageFormatProperties = struct({
-  sType: i32(),
+  sType: i32(VkStructureType11.EXTERNAL_IMAGE_FORMAT_PROPERTIES),
   pNext: ptrAny(),
   externalMemoryProperties: vkExternalMemoryProperties,
 });
 
 export const vkPhysicalDeviceExternalBufferInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType11.PHYSICAL_DEVICE_EXTERNAL_BUFFER_INFO),
   pNext: ptrAny(),
   flags: u32(),
   usage: u32(),
@@ -207,13 +208,13 @@ export const vkPhysicalDeviceExternalBufferInfo = struct({
 });
 
 export const vkExternalBufferProperties = struct({
-  sType: i32(),
+  sType: i32(VkStructureType11.EXTERNAL_BUFFER_PROPERTIES),
   pNext: ptrAny(),
   externalMemoryProperties: vkExternalMemoryProperties,
 });
 
 export const vkPhysicalDeviceIDProperties = struct({
-  sType: i32(),
+  sType: i32(VkStructureType11.PHYSICAL_DEVICE_ID_PROPERTIES),
   pNext: ptrAny(),
   deviceUUID: ptrAny(),
   driverUUID: ptrAny(),
@@ -223,25 +224,25 @@ export const vkPhysicalDeviceIDProperties = struct({
 });
 
 export const vkExternalMemoryImageCreateInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType11.EXTERNAL_MEMORY_IMAGE_CREATE_INFO),
   pNext: ptrAny(),
   handleTypes: u32(),
 });
 
 export const vkExternalMemoryBufferCreateInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType11.EXTERNAL_MEMORY_BUFFER_CREATE_INFO),
   pNext: ptrAny(),
   handleTypes: u32(),
 });
 
 export const vkExportMemoryAllocateInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType11.EXPORT_MEMORY_ALLOCATE_INFO),
   pNext: ptrAny(),
   handleTypes: u32(),
 });
 
 export const vkPhysicalDeviceMultiviewFeatures = struct({
-  sType: i32(),
+  sType: i32(VkStructureType11.PHYSICAL_DEVICE_MULTIVIEW_FEATURES),
   pNext: ptrAny(),
   multiview: u32(),
   multiviewGeometryShader: u32(),
@@ -249,14 +250,14 @@ export const vkPhysicalDeviceMultiviewFeatures = struct({
 });
 
 export const vkPhysicalDeviceMultiviewProperties = struct({
-  sType: i32(),
+  sType: i32(VkStructureType11.PHYSICAL_DEVICE_MULTIVIEW_PROPERTIES),
   pNext: ptrAny(),
   maxMultiviewViewCount: u32(),
   maxMultiviewInstanceIndex: u32(),
 });
 
 export const vkRenderPassMultiviewCreateInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType11.RENDER_PASS_MULTIVIEW_CREATE_INFO),
   pNext: ptrAny(),
   subpassCount: u32(),
   pViewMasks: ptrAny(),

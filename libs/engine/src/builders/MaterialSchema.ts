@@ -10,6 +10,21 @@ import type {
 import type { Rasterizer } from '../resources/Rasterizer';
 
 /**
+ * Shader stage types for graphics pipeline
+ */
+export type ShaderStage = 'vertex' | 'fragment';
+
+/**
+ * Shader sources - can be a single string or per-stage definitions
+ */
+export type ShaderSources = string | { [x in ShaderStage]: string };
+
+/**
+ * Shader entry points - defines entry function names per stage
+ */
+export type ShaderEntries = { [x in ShaderStage]: string };
+
+/**
  * Material primitive topology types (string-based for API agnosticism)
  */
 export type MaterialPrimitive = 'triangles' | 'lines' | 'points';
@@ -40,8 +55,10 @@ export type MaterialDescriptor<
 > = {
   /** Optional label for debugging */
   label?: string;
-  /** Shader source code (WGSL, GLSL, etc.) */
-  shader: string;
+  /** Shader source code (WGSL, GLSL, etc.) - can be a single string or per-stage */
+  shader: ShaderSources;
+  /** Shader entry point function names per stage */
+  entries: ShaderEntries;
   /** Primitive topology */
   primitive?: MaterialPrimitive;
   /** Rasterizer state (depth, stencil, blend, etc.) */

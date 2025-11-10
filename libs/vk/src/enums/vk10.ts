@@ -298,6 +298,18 @@ export enum VkSharingMode {
   CONCURRENT = 1,
 }
 
+// MARK: Sample Count
+
+export enum VkSampleCountFlagBits {
+  COUNT_1_BIT = 0x00000001,
+  COUNT_2_BIT = 0x00000002,
+  COUNT_4_BIT = 0x00000004,
+  COUNT_8_BIT = 0x00000008,
+  COUNT_16_BIT = 0x00000010,
+  COUNT_32_BIT = 0x00000020,
+  COUNT_64_BIT = 0x00000040,
+}
+
 // MARK: Image Layout
 
 export enum VkImageLayout {
@@ -372,6 +384,15 @@ export enum VkPolygonMode {
 export enum VkFrontFace {
   COUNTER_CLOCKWISE = 0,
   CLOCKWISE = 1,
+}
+
+// MARK: Cull Mode
+
+export enum VkCullModeFlagBits {
+  NONE = 0,
+  FRONT_BIT = 0x00000001,
+  BACK_BIT = 0x00000002,
+  FRONT_AND_BACK = 0x00000003,
 }
 
 // MARK: Compare Op
@@ -453,6 +474,15 @@ export enum VkBlendOp {
   REVERSE_SUBTRACT = 2,
   MIN = 3,
   MAX = 4,
+}
+
+// MARK: Color Component
+
+export enum VkColorComponentFlagBits {
+  R_BIT = 0x00000001,
+  G_BIT = 0x00000002,
+  B_BIT = 0x00000004,
+  A_BIT = 0x00000008,
 }
 
 // MARK: Dynamic State
@@ -539,6 +569,18 @@ export enum VkAttachmentStoreOp {
 export enum VkPipelineBindPoint {
   GRAPHICS = 0,
   COMPUTE = 1,
+}
+
+// MARK: Shader Stage
+
+export enum VkShaderStageFlagBits {
+  VERTEX_BIT = 0x00000001,
+  TESSELLATION_CONTROL_BIT = 0x00000002,
+  TESSELLATION_EVALUATION_BIT = 0x00000004,
+  GEOMETRY_BIT = 0x00000008,
+  FRAGMENT_BIT = 0x00000010,
+  COMPUTE_BIT = 0x00000020,
+  ALL_GRAPHICS = 0x0000001f,
 }
 
 // MARK: Command Buffer Level

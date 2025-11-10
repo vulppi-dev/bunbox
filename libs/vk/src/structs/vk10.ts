@@ -10,11 +10,12 @@ import {
   u64,
   u8,
 } from '@bunbox/struct';
+import { VkStructureType } from '../enums';
 
 // MARK: Base Structures
 
 export const vkApplicationInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.APPLICATION_INFO),
   pNext: ptrAny(),
   pApplicationName: string(),
   applicationVersion: u32(),
@@ -24,7 +25,7 @@ export const vkApplicationInfo = struct({
 });
 
 export const vkInstanceCreateInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.INSTANCE_CREATE_INFO),
   pNext: ptrAny(),
   flags: u32(),
   pApplicationInfo: ptrAny(),
@@ -272,7 +273,7 @@ export const vkQueueFamilyProperties = struct({
 // MARK: Device Structures
 
 export const vkDeviceQueueCreateInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.DEVICE_QUEUE_CREATE_INFO),
   pNext: ptrAny(),
   flags: u32(),
   queueFamilyIndex: u32(),
@@ -281,7 +282,7 @@ export const vkDeviceQueueCreateInfo = struct({
 });
 
 export const vkDeviceCreateInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.DEVICE_CREATE_INFO),
   pNext: ptrAny(),
   flags: u32(),
   queueCreateInfoCount: u32(),
@@ -296,14 +297,14 @@ export const vkDeviceCreateInfo = struct({
 // MARK: Memory Structures
 
 export const vkMemoryAllocateInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.MEMORY_ALLOCATE_INFO),
   pNext: ptrAny(),
   allocationSize: u64(),
   memoryTypeIndex: u32(),
 });
 
 export const vkMappedMemoryRange = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.MAPPED_MEMORY_RANGE),
   pNext: ptrAny(),
   memory: ptrAny(),
   offset: u64(),
@@ -313,19 +314,19 @@ export const vkMappedMemoryRange = struct({
 // MARK: Synchronization Structures
 
 export const vkFenceCreateInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.FENCE_CREATE_INFO),
   pNext: ptrAny(),
   flags: u32(),
 });
 
 export const vkSemaphoreCreateInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.SEMAPHORE_CREATE_INFO),
   pNext: ptrAny(),
   flags: u32(),
 });
 
 export const vkEventCreateInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.EVENT_CREATE_INFO),
   pNext: ptrAny(),
   flags: u32(),
 });
@@ -333,7 +334,7 @@ export const vkEventCreateInfo = struct({
 // MARK: Buffer Structures
 
 export const vkBufferCreateInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.BUFFER_CREATE_INFO),
   pNext: ptrAny(),
   flags: u32(),
   size: u64(),
@@ -344,7 +345,7 @@ export const vkBufferCreateInfo = struct({
 });
 
 export const vkBufferViewCreateInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.BUFFER_VIEW_CREATE_INFO),
   pNext: ptrAny(),
   flags: u32(),
   buffer: ptrAny(),
@@ -356,7 +357,7 @@ export const vkBufferViewCreateInfo = struct({
 // MARK: Image Structures
 
 export const vkImageCreateInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.IMAGE_CREATE_INFO),
   pNext: ptrAny(),
   flags: u32(),
   imageType: i32(),
@@ -378,7 +379,7 @@ export const vkImageCreateInfo = struct({
 });
 
 export const vkImageViewCreateInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.IMAGE_VIEW_CREATE_INFO),
   pNext: ptrAny(),
   flags: u32(),
   image: ptrAny(),
@@ -415,7 +416,7 @@ export const vkImageSubresourceRange = struct({
 });
 
 export const vkImageMemoryBarrier = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.IMAGE_MEMORY_BARRIER),
   pNext: ptrAny(),
   srcAccessMask: u32(),
   dstAccessMask: u32(),
@@ -430,7 +431,7 @@ export const vkImageMemoryBarrier = struct({
 // MARK: Pipeline Structures
 
 export const vkPipelineShaderStageCreateInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.PIPELINE_SHADER_STAGE_CREATE_INFO),
   pNext: ptrAny(),
   flags: u32(),
   stage: u32(),
@@ -440,7 +441,7 @@ export const vkPipelineShaderStageCreateInfo = struct({
 });
 
 export const vkPipelineVertexInputStateCreateInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO),
   pNext: ptrAny(),
   flags: u32(),
   vertexBindingDescriptionCount: u32(),
@@ -450,7 +451,7 @@ export const vkPipelineVertexInputStateCreateInfo = struct({
 });
 
 export const vkPipelineInputAssemblyStateCreateInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO),
   pNext: ptrAny(),
   flags: u32(),
   topology: i32(),
@@ -478,7 +479,7 @@ export const vkRect2D = struct({
 });
 
 export const vkPipelineViewportStateCreateInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.PIPELINE_VIEWPORT_STATE_CREATE_INFO),
   pNext: ptrAny(),
   flags: u32(),
   viewportCount: u32(),
@@ -488,7 +489,7 @@ export const vkPipelineViewportStateCreateInfo = struct({
 });
 
 export const vkPipelineRasterizationStateCreateInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.PIPELINE_RASTERIZATION_STATE_CREATE_INFO),
   pNext: ptrAny(),
   flags: u32(),
   depthClampEnable: u32(),
@@ -504,7 +505,7 @@ export const vkPipelineRasterizationStateCreateInfo = struct({
 });
 
 export const vkPipelineMultisampleStateCreateInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.PIPELINE_MULTISAMPLE_STATE_CREATE_INFO),
   pNext: ptrAny(),
   flags: u32(),
   rasterizationSamples: i32(),
@@ -516,7 +517,7 @@ export const vkPipelineMultisampleStateCreateInfo = struct({
 });
 
 export const vkPipelineDepthStencilStateCreateInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO),
   pNext: ptrAny(),
   flags: u32(),
   depthTestEnable: u32(),
@@ -558,7 +559,7 @@ export const vkPipelineColorBlendAttachmentState = struct({
 });
 
 export const vkPipelineColorBlendStateCreateInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.PIPELINE_COLOR_BLEND_STATE_CREATE_INFO),
   pNext: ptrAny(),
   flags: u32(),
   logicOpEnable: u32(),
@@ -569,7 +570,7 @@ export const vkPipelineColorBlendStateCreateInfo = struct({
 });
 
 export const vkPipelineDynamicStateCreateInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.PIPELINE_DYNAMIC_STATE_CREATE_INFO),
   pNext: ptrAny(),
   flags: u32(),
   dynamicStateCount: u32(),
@@ -577,7 +578,7 @@ export const vkPipelineDynamicStateCreateInfo = struct({
 });
 
 export const vkGraphicsPipelineCreateInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.GRAPHICS_PIPELINE_CREATE_INFO),
   pNext: ptrAny(),
   flags: u32(),
   stageCount: u32(),
@@ -599,7 +600,7 @@ export const vkGraphicsPipelineCreateInfo = struct({
 });
 
 export const vkComputePipelineCreateInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.COMPUTE_PIPELINE_CREATE_INFO),
   pNext: ptrAny(),
   flags: u32(),
   stage: vkPipelineShaderStageCreateInfo,
@@ -651,7 +652,7 @@ export const vkSubpassDependency = struct({
 });
 
 export const vkRenderPassCreateInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.RENDER_PASS_CREATE_INFO),
   pNext: ptrAny(),
   flags: u32(),
   attachmentCount: u32(),
@@ -663,7 +664,7 @@ export const vkRenderPassCreateInfo = struct({
 });
 
 export const vkFramebufferCreateInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.FRAMEBUFFER_CREATE_INFO),
   pNext: ptrAny(),
   flags: u32(),
   renderPass: ptrAny(),
@@ -675,7 +676,7 @@ export const vkFramebufferCreateInfo = struct({
 });
 
 export const vkRenderPassBeginInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.RENDER_PASS_BEGIN_INFO),
   pNext: ptrAny(),
   renderPass: ptrAny(),
   framebuffer: ptrAny(),
@@ -687,14 +688,14 @@ export const vkRenderPassBeginInfo = struct({
 // MARK: Command Buffer Structures
 
 export const vkCommandPoolCreateInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.COMMAND_POOL_CREATE_INFO),
   pNext: ptrAny(),
   flags: u32(),
   queueFamilyIndex: u32(),
 });
 
 export const vkCommandBufferAllocateInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.COMMAND_BUFFER_ALLOCATE_INFO),
   pNext: ptrAny(),
   commandPool: ptrAny(),
   level: i32(),
@@ -702,14 +703,14 @@ export const vkCommandBufferAllocateInfo = struct({
 });
 
 export const vkCommandBufferBeginInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.COMMAND_BUFFER_BEGIN_INFO),
   pNext: ptrAny(),
   flags: u32(),
   pInheritanceInfo: ptrAny(),
 });
 
 export const vkSubmitInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.SUBMIT_INFO),
   pNext: ptrAny(),
   waitSemaphoreCount: u32(),
   pWaitSemaphores: ptrAny(),
@@ -731,7 +732,7 @@ export const vkDescriptorSetLayoutBinding = struct({
 });
 
 export const vkDescriptorSetLayoutCreateInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.DESCRIPTOR_SET_LAYOUT_CREATE_INFO),
   pNext: ptrAny(),
   flags: u32(),
   bindingCount: u32(),
@@ -744,7 +745,7 @@ export const vkDescriptorPoolSize = struct({
 });
 
 export const vkDescriptorPoolCreateInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.DESCRIPTOR_POOL_CREATE_INFO),
   pNext: ptrAny(),
   flags: u32(),
   maxSets: u32(),
@@ -753,7 +754,7 @@ export const vkDescriptorPoolCreateInfo = struct({
 });
 
 export const vkDescriptorSetAllocateInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.DESCRIPTOR_SET_ALLOCATE_INFO),
   pNext: ptrAny(),
   descriptorPool: ptrAny(),
   descriptorSetCount: u32(),
@@ -773,7 +774,7 @@ export const vkDescriptorBufferInfo = struct({
 });
 
 export const vkWriteDescriptorSet = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.WRITE_DESCRIPTOR_SET),
   pNext: ptrAny(),
   dstSet: ptrAny(),
   dstBinding: u32(),
@@ -786,7 +787,7 @@ export const vkWriteDescriptorSet = struct({
 });
 
 export const vkCopyDescriptorSet = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.COPY_DESCRIPTOR_SET),
   pNext: ptrAny(),
   srcSet: ptrAny(),
   srcBinding: u32(),
@@ -800,7 +801,7 @@ export const vkCopyDescriptorSet = struct({
 // MARK: Shader Structures
 
 export const vkShaderModuleCreateInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.SHADER_MODULE_CREATE_INFO),
   pNext: ptrAny(),
   flags: u32(),
   codeSize: u64(),
@@ -808,7 +809,7 @@ export const vkShaderModuleCreateInfo = struct({
 });
 
 export const vkPipelineLayoutCreateInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.PIPELINE_LAYOUT_CREATE_INFO),
   pNext: ptrAny(),
   flags: u32(),
   setLayoutCount: u32(),
@@ -820,7 +821,7 @@ export const vkPipelineLayoutCreateInfo = struct({
 // MARK: Sampler Structures
 
 export const vkSamplerCreateInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.SAMPLER_CREATE_INFO),
   pNext: ptrAny(),
   flags: u32(),
   magFilter: i32(),
@@ -843,7 +844,7 @@ export const vkSamplerCreateInfo = struct({
 // MARK: Extension Structures - EXT_debug_utils
 
 export const vkDebugUtilsMessengerCreateInfoEXT = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT),
   pNext: ptrAny(),
   flags: u32(),
   messageSeverity: u32(),
@@ -853,7 +854,7 @@ export const vkDebugUtilsMessengerCreateInfoEXT = struct({
 });
 
 export const vkDebugUtilsMessengerCallbackDataEXT = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT),
   pNext: ptrAny(),
   flags: u32(),
   pMessageIdName: string(),

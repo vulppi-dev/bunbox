@@ -1,4 +1,5 @@
 import { array, i32, ptrAny, struct, u32, u64 } from '@bunbox/struct';
+import { VkStructureType } from '../enums';
 
 // MARK: VK_KHR_surface
 
@@ -28,7 +29,7 @@ export const vkSurfaceFormatKHR = struct({
 // MARK: VK_KHR_win32_surface
 
 export const vkWin32SurfaceCreateInfoKHR = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.WIN32_SURFACE_CREATE_INFO_KHR),
   pNext: ptrAny(),
   flags: u32(),
   hinstance: u64(),
@@ -38,7 +39,7 @@ export const vkWin32SurfaceCreateInfoKHR = struct({
 // MARK: VK_KHR_xlib_surface
 
 export const vkXlibSurfaceCreateInfoKHR = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.XLIB_SURFACE_CREATE_INFO_KHR),
   pNext: ptrAny(),
   flags: u32(),
   dpy: u64(),
@@ -48,7 +49,7 @@ export const vkXlibSurfaceCreateInfoKHR = struct({
 // MARK: VK_KHR_xcb_surface
 
 export const vkXcbSurfaceCreateInfoKHR = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.XCB_SURFACE_CREATE_INFO_KHR),
   pNext: ptrAny(),
   flags: u32(),
   connection: u64(),
@@ -58,7 +59,7 @@ export const vkXcbSurfaceCreateInfoKHR = struct({
 // MARK: VK_KHR_wayland_surface
 
 export const vkWaylandSurfaceCreateInfoKHR = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.WAYLAND_SURFACE_CREATE_INFO_KHR),
   pNext: ptrAny(),
   flags: u32(),
   display: u64(),
@@ -68,7 +69,7 @@ export const vkWaylandSurfaceCreateInfoKHR = struct({
 // MARK: VK_EXT_metal_surface
 
 export const vkMetalSurfaceCreateInfoEXT = struct({
-  sType: i32(),
+  sType: i32(VkStructureType.METAL_SURFACE_CREATE_INFO_EXT),
   pNext: ptrAny(),
   flags: u32(),
   pLayer: u64(),

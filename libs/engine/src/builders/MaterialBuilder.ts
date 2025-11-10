@@ -11,11 +11,14 @@ import type {
   MaterialSchema,
   ConstantProperties,
   MutableProperties,
+  ShaderSources,
+  ShaderEntries,
 } from './MaterialSchema';
 import { validateSchema } from './MaterialSchema';
 import type { PropertyDefinition } from './MaterialPropertyTypes';
 import { validateProperty } from './MaterialPropertyTypes';
 import { Rasterizer } from '../resources/Rasterizer';
+import { triangleShaderSource } from '../shaders';
 
 /**
  * Type-safe material with constant and mutable properties
@@ -24,7 +27,8 @@ export class Material<
   TSchema extends MaterialSchema = MaterialSchema,
 > extends DirtyState {
   #label: string;
-  #shader: string;
+  #shader: ShaderSources;
+  #entries: ShaderEntries;
   #primitive: MaterialPrimitive;
   #rasterizer: Rasterizer;
   #schema: TSchema;
@@ -40,6 +44,7 @@ export class Material<
 
     this.#label = descriptor.label ?? '';
     this.#shader = descriptor.shader;
+    this.#entries = descriptor.entries;
     this.#primitive = descriptor.primitive ?? 'triangles';
     this.#rasterizer = descriptor.rasterizer ?? new Rasterizer();
     this.#schema = descriptor.schema;
@@ -87,6 +92,7 @@ export class Material<
     this.#hash = sha(
       JSON.stringify({
         shader: this.#shader,
+        entries: this.#entries,
         primitive: this.#primitive,
         rasterizer: this.#rasterizer.hash,
         constants: this.#constants,
@@ -100,8 +106,12 @@ export class Material<
     return this.#label;
   }
 
-  get shader(): string {
+  get shader(): ShaderSources {
     return this.#shader;
+  }
+
+  get entries(): ShaderEntries {
+    return this.#entries;
   }
 
   get primitive(): MaterialPrimitive {
@@ -228,6 +238,7 @@ export class Material<
     const cloned = new Material<TSchema>({
       label: this.#label,
       shader: this.#shader,
+      entries: this.#entries,
       primitive: this.#primitive,
       rasterizer: this.#rasterizer.clone(),
       schema: this.#schema,
@@ -271,4 +282,17 @@ export function createMaterial<TSchema extends MaterialSchema>(
   descriptor: MaterialDescriptor<TSchema>,
 ): Material<TSchema> {
   return new Material(descriptor);
+}
+
+/**
+ * Simple material creation helper with default schema
+ */
+export function createSimpleMaterial() {
+  return new Material({
+    label: 'SimpleMaterial',
+    shader: triangleShaderSource,
+    entries: { vertex: 'vertex_main', fragment: 'fragment_main' },
+    schema: {},
+    primitive: 'triangles',
+  });
 }

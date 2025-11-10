@@ -1,16 +1,15 @@
-import { type Disposable } from '@bunbox/utils';
-import { ptr, type Pointer } from 'bun:ffi';
-import { DynamicLibError } from '../../errors';
-import { VK_DEBUG } from '../../singleton/logger';
 import { getInstanceBuffer, instantiate } from '@bunbox/struct';
+import { type Disposable } from '@bunbox/utils';
 import {
   getResultMessage,
   VK,
   VkCommandPoolCreateFlagBits,
   vkCommandPoolCreateInfo,
   VkResult,
-  VkStructureType,
 } from '@bunbox/vk';
+import { ptr, type Pointer } from 'bun:ffi';
+import { DynamicLibError } from '../../errors';
+import { VK_DEBUG } from '../../singleton/logger';
 
 export class VkCommandPool implements Disposable {
   #vkLogicalDevice: Pointer;
@@ -25,7 +24,6 @@ export class VkCommandPool implements Disposable {
     VK_DEBUG('Creating command pool');
 
     const createInfo = instantiate(vkCommandPoolCreateInfo);
-    createInfo.sType = VkStructureType.COMMAND_POOL_CREATE_INFO;
     createInfo.flags =
       VkCommandPoolCreateFlagBits.TRANSIENT_BIT |
       VkCommandPoolCreateFlagBits.RESET_COMMAND_BUFFER_BIT;

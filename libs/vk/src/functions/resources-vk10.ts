@@ -222,6 +222,71 @@ export const vkDestroyShaderModule = {
   returns: 'void',
 } as const satisfies FFIFunction;
 
+// MARK: Pipeline Functions
+
+/**
+ * Create graphics pipelines
+ *
+ * C ref: `VkResult vkCreateGraphicsPipelines(
+ *   VkDevice device,
+ *   VkPipelineCache pipelineCache,
+ *   uint32_t createInfoCount,
+ *   const VkGraphicsPipelineCreateInfo* pCreateInfos,
+ *   const VkAllocationCallbacks* pAllocator,
+ *   VkPipeline* pPipelines)`
+ */
+export const vkCreateGraphicsPipelines = {
+  args: ['ptr', 'ptr', 'u32', 'ptr', 'ptr', 'ptr'] as [
+    device: 'ptr',
+    pipelineCache: 'ptr',
+    createInfoCount: 'u32',
+    pCreateInfos: 'ptr',
+    pAllocator: 'ptr',
+    pPipelines: 'ptr',
+  ],
+  returns: 'i32',
+} as const satisfies FFIFunction;
+
+/**
+ * Create compute pipelines
+ *
+ * C ref: `VkResult vkCreateComputePipelines(
+ *   VkDevice device,
+ *   VkPipelineCache pipelineCache,
+ *   uint32_t createInfoCount,
+ *   const VkComputePipelineCreateInfo* pCreateInfos,
+ *   const VkAllocationCallbacks* pAllocator,
+ *   VkPipeline* pPipelines)`
+ */
+export const vkCreateComputePipelines = {
+  args: ['ptr', 'ptr', 'u32', 'ptr', 'ptr', 'ptr'] as [
+    device: 'ptr',
+    pipelineCache: 'ptr',
+    createInfoCount: 'u32',
+    pCreateInfos: 'ptr',
+    pAllocator: 'ptr',
+    pPipelines: 'ptr',
+  ],
+  returns: 'i32',
+} as const satisfies FFIFunction;
+
+/**
+ * Destroy a pipeline object
+ *
+ * C ref: `void vkDestroyPipeline(
+ *   VkDevice device,
+ *   VkPipeline pipeline,
+ *   const VkAllocationCallbacks* pAllocator)`
+ */
+export const vkDestroyPipeline = {
+  args: ['ptr', 'ptr', 'ptr'] as [
+    device: 'ptr',
+    pipeline: 'ptr',
+    pAllocator: 'ptr',
+  ],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
 // MARK: Command Pool and Buffer
 
 /**

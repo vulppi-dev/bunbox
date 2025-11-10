@@ -15,6 +15,28 @@ import {
 /**
  * Agnostic builder for creating RenderPass configurations
  *
+ * By default, creates render passes with a single subpass for cross-API compatibility.
+ * Multiple subpasses are Vulkan/Metal specific optimizations and should be avoided
+ * unless explicitly targeting mobile/tile-based GPUs.
+ *
+ * For post-processing chains (bloom, blur, etc.), use separate render passes instead
+ * of multiple subpasses within one render pass.
+ *
+ * ## Cross-API Compatibility Strategy:
+ * - ✅ Single subpass per render pass → Works on ALL backends
+ * - ❌ Multiple subpasses → Vulkan/Metal only, requires emulation on D3D12/WebGPU
+ *
+ * ## Architecture Pattern:
+ * ```
+ * Scene Pass (RenderPass 1, subpass 0)
+ *   ↓
+ * Bright Pass (RenderPass 2, subpass 0)
+ *   ↓
+ * Blur Pass (RenderPass 3, subpass 0)
+ *   ↓
+ * Composite (RenderPass 4, subpass 0)
+ * ```
+ *
  * @example
  * ```typescript
  * const config = new RenderPassBuilder()
@@ -30,11 +52,7 @@ import {
  *     loadOp: 'clear',
  *     storeOp: 'dont-care',
  *   })
- *   .addSubpass({
- *     colorAttachments: [{ attachment: 0, layout: 'color-attachment' }],
- *     depthStencilAttachment: { attachment: 1, layout: 'depth-stencil-attachment' }
- *   })
- *   .build();
+ *   .build(); // Automatically creates single subpass
  * ```
  */
 export class RenderPassBuilder {
@@ -111,8 +129,23 @@ export class RenderPassBuilder {
 
   /**
    * Add a subpass configuration
+   *
+   * ⚠️ WARNING: Multiple subpasses are Vulkan/Metal specific optimizations.
+   * For cross-API compatibility, use separate render passes instead.
+   *
+   * Only use this for advanced mobile optimizations when you know you're
+   * targeting Vulkan/Metal backends.
    */
   addSubpass(config: SubpassConfig): this {
+    // Warn if trying to add multiple subpasses
+    if (this.#subpasses.length > 0) {
+      console.warn(
+        '[RenderPassBuilder] Multiple subpasses detected. This is a Vulkan/Metal specific ' +
+          'optimization and may not work on D3D12/WebGPU backends. Consider using separate ' +
+          'render passes for better cross-API compatibility.',
+      );
+    }
+
     this.#validateSubpass(config);
     this.#subpasses.push({
       pipelineBindPoint: 'graphics',
@@ -123,6 +156,9 @@ export class RenderPassBuilder {
 
   /**
    * Add a subpass dependency
+   *
+   * ⚠️ WARNING: Subpass dependencies are only relevant when using multiple subpasses.
+   * For cross-API compatibility, use separate render passes with explicit synchronization.
    */
   addDependency(dependency: SubpassDependency): this {
     this.#validateDependency(dependency);
@@ -131,8 +167,11 @@ export class RenderPassBuilder {
   }
 
   /**
-   * Create a default subpass that uses all attachments
-   * Color attachments come first, depth attachment (if any) comes last
+   * Create a default single subpass that uses all attachments.
+   * Color attachments come first, depth attachment (if any) comes last.
+   *
+   * This is automatically called by build() if no subpasses are defined,
+   * ensuring every render pass has exactly one subpass for compatibility.
    */
   createDefaultSubpass(): this {
     const colorAttachments: AttachmentReference[] = [];
@@ -194,15 +233,23 @@ export class RenderPassBuilder {
 
   /**
    * Build the final RenderPassConfig
+   *
+   * Automatically creates a single default subpass if none were explicitly added.
+   * This ensures cross-API compatibility (D3D12, WebGPU don't support multiple subpasses).
    */
   build(): RenderPassConfig {
     if (this.#attachments.length === 0) {
       throw new Error('Cannot build RenderPass: no attachments defined');
     }
 
-    // Create default subpass if none defined
+    // Always ensure exactly one subpass for compatibility
     if (this.#subpasses.length === 0) {
       this.createDefaultSubpass();
+    } else if (this.#subpasses.length > 1) {
+      console.warn(
+        `[RenderPassBuilder] Created render pass with ${this.#subpasses.length} subpasses. ` +
+          'This may not be compatible with D3D12/WebGPU backends.',
+      );
     }
 
     // Validate all attachment references

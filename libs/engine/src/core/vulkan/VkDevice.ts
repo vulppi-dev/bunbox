@@ -28,7 +28,6 @@ import {
   vkQueueFamilyProperties,
   VkQueueFlagBits,
   VkResult,
-  VkStructureType,
   vkSurfaceCapabilitiesKHR,
   vkSurfaceFormatKHR,
   vkWaylandSurfaceCreateInfoKHR,
@@ -122,7 +121,6 @@ export class VkDevice implements Disposable {
     const { extensions, extPtr } = VkDevice.#getRequiredExtensions();
 
     const appInfo = instantiate(vkApplicationInfo);
-    appInfo.sType = VkStructureType.APPLICATION_INFO;
     appInfo.pApplicationName = getEnv('APP_NAME', 'Bunbox App');
     appInfo.applicationVersion = Number(getEnv('APP_VERSION', '1'));
     appInfo.pEngineName = 'Bunbox Engine';
@@ -130,7 +128,6 @@ export class VkDevice implements Disposable {
     appInfo.apiVersion = makeVersion(1, 4, 0);
 
     const createInfo = instantiate(vkInstanceCreateInfo);
-    createInfo.sType = VkStructureType.INSTANCE_CREATE_INFO;
     createInfo.pApplicationInfo = BigInt(ptr(getInstanceBuffer(appInfo)));
     createInfo.enabledExtensionCount = extensions.length;
     createInfo.ppEnabledExtensionNames = BigInt(extPtr);
@@ -148,7 +145,6 @@ export class VkDevice implements Disposable {
     } else {
       createInfo.enabledLayerCount = 0;
       createInfo.ppEnabledLayerNames = 0n;
-      createInfo.pNext = 0n;
     }
 
     const pointerHolder = new BigUint64Array(1);
@@ -299,8 +295,6 @@ export class VkDevice implements Disposable {
 
   static #getDebugMessenger() {
     const debugCreateInfo = instantiate(vkDebugUtilsMessengerCreateInfoEXT);
-    debugCreateInfo.sType =
-      VkStructureType.DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
     debugCreateInfo.messageSeverity =
       VkDebugUtilsMessageSeverityFlagsEXT.VERBOSE;
     debugCreateInfo.messageType = VkDebugUtilsMessageTypeFlagsEXT.VALIDATION;
@@ -438,9 +432,6 @@ export class VkDevice implements Disposable {
 
     if (process.platform === 'win32') {
       const createInfo = instantiate(vkWin32SurfaceCreateInfoKHR);
-      createInfo.sType = VkStructureType.WIN32_SURFACE_CREATE_INFO_KHR;
-      createInfo.pNext = 0n;
-      createInfo.flags = 0;
       createInfo.hinstance = this.#display;
       createInfo.hwnd = this.#nativeWindow;
 
@@ -453,9 +444,6 @@ export class VkDevice implements Disposable {
     } else if (process.platform === 'linux') {
       if (isWayland()) {
         const createInfo = instantiate(vkWaylandSurfaceCreateInfoKHR);
-        createInfo.sType = VkStructureType.WAYLAND_SURFACE_CREATE_INFO_KHR;
-        createInfo.pNext = 0n;
-        createInfo.flags = 0;
         createInfo.display = this.#display;
         createInfo.surface = this.#nativeWindow;
 
@@ -467,9 +455,6 @@ export class VkDevice implements Disposable {
         );
       } else {
         const createInfo = instantiate(vkXlibSurfaceCreateInfoKHR);
-        createInfo.sType = VkStructureType.XLIB_SURFACE_CREATE_INFO_KHR;
-        createInfo.pNext = 0n;
-        createInfo.flags = 0;
         createInfo.dpy = this.#display;
         createInfo.window = this.#nativeWindow;
 
@@ -482,9 +467,6 @@ export class VkDevice implements Disposable {
       }
     } else if (process.platform === 'darwin') {
       const createInfo = instantiate(vkMetalSurfaceCreateInfoEXT);
-      createInfo.sType = VkStructureType.METAL_SURFACE_CREATE_INFO_EXT;
-      createInfo.pNext = 0n;
-      createInfo.flags = 0;
       createInfo.pLayer = this.#nativeWindow;
 
       result = VK.vkCreateMetalSurfaceEXT(
@@ -595,7 +577,6 @@ export class VkDevice implements Disposable {
     // TODO: Future create with compute and transfer queues
     for (const family of [indices.graphicsFamily, indices.presentFamily]) {
       const queueCreateInfo = instantiate(vkDeviceQueueCreateInfo);
-      queueCreateInfo.sType = VkStructureType.DEVICE_QUEUE_CREATE_INFO;
       queueCreateInfo.queueFamilyIndex = family;
       queueCreateInfo.queueCount = 1;
       queueCreateInfo.pQueuePriorities = BigInt(ptr(new Float32Array([1.0])));
@@ -606,7 +587,6 @@ export class VkDevice implements Disposable {
     deviceFeatures.samplerAnisotropy = 1;
 
     const createInfo = instantiate(vkDeviceCreateInfo);
-    createInfo.sType = VkStructureType.DEVICE_CREATE_INFO;
     createInfo.queueCreateInfoCount = queueCreateInfos.length;
     createInfo.pQueueCreateInfos = BigInt(
       ptr(getInstanceBuffer(queueCreateInfos)),

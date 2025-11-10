@@ -1,9 +1,10 @@
 import { array, i32, i8, ptrAny, struct, u32, u64, u8 } from '@bunbox/struct';
+import { VkStructureType12 } from '../enums';
 
 // MARK: Vulkan 1.2 Structures
 
 export const vkPhysicalDeviceVulkan11Features = struct({
-  sType: i32(),
+  sType: i32(VkStructureType12.PHYSICAL_DEVICE_VULKAN_1_1_FEATURES),
   pNext: ptrAny(),
   storageBuffer16BitAccess: u32(),
   uniformAndStorageBuffer16BitAccess: u32(),
@@ -20,7 +21,7 @@ export const vkPhysicalDeviceVulkan11Features = struct({
 });
 
 export const vkPhysicalDeviceVulkan11Properties = struct({
-  sType: i32(),
+  sType: i32(VkStructureType12.PHYSICAL_DEVICE_VULKAN_1_1_PROPERTIES),
   pNext: ptrAny(),
   deviceUUID: array(u8(), 16),
   driverUUID: array(u8(), 16),
@@ -40,7 +41,7 @@ export const vkPhysicalDeviceVulkan11Properties = struct({
 });
 
 export const vkPhysicalDeviceVulkan12Features = struct({
-  sType: i32(),
+  sType: i32(VkStructureType12.PHYSICAL_DEVICE_VULKAN_1_2_FEATURES),
   pNext: ptrAny(),
   samplerMirrorClampToEdge: u32(),
   drawIndirectCount: u32(),
@@ -92,7 +93,7 @@ export const vkPhysicalDeviceVulkan12Features = struct({
 });
 
 export const vkPhysicalDeviceVulkan12Properties = struct({
-  sType: i32(),
+  sType: i32(VkStructureType12.PHYSICAL_DEVICE_VULKAN_1_2_PROPERTIES),
   pNext: ptrAny(),
   driverID: i32(),
   driverName: array(i8(), 256),
@@ -154,14 +155,14 @@ export const vkPhysicalDeviceVulkan12Properties = struct({
 });
 
 export const vkImageFormatListCreateInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType12.IMAGE_FORMAT_LIST_CREATE_INFO),
   pNext: ptrAny(),
   viewFormatCount: u32(),
   pViewFormats: ptrAny(),
 });
 
 export const vkAttachmentDescription2 = struct({
-  sType: i32(),
+  sType: i32(VkStructureType12.ATTACHMENT_DESCRIPTION_2),
   pNext: ptrAny(),
   flags: u32(),
   format: i32(),
@@ -175,7 +176,7 @@ export const vkAttachmentDescription2 = struct({
 });
 
 export const vkAttachmentReference2 = struct({
-  sType: i32(),
+  sType: i32(VkStructureType12.ATTACHMENT_REFERENCE_2),
   pNext: ptrAny(),
   attachment: u32(),
   layout: i32(),
@@ -183,7 +184,7 @@ export const vkAttachmentReference2 = struct({
 });
 
 export const vkSubpassDescription2 = struct({
-  sType: i32(),
+  sType: i32(VkStructureType12.SUBPASS_DESCRIPTION_2),
   pNext: ptrAny(),
   flags: u32(),
   pipelineBindPoint: i32(),
@@ -199,7 +200,7 @@ export const vkSubpassDescription2 = struct({
 });
 
 export const vkSubpassDependency2 = struct({
-  sType: i32(),
+  sType: i32(VkStructureType12.SUBPASS_DEPENDENCY_2),
   pNext: ptrAny(),
   srcSubpass: u32(),
   dstSubpass: u32(),
@@ -212,7 +213,7 @@ export const vkSubpassDependency2 = struct({
 });
 
 export const vkRenderPassCreateInfo2 = struct({
-  sType: i32(),
+  sType: i32(VkStructureType12.RENDER_PASS_CREATE_INFO_2),
   pNext: ptrAny(),
   flags: u32(),
   attachmentCount: u32(),
@@ -226,14 +227,14 @@ export const vkRenderPassCreateInfo2 = struct({
 });
 
 export const vkSemaphoreTypeCreateInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType12.SEMAPHORE_TYPE_CREATE_INFO),
   pNext: ptrAny(),
   semaphoreType: i32(),
   initialValue: u64(),
 });
 
 export const vkTimelineSemaphoreSubmitInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType12.TIMELINE_SEMAPHORE_SUBMIT_INFO),
   pNext: ptrAny(),
   waitSemaphoreValueCount: u32(),
   pWaitSemaphoreValues: ptrAny(),
@@ -242,7 +243,7 @@ export const vkTimelineSemaphoreSubmitInfo = struct({
 });
 
 export const vkSemaphoreWaitInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType12.SEMAPHORE_WAIT_INFO),
   pNext: ptrAny(),
   flags: u32(),
   semaphoreCount: u32(),
@@ -251,27 +252,27 @@ export const vkSemaphoreWaitInfo = struct({
 });
 
 export const vkSemaphoreSignalInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType12.SEMAPHORE_SIGNAL_INFO),
   pNext: ptrAny(),
   semaphore: ptrAny(),
   value: u64(),
 });
 
 export const vkBufferDeviceAddressInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType12.BUFFER_DEVICE_ADDRESS_INFO),
   pNext: ptrAny(),
   buffer: ptrAny(),
 });
 
 export const vkDescriptorSetLayoutBindingFlagsCreateInfo = struct({
-  sType: i32(),
+  sType: i32(VkStructureType12.DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO),
   pNext: ptrAny(),
   bindingCount: u32(),
   pBindingFlags: ptrAny(),
 });
 
 export const vkPhysicalDeviceDescriptorIndexingFeatures = struct({
-  sType: i32(),
+  sType: i32(VkStructureType12.PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES),
   pNext: ptrAny(),
   shaderInputAttachmentArrayDynamicIndexing: u32(),
   shaderUniformTexelBufferArrayDynamicIndexing: u32(),

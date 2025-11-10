@@ -39,9 +39,10 @@ export class RenderPassPresets {
   }
 
   /**
-   * Deferred rendering with G-Buffer
-   * Creates multiple render targets for position, normal, albedo, etc.
-   * Uses 2 subpasses: geometry pass and lighting pass
+   * Deferred rendering G-Buffer pass (Geometry only)
+   * For cross-API compatibility, split deferred into separate passes:
+   * 1. Use this for geometry pass (writes G-Buffer)
+   * 2. Use deferredLighting() for lighting pass (reads G-Buffer)
    *
    * Attachments:
    * - 0: Position (r32g32b32a32-sfloat)
@@ -49,16 +50,14 @@ export class RenderPassPresets {
    * - 2: Albedo (r8g8b8a8-unorm)
    * - 3: Specular (r8g8b8a8-unorm)
    * - 4: Depth (d32-sfloat)
-   * - 5: Final color (swapchain)
    *
    * Subpasses:
-   * - 0: Geometry pass (writes to G-Buffer)
-   * - 1: Lighting pass (reads G-Buffer, writes final color)
+   * - 0: Geometry pass (single subpass)
    */
-  static deferred(): RenderPassConfig {
+  static deferredGeometry(): RenderPassConfig {
     return (
       new RenderPassBuilder()
-        .setName('Deferred Rendering (G-Buffer)')
+        .setName('Deferred G-Buffer Pass')
         // G-Buffer attachments
         .addColorAttachment({
           format: 'r32g32b32a32-sfloat', // Position
@@ -95,50 +94,34 @@ export class RenderPassPresets {
           finalLayout: 'shader-read-only',
           clearValue: { depthStencil: { depth: 1.0 } },
         })
-        // Final color attachment
-        .addColorAttachment({
-          format: 'swapchain',
-          loadOp: 'clear',
-          storeOp: 'store',
-          finalLayout: 'present-src',
-          clearValue: { color: [0.0, 0.0, 0.0, 1.0] },
-        })
-        // Subpass 0: Geometry pass
-        .addSubpass({
-          colorAttachments: [
-            { attachment: 0, layout: 'color-attachment' }, // Position
-            { attachment: 1, layout: 'color-attachment' }, // Normal
-            { attachment: 2, layout: 'color-attachment' }, // Albedo
-            { attachment: 3, layout: 'color-attachment' }, // Specular
-          ],
-          depthStencilAttachment: {
-            attachment: 4,
-            layout: 'depth-stencil-attachment',
-          },
-        })
-        // Subpass 1: Lighting pass
-        .addSubpass({
-          colorAttachments: [{ attachment: 5, layout: 'color-attachment' }],
-          inputAttachments: [
-            { attachment: 0, layout: 'shader-read-only' }, // Position
-            { attachment: 1, layout: 'shader-read-only' }, // Normal
-            { attachment: 2, layout: 'shader-read-only' }, // Albedo
-            { attachment: 3, layout: 'shader-read-only' }, // Specular
-            { attachment: 4, layout: 'depth-stencil-read-only' }, // Depth
-          ],
-        })
-        // Dependencies
-        .addDependency({
-          srcSubpass: 0,
-          dstSubpass: 1,
-          srcStageMask: 'color-attachment-output',
-          dstStageMask: 'fragment-shader',
-          srcAccessMask: 'color-attachment-write',
-          dstAccessMask: 'input-attachment-read',
-          dependencyFlags: 'by-region',
-        })
-        .build()
+        .build() // Auto-creates single subpass
     );
+  }
+
+  /**
+   * Deferred rendering Lighting pass
+   * Reads G-Buffer from deferredGeometry() and outputs final color
+   *
+   * Attachments:
+   * - 0: Final color (swapchain)
+   *
+   * Subpasses:
+   * - 0: Lighting pass (single subpass)
+   *
+   * Note: G-Buffer textures should be bound as shader resources,
+   * not as input attachments for cross-API compatibility.
+   */
+  static deferredLighting(): RenderPassConfig {
+    return new RenderPassBuilder()
+      .setName('Deferred Lighting Pass')
+      .addColorAttachment({
+        format: 'swapchain',
+        loadOp: 'clear',
+        storeOp: 'store',
+        finalLayout: 'present-src',
+        clearValue: { color: [0.0, 0.0, 0.0, 1.0] },
+      })
+      .build(); // Auto-creates single subpass
   }
 
   /**
