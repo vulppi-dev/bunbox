@@ -298,6 +298,44 @@ export const vkDestroyPipelineLayout = {
   returns: 'void',
 } as const satisfies FFIFunction;
 
+// MARK: Render Pass Functions
+
+/**
+ * Create a new render pass object
+ *
+ * C ref: `VkResult vkCreateRenderPass(
+ *   VkDevice device,
+ *   const VkRenderPassCreateInfo* pCreateInfo,
+ *   const VkAllocationCallbacks* pAllocator,
+ *   VkRenderPass* pRenderPass)`
+ */
+export const vkCreateRenderPass = {
+  args: ['ptr', 'ptr', 'ptr', 'ptr'] as [
+    device: 'ptr',
+    pCreateInfo: 'ptr',
+    pAllocator: 'ptr',
+    pRenderPass: 'ptr',
+  ],
+  returns: 'i32',
+} as const satisfies FFIFunction;
+
+/**
+ * Destroy a render pass object
+ *
+ * C ref: `void vkDestroyRenderPass(
+ *   VkDevice device,
+ *   VkRenderPass renderPass,
+ *   const VkAllocationCallbacks* pAllocator)`
+ */
+export const vkDestroyRenderPass = {
+  args: ['ptr', 'ptr', 'ptr'] as [
+    device: 'ptr',
+    renderPass: 'ptr',
+    pAllocator: 'ptr',
+  ],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
 // MARK: Framebuffer Functions
 
 /**
