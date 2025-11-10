@@ -11,6 +11,7 @@ import {
   type CustomPostProcessConfig,
 } from './VkRenderPipeline';
 import type { SampleCount } from '../../resources/types';
+import type { AbstractCamera, Light, Mesh } from '../../nodes';
 
 export class VkRenderer extends AbstractRenderer {
   #device: VkDevice | null = null;
@@ -48,49 +49,13 @@ export class VkRenderer extends AbstractRenderer {
     this.#device = null;
   }
 
-  override render(meshes: any[], delta: number): void {
-    if (!this.#device || !this.#swapchain || !this.#pipeline) {
-      return;
-    }
-
-    // TODO: Implement actual rendering with the pipeline
-    // Example usage of VkGeometry:
-    //
-    // 1. Create VkGeometry from Geometry:
-    //    const vkGeometry = new VkGeometry(
-    //      this.#device.logicalDevice,
-    //      this.#device.physicalDevice,
-    //      mesh.geometry
-    //    );
-    //
-    // 2. Update buffers if geometry changed:
-    //    vkGeometry.update();
-    //
-    // 3. In command buffer recording:
-    //    commandBuffer.begin();
-    //    commandBuffer.beginRenderPass(...);
-    //    commandBuffer.bindPipeline(pipeline);
-    //
-    //    // Bind vertex buffers (position, normal, uv)
-    //    const vertexBuffers = [vkGeometry.vertexBuffer, vkGeometry.normalBuffer];
-    //    if (vkGeometry.uvBuffers.length > 0) {
-    //      vertexBuffers.push(vkGeometry.uvBuffers[0]);
-    //    }
-    //    commandBuffer.bindVertexBuffers(0, vertexBuffers.filter(b => b !== null));
-    //
-    //    // Bind index buffer
-    //    if (vkGeometry.indexBuffer) {
-    //      commandBuffer.bindIndexBuffer(vkGeometry.indexBuffer);
-    //      commandBuffer.drawIndexed(vkGeometry.indexCount);
-    //    } else {
-    //      commandBuffer.draw(vkGeometry.vertexCount);
-    //    }
-    //
-    //    commandBuffer.endRenderPass();
-    //    commandBuffer.end();
-    //
-    // 4. Dispose when done:
-    //    vkGeometry.dispose();
+  override render(
+    cameras: AbstractCamera[],
+    meshes: Mesh[],
+    lights: Light[],
+    delta: number,
+  ): void {
+    if (!this.#device || !this.#swapchain || !this.#pipeline) return;
   }
 
   /**

@@ -29,6 +29,8 @@ import { GLFW_DEBUG } from '../singleton/logger';
 import { buildCallback, cstr, pointerCopyBuffer } from '../utils/buffer';
 import type { AbstractRenderer } from './AbstractRenderer';
 import { VkRenderer } from './vulkan/VkRenderer';
+import { Node, PROCESS_EVENT } from '../nodes/Node';
+import { AbstractCamera, Light, Mesh } from '../nodes';
 
 // Setup struct pointer/string conversions globally
 setupStruct({
@@ -153,8 +155,10 @@ export class Window extends Root<never, never, WindowEventMap> {
   #isVisible: boolean = true;
   #state: WindowState = 'windowed';
 
-  // #stack: Node[] = [];
-  // #drawStack: Mesh[] = [];
+  #stack: Node[] = [];
+  #meshStack: Mesh[] = [];
+  #cameraStack: AbstractCamera[] = [];
+  #lightStack: Light[] = [];
 
   #scheduleDirty: boolean = true;
 
@@ -679,17 +683,17 @@ export class Window extends Root<never, never, WindowEventMap> {
 
     const windowPosCB = buildCallback(
       glfwWindowPositionCallback,
-      (win, xpos, ypos) => {
+      (win, xPos, yPos) => {
         if (this.#windowPtr !== win) return;
 
-        this.#x = xpos;
-        this.#y = ypos;
+        this.#x = xPos;
+        this.#y = yPos;
         if (
           this.#state !== 'fullscreen' &&
           this.#state !== 'windowed-fullscreen'
         ) {
-          this.#savedX = xpos;
-          this.#savedY = ypos;
+          this.#savedX = xPos;
+          this.#savedY = yPos;
         }
 
         this.#dispatchEvent('window-move');
@@ -745,10 +749,10 @@ export class Window extends Root<never, never, WindowEventMap> {
     );
     const windowContentScaleCB = buildCallback(
       glfwWindowContentScaleCallback,
-      (win, xscale, yscale) => {
+      (win, xScale, yScale) => {
         if (this.#windowPtr !== win) return;
-        this.#xScale = xscale;
-        this.#yScale = yscale;
+        this.#xScale = xScale;
+        this.#yScale = yScale;
         this.#dispatchEvent('window-display-changed');
       },
     );
@@ -872,21 +876,31 @@ export class Window extends Root<never, never, WindowEventMap> {
   }
 
   #rebuildStacks() {
-    // const nextStack: Node[] = [];
-    // const nextDrawStack: Mesh[] = [];
-    // this.traverse(
-    //   (n) => {
-    //     if (n !== this && n instanceof Node) {
-    //       nextStack.push(n as Node);
-    //       if (n instanceof Mesh) {
-    //         nextDrawStack.push(n);
-    //       }
-    //     }
-    //   },
-    //   { ignoreType: Window, includeDisabled: true },
-    // );
-    // this.#stack = nextStack;
-    // this.#drawStack = nextDrawStack;
+    const nextStack: Node[] = [];
+    const nextCameraStack: AbstractCamera[] = [];
+    const nextMeshStack: Mesh[] = [];
+    const nextLightStack: Light[] = [];
+    this.traverse(
+      (n) => {
+        if (n !== this && n instanceof Node) {
+          nextStack.push(n as Node);
+          if (n instanceof AbstractCamera) {
+            nextCameraStack.push(n);
+          }
+          if (n instanceof Mesh) {
+            nextMeshStack.push(n);
+          }
+          if (n instanceof Light) {
+            nextLightStack.push(n);
+          }
+        }
+      },
+      { ignoreType: Window, includeDisabled: true },
+    );
+    this.#stack = nextStack;
+    this.#cameraStack = nextCameraStack;
+    this.#meshStack = nextMeshStack;
+    this.#lightStack = nextLightStack;
     this.#scheduleDirty = false;
   }
 
@@ -894,17 +908,21 @@ export class Window extends Root<never, never, WindowEventMap> {
     if (!this.isEnabled || this.isDisposed) return;
     if (this.#scheduleDirty) this.#rebuildStacks();
 
-    // for (const node of this.#stack) {
-    //   if (node.isEnabled) {
-    //     node._process(delta);
-    //   }
-    // }
+    for (const node of this.#stack) {
+      if (node.isEnabled) {
+        node[PROCESS_EVENT](delta);
+      }
+    }
 
     if (this.isDirty) {
       this.#renderer.rebuildFrame();
       this.markAsClean();
     }
-    // this.#renderer.render(this.#drawStack, delta);
-    this.#renderer.render([], delta);
+    this.#renderer.render(
+      this.#cameraStack,
+      this.#meshStack,
+      this.#lightStack,
+      delta,
+    );
   }
 }
