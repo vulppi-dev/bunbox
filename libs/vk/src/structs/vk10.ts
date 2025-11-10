@@ -311,6 +311,12 @@ export const vkMappedMemoryRange = struct({
   size: u64(),
 });
 
+export const vkMemoryRequirements = struct({
+  size: u64(),
+  alignment: u64(),
+  memoryTypeBits: u32(),
+});
+
 // MARK: Synchronization Structures
 
 export const vkFenceCreateInfo = struct({

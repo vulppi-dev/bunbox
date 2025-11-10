@@ -6,17 +6,32 @@ import { createSimpleMaterial, RenderPassPresets } from '../../builders';
 import { VkRenderPass } from './VkRenderPass';
 import { VkSwapchain } from './VkSwapchain';
 import { VkImageView } from './VkImageView';
+import { TextureImage } from '../../resources';
+import { VkImage } from './VkImage';
 
 export class VkRenderer extends AbstractRenderer {
   #device: VkDevice | null = null;
   #swapchain: VkSwapchain | null = null;
   #commandPool: VkCommandPool | null = null;
   #swapchainView: VkImageView | null = null;
+  #depthStencilTexture: TextureImage | null = null;
+  #depthStencilImage: VkImage | null = null;
+  #depthStencilImageView: VkImageView | null = null;
 
   override dispose(): void | Promise<void> {
+    this.#depthStencilImageView?.dispose();
+    this.#depthStencilImageView = null;
+    this.#depthStencilImage?.dispose();
+    this.#depthStencilImage = null;
+    this.#depthStencilTexture = null;
+    this.#swapchainView?.dispose();
+    this.#swapchainView = null;
     this.#commandPool?.dispose();
+    this.#commandPool = null;
     this.#swapchain?.dispose();
+    this.#swapchain = null;
     this.#device?.dispose();
+    this.#device = null;
   }
 
   override render(meshes: any[], delta: number): void {
@@ -40,10 +55,21 @@ export class VkRenderer extends AbstractRenderer {
       this.#device.logicalDevice,
       indices.graphicsFamily,
     );
+
+    this.#depthStencilTexture = new TextureImage({
+      label: 'Depth/Stencil Texture',
+      width: 1,
+      height: 1,
+      sampleCount: 1,
+      format: 'depth32float-stencil8',
+      usage: ['depth-stencil-target'],
+      mipLevels: 1,
+    });
+    this.#depthStencilTexture.markAsDirty();
   }
 
   protected override _rebuildSwapChain(width: number, height: number): void {
-    if (!this.#device) {
+    if (!this.#device || !this.#depthStencilTexture) {
       return;
     }
     if (this.#swapchain) {
@@ -64,5 +90,33 @@ export class VkRenderer extends AbstractRenderer {
       image: this.#swapchain.images as any,
       mask: ['color'],
     });
+
+    if (
+      this.#depthStencilTexture.width !== this.#swapchain.width ||
+      this.#depthStencilTexture.height !== this.#swapchain.height
+    ) {
+      this.#depthStencilTexture.width = this.#swapchain.width;
+      this.#depthStencilTexture.height = this.#swapchain.height;
+    }
+
+    if (this.#depthStencilTexture.isDirty) {
+      this.#depthStencilImageView?.dispose();
+      this.#depthStencilImage?.dispose();
+
+      this.#depthStencilImage = new VkImage(
+        this.#device.logicalDevice,
+        this.#device.physicalDevice,
+        this.#depthStencilTexture,
+      );
+
+      this.#depthStencilImageView = new VkImageView({
+        device: this.#device.logicalDevice,
+        format: this.#depthStencilImage.format,
+        image: this.#depthStencilImage.instance,
+        mask: ['depth', 'stencil'],
+      });
+
+      this.#depthStencilTexture.markAsClean();
+    }
   }
 }

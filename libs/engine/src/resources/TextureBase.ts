@@ -162,6 +162,7 @@ export abstract class TextureBase extends DirtyState {
   get usage(): readonly TextureUsage[] {
     return Object.freeze(this.#usage.slice());
   }
+
   /**
    * Check if texture format is a depth format.
    * Depth textures are used for depth/stencil attachments in render passes.
@@ -169,6 +170,7 @@ export abstract class TextureBase extends DirtyState {
   get isDepthFormat(): boolean {
     return this.#format.startsWith('depth');
   }
+
   /**
    * Compute content hash for resource deduplication.
    *
@@ -191,11 +193,11 @@ export abstract class TextureBase extends DirtyState {
     };
     return sha(JSON.stringify(key), 'hex');
   }
-  // Subclass-provided getters (place before setters to satisfy ordering)
-  // Must be provided by subclasses (getters before protected methods)
+
   get layerCount(): number {
     return 1;
   }
+
   get depth(): number {
     return 1;
   }
@@ -205,6 +207,7 @@ export abstract class TextureBase extends DirtyState {
     this.#label = v;
     this.markAsDirty();
   }
+
   set width(v: number) {
     const nv = Math.max(1, v | 0);
     if (this.#width === nv) return;
@@ -215,6 +218,7 @@ export abstract class TextureBase extends DirtyState {
     );
     this.markAsDirty();
   }
+
   set height(v: number) {
     const nv = Math.max(1, v | 0);
     if (this.#height === nv) return;
@@ -225,6 +229,7 @@ export abstract class TextureBase extends DirtyState {
     );
     this.markAsDirty();
   }
+
   set mipLevels(v: number) {
     const nv = Math.max(1, v | 0);
     const maxAllowed = TextureBase.computeMaxMipLevels(
@@ -236,6 +241,7 @@ export abstract class TextureBase extends DirtyState {
     this.#mipLevels = clamped;
     this.markAsDirty();
   }
+
   set sampleCount(v: SampleCount) {
     const allowed: SampleCount[] = [1, 2, 4, 8];
     const nv = allowed.includes(v) ? v : 1;
@@ -243,11 +249,13 @@ export abstract class TextureBase extends DirtyState {
     this.#sampleCount = nv;
     this.markAsDirty();
   }
+
   set format(v: TextureFormat) {
     if (this.#format === v) return;
     this.#format = v;
     this.markAsDirty();
   }
+
   set usage(v: TextureUsage[]) {
     const nv = [...new Set(v)];
     // Shallow equality check
