@@ -20,6 +20,7 @@ import {
 } from '@bunbox/vk';
 import { clamp } from '@vulppi/toolbelt/math';
 import { getInstanceBuffer, instantiate } from '@bunbox/struct';
+import { VK_DEBUG } from '../../singleton/logger';
 
 export class VkSwapchain implements Disposable {
   #device: VkDevice;
@@ -37,6 +38,8 @@ export class VkSwapchain implements Disposable {
     this.#width = width;
     this.#height = height;
 
+    VK_DEBUG(`Creating swapchain: ${width}x${height}`);
+
     if (width <= 0 || height <= 0) {
       throw new DynamicLibError(
         'Swap chain dimensions must be greater than zero.',
@@ -50,6 +53,10 @@ export class VkSwapchain implements Disposable {
     this.#height = swapchain.height;
     this.#format = swapchain.format;
     this.#swapchainImages = swapchain.swapImages;
+
+    VK_DEBUG(
+      `Swapchain created: 0x${this.#swapchain.toString(16)}, ${this.#width}x${this.#height}, ${this.#swapchainImages.length} images`,
+    );
   }
 
   get swapchain() {
@@ -77,6 +84,7 @@ export class VkSwapchain implements Disposable {
   }
 
   dispose(): void | Promise<void> {
+    VK_DEBUG(`Destroying swapchain: 0x${this.#swapchain.toString(16)}`);
     for (let i = 0; i < this.#swapchainImages.length; i++) {
       VK.vkDestroyImage(
         this.#device.logicalDevice,
@@ -85,9 +93,11 @@ export class VkSwapchain implements Disposable {
       );
     }
     VK.vkDestroySwapchainKHR(this.#device.logicalDevice, this.#swapchain, null);
+    VK_DEBUG('Swapchain destroyed');
   }
 
   #createSwapChain() {
+    VK_DEBUG('Configuring swapchain properties');
     const details = this.#device.getSwapChainSupport();
 
     const selectedFormat =
@@ -101,6 +111,10 @@ export class VkSwapchain implements Disposable {
     )
       ? VkPresentModeKHR.MAILBOX_KHR
       : VkPresentModeKHR.FIFO_KHR!;
+
+    VK_DEBUG(
+      `Swapchain format: ${selectedFormat.format}, present mode: ${selectedPresentMode}`,
+    );
 
     const extHeight = clamp(
       this.#height,
@@ -154,6 +168,7 @@ export class VkSwapchain implements Disposable {
     createInfo.clipped = 1;
     createInfo.oldSwapchain = VK_NULL_HANDLE;
 
+    VK_DEBUG('Creating Vulkan swapchain');
     const pointerHolder = new BigUint64Array(1);
     const result = VK.vkCreateSwapchainKHR(
       this.#device.logicalDevice,
@@ -167,6 +182,7 @@ export class VkSwapchain implements Disposable {
     const swapchain = Number(pointerHolder[0]) as Pointer;
     const swapImages = new BigUint64Array(imageCount);
 
+    VK_DEBUG(`Getting ${imageCount} swapchain images`);
     VK.vkGetSwapchainImagesKHR(
       this.#device.logicalDevice,
       swapchain,

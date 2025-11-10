@@ -10,6 +10,7 @@ import {
 } from '@bunbox/vk';
 import { ptr, type Pointer } from 'bun:ffi';
 import { DynamicLibError } from '../../errors';
+import { VK_DEBUG } from '../../singleton/logger';
 
 type VkImageViewMask = 'color' | 'depth' | 'stencil' | 'metadata';
 
@@ -50,6 +51,10 @@ export class VkImageView implements Disposable {
   constructor(props: VkImageViewProps) {
     this.#device = props.device;
 
+    VK_DEBUG(
+      `Creating image view for image: 0x${props.image.toString(16)}, format: ${props.format}`,
+    );
+
     const viewCreateInfo = instantiate(vkImageViewCreateInfo);
     viewCreateInfo.image = BigInt(props.image);
     viewCreateInfo.viewType = VkImageViewType.TYPE_2D;
@@ -75,6 +80,7 @@ export class VkImageView implements Disposable {
     }
 
     this.#instance = Number(pointerHolder[0]!) as Pointer;
+    VK_DEBUG(`Image view created: 0x${this.#instance.toString(16)}`);
   }
 
   get instance() {
@@ -82,6 +88,8 @@ export class VkImageView implements Disposable {
   }
 
   dispose(): void | Promise<void> {
+    VK_DEBUG(`Destroying image view: 0x${this.#instance.toString(16)}`);
     VK.vkDestroyImageView(this.#device, this.#instance, null);
+    VK_DEBUG('Image view destroyed');
   }
 }

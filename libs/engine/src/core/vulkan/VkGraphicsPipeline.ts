@@ -45,6 +45,7 @@ import type {
   RasterizerFrontFace,
   StencilOperation,
 } from '../../resources';
+import { VK_DEBUG } from '../../singleton/logger';
 
 export class VkGraphicsPipeline implements Disposable {
   static #normalizeShaderSource(shaderData: Uint8Array) {
@@ -76,7 +77,9 @@ export class VkGraphicsPipeline implements Disposable {
     if (result !== VkResult.SUCCESS) {
       throw new DynamicLibError(getResultMessage(result), 'Vulkan');
     }
-    return Number(pointerHolder[0]!) as Pointer;
+    const shaderModule = Number(pointerHolder[0]!) as Pointer;
+    VK_DEBUG(`Shader module created: 0x${shaderModule.toString(16)}`);
+    return shaderModule;
   }
 
   static #getVkTopology(primitive: MaterialPrimitive) {
@@ -270,6 +273,8 @@ export class VkGraphicsPipeline implements Disposable {
     this.#device = device;
     this.#material = material;
 
+    VK_DEBUG('Creating graphics pipeline');
+
     if (Object.keys(material.entries).length !== 2) {
       throw new DynamicLibError(
         'The material must specify both vertex and fragment entry points',
@@ -374,13 +379,17 @@ export class VkGraphicsPipeline implements Disposable {
     // Bind shader stages
     this.#pipelineConfigInfo.stageCount = this.#shaderStages.length;
     this.#pipelineConfigInfo.pStages = BigInt(ptr(this.#shaderStages));
+
+    VK_DEBUG('Graphics pipeline configuration initialized');
   }
 
   dispose(): void | Promise<void> {
+    VK_DEBUG('Disposing graphics pipeline');
     if (this.#pipelineInstance) {
       VK.vkDestroyPipeline(this.#device, this.#pipelineInstance, null);
       this.#pipelineInstance = null;
     }
+    VK_DEBUG('Graphics pipeline disposed');
     if (this.#vertexModule) {
       VK.vkDestroyShaderModule(this.#device, this.#vertexModule, null);
       this.#vertexModule = null;
@@ -392,6 +401,7 @@ export class VkGraphicsPipeline implements Disposable {
   }
 
   update(width: number, height: number) {
+    VK_DEBUG(`Updating graphics pipeline: ${width}x${height}`);
     if (this.#pipelineInstance) {
       VK.vkDestroyPipeline(this.#device, this.#pipelineInstance, null);
       this.#pipelineInstance = null;
@@ -525,6 +535,7 @@ export class VkGraphicsPipeline implements Disposable {
     this.#depthStencilInfo.back.writeMask = depthStencil.stencilWriteMask.get();
     this.#depthStencilInfo.back.reference = 0;
 
+    VK_DEBUG('Creating Vulkan graphics pipeline');
     const pointerHolder = new BigUint64Array(1);
     const result = VK.vkCreateGraphicsPipelines(
       this.#device,
@@ -539,5 +550,8 @@ export class VkGraphicsPipeline implements Disposable {
       throw new DynamicLibError(getResultMessage(result), 'Vulkan');
     }
     this.#pipelineInstance = Number(pointerHolder[0]!) as Pointer;
+    VK_DEBUG(
+      `Graphics pipeline created: 0x${this.#pipelineInstance.toString(16)}`,
+    );
   }
 }

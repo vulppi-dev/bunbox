@@ -222,6 +222,44 @@ export const vkDestroyShaderModule = {
   returns: 'void',
 } as const satisfies FFIFunction;
 
+// MARK: Framebuffer Functions
+
+/**
+ * Create a new framebuffer object
+ *
+ * C ref: `VkResult vkCreateFramebuffer(
+ *   VkDevice device,
+ *   const VkFramebufferCreateInfo* pCreateInfo,
+ *   const VkAllocationCallbacks* pAllocator,
+ *   VkFramebuffer* pFramebuffer)`
+ */
+export const vkCreateFramebuffer = {
+  args: ['ptr', 'ptr', 'ptr', 'ptr'] as [
+    device: 'ptr',
+    pCreateInfo: 'ptr',
+    pAllocator: 'ptr',
+    pFramebuffer: 'ptr',
+  ],
+  returns: 'i32',
+} as const satisfies FFIFunction;
+
+/**
+ * Destroy a framebuffer object
+ *
+ * C ref: `void vkDestroyFramebuffer(
+ *   VkDevice device,
+ *   VkFramebuffer framebuffer,
+ *   const VkAllocationCallbacks* pAllocator)`
+ */
+export const vkDestroyFramebuffer = {
+  args: ['ptr', 'ptr', 'ptr'] as [
+    device: 'ptr',
+    framebuffer: 'ptr',
+    pAllocator: 'ptr',
+  ],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
 // MARK: Pipeline Functions
 
 /**

@@ -1,31 +1,31 @@
 import { type Disposable } from '@bunbox/utils';
 import { ptr, type Pointer } from 'bun:ffi';
 import { getInstanceBuffer, instantiate } from '@bunbox/struct';
-import {
-  VK,
-  Vk_Result,
-  Vk_StructureType,
-  VkFramebufferCreateInfo,
-} from '../dynamic-libs';
 import { DynamicLibError } from '../../errors';
 import { VK_DEBUG } from '../../singleton/logger';
-import type { VkTexture } from './VkTexture';
+import type { VkImageView } from './VkImageView';
+import {
+  getResultMessage,
+  VK,
+  vkFramebufferCreateInfo,
+  VkResult,
+  VkStructureType,
+} from '@bunbox/vk';
 
-export class Framebuffer implements Disposable {
-  #vkLogicalDevice: Pointer;
-  #vkFramebuffer: Pointer | null = null;
+export class VkFramebuffer implements Disposable {
+  #device: Pointer;
   #renderPass: Pointer;
-  #attachments: VkTexture[];
+  #attachments: VkImageView[];
   #width: number;
   #height: number;
+  #instance: Pointer | null = null;
 
-  // Auxiliary data
-  #ptr_aux: BigUint64Array;
+  #pointerHolder: BigUint64Array;
 
   constructor(
-    vkLogicalDevice: Pointer,
+    device: Pointer,
     renderPass: Pointer,
-    attachments: VkTexture[],
+    attachments: VkImageView[],
     width: number,
     height: number,
   ) {
@@ -36,21 +36,24 @@ export class Framebuffer implements Disposable {
       );
     }
 
-    this.#vkLogicalDevice = vkLogicalDevice;
+    this.#device = device;
     this.#renderPass = renderPass;
     this.#attachments = attachments;
     this.#width = width;
     this.#height = height;
-    this.#ptr_aux = new BigUint64Array(1);
 
+    this.#pointerHolder = new BigUint64Array(1);
     this.#createFramebuffer();
   }
 
   get framebuffer(): Pointer {
-    if (!this.#vkFramebuffer) {
-      throw new DynamicLibError('VkFramebuffer not created', 'Vulkan');
+    if (this.#instance === null) {
+      throw new DynamicLibError(
+        'Framebuffer has not been created yet',
+        'Vulkan',
+      );
     }
-    return this.#vkFramebuffer;
+    return this.#instance;
   }
 
   get width(): number {
@@ -61,19 +64,13 @@ export class Framebuffer implements Disposable {
     return this.#height;
   }
 
-  get attachments(): readonly VkTexture[] {
-    return Object.freeze([...this.#attachments]);
-  }
-
   dispose(): void | Promise<void> {
-    if (!this.#vkFramebuffer) {
-      return;
-    }
+    if (!this.#instance) return;
 
-    VK_DEBUG(`Destroying framebuffer: 0x${this.#vkFramebuffer.toString(16)}`);
-    VK.vkDestroyFramebuffer(this.#vkLogicalDevice, this.#vkFramebuffer, null);
-    this.#vkFramebuffer = null;
+    VK_DEBUG(`Destroying framebuffer: 0x${this.#instance.toString(16)}`);
+    VK.vkDestroyFramebuffer(this.#device, this.#instance, null);
     VK_DEBUG('Framebuffer destroyed');
+    this.#instance = null;
   }
 
   /**
@@ -100,11 +97,11 @@ export class Framebuffer implements Disposable {
 
     // Collect image view handles
     const attachmentViews = new BigUint64Array(
-      this.#attachments.map((tex) => BigInt(tex.imageView as number)),
+      this.#attachments.map((tex) => BigInt(tex.instance)),
     );
 
-    const createInfo = instantiate(VkFramebufferCreateInfo);
-    createInfo.sType = Vk_StructureType.FRAMEBUFFER_CREATE_INFO;
+    const createInfo = instantiate(vkFramebufferCreateInfo);
+    createInfo.sType = VkStructureType.FRAMEBUFFER_CREATE_INFO;
     createInfo.renderPass = BigInt(this.#renderPass as number);
     createInfo.attachmentCount = this.#attachments.length;
     createInfo.pAttachments = BigInt(ptr(attachmentViews));
@@ -113,20 +110,18 @@ export class Framebuffer implements Disposable {
     createInfo.layers = 1;
 
     const result = VK.vkCreateFramebuffer(
-      this.#vkLogicalDevice,
+      this.#device,
       ptr(getInstanceBuffer(createInfo)),
       null,
-      ptr(this.#ptr_aux),
+      ptr(this.#pointerHolder),
     );
 
-    if (result !== Vk_Result.SUCCESS) {
-      throw new DynamicLibError(
-        `Failed to create framebuffer. VkResult: ${result}`,
-        'Vulkan',
-      );
+    if (result !== VkResult.SUCCESS) {
+      throw new DynamicLibError(getResultMessage(result), 'Vulkan');
     }
 
-    this.#vkFramebuffer = Number(this.#ptr_aux[0]) as Pointer;
-    VK_DEBUG(`Framebuffer created: 0x${this.#vkFramebuffer.toString(16)}`);
+    this.#instance = Number(this.#pointerHolder[0]) as Pointer;
+    this.#pointerHolder[0] = 0n;
+    VK_DEBUG(`Framebuffer created: 0x${this.#instance.toString(16)}`);
   }
 }
