@@ -27,9 +27,13 @@ export class VkSync implements Disposable {
   #renderFinishedSemaphores: BigUint64Array;
   #inFlightFences: BigUint64Array;
 
+  // NOVO: por imagem do swapchain (tamanho S)
+  #imageInFlightFences: BigUint64Array;
+
   constructor(
     device: Pointer,
     maxFramesInFlight: number = MAX_FRAMES_IN_FLIGHT,
+    maxSwapchainImages: number = MAX_FRAMES_IN_FLIGHT,
   ) {
     this.#device = device;
 
@@ -38,6 +42,7 @@ export class VkSync implements Disposable {
     this.#imageAvailableSemaphores = new BigUint64Array(maxFramesInFlight);
     this.#renderFinishedSemaphores = new BigUint64Array(maxFramesInFlight);
     this.#inFlightFences = new BigUint64Array(maxFramesInFlight);
+    this.#imageInFlightFences = new BigUint64Array(maxSwapchainImages);
 
     for (let i = 0; i < maxFramesInFlight; i++) {
       this.#createSemaphore(this.#imageAvailableSemaphores, i);
@@ -62,6 +67,13 @@ export class VkSync implements Disposable {
 
   get maxFramesInFlight(): number {
     return this.#inFlightFences.length;
+  }
+
+  /**
+   * Initializes per-swapchain-image fences to track which images are currently in flight.
+   */
+  initPerSwapchainImages(swapchainImageCount: number): void {
+    this.#imageInFlightFences = new BigUint64Array(swapchainImageCount); // zera (0n)
   }
 
   /**
@@ -120,6 +132,35 @@ export class VkSync implements Disposable {
     if (result !== VkResult.SUCCESS) {
       throw new DynamicLibError(getResultMessage(result), 'Vulkan');
     }
+  }
+
+  /**
+   * Waits if the image at the given index is currently in flight.
+   */
+  waitIfImageInFlight(
+    imageIndex: number,
+    timeout: bigint = 0xffffffffffffffffn,
+  ): void {
+    if (imageIndex < 0 || imageIndex >= this.#imageInFlightFences.length)
+      return;
+    const fenceHandle = Number(
+      this.#imageInFlightFences[imageIndex],
+    ) as Pointer;
+    if (fenceHandle) {
+      const arr = new BigUint64Array([BigInt(fenceHandle)]);
+      const res = VK.vkWaitForFences(this.#device, 1, ptr(arr), 1, timeout);
+      if (res !== VkResult.SUCCESS) {
+        throw new DynamicLibError(getResultMessage(res), 'Vulkan');
+      }
+      this.#imageInFlightFences[imageIndex] = 0n;
+    }
+  }
+
+  tagImageWithFrameFence(imageIndex: number, frameIndex: number): void {
+    if (imageIndex < 0 || imageIndex >= this.#imageInFlightFences.length)
+      return;
+    const fence = this.getInFlightFence(frameIndex);
+    this.#imageInFlightFences[imageIndex] = BigInt(fence);
   }
 
   dispose(): void | Promise<void> {

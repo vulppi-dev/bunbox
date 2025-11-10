@@ -127,7 +127,10 @@ export class VkSwapchain implements Disposable {
       details.capabilities.maxImageExtent.width,
     );
 
-    let imageCount = details.capabilities.minImageCount + 1;
+    let imageCount = Math.max(
+      selectedPresentMode === VkPresentModeKHR.MAILBOX_KHR ? 4 : 2,
+      details.capabilities.minImageCount + 1,
+    );
     if (
       details.capabilities.maxImageCount > 0 &&
       imageCount > details.capabilities.maxImageCount

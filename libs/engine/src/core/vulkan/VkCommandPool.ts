@@ -44,7 +44,7 @@ export class VkCommandPool implements Disposable {
     VK_DEBUG(`Command pool created: 0x${this.#commandPool.toString(16)}`);
   }
 
-  get pool(): Pointer {
+  get instance(): Pointer {
     if (!this.#commandPool) {
       throw new DynamicLibError('Command pool not created', 'Vulkan');
     }

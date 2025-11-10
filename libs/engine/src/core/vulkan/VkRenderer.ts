@@ -8,28 +8,41 @@ import { VkSwapchain } from './VkSwapchain';
 import { VkImageView } from './VkImageView';
 import { TextureImage } from '../../resources';
 import { VkImage } from './VkImage';
+import { VkCommandBuffer } from './VkCommandBuffer';
+import { VkSync } from './VkSync';
 
 export class VkRenderer extends AbstractRenderer {
   #device: VkDevice | null = null;
+
   #swapchain: VkSwapchain | null = null;
-  #commandPool: VkCommandPool | null = null;
-  #swapchainView: VkImageView | null = null;
   #depthStencilTexture: TextureImage | null = null;
-  #depthStencilImage: VkImage | null = null;
-  #depthStencilImageView: VkImageView | null = null;
+  #depthStencilImages: VkImage[] = [];
+  #swapchainViews: VkImageView[] = [];
+  #depthStencilImageViews: VkImageView[] = [];
+
+  #sync: VkSync | null = null;
+  #commandPool: VkCommandPool | null = null;
+  #commandBuffers: VkCommandBuffer[] = [];
+
+  #swapCount: number = 0;
+  #frameCount: number = 0;
 
   override dispose(): void | Promise<void> {
-    this.#depthStencilImageView?.dispose();
-    this.#depthStencilImageView = null;
-    this.#depthStencilImage?.dispose();
-    this.#depthStencilImage = null;
+    this.#depthStencilImageViews.forEach((view) => view.dispose());
+    this.#depthStencilImageViews = [];
+    this.#depthStencilImages.forEach((image) => image.dispose());
+    this.#depthStencilImages = [];
     this.#depthStencilTexture = null;
-    this.#swapchainView?.dispose();
-    this.#swapchainView = null;
-    this.#commandPool?.dispose();
-    this.#commandPool = null;
+    this.#swapchainViews.forEach((view) => view.dispose());
+    this.#swapchainViews = [];
     this.#swapchain?.dispose();
     this.#swapchain = null;
+    this.#commandPool?.dispose();
+    this.#commandPool = null;
+    this.#commandBuffers.forEach((buffer) => buffer.dispose());
+    this.#commandBuffers = [];
+    this.#swapCount = 0;
+    this.#frameCount = 0;
     this.#device?.dispose();
     this.#device = null;
   }
@@ -38,13 +51,6 @@ export class VkRenderer extends AbstractRenderer {
     if (!this.#device || !this.#swapchain) {
       return;
     }
-
-    // const renderPassBase = RenderPassPresets.forward();
-    // const renderPass = new VkRenderPass(
-    //   this.#device.logicalDevice,
-    //   renderPassBase,
-    // );
-    // const material = createSimpleMaterial();
   }
 
   protected override _prepare(): void | Promise<void> {
@@ -73,8 +79,12 @@ export class VkRenderer extends AbstractRenderer {
       return;
     }
     if (this.#swapchain) {
-      this.#swapchainView?.dispose();
-      this.#swapchainView = null;
+      this.#depthStencilImageViews.forEach((view) => view.dispose());
+      this.#depthStencilImageViews = [];
+      this.#depthStencilImages.forEach((image) => image.dispose());
+      this.#depthStencilImages = [];
+      this.#swapchainViews.forEach((view) => view.dispose());
+      this.#swapchainViews = [];
       this.#swapchain.dispose();
       this.#swapchain = null;
     }
@@ -84,39 +94,62 @@ export class VkRenderer extends AbstractRenderer {
     }
 
     this.#swapchain = new VkSwapchain(this.#device, width, height);
-    this.#swapchainView = new VkImageView({
-      device: this.#device.logicalDevice,
-      format: this.#swapchain.format,
-      image: this.#swapchain.images as any,
-      mask: ['color'],
-    });
 
-    if (
-      this.#depthStencilTexture.width !== this.#swapchain.width ||
-      this.#depthStencilTexture.height !== this.#swapchain.height
-    ) {
-      this.#depthStencilTexture.width = this.#swapchain.width;
-      this.#depthStencilTexture.height = this.#swapchain.height;
-    }
+    this.#swapCount = this.#swapchain.images.length;
+    this.#frameCount = Math.max(this.#swapCount - 1, 2);
 
-    if (this.#depthStencilTexture.isDirty) {
-      this.#depthStencilImageView?.dispose();
-      this.#depthStencilImage?.dispose();
+    this.#swapchainViews = this.#swapchain.images.map(
+      (image) =>
+        new VkImageView({
+          device: this.#device!.logicalDevice,
+          format: this.#swapchain!.format,
+          image: image as any,
+          mask: ['color'],
+        }),
+    );
 
-      this.#depthStencilImage = new VkImage(
+    this.#depthStencilTexture.width = this.#swapchain.width;
+    this.#depthStencilTexture.height = this.#swapchain.height;
+
+    for (let i = 0; i < this.#swapCount; i++) {
+      const depthStencilImage = new VkImage(
         this.#device.logicalDevice,
         this.#device.physicalDevice,
         this.#depthStencilTexture,
       );
-
-      this.#depthStencilImageView = new VkImageView({
+      this.#depthStencilImages.push(depthStencilImage);
+      const depthStencilImageView = new VkImageView({
         device: this.#device.logicalDevice,
-        format: this.#depthStencilImage.format,
-        image: this.#depthStencilImage.instance,
+        format: depthStencilImage.format,
+        image: depthStencilImage.instance,
         mask: ['depth', 'stencil'],
       });
+      this.#depthStencilImageViews.push(depthStencilImageView);
+    }
+    this.#depthStencilTexture.markAsClean();
 
-      this.#depthStencilTexture.markAsClean();
+    if (this.#frameCount === this.#commandBuffers.length) {
+      if (!this.#sync) {
+        this.#sync = new VkSync(
+          this.#device.logicalDevice,
+          this.#swapCount,
+          this.#frameCount,
+        );
+      } else {
+        this.#sync.initPerSwapchainImages(this.#swapCount);
+      }
+      return;
+    }
+
+    this.#commandBuffers.forEach((buffer) => buffer.dispose());
+    this.#commandBuffers = [];
+
+    for (let i = 0; i < this.#swapCount; i++) {
+      const commandBuffer = new VkCommandBuffer(
+        this.#device.logicalDevice,
+        this.#commandPool!.instance,
+      );
+      this.#commandBuffers.push(commandBuffer);
     }
   }
 }
