@@ -22,6 +22,9 @@ export enum VkResult {
   ERROR_FORMAT_NOT_SUPPORTED = -11,
   ERROR_FRAGMENTED_POOL = -12,
   ERROR_UNKNOWN = -13,
+  // Extension: VK_KHR_swapchain
+  ERROR_OUT_OF_DATE_KHR = -1000001004,
+  SUBOPTIMAL_KHR = 1000001003,
 }
 
 // MARK: Structure Types
@@ -97,6 +100,8 @@ export enum VkStructureType {
 
   // Extension: VK_EXT_metal_surface
   METAL_SURFACE_CREATE_INFO_EXT = 1000217000,
+
+  PRESENT_INFO_KHR = 1000001001,
 }
 
 // MARK: System Allocation Scope

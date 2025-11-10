@@ -6,6 +6,7 @@ import {
   vkFenceCreateInfo,
   vkSemaphoreCreateInfo,
   VkResult,
+  VK_WHOLE_SIZE,
 } from '@bunbox/vk';
 import { ptr, type Pointer } from 'bun:ffi';
 import { DynamicLibError } from '../../errors';
@@ -100,10 +101,7 @@ export class VkSync implements Disposable {
   /**
    * Waits for fence at specified frame index to be signaled.
    */
-  waitForFence(
-    frameIndex: number,
-    timeout: bigint = 0xffffffffffffffffn,
-  ): void {
+  waitForFence(frameIndex: number, timeout: bigint = VK_WHOLE_SIZE): void {
     const fence = this.getInFlightFence(frameIndex);
     const fenceArray = new BigUint64Array([BigInt(fence)]);
 
@@ -139,7 +137,7 @@ export class VkSync implements Disposable {
    */
   waitIfImageInFlight(
     imageIndex: number,
-    timeout: bigint = 0xffffffffffffffffn,
+    timeout: bigint = VK_WHOLE_SIZE,
   ): void {
     if (imageIndex < 0 || imageIndex >= this.#imageInFlightFences.length)
       return;

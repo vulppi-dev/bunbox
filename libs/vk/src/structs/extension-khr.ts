@@ -97,3 +97,15 @@ export const vkMetalSurfaceCreateInfoEXT = struct({
   flags: u32(),
   pLayer: u64(),
 });
+
+// MARK: VK_KHR_present
+export const vkPresentInfoKHR = struct({
+  sType: i32(VkStructureType.PRESENT_INFO_KHR),
+  pNext: ptrAny(),
+  waitSemaphoreCount: u32(),
+  pWaitSemaphores: ptrAny(),
+  swapchainCount: u32(),
+  pSwapchains: ptrAny(),
+  pImageIndices: ptrAny(),
+  pResults: ptrAny(),
+});

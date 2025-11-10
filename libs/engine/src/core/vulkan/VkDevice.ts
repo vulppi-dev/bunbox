@@ -343,6 +343,14 @@ export class VkDevice implements Disposable {
     return this.#surface!;
   }
 
+  get graphicsQueue() {
+    return this.#graphicsQueue!;
+  }
+
+  get presentQueue() {
+    return this.#presentQueue!;
+  }
+
   dispose() {
     decreaseCounter('VkDevice');
     if (this.#surface) {
