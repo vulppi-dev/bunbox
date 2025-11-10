@@ -26,6 +26,29 @@ export const vkSurfaceFormatKHR = struct({
   colorSpace: i32(),
 });
 
+// MARK: VK_KHR_swapchain
+
+export const vkSwapchainCreateInfoKHR = struct({
+  sType: i32(VkStructureType.SWAPCHAIN_CREATE_INFO_KHR),
+  pNext: ptrAny(),
+  flags: u32(),
+  surface: ptrAny(),
+  minImageCount: u32(),
+  imageFormat: i32(),
+  imageColorSpace: i32(),
+  imageExtent: vkExtent2D,
+  imageArrayLayers: u32(),
+  imageUsage: u32(),
+  imageSharingMode: i32(),
+  queueFamilyIndexCount: u32(),
+  pQueueFamilyIndices: ptrAny(),
+  preTransform: i32(),
+  compositeAlpha: i32(),
+  presentMode: i32(),
+  clipped: u32(),
+  oldSwapchain: ptrAny(),
+});
+
 // MARK: VK_KHR_win32_surface
 
 export const vkWin32SurfaceCreateInfoKHR = struct({

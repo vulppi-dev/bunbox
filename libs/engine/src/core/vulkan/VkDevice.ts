@@ -339,6 +339,10 @@ export class VkDevice implements Disposable {
     return this.#logicalDevice!;
   }
 
+  get surface() {
+    return this.#surface!;
+  }
+
   dispose() {
     decreaseCounter('VkDevice');
     if (this.#surface) {
@@ -422,6 +426,10 @@ export class VkDevice implements Disposable {
     }
 
     return indices;
+  }
+
+  getSwapChainSupport() {
+    return this.#getSwapChainSupport(this.#physicalDevice!);
   }
 
   #createSurface() {
