@@ -13,9 +13,6 @@ export class RenderPassPresets {
    * Attachments:
    * - 0: Color (swapchain format)
    * - 1: Depth (d32-sfloat)
-   *
-   * Subpasses:
-   * - 0: Graphics pass (renders to color + depth)
    */
   static forward(): RenderPassConfig {
     return new RenderPassBuilder()
@@ -33,16 +30,12 @@ export class RenderPassPresets {
         storeOp: 'dont-care',
         clearValue: { depthStencil: { depth: 1.0, stencil: 0 } },
       })
-      .createDefaultSubpass()
-      .addDefaultExternalDependency()
       .build();
   }
 
   /**
-   * Deferred rendering G-Buffer pass (Geometry only)
-   * For cross-API compatibility, split deferred into separate passes:
-   * 1. Use this for geometry pass (writes G-Buffer)
-   * 2. Use deferredLighting() for lighting pass (reads G-Buffer)
+   * Deferred rendering G-Buffer pass
+   * Writes position, normal, albedo, and specular to separate attachments
    *
    * Attachments:
    * - 0: Position (r32g32b32a32-sfloat)
@@ -51,65 +44,57 @@ export class RenderPassPresets {
    * - 3: Specular (r8g8b8a8-unorm)
    * - 4: Depth (d32-sfloat)
    *
-   * Subpasses:
-   * - 0: Geometry pass (single subpass)
+   * Note: Use separate render pass for lighting that reads these textures
    */
   static deferredGeometry(): RenderPassConfig {
-    return (
-      new RenderPassBuilder()
-        .setName('Deferred G-Buffer Pass')
-        // G-Buffer attachments
-        .addColorAttachment({
-          format: 'r32g32b32a32-sfloat', // Position
-          loadOp: 'clear',
-          storeOp: 'store',
-          finalLayout: 'shader-read-only',
-          clearValue: { color: [0.0, 0.0, 0.0, 0.0] },
-        })
-        .addColorAttachment({
-          format: 'r16g16b16a16-sfloat', // Normal
-          loadOp: 'clear',
-          storeOp: 'store',
-          finalLayout: 'shader-read-only',
-          clearValue: { color: [0.0, 0.0, 0.0, 0.0] },
-        })
-        .addColorAttachment({
-          format: 'r8g8b8a8-unorm', // Albedo
-          loadOp: 'clear',
-          storeOp: 'store',
-          finalLayout: 'shader-read-only',
-          clearValue: { color: [0.0, 0.0, 0.0, 1.0] },
-        })
-        .addColorAttachment({
-          format: 'r8g8b8a8-unorm', // Specular
-          loadOp: 'clear',
-          storeOp: 'store',
-          finalLayout: 'shader-read-only',
-          clearValue: { color: [0.0, 0.0, 0.0, 1.0] },
-        })
-        .addDepthAttachment({
-          format: 'd32-sfloat',
-          loadOp: 'clear',
-          storeOp: 'store',
-          finalLayout: 'shader-read-only',
-          clearValue: { depthStencil: { depth: 1.0 } },
-        })
-        .build() // Auto-creates single subpass
-    );
+    return new RenderPassBuilder()
+      .setName('Deferred G-Buffer Pass')
+      .addColorAttachment({
+        format: 'r32g32b32a32-sfloat', // Position
+        loadOp: 'clear',
+        storeOp: 'store',
+        finalLayout: 'shader-read-only',
+        clearValue: { color: [0.0, 0.0, 0.0, 0.0] },
+      })
+      .addColorAttachment({
+        format: 'r16g16b16a16-sfloat', // Normal
+        loadOp: 'clear',
+        storeOp: 'store',
+        finalLayout: 'shader-read-only',
+        clearValue: { color: [0.0, 0.0, 0.0, 0.0] },
+      })
+      .addColorAttachment({
+        format: 'r8g8b8a8-unorm', // Albedo
+        loadOp: 'clear',
+        storeOp: 'store',
+        finalLayout: 'shader-read-only',
+        clearValue: { color: [0.0, 0.0, 0.0, 1.0] },
+      })
+      .addColorAttachment({
+        format: 'r8g8b8a8-unorm', // Specular
+        loadOp: 'clear',
+        storeOp: 'store',
+        finalLayout: 'shader-read-only',
+        clearValue: { color: [0.0, 0.0, 0.0, 1.0] },
+      })
+      .addDepthAttachment({
+        format: 'd32-sfloat',
+        loadOp: 'clear',
+        storeOp: 'store',
+        finalLayout: 'shader-read-only',
+        clearValue: { depthStencil: { depth: 1.0 } },
+      })
+      .build();
   }
 
   /**
    * Deferred rendering Lighting pass
-   * Reads G-Buffer from deferredGeometry() and outputs final color
+   * Reads G-Buffer textures as shader resources and outputs final color
    *
    * Attachments:
    * - 0: Final color (swapchain)
    *
-   * Subpasses:
-   * - 0: Lighting pass (single subpass)
-   *
-   * Note: G-Buffer textures should be bound as shader resources,
-   * not as input attachments for cross-API compatibility.
+   * Note: Bind G-Buffer textures as shader resources before rendering
    */
   static deferredLighting(): RenderPassConfig {
     return new RenderPassBuilder()
@@ -121,7 +106,7 @@ export class RenderPassPresets {
         finalLayout: 'present-src',
         clearValue: { color: [0.0, 0.0, 0.0, 1.0] },
       })
-      .build(); // Auto-creates single subpass
+      .build();
   }
 
   /**
@@ -129,9 +114,6 @@ export class RenderPassPresets {
    *
    * Attachments:
    * - 0: Depth (d32-sfloat)
-   *
-   * Subpasses:
-   * - 0: Shadow rendering (depth-only)
    */
   static shadowMap(): RenderPassConfig {
     return new RenderPassBuilder()
@@ -143,135 +125,51 @@ export class RenderPassPresets {
         finalLayout: 'shader-read-only',
         clearValue: { depthStencil: { depth: 1.0 } },
       })
-      .addSubpass({
-        depthStencilAttachment: {
-          attachment: 0,
-          layout: 'depth-stencil-attachment',
-        },
-      })
-      .addDependency({
-        srcSubpass: 'external',
-        dstSubpass: 0,
-        srcStageMask: 'fragment-shader',
-        dstStageMask: 'early-fragment-tests',
-        srcAccessMask: 'shader-read',
-        dstAccessMask: 'depth-stencil-attachment-write',
+      .build();
+  }
+
+  /**
+   * Post-processing pass
+   * Reads from input texture and writes to output
+   *
+   * Attachments:
+   * - 0: Output color
+   *
+   * Note: Bind input texture as shader resource before rendering
+   * For multiple effects, chain multiple render passes together
+   */
+  static postProcess(outputFormat: Format = 'swapchain'): RenderPassConfig {
+    return new RenderPassBuilder()
+      .setName('Post-Processing Pass')
+      .addColorAttachment({
+        format: outputFormat,
+        loadOp: 'dont-care',
+        storeOp: 'store',
+        finalLayout:
+          outputFormat === 'swapchain' ? 'present-src' : 'shader-read-only',
       })
       .build();
   }
 
   /**
-   * Post-processing pass with multiple effects as subpasses
-   * Each subpass reads from previous and writes to next
-   *
-   * Attachments:
-   * - 0: Input color (from scene)
-   * - 1: Intermediate buffer (ping-pong)
-   * - 2: Final output (swapchain)
-   *
-   * Subpasses:
-   * - 0: Effect 1 (reads 0, writes 1)
-   * - 1: Effect 2 (reads 1, writes 2)
-   */
-  static postProcess(): RenderPassConfig {
-    return (
-      new RenderPassBuilder()
-        .setName('Post-Processing Chain')
-        // Input texture (from previous render pass)
-        .addColorAttachment({
-          format: 'r16g16b16a16-sfloat',
-          loadOp: 'load',
-          storeOp: 'dont-care',
-          initialLayout: 'shader-read-only',
-          finalLayout: 'shader-read-only',
-        })
-        // Intermediate buffer
-        .addColorAttachment({
-          format: 'r16g16b16a16-sfloat',
-          loadOp: 'dont-care',
-          storeOp: 'store',
-          finalLayout: 'shader-read-only',
-        })
-        // Final output
-        .addColorAttachment({
-          format: 'swapchain',
-          loadOp: 'dont-care',
-          storeOp: 'store',
-          finalLayout: 'present-src',
-        })
-        // Subpass 0: First effect
-        .addSubpass({
-          inputAttachments: [{ attachment: 0, layout: 'shader-read-only' }],
-          colorAttachments: [{ attachment: 1, layout: 'color-attachment' }],
-        })
-        // Subpass 1: Second effect
-        .addSubpass({
-          inputAttachments: [{ attachment: 1, layout: 'shader-read-only' }],
-          colorAttachments: [{ attachment: 2, layout: 'color-attachment' }],
-        })
-        .addDependency({
-          srcSubpass: 0,
-          dstSubpass: 1,
-          srcStageMask: 'color-attachment-output',
-          dstStageMask: 'fragment-shader',
-          srcAccessMask: 'color-attachment-write',
-          dstAccessMask: 'input-attachment-read',
-          dependencyFlags: 'by-region',
-        })
-        .build()
-    );
-  }
-
-  /**
-   * SSAO (Screen Space Ambient Occlusion) pass
-   * Two subpasses: occlusion calculation and blur
+   * SSAO (Screen Space Ambient Occlusion) calculation pass
+   * Outputs occlusion values to a single channel texture
    *
    * Attachments:
    * - 0: Occlusion buffer (r8-unorm)
-   * - 1: Blurred occlusion (r8-unorm)
    *
-   * Subpasses:
-   * - 0: Calculate occlusion
-   * - 1: Blur occlusion
+   * Note: Use separate render pass for blur/composite
    */
   static ssao(): RenderPassConfig {
-    return (
-      new RenderPassBuilder()
-        .setName('SSAO (Screen Space Ambient Occlusion)')
-        // Raw occlusion
-        .addColorAttachment({
-          format: 'r8-unorm',
-          loadOp: 'dont-care',
-          storeOp: 'store',
-          finalLayout: 'shader-read-only',
-        })
-        // Blurred result
-        .addColorAttachment({
-          format: 'r8-unorm',
-          loadOp: 'dont-care',
-          storeOp: 'store',
-          finalLayout: 'shader-read-only',
-        })
-        // Subpass 0: Calculate occlusion
-        .addSubpass({
-          colorAttachments: [{ attachment: 0, layout: 'color-attachment' }],
-        })
-        // Subpass 1: Blur
-        .addSubpass({
-          inputAttachments: [{ attachment: 0, layout: 'shader-read-only' }],
-          colorAttachments: [{ attachment: 1, layout: 'color-attachment' }],
-        })
-        .addDependency({
-          srcSubpass: 0,
-          dstSubpass: 1,
-          srcStageMask: 'color-attachment-output',
-          dstStageMask: 'fragment-shader',
-          srcAccessMask: 'color-attachment-write',
-          dstAccessMask: 'input-attachment-read',
-          dependencyFlags: 'by-region',
-        })
-        .build()
-    );
+    return new RenderPassBuilder()
+      .setName('SSAO Calculation')
+      .addColorAttachment({
+        format: 'r8-unorm',
+        loadOp: 'dont-care',
+        storeOp: 'store',
+        finalLayout: 'shader-read-only',
+      })
+      .build();
   }
 
   /**
@@ -300,57 +198,70 @@ export class RenderPassPresets {
       });
     }
 
-    return builder.createDefaultSubpass().build();
+    return builder.build();
   }
 
   /**
-   * Refraction pass (renders after opaque objects, reads scene color)
+   * Bloom bright pass
+   * Extracts bright areas from HDR scene
    *
    * Attachments:
-   * - 0: Scene color (input from previous pass)
-   * - 1: Output color (swapchain)
-   * - 2: Depth (shared with previous pass)
+   * - 0: Bright color (r16g16b16a16-sfloat)
    *
-   * Subpasses:
-   * - 0: Render refractive objects
+   * Note: Bind scene color as shader resource
    */
-  static refraction(): RenderPassConfig {
-    return (
-      new RenderPassBuilder()
-        .setName('Refraction Pass')
-        // Input scene color
-        .addColorAttachment({
-          format: 'r16g16b16a16-sfloat',
-          loadOp: 'load',
-          storeOp: 'dont-care',
-          initialLayout: 'shader-read-only',
-          finalLayout: 'shader-read-only',
-        })
-        // Output color
-        .addColorAttachment({
-          format: 'swapchain',
-          loadOp: 'load', // Preserve previous content
-          storeOp: 'store',
-          initialLayout: 'color-attachment',
-          finalLayout: 'present-src',
-        })
-        // Depth buffer
-        .addDepthAttachment({
-          format: 'd32-sfloat',
-          loadOp: 'load',
-          storeOp: 'store',
-          initialLayout: 'depth-stencil-attachment',
-          finalLayout: 'depth-stencil-attachment',
-        })
-        .addSubpass({
-          inputAttachments: [{ attachment: 0, layout: 'shader-read-only' }],
-          colorAttachments: [{ attachment: 1, layout: 'color-attachment' }],
-          depthStencilAttachment: {
-            attachment: 2,
-            layout: 'depth-stencil-attachment',
-          },
-        })
-        .build()
-    );
+  static bloomBright(): RenderPassConfig {
+    return new RenderPassBuilder()
+      .setName('Bloom Bright Pass')
+      .addColorAttachment({
+        format: 'r16g16b16a16-sfloat',
+        loadOp: 'dont-care',
+        storeOp: 'store',
+        finalLayout: 'shader-read-only',
+      })
+      .build();
+  }
+
+  /**
+   * Gaussian blur pass
+   * Can be used for bloom, SSAO blur, etc.
+   *
+   * Attachments:
+   * - 0: Blurred output
+   *
+   * Note: Bind input texture as shader resource
+   * Use two passes (horizontal + vertical) for separable blur
+   */
+  static blur(format: Format = 'r16g16b16a16-sfloat'): RenderPassConfig {
+    return new RenderPassBuilder()
+      .setName('Blur Pass')
+      .addColorAttachment({
+        format,
+        loadOp: 'dont-care',
+        storeOp: 'store',
+        finalLayout: 'shader-read-only',
+      })
+      .build();
+  }
+
+  /**
+   * Tone mapping and gamma correction pass
+   * Final pass that outputs to swapchain
+   *
+   * Attachments:
+   * - 0: Final output (swapchain)
+   *
+   * Note: Bind HDR scene as shader resource
+   */
+  static toneMapping(): RenderPassConfig {
+    return new RenderPassBuilder()
+      .setName('Tone Mapping')
+      .addColorAttachment({
+        format: 'swapchain',
+        loadOp: 'dont-care',
+        storeOp: 'store',
+        finalLayout: 'present-src',
+      })
+      .build();
   }
 }

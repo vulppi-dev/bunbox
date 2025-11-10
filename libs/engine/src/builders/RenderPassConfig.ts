@@ -1,12 +1,8 @@
 import type {
-  AccessMask,
-  DependencyFlag,
   Format,
   ImageLayout,
   LoadOp,
-  PipelineBindPoint,
   SampleCount,
-  StageMask,
   StoreOp,
 } from './RenderPassTypes';
 
@@ -77,104 +73,6 @@ export type ClearValue =
   | { depthStencil: { depth: number; stencil?: number } };
 
 /**
- * Attachment reference in a subpass
- */
-export interface AttachmentReference {
-  /**
-   * Index of the attachment in the attachments array
-   */
-  attachment: number;
-
-  /**
-   * Layout the attachment will be in during the subpass
-   */
-  layout: ImageLayout;
-}
-
-/**
- * Preserve attachment reference (attachment not used in subpass but must be preserved)
- */
-export type PreserveAttachment = number;
-
-/**
- * Subpass configuration
- */
-export interface SubpassConfig {
-  /**
-   * Pipeline bind point
-   * @default 'graphics'
-   */
-  pipelineBindPoint?: PipelineBindPoint;
-
-  /**
-   * Color attachments for this subpass
-   */
-  colorAttachments?: AttachmentReference[];
-
-  /**
-   * Depth/stencil attachment for this subpass
-   */
-  depthStencilAttachment?: AttachmentReference;
-
-  /**
-   * Input attachments (read from previous subpass)
-   */
-  inputAttachments?: AttachmentReference[];
-
-  /**
-   * Resolve attachments (for MSAA resolve)
-   * Must match colorAttachments length if provided
-   */
-  resolveAttachments?: AttachmentReference[];
-
-  /**
-   * Preserve attachments (not used but must be preserved)
-   */
-  preserveAttachments?: PreserveAttachment[];
-}
-
-/**
- * Subpass dependency configuration
- */
-export interface SubpassDependency {
-  /**
-   * Source subpass index (VK_SUBPASS_EXTERNAL for external)
-   */
-  srcSubpass: number | 'external';
-
-  /**
-   * Destination subpass index (VK_SUBPASS_EXTERNAL for external)
-   */
-  dstSubpass: number | 'external';
-
-  /**
-   * Source pipeline stage mask
-   */
-  srcStageMask: StageMask;
-
-  /**
-   * Destination pipeline stage mask
-   */
-  dstStageMask: StageMask;
-
-  /**
-   * Source access mask
-   */
-  srcAccessMask: AccessMask;
-
-  /**
-   * Destination access mask
-   */
-  dstAccessMask: AccessMask;
-
-  /**
-   * Dependency flags
-   * @default undefined
-   */
-  dependencyFlags?: DependencyFlag | DependencyFlag[];
-}
-
-/**
  * Complete render pass configuration
  */
 export interface RenderPassConfig {
@@ -182,17 +80,6 @@ export interface RenderPassConfig {
    * Attachments for this render pass
    */
   attachments: AttachmentConfig[];
-
-  /**
-   * Subpasses for this render pass
-   * @default Single graphics subpass with all color attachments
-   */
-  subpasses?: SubpassConfig[];
-
-  /**
-   * Subpass dependencies
-   */
-  dependencies?: SubpassDependency[];
 
   /**
    * Name for debugging purposes
