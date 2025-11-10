@@ -222,6 +222,82 @@ export const vkDestroyShaderModule = {
   returns: 'void',
 } as const satisfies FFIFunction;
 
+// MARK: Descriptor Set Layout Functions
+
+/**
+ * Create a new descriptor set layout object
+ *
+ * C ref: `VkResult vkCreateDescriptorSetLayout(
+ *   VkDevice device,
+ *   const VkDescriptorSetLayoutCreateInfo* pCreateInfo,
+ *   const VkAllocationCallbacks* pAllocator,
+ *   VkDescriptorSetLayout* pSetLayout)`
+ */
+export const vkCreateDescriptorSetLayout = {
+  args: ['ptr', 'ptr', 'ptr', 'ptr'] as [
+    device: 'ptr',
+    pCreateInfo: 'ptr',
+    pAllocator: 'ptr',
+    pSetLayout: 'ptr',
+  ],
+  returns: 'i32',
+} as const satisfies FFIFunction;
+
+/**
+ * Destroy a descriptor set layout object
+ *
+ * C ref: `void vkDestroyDescriptorSetLayout(
+ *   VkDevice device,
+ *   VkDescriptorSetLayout descriptorSetLayout,
+ *   const VkAllocationCallbacks* pAllocator)`
+ */
+export const vkDestroyDescriptorSetLayout = {
+  args: ['ptr', 'ptr', 'ptr'] as [
+    device: 'ptr',
+    descriptorSetLayout: 'ptr',
+    pAllocator: 'ptr',
+  ],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
+// MARK: Pipeline Layout Functions
+
+/**
+ * Create a new pipeline layout object
+ *
+ * C ref: `VkResult vkCreatePipelineLayout(
+ *   VkDevice device,
+ *   const VkPipelineLayoutCreateInfo* pCreateInfo,
+ *   const VkAllocationCallbacks* pAllocator,
+ *   VkPipelineLayout* pPipelineLayout)`
+ */
+export const vkCreatePipelineLayout = {
+  args: ['ptr', 'ptr', 'ptr', 'ptr'] as [
+    device: 'ptr',
+    pCreateInfo: 'ptr',
+    pAllocator: 'ptr',
+    pPipelineLayout: 'ptr',
+  ],
+  returns: 'i32',
+} as const satisfies FFIFunction;
+
+/**
+ * Destroy a pipeline layout object
+ *
+ * C ref: `void vkDestroyPipelineLayout(
+ *   VkDevice device,
+ *   VkPipelineLayout pipelineLayout,
+ *   const VkAllocationCallbacks* pAllocator)`
+ */
+export const vkDestroyPipelineLayout = {
+  args: ['ptr', 'ptr', 'ptr'] as [
+    device: 'ptr',
+    pipelineLayout: 'ptr',
+    pAllocator: 'ptr',
+  ],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
 // MARK: Framebuffer Functions
 
 /**

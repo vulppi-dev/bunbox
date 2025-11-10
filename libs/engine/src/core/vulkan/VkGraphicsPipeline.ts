@@ -1,5 +1,9 @@
 import { isWgslValid, wgslToSpirvBin } from '@bunbox/naga';
-import { getInstanceBuffer, instantiate } from '@bunbox/struct';
+import {
+  getInstanceBuffer,
+  instantiate,
+  type InferField,
+} from '@bunbox/struct';
 import type { Disposable } from '@bunbox/utils';
 import {
   getResultMessage,
@@ -11,13 +15,19 @@ import {
   VkColorComponentFlagBits,
   VkCompareOp,
   VkCullModeFlagBits,
+  vkDescriptorSetLayoutBinding,
+  vkDescriptorSetLayoutCreateInfo,
+  VkDescriptorType,
+  VkDynamicState,
   VkFrontFace,
   vkGraphicsPipelineCreateInfo,
   VkLogicOp,
   vkPipelineColorBlendAttachmentState,
   vkPipelineColorBlendStateCreateInfo,
   vkPipelineDepthStencilStateCreateInfo,
+  vkPipelineDynamicStateCreateInfo,
   vkPipelineInputAssemblyStateCreateInfo,
+  vkPipelineLayoutCreateInfo,
   vkPipelineMultisampleStateCreateInfo,
   vkPipelineRasterizationStateCreateInfo,
   vkPipelineShaderStageCreateInfo,
@@ -35,6 +45,7 @@ import {
 } from '@bunbox/vk';
 import { ptr, type Pointer } from 'bun:ffi';
 import type { Material, MaterialPrimitive } from '../../builders';
+import { PropertyType } from '../../builders/MaterialPropertyTypes';
 import { DynamicLibError } from '../../errors';
 import type {
   BlendFactor,
@@ -190,6 +201,28 @@ export class VkGraphicsPipeline implements Disposable {
     }
   }
 
+  static #getVkDescriptorType(propertyType: PropertyType): VkDescriptorType {
+    switch (propertyType) {
+      case PropertyType.Texture:
+        return VkDescriptorType.SAMPLED_IMAGE;
+      case PropertyType.Sampler:
+        return VkDescriptorType.SAMPLER;
+      case PropertyType.TextureSampler:
+        return VkDescriptorType.COMBINED_IMAGE_SAMPLER;
+      case PropertyType.Scalar:
+      case PropertyType.Vec2:
+      case PropertyType.Vec3:
+      case PropertyType.Vec4:
+      case PropertyType.Mat2:
+      case PropertyType.Mat3:
+      case PropertyType.Mat4:
+      case PropertyType.Color3:
+      case PropertyType.Color4:
+      default:
+        return VkDescriptorType.UNIFORM_BUFFER;
+    }
+  }
+
   static #getVkBlendFactor(factor: BlendFactor) {
     switch (factor) {
       case 'zero':
@@ -238,14 +271,12 @@ export class VkGraphicsPipeline implements Disposable {
     }
   }
 
-  // MARK: Inactive Properties
   #device: Pointer;
   #material: Material;
 
   #pipelineInstance: Pointer | null = null;
-
-  #vertexData: Uint8Array | null = null;
-  #fragmentData: Uint8Array | null = null;
+  #pipelineLayout: Pointer | null = null;
+  #descriptorSetLayout: Pointer | null = null;
 
   #vertexModule: Pointer | null = null;
   #fragmentModule: Pointer | null = null;
@@ -255,9 +286,10 @@ export class VkGraphicsPipeline implements Disposable {
   #fragmentStageInfo = instantiate(vkPipelineShaderStageCreateInfo);
   #shaderStages: BigUint64Array;
 
+  #dynamicStages: Uint32Array;
+
   // Config structs
-  #viewport = instantiate(vkViewport);
-  #scissor = instantiate(vkRect2D);
+  #dynamicInfo = instantiate(vkPipelineDynamicStateCreateInfo);
   #viewportInfo = instantiate(vkPipelineViewportStateCreateInfo);
   #inputAssemblyInfo = instantiate(vkPipelineInputAssemblyStateCreateInfo);
   #rasterizationInfo = instantiate(vkPipelineRasterizationStateCreateInfo);
@@ -269,7 +301,7 @@ export class VkGraphicsPipeline implements Disposable {
   #vertexInputInfo = instantiate(vkPipelineVertexInputStateCreateInfo);
   #pipelineConfigInfo = instantiate(vkGraphicsPipelineCreateInfo);
 
-  constructor(device: Pointer, material: Material) {
+  constructor(device: Pointer, renderPass: Pointer, material: Material) {
     this.#device = device;
     this.#material = material;
 
@@ -282,6 +314,7 @@ export class VkGraphicsPipeline implements Disposable {
       );
     }
 
+    // Validate and compile vertex shader
     const vertexShader =
       typeof material.shader === 'string'
         ? material.shader
@@ -298,10 +331,11 @@ export class VkGraphicsPipeline implements Disposable {
     if (!isWgslValid(vertexShader)) {
       throw new DynamicLibError('Invalid vertex WGSL shader', 'Vulkan');
     }
-    this.#vertexData = VkGraphicsPipeline.#normalizeShaderSource(
+    const vertexData = VkGraphicsPipeline.#normalizeShaderSource(
       wgslToSpirvBin(vertexShader, 'vertex', material.entries.vertex!),
     );
 
+    // Validate and compile fragment shader
     const fragmentShader =
       typeof material.shader === 'string'
         ? material.shader
@@ -318,19 +352,21 @@ export class VkGraphicsPipeline implements Disposable {
     if (!isWgslValid(fragmentShader)) {
       throw new DynamicLibError('Invalid fragment WGSL shader', 'Vulkan');
     }
-    this.#fragmentData = VkGraphicsPipeline.#normalizeShaderSource(
+    const fragmentData = VkGraphicsPipeline.#normalizeShaderSource(
       wgslToSpirvBin(fragmentShader, 'fragment', material.entries.fragment!),
     );
 
+    // Create shader modules
     this.#vertexModule = VkGraphicsPipeline.#createShaderModule(
       this.#device,
-      this.#vertexData,
+      vertexData,
     );
     this.#fragmentModule = VkGraphicsPipeline.#createShaderModule(
       this.#device,
-      this.#fragmentData,
+      fragmentData,
     );
 
+    // Configure shader stages
     this.#vertexStageInfo.stage = VkShaderStageFlagBits.VERTEX_BIT;
     this.#vertexStageInfo.module = BigInt(this.#vertexModule);
     this.#vertexStageInfo.pName = material.entries.vertex!;
@@ -344,15 +380,46 @@ export class VkGraphicsPipeline implements Disposable {
       BigInt(ptr(getInstanceBuffer(this.#fragmentStageInfo))),
     ]);
 
-    // Bind pointers
-    this.#viewportInfo.pViewports = BigInt(
-      ptr(getInstanceBuffer(this.#viewport)),
-    );
-    this.#viewportInfo.pScissors = BigInt(
-      ptr(getInstanceBuffer(this.#scissor)),
-    );
+    this.#dynamicStages = new Uint32Array([
+      VkDynamicState.VIEWPORT,
+      VkDynamicState.SCISSOR,
+    ]);
+    this.#dynamicInfo.dynamicStateCount = this.#dynamicStages.length;
+    this.#dynamicInfo.pDynamicStates = BigInt(ptr(this.#dynamicStages));
+
+    this.#viewportInfo.viewportCount = 1;
+    this.#viewportInfo.scissorCount = 1;
+
+    // Bind pointers between structs
+    this.#bindPointers();
+
+    // Create pipeline layout
+    this.#createLayout();
+
+    // Create pipeline
+    this.#createPipeline(renderPass);
+
+    VK_DEBUG('Graphics pipeline initialized');
+  }
+
+  get instance(): Pointer {
+    return this.#pipelineInstance!;
+  }
+
+  get material(): Material {
+    return this.#material;
+  }
+
+  /**
+   * Bind pointers between Vulkan structs
+   */
+  #bindPointers(): void {
     this.#colorBlendInfo.pAttachments = BigInt(
       ptr(getInstanceBuffer(this.#colorBlendAttachment)),
+    );
+
+    this.#pipelineConfigInfo.pDynamicState = BigInt(
+      ptr(getInstanceBuffer(this.#dynamicInfo)),
     );
     this.#pipelineConfigInfo.pViewportState = BigInt(
       ptr(getInstanceBuffer(this.#viewportInfo)),
@@ -375,58 +442,154 @@ export class VkGraphicsPipeline implements Disposable {
     this.#pipelineConfigInfo.pVertexInputState = BigInt(
       ptr(getInstanceBuffer(this.#vertexInputInfo)),
     );
-
-    // Bind shader stages
     this.#pipelineConfigInfo.stageCount = this.#shaderStages.length;
     this.#pipelineConfigInfo.pStages = BigInt(ptr(this.#shaderStages));
-
-    VK_DEBUG('Graphics pipeline configuration initialized');
   }
 
-  dispose(): void | Promise<void> {
-    VK_DEBUG('Disposing graphics pipeline');
-    if (this.#pipelineInstance) {
-      VK.vkDestroyPipeline(this.#device, this.#pipelineInstance, null);
-      this.#pipelineInstance = null;
+  /**
+   * Create descriptor set layout and pipeline layout from material schema
+   */
+  #createLayout(): void {
+    VK_DEBUG('Creating pipeline layout from material schema');
+
+    // Collect all bindings from material schema
+    const bindings: InferField<typeof vkDescriptorSetLayoutBinding>[] = [];
+    let bindingIndex = 0;
+
+    // Process constants
+    const constants = this.#material.schema.constants;
+    if (constants) {
+      for (const [key, definition] of Object.entries(constants)) {
+        const binding = instantiate(vkDescriptorSetLayoutBinding);
+        binding.binding = bindingIndex++;
+        binding.descriptorType = VkGraphicsPipeline.#getVkDescriptorType(
+          definition.type,
+        );
+        binding.descriptorCount = 1;
+        binding.stageFlags =
+          VkShaderStageFlagBits.VERTEX_BIT | VkShaderStageFlagBits.FRAGMENT_BIT;
+        binding.pImmutableSamplers = 0n;
+        bindings.push(binding);
+        VK_DEBUG(`  Constant binding ${bindingIndex - 1}: ${key}`);
+      }
     }
-    VK_DEBUG('Graphics pipeline disposed');
-    if (this.#vertexModule) {
-      VK.vkDestroyShaderModule(this.#device, this.#vertexModule, null);
-      this.#vertexModule = null;
+
+    // Process mutables
+    const mutables = this.#material.schema.mutables;
+    if (mutables) {
+      for (const [key, definition] of Object.entries(mutables)) {
+        const binding = instantiate(vkDescriptorSetLayoutBinding);
+        binding.binding = bindingIndex++;
+        binding.descriptorType = VkGraphicsPipeline.#getVkDescriptorType(
+          definition.type,
+        );
+        binding.descriptorCount = 1;
+        binding.stageFlags =
+          VkShaderStageFlagBits.VERTEX_BIT | VkShaderStageFlagBits.FRAGMENT_BIT;
+        binding.pImmutableSamplers = 0n;
+        bindings.push(binding);
+        VK_DEBUG(`  Mutable binding ${bindingIndex - 1}: ${key}`);
+      }
     }
-    if (this.#fragmentModule) {
-      VK.vkDestroyShaderModule(this.#device, this.#fragmentModule, null);
-      this.#fragmentModule = null;
+
+    if (bindings.length === 0) {
+      VK_DEBUG('No bindings - creating empty pipeline layout');
+      const emptyLayoutInfo = instantiate(vkPipelineLayoutCreateInfo);
+      emptyLayoutInfo.setLayoutCount = 0;
+      emptyLayoutInfo.pSetLayouts = 0n;
+      emptyLayoutInfo.pushConstantRangeCount = 0;
+      emptyLayoutInfo.pPushConstantRanges = 0n;
+
+      const pointerHolder = new BigUint64Array(1);
+      const result = VK.vkCreatePipelineLayout(
+        this.#device,
+        ptr(getInstanceBuffer(emptyLayoutInfo)),
+        null,
+        ptr(pointerHolder),
+      );
+
+      if (result !== VkResult.SUCCESS) {
+        throw new DynamicLibError(getResultMessage(result), 'Vulkan');
+      }
+
+      this.#pipelineLayout = Number(pointerHolder[0]!) as Pointer;
+      this.#pipelineConfigInfo.layout = BigInt(this.#pipelineLayout);
+      VK_DEBUG(
+        `Empty pipeline layout created: 0x${this.#pipelineLayout.toString(16)}`,
+      );
+      return;
     }
+
+    VK_DEBUG(`Total bindings: ${bindings.length}`);
+
+    // Create bindings array
+    const bindingsArray = new BigUint64Array(bindings.length);
+    for (let i = 0; i < bindings.length; i++) {
+      bindingsArray[i] = BigInt(ptr(getInstanceBuffer(bindings[i]!)));
+    }
+
+    // Create descriptor set layout
+    const layoutInfo = instantiate(vkDescriptorSetLayoutCreateInfo);
+    layoutInfo.bindingCount = bindings.length;
+    layoutInfo.pBindings = BigInt(ptr(bindingsArray));
+
+    let pointerHolder = new BigUint64Array(1);
+    let result = VK.vkCreateDescriptorSetLayout(
+      this.#device,
+      ptr(getInstanceBuffer(layoutInfo)),
+      null,
+      ptr(pointerHolder),
+    );
+
+    if (result !== VkResult.SUCCESS) {
+      throw new DynamicLibError(getResultMessage(result), 'Vulkan');
+    }
+
+    this.#descriptorSetLayout = Number(pointerHolder[0]!) as Pointer;
+    VK_DEBUG(
+      `Descriptor set layout created: 0x${this.#descriptorSetLayout.toString(16)}`,
+    );
+
+    // Create pipeline layout
+    const setLayouts = new BigUint64Array([BigInt(this.#descriptorSetLayout)]);
+    const pipelineLayoutInfo = instantiate(vkPipelineLayoutCreateInfo);
+    pipelineLayoutInfo.setLayoutCount = 1;
+    pipelineLayoutInfo.pSetLayouts = BigInt(ptr(setLayouts));
+    pipelineLayoutInfo.pushConstantRangeCount = 0;
+    pipelineLayoutInfo.pPushConstantRanges = 0n;
+
+    pointerHolder = new BigUint64Array(1);
+    result = VK.vkCreatePipelineLayout(
+      this.#device,
+      ptr(getInstanceBuffer(pipelineLayoutInfo)),
+      null,
+      ptr(pointerHolder),
+    );
+
+    if (result !== VkResult.SUCCESS) {
+      throw new DynamicLibError(getResultMessage(result), 'Vulkan');
+    }
+
+    this.#pipelineLayout = Number(pointerHolder[0]!) as Pointer;
+    VK_DEBUG(`Pipeline layout created: 0x${this.#pipelineLayout.toString(16)}`);
+
+    // Set pipeline layout in config
+    this.#pipelineConfigInfo.layout = BigInt(this.#pipelineLayout);
   }
 
-  update(width: number, height: number) {
-    VK_DEBUG(`Updating graphics pipeline: ${width}x${height}`);
-    if (this.#pipelineInstance) {
-      VK.vkDestroyPipeline(this.#device, this.#pipelineInstance, null);
-      this.#pipelineInstance = null;
-    }
-    this.#viewport.x = 0;
-    this.#viewport.y = 0;
-    this.#viewport.width = width;
-    // WGSL parser inverts Y axis
-    this.#viewport.height = -height;
-    this.#viewport.maxDepth = 1.0;
-    this.#viewport.minDepth = 0.0;
+  /**
+   * Create graphics pipeline with current configuration
+   */
+  #createPipeline(renderPass: Pointer): void {
+    VK_DEBUG(`Creating graphics pipeline`);
 
-    this.#scissor.offset.x = 0;
-    this.#scissor.offset.y = 0;
-    this.#scissor.extent.width = width;
-    this.#scissor.extent.height = height;
-
-    this.#viewportInfo.viewportCount = 1;
-    this.#viewportInfo.scissorCount = 1;
-
+    // Configure topology
     this.#inputAssemblyInfo.topology = VkGraphicsPipeline.#getVkTopology(
       this.#material.primitive,
     );
     this.#inputAssemblyInfo.primitiveRestartEnable = VK_TRUE;
 
+    // Configure rasterizer
     const rasterizer = this.#material.rasterizer;
     this.#rasterizationInfo.depthClampEnable = VK_FALSE;
     this.#rasterizationInfo.rasterizerDiscardEnable = VK_FALSE;
@@ -449,6 +612,7 @@ export class VkGraphicsPipeline implements Disposable {
       rasterizer.depthStencil.depthBiasSlopeScale;
     this.#rasterizationInfo.lineWidth = 1.0;
 
+    // Configure multisample
     const multisample = rasterizer.multisample;
     this.#multisampleInfo.rasterizationSamples =
       VkGraphicsPipeline.#getVkSampleCount(multisample.count);
@@ -459,6 +623,7 @@ export class VkGraphicsPipeline implements Disposable {
       multisample.alphaToCoverageEnabled ? VK_TRUE : VK_FALSE;
     this.#multisampleInfo.alphaToOneEnable = VK_FALSE;
 
+    // Configure blend
     const blend = rasterizer.blend;
     this.#colorBlendAttachment.blendEnable = blend.enabled ? VK_TRUE : VK_FALSE;
     this.#colorBlendAttachment.srcColorBlendFactor =
@@ -486,6 +651,7 @@ export class VkGraphicsPipeline implements Disposable {
     this.#colorBlendInfo.attachmentCount = 1;
     this.#colorBlendInfo.blendConstants = [0.0, 0.0, 0.0, 0.0];
 
+    // Configure depth/stencil
     const depthStencil = rasterizer.depthStencil;
     this.#depthStencilInfo.depthTestEnable =
       depthStencil.depthCompare !== 'always' ? VK_TRUE : VK_FALSE;
@@ -535,6 +701,11 @@ export class VkGraphicsPipeline implements Disposable {
     this.#depthStencilInfo.back.writeMask = depthStencil.stencilWriteMask.get();
     this.#depthStencilInfo.back.reference = 0;
 
+    // Set render pass
+    this.#pipelineConfigInfo.renderPass = BigInt(renderPass);
+    this.#pipelineConfigInfo.subpass = 0;
+
+    // Create pipeline
     VK_DEBUG('Creating Vulkan graphics pipeline');
     const pointerHolder = new BigUint64Array(1);
     const result = VK.vkCreateGraphicsPipelines(
@@ -553,5 +724,45 @@ export class VkGraphicsPipeline implements Disposable {
     VK_DEBUG(
       `Graphics pipeline created: 0x${this.#pipelineInstance.toString(16)}`,
     );
+  }
+
+  dispose(): void | Promise<void> {
+    VK_DEBUG('Disposing graphics pipeline');
+
+    if (this.#pipelineInstance) {
+      VK.vkDestroyPipeline(this.#device, this.#pipelineInstance, null);
+      this.#pipelineInstance = null;
+      VK_DEBUG('Pipeline destroyed');
+    }
+
+    if (this.#pipelineLayout) {
+      VK.vkDestroyPipelineLayout(this.#device, this.#pipelineLayout, null);
+      this.#pipelineLayout = null;
+      VK_DEBUG('Pipeline layout destroyed');
+    }
+
+    if (this.#descriptorSetLayout) {
+      VK.vkDestroyDescriptorSetLayout(
+        this.#device,
+        this.#descriptorSetLayout,
+        null,
+      );
+      this.#descriptorSetLayout = null;
+      VK_DEBUG('Descriptor set layout destroyed');
+    }
+
+    if (this.#vertexModule) {
+      VK.vkDestroyShaderModule(this.#device, this.#vertexModule, null);
+      this.#vertexModule = null;
+      VK_DEBUG('Vertex shader module destroyed');
+    }
+
+    if (this.#fragmentModule) {
+      VK.vkDestroyShaderModule(this.#device, this.#fragmentModule, null);
+      this.#fragmentModule = null;
+      VK_DEBUG('Fragment shader module destroyed');
+    }
+
+    VK_DEBUG('Graphics pipeline disposed');
   }
 }
