@@ -16,8 +16,6 @@ type VkImageViewMask = 'color' | 'depth' | 'stencil' | 'metadata';
 type VkImageViewProps = {
   device: Pointer;
   image: Pointer;
-  width: number;
-  height: number;
   format: number;
   mask: VkImageViewMask[];
 };
@@ -46,9 +44,12 @@ export class VkImageView implements Disposable {
 
   // MARK: Instance props
 
+  #device: Pointer;
   #instance: Pointer;
 
   constructor(props: VkImageViewProps) {
+    this.#device = props.device;
+
     const viewCreateInfo = instantiate(vkImageViewCreateInfo);
     viewCreateInfo.image = BigInt(props.image);
     viewCreateInfo.viewType = VkImageViewType.TYPE_2D;
@@ -80,5 +81,7 @@ export class VkImageView implements Disposable {
     return this.#instance;
   }
 
-  dispose(): void | Promise<void> {}
+  dispose(): void | Promise<void> {
+    VK.vkDestroyImageView(this.#device, this.#instance, null);
+  }
 }
