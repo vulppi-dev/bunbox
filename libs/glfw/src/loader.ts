@@ -34,7 +34,4 @@ process.on('beforeExit', () => {
   glfwClose();
 });
 
-export * from './callbacks';
-export * from './enums';
-export * from './structs';
 export { GLFW };

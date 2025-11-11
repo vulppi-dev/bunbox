@@ -434,6 +434,21 @@ export const vkImageMemoryBarrier = struct({
   subresourceRange: vkImageSubresourceRange,
 });
 
+// MARK: Clear Values
+
+export const vkClearColorValue = struct({
+  float32: array(f32(), 4),
+});
+
+export const vkClearDepthStencilValue = struct({
+  depth: f32(),
+  stencil: u32(),
+});
+
+export const vkClearValue = struct({
+  color: vkClearColorValue,
+});
+
 // MARK: Pipeline Structures
 
 export const vkPipelineShaderStageCreateInfo = struct({

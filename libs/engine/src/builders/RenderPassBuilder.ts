@@ -1,10 +1,6 @@
 import type { AttachmentConfig, RenderPassConfig } from './RenderPassConfig';
 import type { Format, SampleCount } from './RenderPassTypes';
-import {
-  hasStencilComponent,
-  isColorFormat,
-  isDepthFormat,
-} from './RenderPassTypes';
+import { hasStencilComponent, isDepthFormat } from './RenderPassTypes';
 
 /**
  * Agnostic builder for creating RenderPass configurations

@@ -304,8 +304,8 @@ export class VkRenderPipeline implements Disposable {
       mipLevels: 1,
     });
 
-    const colorImages: VkImage[] = [];
-    const colorViews: VkImageView[] = [];
+    const depthImages: VkImage[] = [];
+    const depthViews: VkImageView[] = [];
     const framebuffers: VkFramebuffer[] = [];
 
     for (let i = 0; i < this.__swapchainImages.length; i++) {
@@ -322,7 +322,7 @@ export class VkRenderPipeline implements Disposable {
         mask: ['depth'],
       });
 
-      const framebuffer = new VkFramebuffer(
+      const frameBuffer = new VkFramebuffer(
         this.__device.logicalDevice,
         renderPass.instance,
         [depthView],
@@ -330,18 +330,20 @@ export class VkRenderPipeline implements Disposable {
         this.__height,
       );
 
-      colorImages.push(depthImage);
-      colorViews.push(depthView);
-      framebuffers.push(framebuffer);
+      depthImages.push(depthImage);
+      depthViews.push(depthView);
+      framebuffers.push(frameBuffer);
     }
 
     this.__depthPrePassStage = {
       name: 'Depth Pre-Pass',
       renderPass,
-      framebuffers,
+      framebuffers: framebuffers,
       resources: {
-        colorImages,
-        colorViews,
+        colorImages: [],
+        colorViews: [],
+        depthImage: depthImages[0],
+        depthView: depthViews[0],
       },
     };
 
@@ -451,6 +453,8 @@ export class VkRenderPipeline implements Disposable {
 
     const colorImages: VkImage[] = [];
     const colorViews: VkImageView[] = [];
+    const depthImages: VkImage[] = [];
+    const depthViews: VkImageView[] = [];
     const framebuffers: VkFramebuffer[] = [];
 
     for (let i = 0; i < this.__swapchainImages.length; i++) {
@@ -490,6 +494,8 @@ export class VkRenderPipeline implements Disposable {
 
       colorImages.push(colorImage);
       colorViews.push(colorView);
+      depthImages.push(depthImage);
+      depthViews.push(depthView);
       framebuffers.push(framebuffer);
     }
 
@@ -500,8 +506,8 @@ export class VkRenderPipeline implements Disposable {
       resources: {
         colorImages,
         colorViews,
-        depthImage: colorImages[0],
-        depthView: colorViews[0],
+        depthImage: depthImages[0],
+        depthView: depthViews[0],
       },
     };
 
@@ -538,6 +544,8 @@ export class VkRenderPipeline implements Disposable {
 
     const colorImages: VkImage[] = [];
     const colorViews: VkImageView[] = [];
+    const depthImages: VkImage[] = [];
+    const depthViews: VkImageView[] = [];
     const framebuffers: VkFramebuffer[] = [];
 
     for (let i = 0; i < this.__swapchainImages.length; i++) {
@@ -577,6 +585,8 @@ export class VkRenderPipeline implements Disposable {
 
       colorImages.push(colorImage);
       colorViews.push(colorView);
+      depthImages.push(depthImage);
+      depthViews.push(depthView);
       framebuffers.push(framebuffer);
     }
 
@@ -587,8 +597,8 @@ export class VkRenderPipeline implements Disposable {
       resources: {
         colorImages,
         colorViews,
-        depthImage: colorImages[0],
-        depthView: colorViews[0],
+        depthImage: depthImages[0],
+        depthView: depthViews[0],
       },
     };
 

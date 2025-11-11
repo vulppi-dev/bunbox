@@ -25,6 +25,7 @@ import type { SampleCount } from '../../resources/types';
 import type { AbstractCamera, Light, Mesh } from '../../nodes';
 import { Color } from '../../math/Color';
 import { Rect } from '../../math/Rect';
+import { Cube } from '../../math';
 
 export class VkRenderer extends AbstractRenderer {
   private __device: VkDevice | null = null;
@@ -82,6 +83,24 @@ export class VkRenderer extends AbstractRenderer {
     lights: Light[],
   ): void {
     commandBuffer.begin();
+    commandBuffer.setViewport(
+      new Cube(
+        0,
+        0,
+        0,
+        this.__swapchain ? this.__swapchain.width : 0,
+        this.__swapchain ? this.__swapchain.height : 0,
+        1.0,
+      ),
+    );
+    commandBuffer.setScissor(
+      new Rect(
+        0,
+        0,
+        this.__swapchain ? this.__swapchain.width : 0,
+        this.__swapchain ? this.__swapchain.height : 0,
+      ),
+    );
 
     // TODO: Implement actual recording logic
     // For now, just render a basic clear screen with the clear color
@@ -97,12 +116,12 @@ export class VkRenderer extends AbstractRenderer {
           this.__swapchain.height,
         );
 
-        // Use the clear color from the renderer
+        // Final composite uses loadOp: 'dont-care', so no clear values needed
         commandBuffer.beginRenderPass(
           stage.renderPass.instance,
           framebuffer.framebuffer,
           renderArea,
-          [this._clearColor],
+          undefined,
         );
 
         // TODO: Record actual render commands here
@@ -140,18 +159,19 @@ export class VkRenderer extends AbstractRenderer {
       this.__swapchain.swapchain,
       VK_WHOLE_SIZE,
       this.__sync.getImageAvailableSemaphore(this.__currentFrameIndex),
-      0 as any,
+      0,
       ptr(imageIndexHolder),
     );
 
-    if (acquireResult === VkResult.ERROR_OUT_OF_DATE_KHR) {
+    if (
+      acquireResult === VkResult.ERROR_OUT_OF_DATE_KHR ||
+      acquireResult === VkResult.SUBOPTIMAL_KHR
+    ) {
+      this.rebuildFrame();
       return;
     }
 
-    if (
-      acquireResult !== VkResult.SUCCESS &&
-      acquireResult !== VkResult.SUBOPTIMAL_KHR
-    ) {
+    if (acquireResult !== VkResult.SUCCESS) {
       throw new DynamicLibError(getResultMessage(acquireResult), 'Vulkan');
     }
 
@@ -274,7 +294,7 @@ export class VkRenderer extends AbstractRenderer {
     const width = this.width;
     const height = this.height;
 
-    if (this.__pipeline) {
+    if (this.__swapchain) {
       this.__swapchainViews.forEach((view) => view.dispose());
       this.__swapchainViews = [];
       this.__swapchain?.dispose();
@@ -321,16 +341,17 @@ export class VkRenderer extends AbstractRenderer {
       this.__pipeline.rebuild(width, height);
     }
 
+    if (!this.__sync) {
+      this.__sync = new VkSync(
+        this.__device.logicalDevice,
+        this.__swapCount,
+        this.__frameCount,
+      );
+    } else {
+      this.__sync.initPerSwapchainImages(this.__swapCount);
+    }
+
     if (this.__frameCount === this.__commandBuffers.length) {
-      if (!this.__sync) {
-        this.__sync = new VkSync(
-          this.__device.logicalDevice,
-          this.__swapCount,
-          this.__frameCount,
-        );
-      } else {
-        this.__sync.initPerSwapchainImages(this.__swapCount);
-      }
       return;
     }
 

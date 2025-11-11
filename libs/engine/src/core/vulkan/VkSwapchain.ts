@@ -1,7 +1,5 @@
-import { ptr, type Pointer } from 'bun:ffi';
+import { getInstanceBuffer, instantiate } from '@bunbox/struct';
 import type { Disposable } from '@bunbox/utils';
-import { DynamicLibError } from '../../errors';
-import type { VkDevice } from './VkDevice';
 import {
   getResultMessage,
   VK,
@@ -9,18 +7,17 @@ import {
   VkColorSpaceKHR,
   VkCompositeAlphaFlagBitsKHR,
   VkFormat,
-  VkImageAspectFlagBits,
   VkImageUsageFlagBits,
-  vkImageViewCreateInfo,
-  VkImageViewType,
   VkPresentModeKHR,
   VkResult,
   VkSharingMode,
   vkSwapchainCreateInfoKHR,
 } from '@bunbox/vk';
 import { clamp } from '@vulppi/toolbelt/math';
-import { getInstanceBuffer, instantiate } from '@bunbox/struct';
+import { ptr, type Pointer } from 'bun:ffi';
+import { DynamicLibError } from '../../errors';
 import { VK_DEBUG } from '../../singleton/logger';
+import type { VkDevice } from './VkDevice';
 
 export class VkSwapchain implements Disposable {
   private __device: VkDevice;
@@ -152,7 +149,6 @@ export class VkSwapchain implements Disposable {
     createInfo.imageArrayLayers = 1;
     createInfo.imageUsage = VkImageUsageFlagBits.COLOR_ATTACHMENT_BIT;
 
-    const indices = this.__device.findQueueFamily();
     createInfo.imageSharingMode = VkSharingMode.EXCLUSIVE;
     createInfo.queueFamilyIndexCount = 0;
     createInfo.pQueueFamilyIndices = 0n;

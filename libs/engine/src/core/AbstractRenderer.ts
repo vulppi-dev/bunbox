@@ -23,7 +23,6 @@ export abstract class AbstractRenderer implements Disposable {
 
     // Initialize window
     this.__windowPtr = window;
-    this.rebuildFrame();
   }
 
   get width(): number {

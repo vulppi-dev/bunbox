@@ -5,6 +5,7 @@ export * from './Matrix';
 export * from './Plane';
 export * from './Quaternion';
 export * from './Rect';
+export * from './Cube';
 export * from './Vector2';
 export * from './Vector3';
 export * from './Vector4';

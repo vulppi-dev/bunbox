@@ -269,6 +269,7 @@ export class Window extends Root<never, never, WindowEventMap> {
       }
     });
 
+    this.markAsDirty();
     GLFW_DEBUG(`First creating window: ${this.__title}`);
   }
 

@@ -721,7 +721,7 @@ export class VkGraphicsPipeline implements Disposable {
     const pointerHolder = new BigUint64Array(1);
     const result = VK.vkCreateGraphicsPipelines(
       this.__device,
-      null,
+      0n,
       1,
       ptr(getInstanceBuffer(this.__pipelineConfigInfo)),
       null,

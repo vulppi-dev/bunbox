@@ -6,11 +6,14 @@ import {
   VkAttachmentLoadOp,
   VkAttachmentStoreOp,
   vkAttachmentDescription,
+  vkAttachmentReference,
   VkFormat,
   VkImageLayout,
+  VkPipelineBindPoint,
   vkRenderPassCreateInfo,
   VkResult,
   VkSampleCountFlagBits,
+  vkSubpassDescription,
 } from '@bunbox/vk';
 import { ptr, type Pointer } from 'bun:ffi';
 import type { RenderPassConfig } from '../../builders/RenderPassConfig';
@@ -156,6 +159,10 @@ export class VkRenderPass implements Disposable {
     return this.__renderPass;
   }
 
+  get attachmentsCount(): number {
+    return this.__config.attachments.length;
+  }
+
   dispose(): void | Promise<void> {
     if (!this.__renderPass) return;
 
@@ -224,12 +231,65 @@ export class VkRenderPass implements Disposable {
       }
     }
 
+    // Create attachment references for the subpass
+    const colorAttachmentRefs: number[] = [];
+    let depthAttachmentRef: number | null = null;
+
+    for (let i = 0; i < attachments.length; i++) {
+      const attachment = attachments[i]!;
+      const isDepth = isDepthFormat(attachment.format);
+
+      if (isDepth) {
+        depthAttachmentRef = i;
+      } else {
+        colorAttachmentRefs.push(i);
+      }
+    }
+
+    // Create attachment reference structs
+    const colorRefSize = sizeOf(vkAttachmentReference);
+    const colorRefsBuffer = new Uint8Array(
+      colorAttachmentRefs.length * colorRefSize,
+    );
+
+    for (let i = 0; i < colorAttachmentRefs.length; i++) {
+      const ref = instantiate(vkAttachmentReference, colorRefsBuffer, i);
+      ref.attachment = colorAttachmentRefs[i]!;
+      ref.layout = VkImageLayout.COLOR_ATTACHMENT_OPTIMAL;
+    }
+
+    // Create depth attachment reference if exists
+    let depthRefBuffer: Uint8Array | null = null;
+    if (depthAttachmentRef !== null) {
+      depthRefBuffer = new Uint8Array(colorRefSize);
+      const depthRef = instantiate(vkAttachmentReference, depthRefBuffer, 0);
+      depthRef.attachment = depthAttachmentRef;
+      depthRef.layout = VkImageLayout.DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    }
+
+    // Create subpass description
+    const subpassDesc = instantiate(vkSubpassDescription);
+    subpassDesc.flags = 0;
+    subpassDesc.pipelineBindPoint = VkPipelineBindPoint.GRAPHICS;
+    subpassDesc.inputAttachmentCount = 0;
+    subpassDesc.pInputAttachments = 0n;
+    subpassDesc.colorAttachmentCount = colorAttachmentRefs.length;
+    subpassDesc.pColorAttachments =
+      colorAttachmentRefs.length > 0 ? BigInt(ptr(colorRefsBuffer)) : 0n;
+    subpassDesc.pResolveAttachments = 0n;
+    subpassDesc.pDepthStencilAttachment =
+      depthRefBuffer !== null ? BigInt(ptr(depthRefBuffer)) : 0n;
+    subpassDesc.preserveAttachmentCount = 0;
+    subpassDesc.pPreserveAttachments = 0n;
+
     const renderPassCreateInfo = instantiate(vkRenderPassCreateInfo);
     renderPassCreateInfo.flags = 0;
     renderPassCreateInfo.attachmentCount = attachments.length;
     renderPassCreateInfo.pAttachments = BigInt(ptr(attachmentDescBuffer));
-    renderPassCreateInfo.subpassCount = 0;
-    renderPassCreateInfo.pSubpasses = 0n;
+    renderPassCreateInfo.subpassCount = 1;
+    renderPassCreateInfo.pSubpasses = BigInt(
+      ptr(getInstanceBuffer(subpassDesc)),
+    );
     renderPassCreateInfo.dependencyCount = 0;
     renderPassCreateInfo.pDependencies = 0n;
 

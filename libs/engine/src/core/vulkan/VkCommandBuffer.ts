@@ -1,4 +1,4 @@
-import { getInstanceBuffer, instantiate } from '@bunbox/struct';
+import { getInstanceBuffer, instantiate, sizeOf } from '@bunbox/struct';
 import type { Disposable } from '@bunbox/utils';
 import {
   getResultMessage,
@@ -13,6 +13,7 @@ import {
   VkResult,
   VkSubpassContents,
   vkViewport,
+  vkClearValue,
 } from '@bunbox/vk';
 import { ptr, type Pointer } from 'bun:ffi';
 import { DynamicLibError } from '../../errors';
@@ -20,6 +21,7 @@ import { Color } from '../../math/Color';
 import { Rect } from '../../math/Rect';
 import { VK_DEBUG } from '../../singleton/logger';
 import type { VkBuffer } from './VkBuffer';
+import type { Cube } from '../../math';
 
 /**
  * Wrapper for Vulkan VkCommandBuffer
@@ -121,17 +123,15 @@ export class VkCommandBuffer implements Disposable {
     renderPassInfo.renderArea.extent.height = Math.floor(renderArea.height);
 
     if (clearValues && clearValues.length > 0) {
-      // Create clear values array
-      const clearValuesArray = new Float32Array(clearValues.length * 4);
+      const length = sizeOf(vkClearValue);
+      const clearValuesBfr = new Uint8Array(clearValues.length * length);
+      const cv = instantiate(vkClearValue);
       for (let i = 0; i < clearValues.length; i++) {
-        const cv = clearValues[i]!;
-        clearValuesArray[i * 4 + 0] = cv.r;
-        clearValuesArray[i * 4 + 1] = cv.g;
-        clearValuesArray[i * 4 + 2] = cv.b;
-        clearValuesArray[i * 4 + 3] = cv.a;
+        cv.color.float32 = clearValues[i]!.toArray();
+        clearValuesBfr.set(new Uint8Array(getInstanceBuffer(cv)), i * length);
       }
       renderPassInfo.clearValueCount = clearValues.length;
-      renderPassInfo.pClearValues = BigInt(ptr(clearValuesArray));
+      renderPassInfo.pClearValues = BigInt(ptr(clearValuesBfr));
     } else {
       renderPassInfo.clearValueCount = 0;
       renderPassInfo.pClearValues = 0n;
@@ -255,14 +255,7 @@ export class VkCommandBuffer implements Disposable {
   /**
    * Set viewport dynamically
    */
-  setViewport(
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-    minDepth: number = 0.0,
-    maxDepth: number = 1.0,
-  ): void {
+  setViewport(viewport: Cube): void {
     if (!this.__isRecording) {
       throw new DynamicLibError(
         'Cannot set viewport: command buffer is not recording',
@@ -270,19 +263,19 @@ export class VkCommandBuffer implements Disposable {
       );
     }
 
-    const viewport = instantiate(vkViewport);
-    viewport.x = x;
-    viewport.y = y;
-    viewport.width = width;
-    viewport.height = height;
-    viewport.minDepth = minDepth;
-    viewport.maxDepth = maxDepth;
+    const viewportStr = instantiate(vkViewport);
+    viewportStr.x = viewport.x;
+    viewportStr.y = viewport.y;
+    viewportStr.width = viewport.width;
+    viewportStr.height = viewport.height;
+    viewportStr.minDepth = viewport.z;
+    viewportStr.maxDepth = viewport.z + viewport.depth;
 
     VK.vkCmdSetViewport(
       this.__instance,
       0,
       1,
-      ptr(getInstanceBuffer(viewport)),
+      ptr(getInstanceBuffer(viewportStr)),
     );
   }
 

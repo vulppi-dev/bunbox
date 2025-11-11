@@ -34,7 +34,4 @@ process.on('beforeExit', () => {
   vkClose();
 });
 
-export * from './callbacks';
-export * from './enums';
-export * from './structs';
 export { VK };
