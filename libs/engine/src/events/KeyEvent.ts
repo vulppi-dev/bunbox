@@ -290,66 +290,66 @@ const KEY_TEXT_MAP = {
 } as const satisfies Record<number, string>;
 
 export class KeyEvent extends Event {
-  #windowId: number;
-  #deviceId: number;
-  #code: number;
-  #key: number;
-  #ctrl: boolean;
-  #shift: boolean;
-  #alt: boolean;
-  #meta: boolean;
-  #repeat: boolean;
+  private __windowId: number;
+  private __deviceId: number;
+  private __code: number;
+  private __key: number;
+  private __ctrl: boolean;
+  private __shift: boolean;
+  private __alt: boolean;
+  private __meta: boolean;
+  private __repeat: boolean;
 
   constructor(options: KeyEventOptions) {
     super(options);
-    this.#windowId = options.windowId;
-    this.#deviceId = options.deviceId;
-    this.#code = options.code;
-    this.#key = options.key;
-    this.#ctrl = options.ctrl;
-    this.#shift = options.shift;
-    this.#alt = options.alt;
-    this.#meta = options.meta;
-    this.#repeat = options.repeat;
+    this.__windowId = options.windowId;
+    this.__deviceId = options.deviceId;
+    this.__code = options.code;
+    this.__key = options.key;
+    this.__ctrl = options.ctrl;
+    this.__shift = options.shift;
+    this.__alt = options.alt;
+    this.__meta = options.meta;
+    this.__repeat = options.repeat;
   }
 
   get windowId() {
-    return this.#windowId;
+    return this.__windowId;
   }
 
   get deviceId() {
-    return this.#deviceId;
+    return this.__deviceId;
   }
 
   get code() {
-    return this.#code;
+    return this.__code;
   }
 
   get key() {
-    return this.#key;
+    return this.__key;
   }
 
   get ctrl() {
-    return this.#ctrl;
+    return this.__ctrl;
   }
 
   get shift() {
-    return this.#shift;
+    return this.__shift;
   }
 
   get alt() {
-    return this.#alt;
+    return this.__alt;
   }
 
   get meta() {
-    return this.#meta;
+    return this.__meta;
   }
 
   get repeat() {
-    return this.#repeat;
+    return this.__repeat;
   }
 
   get keyText() {
-    return KEY_TEXT_MAP[this.#key as keyof typeof KEY_TEXT_MAP] || 'Unknown';
+    return KEY_TEXT_MAP[this.__key as keyof typeof KEY_TEXT_MAP] || 'Unknown';
   }
 }

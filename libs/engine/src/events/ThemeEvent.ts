@@ -5,14 +5,14 @@ export type ThemeEventOptions = {
 } & EventOptions;
 
 export class ThemeEvent extends Event {
-  #mode: 'light' | 'dark' | 'system' = 'system';
+  private __mode: 'light' | 'dark' | 'system' = 'system';
 
   constructor(options: ThemeEventOptions) {
     super(options);
-    this.#mode = options.mode ?? 'system';
+    this.__mode = options.mode ?? 'system';
   }
 
   get mode() {
-    return this.#mode;
+    return this.__mode;
   }
 }

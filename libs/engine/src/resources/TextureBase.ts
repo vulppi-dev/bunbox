@@ -91,52 +91,52 @@ export abstract class TextureBase extends DirtyState {
     return Math.floor(Math.log2(maxDim)) + 1;
   }
 
-  #label: string = '';
-  #id: string = '';
-  #width: number = 1;
-  #height: number = 1;
-  #mipLevels: number = 1;
-  #sampleCount: SampleCount = 1;
-  #format: TextureFormat = 'rgba8unorm';
-  #usage: TextureUsage[] = ['sampler', 'color-target'];
+  private __label: string = '';
+  private __id: string = '';
+  private __width: number = 1;
+  private __height: number = 1;
+  private __mipLevels: number = 1;
+  private __sampleCount: SampleCount = 1;
+  private __format: TextureFormat = 'rgba8unorm';
+  private __usage: TextureUsage[] = ['sampler', 'color-target'];
 
   protected constructor(desc: TextureBaseDescriptor) {
     super();
-    this.#id = ulid();
-    this.#label = desc.label ?? '';
-    this.#width = Math.max(1, desc.width | 0);
-    this.#height = Math.max(1, desc.height | 0);
-    this.#format = desc.format ?? 'rgba8unorm';
-    this.#mipLevels = Math.max(1, desc.mipLevels ?? 1);
-    this.#sampleCount = desc.sampleCount ?? 1;
-    this.#usage = Array.isArray(desc.usage)
+    this.__id = ulid();
+    this.__label = desc.label ?? '';
+    this.__width = Math.max(1, desc.width | 0);
+    this.__height = Math.max(1, desc.height | 0);
+    this.__format = desc.format ?? 'rgba8unorm';
+    this.__mipLevels = Math.max(1, desc.mipLevels ?? 1);
+    this.__sampleCount = desc.sampleCount ?? 1;
+    this.__usage = Array.isArray(desc.usage)
       ? [...new Set(desc.usage)]
       : ['sampler', 'color-target'];
   }
 
   /** Unique identifier generated at creation time */
   get id() {
-    return this.#id;
+    return this.__id;
   }
 
   /** Debug label for resource tracking */
   get label() {
-    return this.#label;
+    return this.__label;
   }
 
   /** Texture width in pixels */
   get width() {
-    return this.#width;
+    return this.__width;
   }
 
   /** Texture height in pixels */
   get height() {
-    return this.#height;
+    return this.__height;
   }
 
   /** Number of mip levels (1 = no mipmaps) */
   get mipLevels() {
-    return this.#mipLevels;
+    return this.__mipLevels;
   }
 
   /**
@@ -144,7 +144,7 @@ export abstract class TextureBase extends DirtyState {
    * 1 = no MSAA, 4 = 4x MSAA
    */
   get sampleCount() {
-    return this.#sampleCount;
+    return this.__sampleCount;
   }
 
   /**
@@ -152,7 +152,7 @@ export abstract class TextureBase extends DirtyState {
    * Examples: 'rgba8unorm', 'bgra8unorm', 'depth24plus'
    */
   get format() {
-    return this.#format;
+    return this.__format;
   }
 
   /**
@@ -160,7 +160,7 @@ export abstract class TextureBase extends DirtyState {
    * Returns a frozen copy for immutability.
    */
   get usage(): readonly TextureUsage[] {
-    return Object.freeze(this.#usage.slice());
+    return Object.freeze(this.__usage.slice());
   }
 
   /**
@@ -168,7 +168,7 @@ export abstract class TextureBase extends DirtyState {
    * Depth textures are used for depth/stencil attachments in render passes.
    */
   get isDepthFormat(): boolean {
-    return this.#format.startsWith('depth');
+    return this.__format.startsWith('depth');
   }
 
   /**
@@ -181,13 +181,13 @@ export abstract class TextureBase extends DirtyState {
    */
   get hash(): string {
     const key = {
-      label: this.#label,
-      width: this.#width,
-      height: this.#height,
-      mipLevels: this.#mipLevels,
-      sampleCount: this.#sampleCount,
-      format: this.#format,
-      usage: this.#usage,
+      label: this.__label,
+      width: this.__width,
+      height: this.__height,
+      mipLevels: this.__mipLevels,
+      sampleCount: this.__sampleCount,
+      format: this.__format,
+      usage: this.__usage,
       kind: this._kind(),
       ext: this._extraHashKey(),
     };
@@ -203,29 +203,29 @@ export abstract class TextureBase extends DirtyState {
   }
 
   set label(v: string) {
-    if (this.#label === v) return;
-    this.#label = v;
+    if (this.__label === v) return;
+    this.__label = v;
     this.markAsDirty();
   }
 
   set width(v: number) {
     const nv = Math.max(1, v | 0);
-    if (this.#width === nv) return;
-    this.#width = nv;
-    this.#mipLevels = Math.min(
-      this.#mipLevels,
-      TextureBase.computeMaxMipLevels(this.#width, this.#height),
+    if (this.__width === nv) return;
+    this.__width = nv;
+    this.__mipLevels = Math.min(
+      this.__mipLevels,
+      TextureBase.computeMaxMipLevels(this.__width, this.__height),
     );
     this.markAsDirty();
   }
 
   set height(v: number) {
     const nv = Math.max(1, v | 0);
-    if (this.#height === nv) return;
-    this.#height = nv;
-    this.#mipLevels = Math.min(
-      this.#mipLevels,
-      TextureBase.computeMaxMipLevels(this.#width, this.#height),
+    if (this.__height === nv) return;
+    this.__height = nv;
+    this.__mipLevels = Math.min(
+      this.__mipLevels,
+      TextureBase.computeMaxMipLevels(this.__width, this.__height),
     );
     this.markAsDirty();
   }
@@ -233,26 +233,26 @@ export abstract class TextureBase extends DirtyState {
   set mipLevels(v: number) {
     const nv = Math.max(1, v | 0);
     const maxAllowed = TextureBase.computeMaxMipLevels(
-      this.#width,
-      this.#height,
+      this.__width,
+      this.__height,
     );
     const clamped = Math.min(nv, maxAllowed);
-    if (this.#mipLevels === clamped) return;
-    this.#mipLevels = clamped;
+    if (this.__mipLevels === clamped) return;
+    this.__mipLevels = clamped;
     this.markAsDirty();
   }
 
   set sampleCount(v: SampleCount) {
     const allowed: SampleCount[] = [1, 2, 4, 8];
     const nv = allowed.includes(v) ? v : 1;
-    if (this.#sampleCount === nv) return;
-    this.#sampleCount = nv;
+    if (this.__sampleCount === nv) return;
+    this.__sampleCount = nv;
     this.markAsDirty();
   }
 
   set format(v: TextureFormat) {
-    if (this.#format === v) return;
-    this.#format = v;
+    if (this.__format === v) return;
+    this.__format = v;
     this.markAsDirty();
   }
 
@@ -260,31 +260,31 @@ export abstract class TextureBase extends DirtyState {
     const nv = [...new Set(v)];
     // Shallow equality check
     if (
-      nv.length === this.#usage.length &&
-      nv.every((u, i) => u === this.#usage[i])
+      nv.length === this.__usage.length &&
+      nv.every((u, i) => u === this.__usage[i])
     )
       return;
-    this.#usage = nv;
+    this.__usage = nv;
     this.markAsDirty();
   }
 
   addUsage(flag: TextureUsage): this {
-    if (!this.#usage.includes(flag)) {
-      this.#usage.push(flag);
+    if (!this.__usage.includes(flag)) {
+      this.__usage.push(flag);
       this.markAsDirty();
     }
     return this;
   }
 
   removeUsage(flag: TextureUsage): this {
-    const before = this.#usage.length;
-    this.#usage = this.#usage.filter((u) => u !== flag);
-    if (this.#usage.length !== before) this.markAsDirty();
+    const before = this.__usage.length;
+    this.__usage = this.__usage.filter((u) => u !== flag);
+    if (this.__usage.length !== before) this.markAsDirty();
     return this;
   }
 
   hasUsage(flag: TextureUsage): boolean {
-    return this.#usage.includes(flag);
+    return this.__usage.includes(flag);
   }
 
   // Protected hooks: non-abstract before abstract to satisfy ordering

@@ -7,9 +7,9 @@ import { AbstractVector } from './AbstractVector';
  * Right-handed convention. Units follow the engine standard (meters).
  */
 export class Vector3 extends AbstractVector<3> {
-  #x: number;
-  #y: number;
-  #z: number;
+  private __x: number;
+  private __y: number;
+  private __z: number;
 
   /**
    * Returns a zero vector (0, 0, 0).
@@ -75,36 +75,36 @@ export class Vector3 extends AbstractVector<3> {
    */
   constructor(x: number = 0, y: number = 0, z: number = 0) {
     super();
-    this.#x = x;
-    this.#y = y;
-    this.#z = z;
+    this.__x = x;
+    this.__y = y;
+    this.__z = z;
   }
 
   /** X component */
   get x() {
-    return this.#x;
+    return this.__x;
   }
   /** Y component */
   get y() {
-    return this.#y;
+    return this.__y;
   }
   /** Z component */
   get z() {
-    return this.#z;
+    return this.__z;
   }
   /** X component */
   set x(value) {
-    this.#x = value;
+    this.__x = value;
     this.markAsDirty();
   }
   /** Y component */
   set y(value) {
-    this.#y = value;
+    this.__y = value;
     this.markAsDirty();
   }
   /** Z component */
   set z(value) {
-    this.#z = value;
+    this.__z = value;
     this.markAsDirty();
   }
 
@@ -114,9 +114,9 @@ export class Vector3 extends AbstractVector<3> {
    * @returns this
    */
   override sum(vector: this): this {
-    this.#x += vector.x;
-    this.#y += vector.y;
-    this.#z += vector.z;
+    this.__x += vector.x;
+    this.__y += vector.y;
+    this.__z += vector.z;
     return this.markAsDirty();
   }
 
@@ -126,9 +126,9 @@ export class Vector3 extends AbstractVector<3> {
    * @returns this
    */
   override sub(vector: this): this {
-    this.#x -= vector.x;
-    this.#y -= vector.y;
-    this.#z -= vector.z;
+    this.__x -= vector.x;
+    this.__y -= vector.y;
+    this.__z -= vector.z;
     return this.markAsDirty();
   }
 
@@ -138,9 +138,9 @@ export class Vector3 extends AbstractVector<3> {
    * @returns this
    */
   override mul(vector: this): this {
-    this.#x *= vector.x;
-    this.#y *= vector.y;
-    this.#z *= vector.z;
+    this.__x *= vector.x;
+    this.__y *= vector.y;
+    this.__z *= vector.z;
     return this.markAsDirty();
   }
 
@@ -150,9 +150,9 @@ export class Vector3 extends AbstractVector<3> {
    * @returns this
    */
   override div(vector: this): this {
-    this.#x /= vector.x;
-    this.#y /= vector.y;
-    this.#z /= vector.z;
+    this.__x /= vector.x;
+    this.__y /= vector.y;
+    this.__z /= vector.z;
     return this.markAsDirty();
   }
 
@@ -162,9 +162,9 @@ export class Vector3 extends AbstractVector<3> {
    * @returns this
    */
   override mulS(scalar: number): this {
-    this.#x *= scalar;
-    this.#y *= scalar;
-    this.#z *= scalar;
+    this.__x *= scalar;
+    this.__y *= scalar;
+    this.__z *= scalar;
     return this.markAsDirty();
   }
 
@@ -177,9 +177,9 @@ export class Vector3 extends AbstractVector<3> {
     if (scalar === 0) {
       throw new Error('Division by zero');
     }
-    this.#x /= scalar;
-    this.#y /= scalar;
-    this.#z /= scalar;
+    this.__x /= scalar;
+    this.__y /= scalar;
+    this.__z /= scalar;
     return this.markAsDirty();
   }
 
@@ -202,9 +202,9 @@ export class Vector3 extends AbstractVector<3> {
     const ry = this.z * vector.x - this.x * vector.z;
     const rz = this.x * vector.y - this.y * vector.x;
 
-    this.#x = rx;
-    this.#y = ry;
-    this.#z = rz;
+    this.__x = rx;
+    this.__y = ry;
+    this.__z = rz;
     return this.markAsDirty();
   }
 
@@ -216,9 +216,9 @@ export class Vector3 extends AbstractVector<3> {
    * @returns this
    */
   override set(x: number, y: number, z: number): this {
-    this.#x = x;
-    this.#y = y;
-    this.#z = z;
+    this.__x = x;
+    this.__y = y;
+    this.__z = z;
     return this.markAsDirty();
   }
 
@@ -228,9 +228,9 @@ export class Vector3 extends AbstractVector<3> {
    * @returns this
    */
   override copy(vector: this): this {
-    this.#x = vector.#x;
-    this.#y = vector.#y;
-    this.#z = vector.#z;
+    this.__x = vector.__x;
+    this.__y = vector.__y;
+    this.__z = vector.__z;
     return this.markAsDirty();
   }
 
@@ -245,7 +245,7 @@ export class Vector3 extends AbstractVector<3> {
    * Returns a Float32Array buffer [x, y, z].
    */
   override toBuffer(): Float32Array {
-    return new Float32Array([this.#x, this.#y, this.#z]);
+    return new Float32Array([this.__x, this.__y, this.__z]);
   }
 
   /**

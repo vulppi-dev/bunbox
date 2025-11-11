@@ -5,14 +5,14 @@ export type LocaleEventOptions = {
 } & EventOptions;
 
 export class LocaleEvent extends Event {
-  #locales: { language: string; country: string }[];
+  private __locales: { language: string; country: string }[];
 
   constructor(options: LocaleEventOptions) {
     super(options);
-    this.#locales = options.locales ?? [];
+    this.__locales = options.locales ?? [];
   }
 
   get locales() {
-    return Object.freeze([...this.#locales]);
+    return Object.freeze([...this.__locales]);
   }
 }

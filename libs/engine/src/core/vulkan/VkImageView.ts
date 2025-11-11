@@ -45,11 +45,11 @@ export class VkImageView implements Disposable {
 
   // MARK: Instance props
 
-  #device: Pointer;
-  #instance: Pointer;
+  private __device: Pointer;
+  private __instance: Pointer;
 
   constructor(props: VkImageViewProps) {
-    this.#device = props.device;
+    this.__device = props.device;
 
     VK_DEBUG(
       `Creating image view for image: 0x${props.image.toString(16)}, format: ${props.format}`,
@@ -79,17 +79,17 @@ export class VkImageView implements Disposable {
       throw new DynamicLibError(getResultMessage(result), 'Vulkan');
     }
 
-    this.#instance = Number(pointerHolder[0]!) as Pointer;
-    VK_DEBUG(`Image view created: 0x${this.#instance.toString(16)}`);
+    this.__instance = Number(pointerHolder[0]!) as Pointer;
+    VK_DEBUG(`Image view created: 0x${this.__instance.toString(16)}`);
   }
 
   get instance() {
-    return this.#instance;
+    return this.__instance;
   }
 
   dispose(): void | Promise<void> {
-    VK_DEBUG(`Destroying image view: 0x${this.#instance.toString(16)}`);
-    VK.vkDestroyImageView(this.#device, this.#instance, null);
+    VK_DEBUG(`Destroying image view: 0x${this.__instance.toString(16)}`);
+    VK.vkDestroyImageView(this.__device, this.__instance, null);
     VK_DEBUG('Image view destroyed');
   }
 }

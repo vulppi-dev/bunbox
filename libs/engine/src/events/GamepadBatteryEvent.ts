@@ -15,26 +15,26 @@ export type GamepadBatteryEventOptions = {
 } & EventOptions;
 
 export class GamepadBatteryEvent extends Event {
-  #deviceId: number;
-  #batteryLevel: number;
-  #state: GamepadBatteryPowerState;
+  private __deviceId: number;
+  private __batteryLevel: number;
+  private __state: GamepadBatteryPowerState;
 
   constructor(options: GamepadBatteryEventOptions) {
     super(options);
-    this.#deviceId = options.deviceId;
-    this.#batteryLevel = options.batteryLevel;
-    this.#state = options.state;
+    this.__deviceId = options.deviceId;
+    this.__batteryLevel = options.batteryLevel;
+    this.__state = options.state;
   }
 
   get deviceId() {
-    return this.#deviceId;
+    return this.__deviceId;
   }
 
   get batteryLevel() {
-    return this.#batteryLevel;
+    return this.__batteryLevel;
   }
 
   get state() {
-    return this.#state;
+    return this.__state;
   }
 }

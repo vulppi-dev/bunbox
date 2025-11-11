@@ -19,23 +19,23 @@ interface TextureEntry {
  * Tracks dirty state and ensures efficient memory usage by deduplicating textures.
  */
 export class TextureManager implements Disposable {
-  #entries: Map<TexturePointer, TextureEntry> = new Map();
-  #textureToPointer: Map<TextureBase, TexturePointer> = new Map();
-  #hashToPointer: Map<string, TexturePointer> = new Map();
-  #disposed = false;
+  private __entries: Map<TexturePointer, TextureEntry> = new Map();
+  private __textureToPointer: Map<TextureBase, TexturePointer> = new Map();
+  private __hashToPointer: Map<string, TexturePointer> = new Map();
+  private __disposed = false;
 
   /**
    * Get total number of registered textures.
    */
   get count(): number {
-    return this.#entries.size;
+    return this.__entries.size;
   }
 
   /**
    * Check if the manager has been disposed.
    */
   get isDisposed(): boolean {
-    return this.#disposed;
+    return this.__disposed;
   }
 
   /**
@@ -44,22 +44,22 @@ export class TextureManager implements Disposable {
    * Uses hash-based deduplication to avoid storing identical textures.
    */
   register(texture: TextureBase): TexturePointer {
-    if (this.#disposed) {
+    if (this.__disposed) {
       throw new Error('TextureManager has been disposed');
     }
 
     // Check if already registered
-    const existing = this.#textureToPointer.get(texture);
+    const existing = this.__textureToPointer.get(texture);
     if (existing !== undefined) {
       return existing;
     }
 
     // Check for hash collision (same content, different instance)
     const hash = texture.hash;
-    const hashPointer = this.#hashToPointer.get(hash);
+    const hashPointer = this.__hashToPointer.get(hash);
     if (hashPointer !== undefined) {
       // Reuse existing texture with same content
-      this.#textureToPointer.set(texture, hashPointer);
+      this.__textureToPointer.set(texture, hashPointer);
       return hashPointer;
     }
 
@@ -71,9 +71,9 @@ export class TextureManager implements Disposable {
       pointer,
     };
 
-    this.#entries.set(pointer, entry);
-    this.#textureToPointer.set(texture, pointer);
-    this.#hashToPointer.set(hash, pointer);
+    this.__entries.set(pointer, entry);
+    this.__textureToPointer.set(texture, pointer);
+    this.__hashToPointer.set(hash, pointer);
 
     return pointer;
   }
@@ -83,13 +83,13 @@ export class TextureManager implements Disposable {
    * Removes the texture from internal tracking.
    */
   unregister(pointer: TexturePointer): boolean {
-    const entry = this.#entries.get(pointer);
+    const entry = this.__entries.get(pointer);
     if (!entry) return false;
 
     const hash = entry.texture.hash;
-    this.#entries.delete(pointer);
-    this.#textureToPointer.delete(entry.texture);
-    this.#hashToPointer.delete(hash);
+    this.__entries.delete(pointer);
+    this.__textureToPointer.delete(entry.texture);
+    this.__hashToPointer.delete(hash);
 
     return true;
   }
@@ -99,7 +99,7 @@ export class TextureManager implements Disposable {
    * Returns undefined if pointer is invalid.
    */
   get(pointer: TexturePointer): TextureBase | undefined {
-    return this.#entries.get(pointer)?.texture;
+    return this.__entries.get(pointer)?.texture;
   }
 
   /**
@@ -107,7 +107,7 @@ export class TextureManager implements Disposable {
    * Returns undefined if texture is not registered.
    */
   getPointer(texture: TextureBase): TexturePointer | undefined {
-    return this.#textureToPointer.get(texture);
+    return this.__textureToPointer.get(texture);
   }
 
   /**
@@ -115,7 +115,7 @@ export class TextureManager implements Disposable {
    * Returns false if pointer is invalid.
    */
   isDirty(pointer: TexturePointer): boolean {
-    const entry = this.#entries.get(pointer);
+    const entry = this.__entries.get(pointer);
     if (!entry) return false;
     return entry.texture.isDirty;
   }
@@ -125,7 +125,7 @@ export class TextureManager implements Disposable {
    * Should be called after uploading data to GPU.
    */
   markAsClean(pointer: TexturePointer): void {
-    const entry = this.#entries.get(pointer);
+    const entry = this.__entries.get(pointer);
     if (!entry) return;
 
     entry.texture.markAsClean();
@@ -138,14 +138,14 @@ export class TextureManager implements Disposable {
    * Returns 0 if pointer is invalid.
    */
   getVersion(pointer: TexturePointer): number {
-    return this.#entries.get(pointer)?.version ?? 0;
+    return this.__entries.get(pointer)?.version ?? 0;
   }
 
   /**
    * Get all registered pointers.
    */
   getAllPointers(): readonly TexturePointer[] {
-    return Array.from(this.#entries.keys());
+    return Array.from(this.__entries.keys());
   }
 
   /**
@@ -156,7 +156,7 @@ export class TextureManager implements Disposable {
     texture: TextureBase;
   }> {
     const result: Array<{ pointer: TexturePointer; texture: TextureBase }> = [];
-    for (const [pointer, entry] of this.#entries) {
+    for (const [pointer, entry] of this.__entries) {
       if (entry.texture.isDirty) {
         result.push({ pointer, texture: entry.texture });
       }
@@ -172,7 +172,7 @@ export class TextureManager implements Disposable {
     texture: TextureBase;
   }> {
     const result: Array<{ pointer: TexturePointer; texture: TextureBase }> = [];
-    for (const [pointer, entry] of this.#entries) {
+    for (const [pointer, entry] of this.__entries) {
       if (entry.texture.format === format) {
         result.push({ pointer, texture: entry.texture });
       }
@@ -188,7 +188,7 @@ export class TextureManager implements Disposable {
     texture: TextureBase;
   }> {
     const result: Array<{ pointer: TexturePointer; texture: TextureBase }> = [];
-    for (const [pointer, entry] of this.#entries) {
+    for (const [pointer, entry] of this.__entries) {
       if (entry.texture.isDepthFormat) {
         result.push({ pointer, texture: entry.texture });
       }
@@ -200,17 +200,17 @@ export class TextureManager implements Disposable {
    * Clear all registered textures.
    */
   clear(): void {
-    this.#entries.clear();
-    this.#textureToPointer.clear();
-    this.#hashToPointer.clear();
+    this.__entries.clear();
+    this.__textureToPointer.clear();
+    this.__hashToPointer.clear();
   }
 
   /**
    * Dispose the manager and clear all data.
    */
   dispose(): void {
-    if (this.#disposed) return;
+    if (this.__disposed) return;
     this.clear();
-    this.#disposed = true;
+    this.__disposed = true;
   }
 }

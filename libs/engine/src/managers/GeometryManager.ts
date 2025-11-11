@@ -19,23 +19,23 @@ interface GeometryEntry {
  * Tracks dirty state and ensures efficient memory usage by deduplicating geometries.
  */
 export class GeometryManager implements Disposable {
-  #entries: Map<GeometryPointer, GeometryEntry> = new Map();
-  #geometryToPointer: Map<Geometry, GeometryPointer> = new Map();
-  #hashToPointer: Map<string, GeometryPointer> = new Map();
-  #disposed = false;
+  private __entries: Map<GeometryPointer, GeometryEntry> = new Map();
+  private __geometryToPointer: Map<Geometry, GeometryPointer> = new Map();
+  private __hashToPointer: Map<string, GeometryPointer> = new Map();
+  private __disposed = false;
 
   /**
    * Get total number of registered geometries.
    */
   get count(): number {
-    return this.#entries.size;
+    return this.__entries.size;
   }
 
   /**
    * Check if the manager has been disposed.
    */
   get isDisposed(): boolean {
-    return this.#disposed;
+    return this.__disposed;
   }
 
   /**
@@ -44,22 +44,22 @@ export class GeometryManager implements Disposable {
    * Uses hash-based deduplication to avoid storing identical geometries.
    */
   register(geometry: Geometry): GeometryPointer {
-    if (this.#disposed) {
+    if (this.__disposed) {
       throw new Error('GeometryManager has been disposed');
     }
 
     // Check if already registered
-    const existing = this.#geometryToPointer.get(geometry);
+    const existing = this.__geometryToPointer.get(geometry);
     if (existing !== undefined) {
       return existing;
     }
 
     // Check for hash collision (same content, different instance)
     const hash = geometry.hash;
-    const hashPointer = this.#hashToPointer.get(hash);
+    const hashPointer = this.__hashToPointer.get(hash);
     if (hashPointer !== undefined) {
       // Reuse existing geometry with same content
-      this.#geometryToPointer.set(geometry, hashPointer);
+      this.__geometryToPointer.set(geometry, hashPointer);
       return hashPointer;
     }
 
@@ -71,9 +71,9 @@ export class GeometryManager implements Disposable {
       pointer,
     };
 
-    this.#entries.set(pointer, entry);
-    this.#geometryToPointer.set(geometry, pointer);
-    this.#hashToPointer.set(hash, pointer);
+    this.__entries.set(pointer, entry);
+    this.__geometryToPointer.set(geometry, pointer);
+    this.__hashToPointer.set(hash, pointer);
 
     return pointer;
   }
@@ -83,13 +83,13 @@ export class GeometryManager implements Disposable {
    * Removes the geometry from internal tracking.
    */
   unregister(pointer: GeometryPointer): boolean {
-    const entry = this.#entries.get(pointer);
+    const entry = this.__entries.get(pointer);
     if (!entry) return false;
 
     const hash = entry.geometry.hash;
-    this.#entries.delete(pointer);
-    this.#geometryToPointer.delete(entry.geometry);
-    this.#hashToPointer.delete(hash);
+    this.__entries.delete(pointer);
+    this.__geometryToPointer.delete(entry.geometry);
+    this.__hashToPointer.delete(hash);
 
     return true;
   }
@@ -99,7 +99,7 @@ export class GeometryManager implements Disposable {
    * Returns undefined if pointer is invalid.
    */
   get(pointer: GeometryPointer): Geometry | undefined {
-    return this.#entries.get(pointer)?.geometry;
+    return this.__entries.get(pointer)?.geometry;
   }
 
   /**
@@ -107,7 +107,7 @@ export class GeometryManager implements Disposable {
    * Returns undefined if geometry is not registered.
    */
   getPointer(geometry: Geometry): GeometryPointer | undefined {
-    return this.#geometryToPointer.get(geometry);
+    return this.__geometryToPointer.get(geometry);
   }
 
   /**
@@ -115,7 +115,7 @@ export class GeometryManager implements Disposable {
    * Returns false if pointer is invalid.
    */
   isDirty(pointer: GeometryPointer): boolean {
-    const entry = this.#entries.get(pointer);
+    const entry = this.__entries.get(pointer);
     if (!entry) return false;
     return entry.geometry.isDirty;
   }
@@ -125,7 +125,7 @@ export class GeometryManager implements Disposable {
    * Should be called after uploading data to GPU.
    */
   markAsClean(pointer: GeometryPointer): void {
-    const entry = this.#entries.get(pointer);
+    const entry = this.__entries.get(pointer);
     if (!entry) return;
 
     entry.geometry.markAsClean();
@@ -138,14 +138,14 @@ export class GeometryManager implements Disposable {
    * Returns 0 if pointer is invalid.
    */
   getVersion(pointer: GeometryPointer): number {
-    return this.#entries.get(pointer)?.version ?? 0;
+    return this.__entries.get(pointer)?.version ?? 0;
   }
 
   /**
    * Get all registered pointers.
    */
   getAllPointers(): readonly GeometryPointer[] {
-    return Array.from(this.#entries.keys());
+    return Array.from(this.__entries.keys());
   }
 
   /**
@@ -156,7 +156,7 @@ export class GeometryManager implements Disposable {
     geometry: Geometry;
   }> {
     const result: Array<{ pointer: GeometryPointer; geometry: Geometry }> = [];
-    for (const [pointer, entry] of this.#entries) {
+    for (const [pointer, entry] of this.__entries) {
       if (entry.geometry.isDirty) {
         result.push({ pointer, geometry: entry.geometry });
       }
@@ -168,18 +168,18 @@ export class GeometryManager implements Disposable {
    * Clear all registered geometries.
    */
   clear(): void {
-    this.#entries.clear();
-    this.#geometryToPointer.clear();
-    this.#hashToPointer.clear();
+    this.__entries.clear();
+    this.__geometryToPointer.clear();
+    this.__hashToPointer.clear();
   }
 
   /**
    * Dispose the manager and clear all data.
    */
   dispose(): void {
-    if (this.#disposed) return;
+    if (this.__disposed) return;
     this.clear();
-    this.#disposed = true;
+    this.__disposed = true;
   }
 
   // ==================== PRIMITIVE GEOMETRIES ====================

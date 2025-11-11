@@ -54,22 +54,22 @@ import { Node } from './Node';
  * ```
  */
 export class Environment extends Node {
-  #ambientColor: Color;
-  #ambientIntensity: number = 0.2;
-  #shadowConfig: ShadowConfig;
-  #skybox: TexturePointer | null = null;
-  #enableFog: boolean = false;
-  #fogColor: Color;
-  #fogStart: number = 10;
-  #fogEnd: number = 100;
-  #fogDensity: number = 0.02;
-  #exposure: number = 1.0;
+  private __ambientColor: Color;
+  private __ambientIntensity: number = 0.2;
+  private __shadowConfig: ShadowConfig;
+  private __skybox: TexturePointer | null = null;
+  private __enableFog: boolean = false;
+  private __fogColor: Color;
+  private __fogStart: number = 10;
+  private __fogEnd: number = 100;
+  private __fogDensity: number = 0.02;
+  private __exposure: number = 1.0;
 
   constructor() {
     super();
-    this.#ambientColor = new Color(0.2, 0.2, 0.2, 1.0);
-    this.#shadowConfig = ShadowConfig.medium();
-    this.#fogColor = new Color(0.5, 0.6, 0.7, 1.0);
+    this.__ambientColor = new Color(0.2, 0.2, 0.2, 1.0);
+    this.__shadowConfig = ShadowConfig.medium();
+    this.__fogColor = new Color(0.5, 0.6, 0.7, 1.0);
   }
 
   /**
@@ -79,7 +79,7 @@ export class Environment extends Node {
    * Combined with ambientIntensity to calculate final ambient contribution.
    */
   get ambientColor(): Color {
-    return this.#ambientColor;
+    return this.__ambientColor;
   }
 
   /**
@@ -89,7 +89,7 @@ export class Environment extends Node {
    * Higher values reduce contrast but improve visibility in shadows.
    */
   get ambientIntensity(): number {
-    return this.#ambientIntensity;
+    return this.__ambientIntensity;
   }
 
   /**
@@ -104,7 +104,7 @@ export class Environment extends Node {
    * - ShadowConfig.disabled() - No shadows
    */
   get shadowConfig(): ShadowConfig {
-    return this.#shadowConfig;
+    return this.__shadowConfig;
   }
 
   /**
@@ -123,7 +123,7 @@ export class Environment extends Node {
    * ```
    */
   get skybox(): TexturePointer | null {
-    return this.#skybox;
+    return this.__skybox;
   }
 
   /**
@@ -133,7 +133,7 @@ export class Environment extends Node {
    * Uses either linear (fogStart/fogEnd) or exponential (fogDensity) falloff.
    */
   get enableFog(): boolean {
-    return this.#enableFog;
+    return this.__enableFog;
   }
 
   /**
@@ -142,7 +142,7 @@ export class Environment extends Node {
    * Typically matches skybox horizon color for seamless transition.
    */
   get fogColor(): Color {
-    return this.#fogColor;
+    return this.__fogColor;
   }
 
   /**
@@ -152,7 +152,7 @@ export class Environment extends Node {
    * Only used when enableFog is true with linear fog mode.
    */
   get fogStart(): number {
-    return this.#fogStart;
+    return this.__fogStart;
   }
 
   /**
@@ -162,7 +162,7 @@ export class Environment extends Node {
    * Only used when enableFog is true with linear fog mode.
    */
   get fogEnd(): number {
-    return this.#fogEnd;
+    return this.__fogEnd;
   }
 
   /**
@@ -173,7 +173,7 @@ export class Environment extends Node {
    * Only used when enableFog is true with exponential fog mode.
    */
   get fogDensity(): number {
-    return this.#fogDensity;
+    return this.__fogDensity;
   }
 
   /**
@@ -187,39 +187,39 @@ export class Environment extends Node {
    * Typical range: 0.1 - 10.0
    */
   get exposure(): number {
-    return this.#exposure;
+    return this.__exposure;
   }
 
   set ambientIntensity(value: number) {
-    this.#ambientIntensity = Math.max(0, value);
+    this.__ambientIntensity = Math.max(0, value);
   }
 
   set shadowConfig(value: ShadowConfig) {
-    this.#shadowConfig = value;
+    this.__shadowConfig = value;
   }
 
   set skybox(value: TexturePointer | null) {
-    this.#skybox = value;
+    this.__skybox = value;
   }
 
   set enableFog(value: boolean) {
-    this.#enableFog = value;
+    this.__enableFog = value;
   }
 
   set fogStart(value: number) {
-    this.#fogStart = Math.max(0, value);
+    this.__fogStart = Math.max(0, value);
   }
 
   set fogEnd(value: number) {
-    this.#fogEnd = Math.max(this.#fogStart, value);
+    this.__fogEnd = Math.max(this.__fogStart, value);
   }
 
   set fogDensity(value: number) {
-    this.#fogDensity = Math.max(0, value);
+    this.__fogDensity = Math.max(0, value);
   }
 
   set exposure(value: number) {
-    this.#exposure = Math.max(0.001, value);
+    this.__exposure = Math.max(0.001, value);
   }
 
   /**
@@ -232,13 +232,13 @@ export class Environment extends Node {
    * @returns Fog factor [0, 1]
    */
   getFogFactor(distance: number): number {
-    if (!this.#enableFog) return 0;
+    if (!this.__enableFog) return 0;
 
     // Linear fog
-    if (distance <= this.#fogStart) return 0;
-    if (distance >= this.#fogEnd) return 1;
+    if (distance <= this.__fogStart) return 0;
+    if (distance >= this.__fogEnd) return 1;
 
-    return (distance - this.#fogStart) / (this.#fogEnd - this.#fogStart);
+    return (distance - this.__fogStart) / (this.__fogEnd - this.__fogStart);
   }
 
   /**
@@ -251,10 +251,10 @@ export class Environment extends Node {
    * @returns Fog factor [0, 1]
    */
   getExponentialFogFactor(distance: number): number {
-    if (!this.#enableFog) return 0;
+    if (!this.__enableFog) return 0;
 
     // Exponential fog: 1 - e^(-density * distance)
-    return 1.0 - Math.exp(-this.#fogDensity * distance);
+    return 1.0 - Math.exp(-this.__fogDensity * distance);
   }
 
   /**
@@ -267,10 +267,10 @@ export class Environment extends Node {
    * @returns Fog factor [0, 1]
    */
   getExponentialSquaredFogFactor(distance: number): number {
-    if (!this.#enableFog) return 0;
+    if (!this.__enableFog) return 0;
 
     // Exponential squared fog: 1 - e^(-(density * distance)^2)
-    const factor = this.#fogDensity * distance;
+    const factor = this.__fogDensity * distance;
     return 1.0 - Math.exp(-factor * factor);
   }
 }

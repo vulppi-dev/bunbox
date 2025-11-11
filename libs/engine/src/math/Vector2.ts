@@ -6,8 +6,8 @@ import { AbstractVector } from './AbstractVector';
  * All operations are in-place and return `this` for chaining.
  */
 export class Vector2 extends AbstractVector<2> {
-  #x: number;
-  #y: number;
+  private __x: number;
+  private __y: number;
 
   /** Returns (0, 0). */
   static Zero(): Vector2 {
@@ -46,61 +46,61 @@ export class Vector2 extends AbstractVector<2> {
    */
   constructor(x: number = 0, y: number = 0) {
     super();
-    this.#x = x;
-    this.#y = y;
+    this.__x = x;
+    this.__y = y;
   }
 
   /** X component */
   get x() {
-    return this.#x;
+    return this.__x;
   }
   /** Y component */
   get y() {
-    return this.#y;
+    return this.__y;
   }
   /** X component */
   set x(value) {
-    this.#x = value;
+    this.__x = value;
     this.markAsDirty();
   }
   /** Y component */
   set y(value) {
-    this.#y = value;
+    this.__y = value;
     this.markAsDirty();
   }
 
   /** Component-wise addition. */
   override sum(vector: this): this {
-    this.#x += vector.x;
-    this.#y += vector.y;
+    this.__x += vector.x;
+    this.__y += vector.y;
     return this.markAsDirty();
   }
 
   /** Component-wise subtraction. */
   override sub(vector: this): this {
-    this.#x -= vector.x;
-    this.#y -= vector.y;
+    this.__x -= vector.x;
+    this.__y -= vector.y;
     return this.markAsDirty();
   }
 
   /** Component-wise multiplication. */
   override mul(vector: this): this {
-    this.#x *= vector.x;
-    this.#y *= vector.y;
+    this.__x *= vector.x;
+    this.__y *= vector.y;
     return this.markAsDirty();
   }
 
   /** Component-wise division. */
   override div(vector: this): this {
-    this.#x /= vector.x;
-    this.#y /= vector.y;
+    this.__x /= vector.x;
+    this.__y /= vector.y;
     return this.markAsDirty();
   }
 
   /** Multiply by scalar. */
   override mulS(scalar: number): this {
-    this.#x *= scalar;
-    this.#y *= scalar;
+    this.__x *= scalar;
+    this.__y *= scalar;
     return this.markAsDirty();
   }
 
@@ -109,8 +109,8 @@ export class Vector2 extends AbstractVector<2> {
     if (scalar === 0) {
       throw new Error('Division by zero');
     }
-    this.#x /= scalar;
-    this.#y /= scalar;
+    this.__x /= scalar;
+    this.__y /= scalar;
     return this.markAsDirty();
   }
 
@@ -121,15 +121,15 @@ export class Vector2 extends AbstractVector<2> {
 
   /** Set both components. */
   override set(x: number, y: number): this {
-    this.#x = x;
-    this.#y = y;
+    this.__x = x;
+    this.__y = y;
     return this.markAsDirty();
   }
 
   /** Copy both components from another vector. */
   override copy(vector: this): this {
-    this.#x = vector.x;
-    this.#y = vector.y;
+    this.__x = vector.x;
+    this.__y = vector.y;
     return this.markAsDirty();
   }
 
@@ -140,7 +140,7 @@ export class Vector2 extends AbstractVector<2> {
 
   /** Returns Float32Array [x, y]. */
   override toBuffer(): Float32Array {
-    return new Float32Array([this.#x, this.#y]);
+    return new Float32Array([this.__x, this.__y]);
   }
 
   /** String representation for debugging. */

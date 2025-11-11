@@ -11,7 +11,7 @@ import { DirtyState } from '@bunbox/utils';
  * Represents a 4x4 matrix.
  */
 export class Matrix extends DirtyState {
-  #m = new Float32Array([
+  private __m = new Float32Array([
     1, 0, 0, 0, // col 0
     0, 1, 0, 0, // col 1
     0, 0, 1, 0, // col 2
@@ -24,7 +24,7 @@ export class Matrix extends DirtyState {
    * @returns This matrix after multiplication.
    */
   mulL(matrix: this): this {
-    this.#leftMultiplyTo(this.#m, matrix.#m);
+    this.__leftMultiplyTo(this.__m, matrix.__m);
     return this.markAsDirty();
   }
 
@@ -34,7 +34,7 @@ export class Matrix extends DirtyState {
    * @returns This matrix after multiplication.
    */
   mulR(matrix: this): this {
-    this.#rightMultiplyTo(this.#m, matrix.#m);
+    this.__rightMultiplyTo(this.__m, matrix.__m);
     return this.markAsDirty();
   }
 
@@ -45,7 +45,7 @@ export class Matrix extends DirtyState {
    */
   set(args: FixedArray<number, 16>): this {
     if (args.length !== 16) throw new Error('Invalid arguments');
-    this.#m.set(args);
+    this.__m.set(args);
     return this.markAsDirty();
   }
 
@@ -55,7 +55,7 @@ export class Matrix extends DirtyState {
    * @returns This matrix after copying the components.
    */
   copy(m: this): this {
-    this.#m.set(m.#m);
+    this.__m.set(m.__m);
     return this.markAsDirty();
   }
 
@@ -64,7 +64,7 @@ export class Matrix extends DirtyState {
    * @returns The array representation of the matrix.
    */
   toArray(): FixedArray<number, 16> {
-    return Array.from(this.#m) as FixedArray<number, 16>;
+    return Array.from(this.__m) as FixedArray<number, 16>;
   }
 
   /**
@@ -72,7 +72,7 @@ export class Matrix extends DirtyState {
    * @returns The buffer representation of the matrix.
    */
   toBuffer(): Float32Array {
-    return this.#m.slice();
+    return this.__m.slice();
   }
 
   /**
@@ -80,7 +80,7 @@ export class Matrix extends DirtyState {
    * @returns The string representation of the matrix.
    */
   override toString(): string {
-    const vals = Array.from(this.#m).map((n) => n.toFixed(3));
+    const vals = Array.from(this.__m).map((n) => n.toFixed(3));
     return `Matrix4(${vals.join(', ')})`;
   }
 
@@ -121,7 +121,7 @@ export class Matrix extends DirtyState {
    * @returns This matrix after resetting.
    */
   reset() {
-    this.#m.set([
+    this.__m.set([
       1, 0, 0, 0,
       0, 1, 0, 0,
       0, 0, 1, 0,
@@ -136,7 +136,7 @@ export class Matrix extends DirtyState {
    * @returns This matrix after scaling.
    */
   scale(v: Vector3): this {
-    const m = this.#m;
+    const m = this.__m;
     for (let i = 0; i < 4; i++) {
       m[0 * 4 + i]! *= v.x; // column 0
       m[1 * 4 + i]! *= v.y; // column 1
@@ -151,7 +151,7 @@ export class Matrix extends DirtyState {
    * @returns This matrix after translation.
    */
   translate(v: Vector3): this {
-    const m = this.#m;
+    const m = this.__m;
     const tx = v.x,
       ty = v.y,
       tz = v.z;
@@ -188,8 +188,8 @@ export class Matrix extends DirtyState {
    * @returns This matrix after rotation.
    */
   rotate(r: Quaternion): this {
-    const R = this.#quaternionToMatrix(r);
-    this.#rightMultiplyTo(this.#m, R);
+    const R = this.__quaternionToMatrix(r);
+    this.__rightMultiplyTo(this.__m, R);
     return this.markAsDirty();
   }
 
@@ -215,13 +215,13 @@ export class Matrix extends DirtyState {
 
     const R =
       rotation instanceof Quaternion
-        ? this.#quaternionToMatrix(rotation)
-        : this.#eulerToMatrix(rotation);
+        ? this.__quaternionToMatrix(rotation)
+        : this.__eulerToMatrix(rotation);
 
     const sx = scale.x,
       sy = scale.y,
       sz = scale.z;
-    const m = this.#m;
+    const m = this.__m;
 
     // Basis columns: R * diag(sx, sy, sz)
     // Column 0
@@ -254,7 +254,7 @@ export class Matrix extends DirtyState {
    * @returns This matrix after decomposing the rotation.
    */
   decomposeRotation(out: Euler): this {
-    const m = this.#m;
+    const m = this.__m;
     const m11 = m[0]!,
       m12 = m[4]!,
       m13 = m[8]!;
@@ -342,7 +342,7 @@ export class Matrix extends DirtyState {
    * @returns This matrix after decomposing the rotation.
    */
   decomposeRotationQ(out: Quaternion): this {
-    const m = this.#m;
+    const m = this.__m;
 
     // Extract rotation matrix (remove scale)
     const sx = Math.hypot(m[0]!, m[1]!, m[2]!);
@@ -390,7 +390,7 @@ export class Matrix extends DirtyState {
    * @returns This matrix after decomposing the scale.
    */
   decomposeScale(out: Vector3): this {
-    const m = this.#m;
+    const m = this.__m;
 
     const sx = Math.hypot(m[0]!, m[1]!, m[2]!);
     const sy = Math.hypot(m[4]!, m[5]!, m[6]!);
@@ -406,7 +406,7 @@ export class Matrix extends DirtyState {
    * @returns This matrix after decomposing the position.
    */
   decomposePosition(out: Vector3): this {
-    const m = this.#m;
+    const m = this.__m;
 
     out.set(m[12]!, m[13]!, m[14]!);
     return this;
@@ -450,14 +450,14 @@ export class Matrix extends DirtyState {
    * @returns This matrix after transposition.
    */
   transpose(): this {
-    const m = this.#m;
+    const m = this.__m;
     const t = new Float32Array(16);
     for (let r = 0; r < 4; r++) {
       for (let c = 0; c < 4; c++) {
         t[r * 4 + c] = m[c * 4 + r]!; // column-major transpose
       }
     }
-    this.#m.set(t);
+    this.__m.set(t);
     return this.markAsDirty();
   }
 
@@ -465,7 +465,7 @@ export class Matrix extends DirtyState {
    * Inverse for rigid transforms (R|t) => (R^T | -R^T t)
    */
   invert(): this {
-    const m = this.#m;
+    const m = this.__m;
 
     const r00 = m[0]!,
       r01 = m[4]!,
@@ -505,7 +505,7 @@ export class Matrix extends DirtyState {
     return this.markAsDirty();
   }
 
-  #quaternionToMatrix(quaternion: Quaternion): Float32Array {
+  private __quaternionToMatrix(quaternion: Quaternion): Float32Array {
     const R = new Float32Array(16);
 
     const w = quaternion.w,
@@ -556,7 +556,7 @@ export class Matrix extends DirtyState {
     return R;
   }
 
-  #eulerToMatrix(euler: Euler): Float32Array {
+  private __eulerToMatrix(euler: Euler): Float32Array {
     const R = new Float32Array(16);
     R[0] = 1;
     R[5] = 1;
@@ -599,14 +599,14 @@ export class Matrix extends DirtyState {
     const rotations: Record<string, Float32Array> = { x: rX, y: rY, z: rZ };
 
     for (const a of order) {
-      this.#rightMultiplyTo(R, rotations[a]!); // R = R * Ra
+      this.__rightMultiplyTo(R, rotations[a]!); // R = R * Ra
     }
 
     return R;
   }
 
   // target = mat * target
-  #leftMultiplyTo(target: Float32Array, mat: Float32Array) {
+  private __leftMultiplyTo(target: Float32Array, mat: Float32Array) {
     const tmp = new Float32Array(16);
     for (let j = 0; j < 4; j++) {
       // columns
@@ -627,7 +627,7 @@ export class Matrix extends DirtyState {
   }
 
   // target = target * mat
-  #rightMultiplyTo(target: Float32Array, mat: Float32Array) {
+  private __rightMultiplyTo(target: Float32Array, mat: Float32Array) {
     const tmp = new Float32Array(16);
     for (let j = 0; j < 4; j++) {
       // columns of result = target * mat.col(j)

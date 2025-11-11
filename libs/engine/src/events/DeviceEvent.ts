@@ -15,20 +15,20 @@ export type DeviceEventOptions = {
 } & EventOptions;
 
 export class DeviceEvent extends Event {
-  #deviceType: DeviceType;
-  #deviceId: number;
+  private __deviceType: DeviceType;
+  private __deviceId: number;
 
   constructor(options: DeviceEventOptions) {
     super(options);
-    this.#deviceType = options.deviceType;
-    this.#deviceId = options.deviceId;
+    this.__deviceType = options.deviceType;
+    this.__deviceId = options.deviceId;
   }
 
   get deviceType() {
-    return this.#deviceType;
+    return this.__deviceType;
   }
 
   get deviceId() {
-    return this.#deviceId;
+    return this.__deviceId;
   }
 }

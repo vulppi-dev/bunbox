@@ -30,7 +30,7 @@ import { VK_DEBUG } from '../../singleton/logger';
  * Simplifies render pass creation using agnostic configuration
  */
 export class VkRenderPass implements Disposable {
-  static #mapFormat(format: Format, swapchainFormat: number): number {
+  private static __mapFormat(format: Format, swapchainFormat: number): number {
     if (format === 'swapchain') {
       return swapchainFormat;
     }
@@ -68,7 +68,7 @@ export class VkRenderPass implements Disposable {
     return formatMap[format];
   }
 
-  static #mapSampleCount(samples: SampleCount): number {
+  private static __mapSampleCount(samples: SampleCount): number {
     const sampleMap: Record<SampleCount, number> = {
       1: VkSampleCountFlagBits.COUNT_1_BIT,
       2: VkSampleCountFlagBits.COUNT_2_BIT,
@@ -82,7 +82,7 @@ export class VkRenderPass implements Disposable {
     return sampleMap[samples];
   }
 
-  static #mapLoadOp(loadOp: LoadOp): number {
+  private static __mapLoadOp(loadOp: LoadOp): number {
     const loadOpMap: Record<LoadOp, number> = {
       load: VkAttachmentLoadOp.LOAD,
       clear: VkAttachmentLoadOp.CLEAR,
@@ -92,7 +92,7 @@ export class VkRenderPass implements Disposable {
     return loadOpMap[loadOp];
   }
 
-  static #mapStoreOp(storeOp: StoreOp): number {
+  private static __mapStoreOp(storeOp: StoreOp): number {
     const storeOpMap: Record<StoreOp, number> = {
       store: VkAttachmentStoreOp.STORE,
       'dont-care': VkAttachmentStoreOp.DONT_CARE,
@@ -101,7 +101,7 @@ export class VkRenderPass implements Disposable {
     return storeOpMap[storeOp];
   }
 
-  static #mapImageLayout(layout: ImageLayout): number {
+  private static __mapImageLayout(layout: ImageLayout): number {
     const layoutMap: Record<ImageLayout, number> = {
       undefined: VkImageLayout.UNDEFINED,
       general: VkImageLayout.GENERAL,
@@ -122,51 +122,51 @@ export class VkRenderPass implements Disposable {
     return layoutMap[layout];
   }
 
-  #device: Pointer;
-  #renderPass: Pointer | null = null;
-  #config: RenderPassConfig;
-  #swapchainFormat: number;
+  private __device: Pointer;
+  private __renderPass: Pointer | null = null;
+  private __config: RenderPassConfig;
+  private __swapchainFormat: number;
 
-  #pointerHolder: BigUint64Array;
+  private __pointerHolder: BigUint64Array;
 
   constructor(
     device: Pointer,
     config: RenderPassConfig,
     swapchainFormat: number,
   ) {
-    this.#device = device;
-    this.#config = config;
-    this.#swapchainFormat = swapchainFormat;
+    this.__device = device;
+    this.__config = config;
+    this.__swapchainFormat = swapchainFormat;
 
-    this.#pointerHolder = new BigUint64Array(1);
-    this.#createRenderPass();
+    this.__pointerHolder = new BigUint64Array(1);
+    this.__createRenderPass();
 
     VK_DEBUG(
-      `RenderPass created: 0x${this.#renderPass!.toString(16)} ${config.name ? `(${config.name})` : ''}`,
+      `RenderPass created: 0x${this.__renderPass!.toString(16)} ${config.name ? `(${config.name})` : ''}`,
     );
   }
 
   get instance(): Pointer {
-    if (this.#renderPass === null) {
+    if (this.__renderPass === null) {
       throw new DynamicLibError(
         'RenderPass has not been created yet',
         'Vulkan',
       );
     }
-    return this.#renderPass;
+    return this.__renderPass;
   }
 
   dispose(): void | Promise<void> {
-    if (!this.#renderPass) return;
+    if (!this.__renderPass) return;
 
-    VK_DEBUG(`Destroying renderPass: 0x${this.#renderPass.toString(16)}`);
-    VK.vkDestroyRenderPass(this.#device, this.#renderPass, null);
+    VK_DEBUG(`Destroying renderPass: 0x${this.__renderPass.toString(16)}`);
+    VK.vkDestroyRenderPass(this.__device, this.__renderPass, null);
     VK_DEBUG('RenderPass destroyed');
-    this.#renderPass = null;
+    this.__renderPass = null;
   }
 
-  #createRenderPass(): void {
-    const { attachments } = this.#config;
+  private __createRenderPass(): void {
+    const { attachments } = this.__config;
 
     if (attachments.length === 0) {
       throw new DynamicLibError(
@@ -190,35 +190,35 @@ export class VkRenderPass implements Disposable {
         i,
       );
       attachmentDesc.flags = 0;
-      attachmentDesc.format = VkRenderPass.#mapFormat(
+      attachmentDesc.format = VkRenderPass.__mapFormat(
         attachment.format,
-        this.#swapchainFormat,
+        this.__swapchainFormat,
       );
-      attachmentDesc.samples = VkRenderPass.#mapSampleCount(
+      attachmentDesc.samples = VkRenderPass.__mapSampleCount(
         attachment.samples ?? 1,
       );
-      attachmentDesc.loadOp = VkRenderPass.#mapLoadOp(
+      attachmentDesc.loadOp = VkRenderPass.__mapLoadOp(
         attachment.loadOp ?? 'dont-care',
       );
-      attachmentDesc.storeOp = VkRenderPass.#mapStoreOp(
+      attachmentDesc.storeOp = VkRenderPass.__mapStoreOp(
         attachment.storeOp ?? 'dont-care',
       );
-      attachmentDesc.stencilLoadOp = VkRenderPass.#mapLoadOp(
+      attachmentDesc.stencilLoadOp = VkRenderPass.__mapLoadOp(
         attachment.stencilLoadOp ?? 'dont-care',
       );
-      attachmentDesc.stencilStoreOp = VkRenderPass.#mapStoreOp(
+      attachmentDesc.stencilStoreOp = VkRenderPass.__mapStoreOp(
         attachment.stencilStoreOp ?? 'dont-care',
       );
-      attachmentDesc.initialLayout = VkRenderPass.#mapImageLayout(
+      attachmentDesc.initialLayout = VkRenderPass.__mapImageLayout(
         attachment.initialLayout ?? 'undefined',
       );
 
       if (attachment.finalLayout) {
-        attachmentDesc.finalLayout = VkRenderPass.#mapImageLayout(
+        attachmentDesc.finalLayout = VkRenderPass.__mapImageLayout(
           attachment.finalLayout,
         );
       } else {
-        attachmentDesc.finalLayout = VkRenderPass.#mapImageLayout(
+        attachmentDesc.finalLayout = VkRenderPass.__mapImageLayout(
           isDepth ? 'depth-stencil-attachment' : 'color-attachment',
         );
       }
@@ -235,16 +235,16 @@ export class VkRenderPass implements Disposable {
 
     VK_DEBUG(`Creating render pass with ${attachments.length} attachments`);
     const result = VK.vkCreateRenderPass(
-      this.#device,
+      this.__device,
       ptr(getInstanceBuffer(renderPassCreateInfo)),
       null,
-      ptr(this.#pointerHolder),
+      ptr(this.__pointerHolder),
     );
 
     if (result !== VkResult.SUCCESS) {
       throw new DynamicLibError(getResultMessage(result), 'Vulkan');
     }
 
-    this.#renderPass = Number(this.#pointerHolder[0]) as Pointer;
+    this.__renderPass = Number(this.__pointerHolder[0]) as Pointer;
   }
 }

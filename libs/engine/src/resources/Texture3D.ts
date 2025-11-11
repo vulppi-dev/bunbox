@@ -7,7 +7,7 @@ export interface Texture3DDescriptor extends TextureBaseDescriptor {
 }
 
 export class Texture3D extends TextureBase {
-  #depth: number = 1;
+  private __depth: number = 1;
 
   constructor(desc: Texture3DDescriptor) {
     super(desc);
@@ -15,12 +15,12 @@ export class Texture3D extends TextureBase {
   }
 
   override get depth(): number {
-    return this.#depth;
+    return this.__depth;
   }
   override set depth(v: number) {
     const n = Math.max(1, v | 0);
-    if (this.#depth === n) return;
-    this.#depth = n;
+    if (this.__depth === n) return;
+    this.__depth = n;
     this.markAsDirty();
   }
 

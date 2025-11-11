@@ -1,17 +1,17 @@
 export class DirtyState {
-  #isDirty: boolean = false;
+  private __isDirty: boolean = false;
 
   get isDirty(): boolean {
-    return this.#isDirty;
+    return this.__isDirty;
   }
 
   markAsDirty(): this {
-    this.#isDirty = true;
+    this.__isDirty = true;
     return this;
   }
 
   markAsClean(): this {
-    this.#isDirty = false;
+    this.__isDirty = false;
     return this;
   }
 }

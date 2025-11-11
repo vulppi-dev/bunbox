@@ -10,44 +10,44 @@ export type DropEventOptions = {
 } & EventOptions;
 
 export class DropEvent extends Event {
-  #windowId: number;
-  #x: number;
-  #y: number;
-  #source: string;
-  #data: string;
-  #dropType: 'file' | 'text' | 'unknown';
+  private __windowId: number;
+  private __x: number;
+  private __y: number;
+  private __source: string;
+  private __data: string;
+  private __dropType: 'file' | 'text' | 'unknown';
 
   constructor(options: DropEventOptions) {
     super(options);
-    this.#windowId = options.windowId;
-    this.#x = options.x;
-    this.#y = options.y;
-    this.#source = options.source;
-    this.#data = options.data;
-    this.#dropType = options.dropType;
+    this.__windowId = options.windowId;
+    this.__x = options.x;
+    this.__y = options.y;
+    this.__source = options.source;
+    this.__data = options.data;
+    this.__dropType = options.dropType;
   }
 
   get windowId() {
-    return this.#windowId;
+    return this.__windowId;
   }
 
   get x() {
-    return this.#x;
+    return this.__x;
   }
 
   get y() {
-    return this.#y;
+    return this.__y;
   }
 
   get source() {
-    return this.#source;
+    return this.__source;
   }
 
   get data() {
-    return this.#data;
+    return this.__data;
   }
 
   get dropType() {
-    return this.#dropType;
+    return this.__dropType;
   }
 }

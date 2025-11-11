@@ -70,14 +70,14 @@ export interface ShadowCascadeConfig {
  * ```
  */
 export class ShadowConfig extends DirtyState {
-  #enabled: boolean = true;
-  #resolution: number = 1024;
-  #filterMode: ShadowFilterMode = 'pcf';
-  #bias: number = 0.001;
-  #normalBias: number = 0.005;
-  #maxDistance: number = 100;
-  #fadeDistance: number = 10;
-  #cascades: ShadowCascadeConfig | null = null;
+  private __enabled: boolean = true;
+  private __resolution: number = 1024;
+  private __filterMode: ShadowFilterMode = 'pcf';
+  private __bias: number = 0.001;
+  private __normalBias: number = 0.005;
+  private __maxDistance: number = 100;
+  private __fadeDistance: number = 10;
+  private __cascades: ShadowCascadeConfig | null = null;
 
   /**
    * Low quality preset (512x512, PCF filtering).
@@ -147,7 +147,7 @@ export class ShadowConfig extends DirtyState {
    */
   static disabled(): ShadowConfig {
     const config = new ShadowConfig({});
-    config.#enabled = false;
+    config.__enabled = false;
     return config;
   }
 
@@ -162,19 +162,19 @@ export class ShadowConfig extends DirtyState {
     cascades?: ShadowCascadeConfig | null;
   }) {
     super();
-    this.#enabled = desc.enabled ?? true;
-    this.#resolution = Math.max(256, desc.resolution ?? 1024);
-    this.#filterMode = desc.filterMode ?? 'pcf';
-    this.#bias = Math.max(0, desc.bias ?? 0.001);
-    this.#normalBias = Math.max(0, desc.normalBias ?? 0.005);
-    this.#maxDistance = Math.max(1, desc.maxDistance ?? 100);
-    this.#fadeDistance = Math.max(0, desc.fadeDistance ?? 10);
-    this.#cascades = desc.cascades ?? null;
+    this.__enabled = desc.enabled ?? true;
+    this.__resolution = Math.max(256, desc.resolution ?? 1024);
+    this.__filterMode = desc.filterMode ?? 'pcf';
+    this.__bias = Math.max(0, desc.bias ?? 0.001);
+    this.__normalBias = Math.max(0, desc.normalBias ?? 0.005);
+    this.__maxDistance = Math.max(1, desc.maxDistance ?? 100);
+    this.__fadeDistance = Math.max(0, desc.fadeDistance ?? 10);
+    this.__cascades = desc.cascades ?? null;
   }
 
   /** Whether shadows are enabled */
   get enabled(): boolean {
-    return this.#enabled;
+    return this.__enabled;
   }
 
   /**
@@ -182,12 +182,12 @@ export class ShadowConfig extends DirtyState {
    * Common values: 512, 1024, 2048, 4096
    */
   get resolution(): number {
-    return this.#resolution;
+    return this.__resolution;
   }
 
   /** Shadow filtering technique */
   get filterMode(): ShadowFilterMode {
-    return this.#filterMode;
+    return this.__filterMode;
   }
 
   /**
@@ -195,7 +195,7 @@ export class ShadowConfig extends DirtyState {
    * Typical range: 0.0001 - 0.01
    */
   get bias(): number {
-    return this.#bias;
+    return this.__bias;
   }
 
   /**
@@ -203,7 +203,7 @@ export class ShadowConfig extends DirtyState {
    * Typical range: 0.001 - 0.05
    */
   get normalBias(): number {
-    return this.#normalBias;
+    return this.__normalBias;
   }
 
   /**
@@ -211,7 +211,7 @@ export class ShadowConfig extends DirtyState {
    * Objects beyond this distance won't cast or receive shadows.
    */
   get maxDistance(): number {
-    return this.#maxDistance;
+    return this.__maxDistance;
   }
 
   /**
@@ -219,7 +219,7 @@ export class ShadowConfig extends DirtyState {
    * Prevents harsh cutoff at shadow distance limit.
    */
   get fadeDistance(): number {
-    return this.#fadeDistance;
+    return this.__fadeDistance;
   }
 
   /**
@@ -227,11 +227,11 @@ export class ShadowConfig extends DirtyState {
    * null disables cascades (single shadow map).
    */
   get cascades(): ShadowCascadeConfig | null {
-    return this.#cascades
+    return this.__cascades
       ? {
-          count: this.#cascades.count,
-          splits: [...this.#cascades.splits],
-          fadeDistance: this.#cascades.fadeDistance,
+          count: this.__cascades.count,
+          splits: [...this.__cascades.splits],
+          fadeDistance: this.__cascades.fadeDistance,
         }
       : null;
   }
@@ -242,70 +242,70 @@ export class ShadowConfig extends DirtyState {
   get hash(): string {
     return sha(
       JSON.stringify({
-        enabled: this.#enabled,
-        resolution: this.#resolution,
-        filterMode: this.#filterMode,
-        bias: this.#bias,
-        normalBias: this.#normalBias,
-        maxDistance: this.#maxDistance,
-        fadeDistance: this.#fadeDistance,
-        cascades: this.#cascades,
+        enabled: this.__enabled,
+        resolution: this.__resolution,
+        filterMode: this.__filterMode,
+        bias: this.__bias,
+        normalBias: this.__normalBias,
+        maxDistance: this.__maxDistance,
+        fadeDistance: this.__fadeDistance,
+        cascades: this.__cascades,
       }),
       'hex',
     );
   }
 
   set enabled(value: boolean) {
-    if (this.#enabled === value) return;
-    this.#enabled = value;
+    if (this.__enabled === value) return;
+    this.__enabled = value;
     this.markAsDirty();
   }
 
   set resolution(value: number) {
     const res = Math.max(256, value | 0);
-    if (this.#resolution === res) return;
-    this.#resolution = res;
+    if (this.__resolution === res) return;
+    this.__resolution = res;
     this.markAsDirty();
   }
 
   set filterMode(value: ShadowFilterMode) {
-    if (this.#filterMode === value) return;
-    this.#filterMode = value;
+    if (this.__filterMode === value) return;
+    this.__filterMode = value;
     this.markAsDirty();
   }
 
   set bias(value: number) {
     const b = Math.max(0, value);
-    if (this.#bias === b) return;
-    this.#bias = b;
+    if (this.__bias === b) return;
+    this.__bias = b;
     this.markAsDirty();
   }
 
   set normalBias(value: number) {
     const nb = Math.max(0, value);
-    if (this.#normalBias === nb) return;
-    this.#normalBias = nb;
+    if (this.__normalBias === nb) return;
+    this.__normalBias = nb;
     this.markAsDirty();
   }
 
   set maxDistance(value: number) {
     const d = Math.max(1, value);
-    if (this.#maxDistance === d) return;
-    this.#maxDistance = d;
+    if (this.__maxDistance === d) return;
+    this.__maxDistance = d;
     this.markAsDirty();
   }
 
   set fadeDistance(value: number) {
     const fd = Math.max(0, value);
-    if (this.#fadeDistance === fd) return;
-    this.#fadeDistance = fd;
+    if (this.__fadeDistance === fd) return;
+    this.__fadeDistance = fd;
     this.markAsDirty();
   }
 
   set cascades(value: ShadowCascadeConfig | null) {
     if (value === null) {
-      if (this.#cascades === null) return;
-      this.#cascades = null;
+      if (this.__cascades === null) return;
+      this.__cascades = null;
       this.markAsDirty();
       return;
     }
@@ -317,16 +317,16 @@ export class ShadowConfig extends DirtyState {
     };
 
     if (
-      this.#cascades &&
-      this.#cascades.count === newConfig.count &&
-      this.#cascades.fadeDistance === newConfig.fadeDistance &&
-      this.#cascades.splits.length === newConfig.splits.length &&
-      this.#cascades.splits.every((v, i) => v === newConfig.splits[i])
+      this.__cascades &&
+      this.__cascades.count === newConfig.count &&
+      this.__cascades.fadeDistance === newConfig.fadeDistance &&
+      this.__cascades.splits.length === newConfig.splits.length &&
+      this.__cascades.splits.every((v, i) => v === newConfig.splits[i])
     ) {
       return;
     }
 
-    this.#cascades = newConfig;
+    this.__cascades = newConfig;
     this.markAsDirty();
   }
 
@@ -334,32 +334,32 @@ export class ShadowConfig extends DirtyState {
    * Copy configuration from another ShadowConfig.
    */
   copy(other: ShadowConfig): this {
-    if (this.#enabled !== other.#enabled) {
-      this.#enabled = other.#enabled;
+    if (this.__enabled !== other.__enabled) {
+      this.__enabled = other.__enabled;
       this.markAsDirty();
     }
-    if (this.#resolution !== other.#resolution) {
-      this.#resolution = other.#resolution;
+    if (this.__resolution !== other.__resolution) {
+      this.__resolution = other.__resolution;
       this.markAsDirty();
     }
-    if (this.#filterMode !== other.#filterMode) {
-      this.#filterMode = other.#filterMode;
+    if (this.__filterMode !== other.__filterMode) {
+      this.__filterMode = other.__filterMode;
       this.markAsDirty();
     }
-    if (this.#bias !== other.#bias) {
-      this.#bias = other.#bias;
+    if (this.__bias !== other.__bias) {
+      this.__bias = other.__bias;
       this.markAsDirty();
     }
-    if (this.#normalBias !== other.#normalBias) {
-      this.#normalBias = other.#normalBias;
+    if (this.__normalBias !== other.__normalBias) {
+      this.__normalBias = other.__normalBias;
       this.markAsDirty();
     }
-    if (this.#maxDistance !== other.#maxDistance) {
-      this.#maxDistance = other.#maxDistance;
+    if (this.__maxDistance !== other.__maxDistance) {
+      this.__maxDistance = other.__maxDistance;
       this.markAsDirty();
     }
-    if (this.#fadeDistance !== other.#fadeDistance) {
-      this.#fadeDistance = other.#fadeDistance;
+    if (this.__fadeDistance !== other.__fadeDistance) {
+      this.__fadeDistance = other.__fadeDistance;
       this.markAsDirty();
     }
 
@@ -373,18 +373,18 @@ export class ShadowConfig extends DirtyState {
    */
   clone(): this {
     const clone = new ShadowConfig({
-      enabled: this.#enabled,
-      resolution: this.#resolution,
-      filterMode: this.#filterMode,
-      bias: this.#bias,
-      normalBias: this.#normalBias,
-      maxDistance: this.#maxDistance,
-      fadeDistance: this.#fadeDistance,
-      cascades: this.#cascades
+      enabled: this.__enabled,
+      resolution: this.__resolution,
+      filterMode: this.__filterMode,
+      bias: this.__bias,
+      normalBias: this.__normalBias,
+      maxDistance: this.__maxDistance,
+      fadeDistance: this.__fadeDistance,
+      cascades: this.__cascades
         ? {
-            count: this.#cascades.count,
-            splits: [...this.#cascades.splits],
-            fadeDistance: this.#cascades.fadeDistance,
+            count: this.__cascades.count,
+            splits: [...this.__cascades.splits],
+            fadeDistance: this.__cascades.fadeDistance,
           }
         : null,
     });

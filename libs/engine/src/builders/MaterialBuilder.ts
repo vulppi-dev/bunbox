@@ -26,15 +26,15 @@ import { triangleShaderSource } from '../shaders';
 export class Material<
   TSchema extends MaterialSchema = MaterialSchema,
 > extends DirtyState {
-  #label: string;
-  #shader: ShaderSources;
-  #entries: ShaderEntries;
-  #primitive: MaterialPrimitive;
-  #rasterizer: Rasterizer;
-  #schema: TSchema;
-  #constants: Record<string, unknown>;
-  #mutables: Record<string, unknown>;
-  #hash: string = '';
+  private __label: string;
+  private __shader: ShaderSources;
+  private __entries: ShaderEntries;
+  private __primitive: MaterialPrimitive;
+  private __rasterizer: Rasterizer;
+  private __schema: TSchema;
+  private __constants: Record<string, unknown>;
+  private __mutables: Record<string, unknown>;
+  private __hash: string = '';
 
   constructor(descriptor: MaterialDescriptor<TSchema>) {
     super();
@@ -42,30 +42,30 @@ export class Material<
     // Validate schema
     validateSchema(descriptor.schema);
 
-    this.#label = descriptor.label ?? '';
-    this.#shader = descriptor.shader;
-    this.#entries = descriptor.entries;
-    this.#primitive = descriptor.primitive ?? 'triangles';
-    this.#rasterizer = descriptor.rasterizer ?? new Rasterizer();
-    this.#schema = descriptor.schema;
+    this.__label = descriptor.label ?? '';
+    this.__shader = descriptor.shader;
+    this.__entries = descriptor.entries;
+    this.__primitive = descriptor.primitive ?? 'triangles';
+    this.__rasterizer = descriptor.rasterizer ?? new Rasterizer();
+    this.__schema = descriptor.schema;
 
     // Initialize constants with defaults
-    this.#constants = this.#initializeProperties(
-      this.#schema.constants ?? {},
+    this.__constants = this.__initializeProperties(
+      this.__schema.constants ?? {},
       descriptor.constants as Record<string, unknown> | undefined,
     );
 
     // Initialize mutables with defaults
-    this.#mutables = this.#initializeProperties(
-      this.#schema.mutables ?? {},
+    this.__mutables = this.__initializeProperties(
+      this.__schema.mutables ?? {},
       descriptor.mutables as Record<string, unknown> | undefined,
     );
 
-    this.#updateHash();
+    this.__updateHash();
     this.markAsDirty();
   }
 
-  #initializeProperties(
+  private __initializeProperties(
     definitions: Record<string, PropertyDefinition>,
     values?: Record<string, unknown>,
   ): Record<string, unknown> {
@@ -88,14 +88,14 @@ export class Material<
     return result;
   }
 
-  #updateHash(): void {
-    this.#hash = sha(
+  private __updateHash(): void {
+    this.__hash = sha(
       JSON.stringify({
-        shader: this.#shader,
-        entries: this.#entries,
-        primitive: this.#primitive,
-        rasterizer: this.#rasterizer.hash,
-        constants: this.#constants,
+        shader: this.__shader,
+        entries: this.__entries,
+        primitive: this.__primitive,
+        rasterizer: this.__rasterizer.hash,
+        constants: this.__constants,
       }),
       'hex',
     );
@@ -103,58 +103,60 @@ export class Material<
 
   // Public getters
   get label(): string {
-    return this.#label;
+    return this.__label;
   }
 
   get shader(): ShaderSources {
-    return this.#shader;
+    return this.__shader;
   }
 
   get entries(): ShaderEntries {
-    return this.#entries;
+    return this.__entries;
   }
 
   get primitive(): MaterialPrimitive {
-    return this.#primitive;
+    return this.__primitive;
   }
 
   get rasterizer(): Rasterizer {
-    return this.#rasterizer;
+    return this.__rasterizer;
   }
 
   get hash(): string {
-    return this.#hash;
+    return this.__hash;
   }
 
   get schema(): TSchema {
-    return this.#schema;
+    return this.__schema;
   }
 
   /**
    * Get constant properties (read-only)
    */
   get constants(): Readonly<ConstantProperties<TSchema>> {
-    return Object.freeze({ ...this.#constants }) as ConstantProperties<TSchema>;
+    return Object.freeze({
+      ...this.__constants,
+    }) as ConstantProperties<TSchema>;
   }
 
   /**
    * Get mutable properties (read-only snapshot)
    */
   get mutables(): Readonly<MutableProperties<TSchema>> {
-    return Object.freeze({ ...this.#mutables }) as MutableProperties<TSchema>;
+    return Object.freeze({ ...this.__mutables }) as MutableProperties<TSchema>;
   }
 
   // Setters
   set label(value: string) {
-    if (this.#label === value) return;
-    this.#label = value;
+    if (this.__label === value) return;
+    this.__label = value;
     this.markAsDirty();
   }
 
   set primitive(value: MaterialPrimitive) {
-    if (this.#primitive === value) return;
-    this.#primitive = value;
-    this.#updateHash();
+    if (this.__primitive === value) return;
+    this.__primitive = value;
+    this.__updateHash();
     this.markAsDirty();
   }
 
@@ -164,7 +166,7 @@ export class Material<
   getConstant<K extends keyof ConstantProperties<TSchema>>(
     key: K,
   ): ConstantProperties<TSchema>[K] {
-    return this.#constants[key as string] as ConstantProperties<TSchema>[K];
+    return this.__constants[key as string] as ConstantProperties<TSchema>[K];
   }
 
   /**
@@ -173,7 +175,7 @@ export class Material<
   getMutable<K extends keyof MutableProperties<TSchema>>(
     key: K,
   ): MutableProperties<TSchema>[K] {
-    return this.#mutables[key as string] as MutableProperties<TSchema>[K];
+    return this.__mutables[key as string] as MutableProperties<TSchema>[K];
   }
 
   /**
@@ -183,7 +185,7 @@ export class Material<
     key: K,
     value: MutableProperties<TSchema>[K],
   ): this {
-    const definitions = this.#schema.mutables;
+    const definitions = this.__schema.mutables;
     if (!definitions || !(key in definitions)) {
       throw new Error(`Property '${String(key)}' is not a mutable property`);
     }
@@ -195,9 +197,9 @@ export class Material<
       );
     }
 
-    if (this.#mutables[key as string] === value) return this;
+    if (this.__mutables[key as string] === value) return this;
 
-    this.#mutables[key as string] = value;
+    this.__mutables[key as string] = value;
     return this.markAsDirty();
   }
 
@@ -209,7 +211,7 @@ export class Material<
 
     for (const [key, value] of Object.entries(values)) {
       if (value !== undefined) {
-        const definitions = this.#schema.mutables;
+        const definitions = this.__schema.mutables;
         if (!definitions || !(key in definitions)) {
           throw new Error(`Property '${key}' is not a mutable property`);
         }
@@ -221,8 +223,8 @@ export class Material<
           );
         }
 
-        if (this.#mutables[key] !== value) {
-          this.#mutables[key] = value;
+        if (this.__mutables[key] !== value) {
+          this.__mutables[key] = value;
           changed = true;
         }
       }
@@ -236,14 +238,14 @@ export class Material<
    */
   clone(): Material<TSchema> {
     const cloned = new Material<TSchema>({
-      label: this.#label,
-      shader: this.#shader,
-      entries: this.#entries,
-      primitive: this.#primitive,
-      rasterizer: this.#rasterizer.clone(),
-      schema: this.#schema,
-      constants: { ...this.#constants },
-      mutables: { ...this.#mutables },
+      label: this.__label,
+      shader: this.__shader,
+      entries: this.__entries,
+      primitive: this.__primitive,
+      rasterizer: this.__rasterizer.clone(),
+      schema: this.__schema,
+      constants: { ...this.__constants },
+      mutables: { ...this.__mutables },
     } as unknown as MaterialDescriptor<TSchema>);
     cloned.markAsDirty();
     return cloned;
@@ -254,8 +256,8 @@ export class Material<
    */
   equals(other: Material<TSchema>): boolean {
     return (
-      this.#hash === other.#hash &&
-      JSON.stringify(this.#mutables) === JSON.stringify(other.#mutables)
+      this.__hash === other.__hash &&
+      JSON.stringify(this.__mutables) === JSON.stringify(other.__mutables)
     );
   }
 
@@ -265,12 +267,12 @@ export class Material<
   copy(other: Material<TSchema>): this {
     if (this.equals(other)) return this;
 
-    this.#label = other.#label;
-    this.#primitive = other.#primitive;
-    this.#rasterizer.copy(other.#rasterizer);
-    this.#mutables = { ...other.#mutables };
+    this.__label = other.__label;
+    this.__primitive = other.__primitive;
+    this.__rasterizer.copy(other.__rasterizer);
+    this.__mutables = { ...other.__mutables };
 
-    this.#updateHash();
+    this.__updateHash();
     return this.markAsDirty();
   }
 }

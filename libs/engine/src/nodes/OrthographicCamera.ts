@@ -27,8 +27,8 @@ import { AbstractCamera } from './AbstractCamera';
  * ```
  */
 export class OrthographicCamera extends AbstractCamera {
-  #horizontal: Vector2 = new Vector2(-1, 1);
-  #vertical: Vector2 = new Vector2(-1, 1);
+  private __horizontal: Vector2 = new Vector2(-1, 1);
+  private __vertical: Vector2 = new Vector2(-1, 1);
 
   /**
    * Horizontal extents [left, right].
@@ -37,7 +37,7 @@ export class OrthographicCamera extends AbstractCamera {
    * Default: [-1, 1]
    */
   get horizontal(): Vector2 {
-    return this.#horizontal;
+    return this.__horizontal;
   }
 
   /**
@@ -47,7 +47,7 @@ export class OrthographicCamera extends AbstractCamera {
    * Default: [-1, 1]
    */
   get vertical(): Vector2 {
-    return this.#vertical;
+    return this.__vertical;
   }
 
   /**
@@ -56,7 +56,7 @@ export class OrthographicCamera extends AbstractCamera {
    * Shortcut for vertical.y
    */
   get top(): number {
-    return this.#vertical.y;
+    return this.__vertical.y;
   }
 
   /**
@@ -65,7 +65,7 @@ export class OrthographicCamera extends AbstractCamera {
    * Shortcut for horizontal.x
    */
   get right(): number {
-    return this.#horizontal.x;
+    return this.__horizontal.x;
   }
 
   /**
@@ -74,7 +74,7 @@ export class OrthographicCamera extends AbstractCamera {
    * Shortcut for vertical.x
    */
   get bottom(): number {
-    return this.#vertical.x;
+    return this.__vertical.x;
   }
 
   /**
@@ -83,7 +83,7 @@ export class OrthographicCamera extends AbstractCamera {
    * Shortcut for horizontal.y
    */
   get left(): number {
-    return this.#horizontal.y;
+    return this.__horizontal.y;
   }
 
   /**
@@ -92,8 +92,8 @@ export class OrthographicCamera extends AbstractCamera {
    * @param value - New horizontal extents
    */
   set horizontal(value: Vector2) {
-    this.#horizontal = value;
-    this.#horizontal.markAsDirty();
+    this.__horizontal = value;
+    this.__horizontal.markAsDirty();
     this.markAsDirty();
   }
 
@@ -103,8 +103,8 @@ export class OrthographicCamera extends AbstractCamera {
    * @param value - New vertical extents
    */
   set vertical(value: Vector2) {
-    this.#vertical = value;
-    this.#vertical.markAsDirty();
+    this.__vertical = value;
+    this.__vertical.markAsDirty();
     this.markAsDirty();
   }
 
@@ -114,7 +114,7 @@ export class OrthographicCamera extends AbstractCamera {
    * @param value - Top extent
    */
   set top(value: number) {
-    this.#vertical.y = value;
+    this.__vertical.y = value;
     this.markAsDirty();
   }
 
@@ -124,7 +124,7 @@ export class OrthographicCamera extends AbstractCamera {
    * @param value - Right extent
    */
   set right(value: number) {
-    this.#horizontal.x = value;
+    this.__horizontal.x = value;
     this.markAsDirty();
   }
 
@@ -134,7 +134,7 @@ export class OrthographicCamera extends AbstractCamera {
    * @param value - Bottom extent
    */
   set bottom(value: number) {
-    this.#vertical.x = value;
+    this.__vertical.x = value;
     this.markAsDirty();
   }
 
@@ -144,7 +144,7 @@ export class OrthographicCamera extends AbstractCamera {
    * @param value - Left extent
    */
   set left(value: number) {
-    this.#horizontal.y = value;
+    this.__horizontal.y = value;
     this.markAsDirty();
   }
 
@@ -157,10 +157,10 @@ export class OrthographicCamera extends AbstractCamera {
    * @override
    */
   override _process(deltaTime: number): void {
-    if (this.#horizontal.isDirty || this.#vertical.isDirty) {
+    if (this.__horizontal.isDirty || this.__vertical.isDirty) {
       this._processProjectionMatrix();
-      this.#horizontal.markAsClean();
-      this.#vertical.markAsClean();
+      this.__horizontal.markAsClean();
+      this.__vertical.markAsClean();
     }
 
     super._process(deltaTime);

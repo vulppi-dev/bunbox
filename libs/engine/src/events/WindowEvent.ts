@@ -10,44 +10,44 @@ export type WindowEventOptions = {
 } & EventOptions;
 
 export class WindowEvent extends Event {
-  #windowId: number;
-  #currentDisplayId: number;
-  #x: number;
-  #y: number;
-  #width: number;
-  #height: number;
+  private __windowId: number;
+  private __currentDisplayId: number;
+  private __x: number;
+  private __y: number;
+  private __width: number;
+  private __height: number;
 
   constructor(options: WindowEventOptions) {
     super(options);
-    this.#windowId = options.windowId;
-    this.#currentDisplayId = options.currentDisplayId;
-    this.#x = options.x;
-    this.#y = options.y;
-    this.#width = options.width;
-    this.#height = options.height;
+    this.__windowId = options.windowId;
+    this.__currentDisplayId = options.currentDisplayId;
+    this.__x = options.x;
+    this.__y = options.y;
+    this.__width = options.width;
+    this.__height = options.height;
   }
 
   get windowId() {
-    return this.#windowId;
+    return this.__windowId;
   }
 
   get currentDisplayId() {
-    return this.#currentDisplayId;
+    return this.__currentDisplayId;
   }
 
   get x() {
-    return this.#x;
+    return this.__x;
   }
 
   get y() {
-    return this.#y;
+    return this.__y;
   }
 
   get width() {
-    return this.#width;
+    return this.__width;
   }
 
   get height() {
-    return this.#height;
+    return this.__height;
   }
 }

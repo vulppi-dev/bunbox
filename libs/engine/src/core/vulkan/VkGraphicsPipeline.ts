@@ -59,7 +59,7 @@ import type {
 import { VK_DEBUG } from '../../singleton/logger';
 
 export class VkGraphicsPipeline implements Disposable {
-  static #normalizeShaderSource(shaderData: Uint8Array) {
+  private static __normalizeShaderSource(shaderData: Uint8Array) {
     const padding = shaderData.byteLength % Uint32Array.BYTES_PER_ELEMENT;
     if (padding === 0) {
       return shaderData;
@@ -72,7 +72,7 @@ export class VkGraphicsPipeline implements Disposable {
     return paddedShaderData;
   }
 
-  static #createShaderModule(device: Pointer, shaderData: Uint8Array) {
+  private static __createShaderModule(device: Pointer, shaderData: Uint8Array) {
     const createInfo = instantiate(vkShaderModuleCreateInfo);
     createInfo.codeSize = BigInt(shaderData.byteLength);
     createInfo.pCode = BigInt(ptr(shaderData));
@@ -93,7 +93,7 @@ export class VkGraphicsPipeline implements Disposable {
     return shaderModule;
   }
 
-  static #getVkTopology(primitive: MaterialPrimitive) {
+  private static __getVkTopology(primitive: MaterialPrimitive) {
     switch (primitive) {
       case 'points':
         return VkPrimitiveTopology.POINT_LIST;
@@ -105,7 +105,7 @@ export class VkGraphicsPipeline implements Disposable {
     }
   }
 
-  static #getVkPolygonMode(fillMode: RasterizerFillMode) {
+  private static __getVkPolygonMode(fillMode: RasterizerFillMode) {
     switch (fillMode) {
       case 'point':
         return VkPolygonMode.POINT;
@@ -117,7 +117,7 @@ export class VkGraphicsPipeline implements Disposable {
     }
   }
 
-  static #getVkCullMode(cull: RasterizerCullMode) {
+  private static __getVkCullMode(cull: RasterizerCullMode) {
     switch (cull) {
       case 'front':
         return VkCullModeFlagBits.FRONT_BIT;
@@ -131,7 +131,7 @@ export class VkGraphicsPipeline implements Disposable {
     }
   }
 
-  static #getVkFrontFace(frontFace: RasterizerFrontFace) {
+  private static __getVkFrontFace(frontFace: RasterizerFrontFace) {
     switch (frontFace) {
       case 'ccw':
         return VkFrontFace.COUNTER_CLOCKWISE;
@@ -141,7 +141,7 @@ export class VkGraphicsPipeline implements Disposable {
     }
   }
 
-  static #getVkCompareOp(compare: CompareFunction) {
+  private static __getVkCompareOp(compare: CompareFunction) {
     switch (compare) {
       case 'never':
         return VkCompareOp.NEVER;
@@ -163,7 +163,7 @@ export class VkGraphicsPipeline implements Disposable {
     }
   }
 
-  static #getVkStencilOp(op: StencilOperation) {
+  private static __getVkStencilOp(op: StencilOperation) {
     switch (op) {
       case 'keep':
         return VkStencilOp.KEEP;
@@ -185,7 +185,7 @@ export class VkGraphicsPipeline implements Disposable {
     }
   }
 
-  static #getVkSampleCount(count: 1 | 2 | 4 | 8 | 16) {
+  private static __getVkSampleCount(count: 1 | 2 | 4 | 8 | 16) {
     switch (count) {
       case 1:
         return VkSampleCountFlagBits.COUNT_1_BIT;
@@ -201,7 +201,9 @@ export class VkGraphicsPipeline implements Disposable {
     }
   }
 
-  static #getVkDescriptorType(propertyType: PropertyType): VkDescriptorType {
+  private static __getVkDescriptorType(
+    propertyType: PropertyType,
+  ): VkDescriptorType {
     switch (propertyType) {
       case PropertyType.Texture:
         return VkDescriptorType.SAMPLED_IMAGE;
@@ -223,7 +225,7 @@ export class VkGraphicsPipeline implements Disposable {
     }
   }
 
-  static #getVkBlendFactor(factor: BlendFactor) {
+  private static __getVkBlendFactor(factor: BlendFactor) {
     switch (factor) {
       case 'zero':
         return VkBlendFactor.ZERO;
@@ -255,7 +257,7 @@ export class VkGraphicsPipeline implements Disposable {
     }
   }
 
-  static #getVkBlendOp(operation: BlendOperation) {
+  private static __getVkBlendOp(operation: BlendOperation) {
     switch (operation) {
       case 'add':
         return VkBlendOp.ADD;
@@ -271,39 +273,47 @@ export class VkGraphicsPipeline implements Disposable {
     }
   }
 
-  #device: Pointer;
-  #material: Material;
+  private __device: Pointer;
+  private __material: Material;
 
-  #pipelineInstance: Pointer | null = null;
-  #pipelineLayout: Pointer | null = null;
-  #descriptorSetLayout: Pointer | null = null;
+  private __pipelineInstance: Pointer | null = null;
+  private __pipelineLayout: Pointer | null = null;
+  private __descriptorSetLayout: Pointer | null = null;
 
-  #vertexModule: Pointer | null = null;
-  #fragmentModule: Pointer | null = null;
+  private __vertexModule: Pointer | null = null;
+  private __fragmentModule: Pointer | null = null;
 
   // Shader stage structs
-  #vertexStageInfo = instantiate(vkPipelineShaderStageCreateInfo);
-  #fragmentStageInfo = instantiate(vkPipelineShaderStageCreateInfo);
-  #shaderStages: BigUint64Array;
+  private __vertexStageInfo = instantiate(vkPipelineShaderStageCreateInfo);
+  private __fragmentStageInfo = instantiate(vkPipelineShaderStageCreateInfo);
+  private __shaderStages: BigUint64Array;
 
-  #dynamicStages: Uint32Array;
+  private __dynamicStages: Uint32Array;
 
   // Config structs
-  #dynamicInfo = instantiate(vkPipelineDynamicStateCreateInfo);
-  #viewportInfo = instantiate(vkPipelineViewportStateCreateInfo);
-  #inputAssemblyInfo = instantiate(vkPipelineInputAssemblyStateCreateInfo);
-  #rasterizationInfo = instantiate(vkPipelineRasterizationStateCreateInfo);
-  #multisampleInfo = instantiate(vkPipelineMultisampleStateCreateInfo);
-  #colorBlendAttachment = instantiate(vkPipelineColorBlendAttachmentState);
-  #colorBlendInfo = instantiate(vkPipelineColorBlendStateCreateInfo);
-  #depthStencilInfo = instantiate(vkPipelineDepthStencilStateCreateInfo);
+  private __dynamicInfo = instantiate(vkPipelineDynamicStateCreateInfo);
+  private __viewportInfo = instantiate(vkPipelineViewportStateCreateInfo);
+  private __inputAssemblyInfo = instantiate(
+    vkPipelineInputAssemblyStateCreateInfo,
+  );
+  private __rasterizationInfo = instantiate(
+    vkPipelineRasterizationStateCreateInfo,
+  );
+  private __multisampleInfo = instantiate(vkPipelineMultisampleStateCreateInfo);
+  private __colorBlendAttachment = instantiate(
+    vkPipelineColorBlendAttachmentState,
+  );
+  private __colorBlendInfo = instantiate(vkPipelineColorBlendStateCreateInfo);
+  private __depthStencilInfo = instantiate(
+    vkPipelineDepthStencilStateCreateInfo,
+  );
 
-  #vertexInputInfo = instantiate(vkPipelineVertexInputStateCreateInfo);
-  #pipelineConfigInfo = instantiate(vkGraphicsPipelineCreateInfo);
+  private __vertexInputInfo = instantiate(vkPipelineVertexInputStateCreateInfo);
+  private __pipelineConfigInfo = instantiate(vkGraphicsPipelineCreateInfo);
 
   constructor(device: Pointer, renderPass: Pointer, material: Material) {
-    this.#device = device;
-    this.#material = material;
+    this.__device = device;
+    this.__material = material;
 
     VK_DEBUG('Creating graphics pipeline');
 
@@ -331,7 +341,7 @@ export class VkGraphicsPipeline implements Disposable {
     if (!isWgslValid(vertexShader)) {
       throw new DynamicLibError('Invalid vertex WGSL shader', 'Vulkan');
     }
-    const vertexData = VkGraphicsPipeline.#normalizeShaderSource(
+    const vertexData = VkGraphicsPipeline.__normalizeShaderSource(
       wgslToSpirvBin(vertexShader, 'vertex', material.entries.vertex!),
     );
 
@@ -352,104 +362,104 @@ export class VkGraphicsPipeline implements Disposable {
     if (!isWgslValid(fragmentShader)) {
       throw new DynamicLibError('Invalid fragment WGSL shader', 'Vulkan');
     }
-    const fragmentData = VkGraphicsPipeline.#normalizeShaderSource(
+    const fragmentData = VkGraphicsPipeline.__normalizeShaderSource(
       wgslToSpirvBin(fragmentShader, 'fragment', material.entries.fragment!),
     );
 
     // Create shader modules
-    this.#vertexModule = VkGraphicsPipeline.#createShaderModule(
-      this.#device,
+    this.__vertexModule = VkGraphicsPipeline.__createShaderModule(
+      this.__device,
       vertexData,
     );
-    this.#fragmentModule = VkGraphicsPipeline.#createShaderModule(
-      this.#device,
+    this.__fragmentModule = VkGraphicsPipeline.__createShaderModule(
+      this.__device,
       fragmentData,
     );
 
     // Configure shader stages
-    this.#vertexStageInfo.stage = VkShaderStageFlagBits.VERTEX_BIT;
-    this.#vertexStageInfo.module = BigInt(this.#vertexModule);
-    this.#vertexStageInfo.pName = material.entries.vertex!;
+    this.__vertexStageInfo.stage = VkShaderStageFlagBits.VERTEX_BIT;
+    this.__vertexStageInfo.module = BigInt(this.__vertexModule);
+    this.__vertexStageInfo.pName = material.entries.vertex!;
 
-    this.#fragmentStageInfo.stage = VkShaderStageFlagBits.FRAGMENT_BIT;
-    this.#fragmentStageInfo.module = BigInt(this.#fragmentModule);
-    this.#fragmentStageInfo.pName = material.entries.fragment!;
+    this.__fragmentStageInfo.stage = VkShaderStageFlagBits.FRAGMENT_BIT;
+    this.__fragmentStageInfo.module = BigInt(this.__fragmentModule);
+    this.__fragmentStageInfo.pName = material.entries.fragment!;
 
-    this.#shaderStages = new BigUint64Array([
-      BigInt(ptr(getInstanceBuffer(this.#vertexStageInfo))),
-      BigInt(ptr(getInstanceBuffer(this.#fragmentStageInfo))),
+    this.__shaderStages = new BigUint64Array([
+      BigInt(ptr(getInstanceBuffer(this.__vertexStageInfo))),
+      BigInt(ptr(getInstanceBuffer(this.__fragmentStageInfo))),
     ]);
 
-    this.#dynamicStages = new Uint32Array([
+    this.__dynamicStages = new Uint32Array([
       VkDynamicState.VIEWPORT,
       VkDynamicState.SCISSOR,
     ]);
-    this.#dynamicInfo.dynamicStateCount = this.#dynamicStages.length;
-    this.#dynamicInfo.pDynamicStates = BigInt(ptr(this.#dynamicStages));
+    this.__dynamicInfo.dynamicStateCount = this.__dynamicStages.length;
+    this.__dynamicInfo.pDynamicStates = BigInt(ptr(this.__dynamicStages));
 
-    this.#viewportInfo.viewportCount = 1;
-    this.#viewportInfo.scissorCount = 1;
+    this.__viewportInfo.viewportCount = 1;
+    this.__viewportInfo.scissorCount = 1;
 
     // Bind pointers between structs
-    this.#bindPointers();
+    this.__bindPointers();
 
     // Create pipeline layout
-    this.#createLayout();
+    this.__createLayout();
 
     // Create pipeline
-    this.#createPipeline(renderPass);
+    this.__createPipeline(renderPass);
 
     VK_DEBUG('Graphics pipeline initialized');
   }
 
   get instance(): Pointer {
-    return this.#pipelineInstance!;
+    return this.__pipelineInstance!;
   }
 
   get material(): Material {
-    return this.#material;
+    return this.__material;
   }
 
   /**
    * Bind pointers between Vulkan structs
    */
-  #bindPointers(): void {
-    this.#colorBlendInfo.pAttachments = BigInt(
-      ptr(getInstanceBuffer(this.#colorBlendAttachment)),
+  private __bindPointers(): void {
+    this.__colorBlendInfo.pAttachments = BigInt(
+      ptr(getInstanceBuffer(this.__colorBlendAttachment)),
     );
 
-    this.#pipelineConfigInfo.pDynamicState = BigInt(
-      ptr(getInstanceBuffer(this.#dynamicInfo)),
+    this.__pipelineConfigInfo.pDynamicState = BigInt(
+      ptr(getInstanceBuffer(this.__dynamicInfo)),
     );
-    this.#pipelineConfigInfo.pViewportState = BigInt(
-      ptr(getInstanceBuffer(this.#viewportInfo)),
+    this.__pipelineConfigInfo.pViewportState = BigInt(
+      ptr(getInstanceBuffer(this.__viewportInfo)),
     );
-    this.#pipelineConfigInfo.pInputAssemblyState = BigInt(
-      ptr(getInstanceBuffer(this.#inputAssemblyInfo)),
+    this.__pipelineConfigInfo.pInputAssemblyState = BigInt(
+      ptr(getInstanceBuffer(this.__inputAssemblyInfo)),
     );
-    this.#pipelineConfigInfo.pRasterizationState = BigInt(
-      ptr(getInstanceBuffer(this.#rasterizationInfo)),
+    this.__pipelineConfigInfo.pRasterizationState = BigInt(
+      ptr(getInstanceBuffer(this.__rasterizationInfo)),
     );
-    this.#pipelineConfigInfo.pMultisampleState = BigInt(
-      ptr(getInstanceBuffer(this.#multisampleInfo)),
+    this.__pipelineConfigInfo.pMultisampleState = BigInt(
+      ptr(getInstanceBuffer(this.__multisampleInfo)),
     );
-    this.#pipelineConfigInfo.pColorBlendState = BigInt(
-      ptr(getInstanceBuffer(this.#colorBlendInfo)),
+    this.__pipelineConfigInfo.pColorBlendState = BigInt(
+      ptr(getInstanceBuffer(this.__colorBlendInfo)),
     );
-    this.#pipelineConfigInfo.pDepthStencilState = BigInt(
-      ptr(getInstanceBuffer(this.#depthStencilInfo)),
+    this.__pipelineConfigInfo.pDepthStencilState = BigInt(
+      ptr(getInstanceBuffer(this.__depthStencilInfo)),
     );
-    this.#pipelineConfigInfo.pVertexInputState = BigInt(
-      ptr(getInstanceBuffer(this.#vertexInputInfo)),
+    this.__pipelineConfigInfo.pVertexInputState = BigInt(
+      ptr(getInstanceBuffer(this.__vertexInputInfo)),
     );
-    this.#pipelineConfigInfo.stageCount = this.#shaderStages.length;
-    this.#pipelineConfigInfo.pStages = BigInt(ptr(this.#shaderStages));
+    this.__pipelineConfigInfo.stageCount = this.__shaderStages.length;
+    this.__pipelineConfigInfo.pStages = BigInt(ptr(this.__shaderStages));
   }
 
   /**
    * Create descriptor set layout and pipeline layout from material schema
    */
-  #createLayout(): void {
+  private __createLayout(): void {
     VK_DEBUG('Creating pipeline layout from material schema');
 
     // Collect all bindings from material schema
@@ -457,12 +467,12 @@ export class VkGraphicsPipeline implements Disposable {
     let bindingIndex = 0;
 
     // Process constants
-    const constants = this.#material.schema.constants;
+    const constants = this.__material.schema.constants;
     if (constants) {
       for (const [key, definition] of Object.entries(constants)) {
         const binding = instantiate(vkDescriptorSetLayoutBinding);
         binding.binding = bindingIndex++;
-        binding.descriptorType = VkGraphicsPipeline.#getVkDescriptorType(
+        binding.descriptorType = VkGraphicsPipeline.__getVkDescriptorType(
           definition.type,
         );
         binding.descriptorCount = 1;
@@ -475,12 +485,12 @@ export class VkGraphicsPipeline implements Disposable {
     }
 
     // Process mutables
-    const mutables = this.#material.schema.mutables;
+    const mutables = this.__material.schema.mutables;
     if (mutables) {
       for (const [key, definition] of Object.entries(mutables)) {
         const binding = instantiate(vkDescriptorSetLayoutBinding);
         binding.binding = bindingIndex++;
-        binding.descriptorType = VkGraphicsPipeline.#getVkDescriptorType(
+        binding.descriptorType = VkGraphicsPipeline.__getVkDescriptorType(
           definition.type,
         );
         binding.descriptorCount = 1;
@@ -502,7 +512,7 @@ export class VkGraphicsPipeline implements Disposable {
 
       const pointerHolder = new BigUint64Array(1);
       const result = VK.vkCreatePipelineLayout(
-        this.#device,
+        this.__device,
         ptr(getInstanceBuffer(emptyLayoutInfo)),
         null,
         ptr(pointerHolder),
@@ -512,10 +522,10 @@ export class VkGraphicsPipeline implements Disposable {
         throw new DynamicLibError(getResultMessage(result), 'Vulkan');
       }
 
-      this.#pipelineLayout = Number(pointerHolder[0]!) as Pointer;
-      this.#pipelineConfigInfo.layout = BigInt(this.#pipelineLayout);
+      this.__pipelineLayout = Number(pointerHolder[0]!) as Pointer;
+      this.__pipelineConfigInfo.layout = BigInt(this.__pipelineLayout);
       VK_DEBUG(
-        `Empty pipeline layout created: 0x${this.#pipelineLayout.toString(16)}`,
+        `Empty pipeline layout created: 0x${this.__pipelineLayout.toString(16)}`,
       );
       return;
     }
@@ -535,7 +545,7 @@ export class VkGraphicsPipeline implements Disposable {
 
     let pointerHolder = new BigUint64Array(1);
     let result = VK.vkCreateDescriptorSetLayout(
-      this.#device,
+      this.__device,
       ptr(getInstanceBuffer(layoutInfo)),
       null,
       ptr(pointerHolder),
@@ -545,13 +555,13 @@ export class VkGraphicsPipeline implements Disposable {
       throw new DynamicLibError(getResultMessage(result), 'Vulkan');
     }
 
-    this.#descriptorSetLayout = Number(pointerHolder[0]!) as Pointer;
+    this.__descriptorSetLayout = Number(pointerHolder[0]!) as Pointer;
     VK_DEBUG(
-      `Descriptor set layout created: 0x${this.#descriptorSetLayout.toString(16)}`,
+      `Descriptor set layout created: 0x${this.__descriptorSetLayout.toString(16)}`,
     );
 
     // Create pipeline layout
-    const setLayouts = new BigUint64Array([BigInt(this.#descriptorSetLayout)]);
+    const setLayouts = new BigUint64Array([BigInt(this.__descriptorSetLayout)]);
     const pipelineLayoutInfo = instantiate(vkPipelineLayoutCreateInfo);
     pipelineLayoutInfo.setLayoutCount = 1;
     pipelineLayoutInfo.pSetLayouts = BigInt(ptr(setLayouts));
@@ -560,7 +570,7 @@ export class VkGraphicsPipeline implements Disposable {
 
     pointerHolder = new BigUint64Array(1);
     result = VK.vkCreatePipelineLayout(
-      this.#device,
+      this.__device,
       ptr(getInstanceBuffer(pipelineLayoutInfo)),
       null,
       ptr(pointerHolder),
@@ -570,149 +580,150 @@ export class VkGraphicsPipeline implements Disposable {
       throw new DynamicLibError(getResultMessage(result), 'Vulkan');
     }
 
-    this.#pipelineLayout = Number(pointerHolder[0]!) as Pointer;
-    VK_DEBUG(`Pipeline layout created: 0x${this.#pipelineLayout.toString(16)}`);
+    this.__pipelineLayout = Number(pointerHolder[0]!) as Pointer;
+    VK_DEBUG(
+      `Pipeline layout created: 0x${this.__pipelineLayout.toString(16)}`,
+    );
 
     // Set pipeline layout in config
-    this.#pipelineConfigInfo.layout = BigInt(this.#pipelineLayout);
+    this.__pipelineConfigInfo.layout = BigInt(this.__pipelineLayout);
   }
 
   /**
    * Create graphics pipeline with current configuration
    */
-  #createPipeline(renderPass: Pointer): void {
+  private __createPipeline(renderPass: Pointer): void {
     VK_DEBUG(`Creating graphics pipeline`);
 
     // Configure topology
-    this.#inputAssemblyInfo.topology = VkGraphicsPipeline.#getVkTopology(
-      this.#material.primitive,
+    this.__inputAssemblyInfo.topology = VkGraphicsPipeline.__getVkTopology(
+      this.__material.primitive,
     );
-    this.#inputAssemblyInfo.primitiveRestartEnable = VK_TRUE;
+    this.__inputAssemblyInfo.primitiveRestartEnable = VK_TRUE;
 
     // Configure rasterizer
-    const rasterizer = this.#material.rasterizer;
-    this.#rasterizationInfo.depthClampEnable = VK_FALSE;
-    this.#rasterizationInfo.rasterizerDiscardEnable = VK_FALSE;
-    this.#rasterizationInfo.polygonMode = VkGraphicsPipeline.#getVkPolygonMode(
-      rasterizer.fillMode,
-    );
-    this.#rasterizationInfo.cullMode = VkGraphicsPipeline.#getVkCullMode(
+    const rasterizer = this.__material.rasterizer;
+    this.__rasterizationInfo.depthClampEnable = VK_FALSE;
+    this.__rasterizationInfo.rasterizerDiscardEnable = VK_FALSE;
+    this.__rasterizationInfo.polygonMode =
+      VkGraphicsPipeline.__getVkPolygonMode(rasterizer.fillMode);
+    this.__rasterizationInfo.cullMode = VkGraphicsPipeline.__getVkCullMode(
       rasterizer.cull,
     );
-    this.#rasterizationInfo.frontFace = VkGraphicsPipeline.#getVkFrontFace(
+    this.__rasterizationInfo.frontFace = VkGraphicsPipeline.__getVkFrontFace(
       rasterizer.frontFace,
     );
-    this.#rasterizationInfo.depthBiasEnable =
+    this.__rasterizationInfo.depthBiasEnable =
       rasterizer.depthStencil.depthBias !== 0 ? VK_TRUE : VK_FALSE;
-    this.#rasterizationInfo.depthBiasConstantFactor =
+    this.__rasterizationInfo.depthBiasConstantFactor =
       rasterizer.depthStencil.depthBias;
-    this.#rasterizationInfo.depthBiasClamp =
+    this.__rasterizationInfo.depthBiasClamp =
       rasterizer.depthStencil.depthBiasClamp;
-    this.#rasterizationInfo.depthBiasSlopeFactor =
+    this.__rasterizationInfo.depthBiasSlopeFactor =
       rasterizer.depthStencil.depthBiasSlopeScale;
-    this.#rasterizationInfo.lineWidth = 1.0;
+    this.__rasterizationInfo.lineWidth = 1.0;
 
     // Configure multisample
     const multisample = rasterizer.multisample;
-    this.#multisampleInfo.rasterizationSamples =
-      VkGraphicsPipeline.#getVkSampleCount(multisample.count);
-    this.#multisampleInfo.sampleShadingEnable = VK_FALSE;
-    this.#multisampleInfo.minSampleShading = 1.0;
-    this.#multisampleInfo.pSampleMask = 0n;
-    this.#multisampleInfo.alphaToCoverageEnable =
+    this.__multisampleInfo.rasterizationSamples =
+      VkGraphicsPipeline.__getVkSampleCount(multisample.count);
+    this.__multisampleInfo.sampleShadingEnable = VK_FALSE;
+    this.__multisampleInfo.minSampleShading = 1.0;
+    this.__multisampleInfo.pSampleMask = 0n;
+    this.__multisampleInfo.alphaToCoverageEnable =
       multisample.alphaToCoverageEnabled ? VK_TRUE : VK_FALSE;
-    this.#multisampleInfo.alphaToOneEnable = VK_FALSE;
+    this.__multisampleInfo.alphaToOneEnable = VK_FALSE;
 
     // Configure blend
     const blend = rasterizer.blend;
-    this.#colorBlendAttachment.blendEnable = blend.enabled ? VK_TRUE : VK_FALSE;
-    this.#colorBlendAttachment.srcColorBlendFactor =
-      VkGraphicsPipeline.#getVkBlendFactor(blend.color.srcFactor);
-    this.#colorBlendAttachment.dstColorBlendFactor =
-      VkGraphicsPipeline.#getVkBlendFactor(blend.color.dstFactor);
-    this.#colorBlendAttachment.colorBlendOp = VkGraphicsPipeline.#getVkBlendOp(
-      blend.color.operation,
-    );
-    this.#colorBlendAttachment.srcAlphaBlendFactor =
-      VkGraphicsPipeline.#getVkBlendFactor(blend.alpha.srcFactor);
-    this.#colorBlendAttachment.dstAlphaBlendFactor =
-      VkGraphicsPipeline.#getVkBlendFactor(blend.alpha.dstFactor);
-    this.#colorBlendAttachment.alphaBlendOp = VkGraphicsPipeline.#getVkBlendOp(
-      blend.alpha.operation,
-    );
-    this.#colorBlendAttachment.colorWriteMask =
+    this.__colorBlendAttachment.blendEnable = blend.enabled
+      ? VK_TRUE
+      : VK_FALSE;
+    this.__colorBlendAttachment.srcColorBlendFactor =
+      VkGraphicsPipeline.__getVkBlendFactor(blend.color.srcFactor);
+    this.__colorBlendAttachment.dstColorBlendFactor =
+      VkGraphicsPipeline.__getVkBlendFactor(blend.color.dstFactor);
+    this.__colorBlendAttachment.colorBlendOp =
+      VkGraphicsPipeline.__getVkBlendOp(blend.color.operation);
+    this.__colorBlendAttachment.srcAlphaBlendFactor =
+      VkGraphicsPipeline.__getVkBlendFactor(blend.alpha.srcFactor);
+    this.__colorBlendAttachment.dstAlphaBlendFactor =
+      VkGraphicsPipeline.__getVkBlendFactor(blend.alpha.dstFactor);
+    this.__colorBlendAttachment.alphaBlendOp =
+      VkGraphicsPipeline.__getVkBlendOp(blend.alpha.operation);
+    this.__colorBlendAttachment.colorWriteMask =
       (blend.writeMask.has(0) ? VkColorComponentFlagBits.R_BIT : 0) |
       (blend.writeMask.has(1) ? VkColorComponentFlagBits.G_BIT : 0) |
       (blend.writeMask.has(2) ? VkColorComponentFlagBits.B_BIT : 0) |
       (blend.writeMask.has(3) ? VkColorComponentFlagBits.A_BIT : 0);
 
-    this.#colorBlendInfo.logicOpEnable = VK_FALSE;
-    this.#colorBlendInfo.logicOp = VkLogicOp.CLEAR;
-    this.#colorBlendInfo.attachmentCount = 1;
-    this.#colorBlendInfo.blendConstants = [0.0, 0.0, 0.0, 0.0];
+    this.__colorBlendInfo.logicOpEnable = VK_FALSE;
+    this.__colorBlendInfo.logicOp = VkLogicOp.CLEAR;
+    this.__colorBlendInfo.attachmentCount = 1;
+    this.__colorBlendInfo.blendConstants = [0.0, 0.0, 0.0, 0.0];
 
     // Configure depth/stencil
     const depthStencil = rasterizer.depthStencil;
-    this.#depthStencilInfo.depthTestEnable =
+    this.__depthStencilInfo.depthTestEnable =
       depthStencil.depthCompare !== 'always' ? VK_TRUE : VK_FALSE;
-    this.#depthStencilInfo.depthWriteEnable = depthStencil.depthWriteEnabled
+    this.__depthStencilInfo.depthWriteEnable = depthStencil.depthWriteEnabled
       ? VK_TRUE
       : VK_FALSE;
-    this.#depthStencilInfo.depthCompareOp = VkGraphicsPipeline.#getVkCompareOp(
-      depthStencil.depthCompare,
-    );
-    this.#depthStencilInfo.depthBoundsTestEnable = VK_FALSE;
-    this.#depthStencilInfo.minDepthBounds = 0.0;
-    this.#depthStencilInfo.maxDepthBounds = 1.0;
-    this.#depthStencilInfo.stencilTestEnable =
+    this.__depthStencilInfo.depthCompareOp =
+      VkGraphicsPipeline.__getVkCompareOp(depthStencil.depthCompare);
+    this.__depthStencilInfo.depthBoundsTestEnable = VK_FALSE;
+    this.__depthStencilInfo.minDepthBounds = 0.0;
+    this.__depthStencilInfo.maxDepthBounds = 1.0;
+    this.__depthStencilInfo.stencilTestEnable =
       depthStencil.stencilFront.compare !== 'always' ||
       depthStencil.stencilBack.compare !== 'always'
         ? VK_TRUE
         : VK_FALSE;
-    this.#depthStencilInfo.front.failOp = VkGraphicsPipeline.#getVkStencilOp(
+    this.__depthStencilInfo.front.failOp = VkGraphicsPipeline.__getVkStencilOp(
       depthStencil.stencilFront.failOp,
     );
-    this.#depthStencilInfo.front.passOp = VkGraphicsPipeline.#getVkStencilOp(
+    this.__depthStencilInfo.front.passOp = VkGraphicsPipeline.__getVkStencilOp(
       depthStencil.stencilFront.passOp,
     );
-    this.#depthStencilInfo.front.depthFailOp =
-      VkGraphicsPipeline.#getVkStencilOp(depthStencil.stencilFront.depthFailOp);
-    this.#depthStencilInfo.front.compareOp = VkGraphicsPipeline.#getVkCompareOp(
-      depthStencil.stencilFront.compare,
-    );
-    this.#depthStencilInfo.front.compareMask =
+    this.__depthStencilInfo.front.depthFailOp =
+      VkGraphicsPipeline.__getVkStencilOp(
+        depthStencil.stencilFront.depthFailOp,
+      );
+    this.__depthStencilInfo.front.compareOp =
+      VkGraphicsPipeline.__getVkCompareOp(depthStencil.stencilFront.compare);
+    this.__depthStencilInfo.front.compareMask =
       depthStencil.stencilReadMask.get();
-    this.#depthStencilInfo.front.writeMask =
+    this.__depthStencilInfo.front.writeMask =
       depthStencil.stencilWriteMask.get();
-    this.#depthStencilInfo.front.reference = 0;
-    this.#depthStencilInfo.back.failOp = VkGraphicsPipeline.#getVkStencilOp(
+    this.__depthStencilInfo.front.reference = 0;
+    this.__depthStencilInfo.back.failOp = VkGraphicsPipeline.__getVkStencilOp(
       depthStencil.stencilBack.failOp,
     );
-    this.#depthStencilInfo.back.passOp = VkGraphicsPipeline.#getVkStencilOp(
+    this.__depthStencilInfo.back.passOp = VkGraphicsPipeline.__getVkStencilOp(
       depthStencil.stencilBack.passOp,
     );
-    this.#depthStencilInfo.back.depthFailOp =
-      VkGraphicsPipeline.#getVkStencilOp(depthStencil.stencilBack.depthFailOp);
-    this.#depthStencilInfo.back.compareOp = VkGraphicsPipeline.#getVkCompareOp(
-      depthStencil.stencilBack.compare,
-    );
-    this.#depthStencilInfo.back.compareMask =
+    this.__depthStencilInfo.back.depthFailOp =
+      VkGraphicsPipeline.__getVkStencilOp(depthStencil.stencilBack.depthFailOp);
+    this.__depthStencilInfo.back.compareOp =
+      VkGraphicsPipeline.__getVkCompareOp(depthStencil.stencilBack.compare);
+    this.__depthStencilInfo.back.compareMask =
       depthStencil.stencilReadMask.get();
-    this.#depthStencilInfo.back.writeMask = depthStencil.stencilWriteMask.get();
-    this.#depthStencilInfo.back.reference = 0;
+    this.__depthStencilInfo.back.writeMask =
+      depthStencil.stencilWriteMask.get();
+    this.__depthStencilInfo.back.reference = 0;
 
     // Set render pass
-    this.#pipelineConfigInfo.renderPass = BigInt(renderPass);
-    this.#pipelineConfigInfo.subpass = 0;
+    this.__pipelineConfigInfo.renderPass = BigInt(renderPass);
+    this.__pipelineConfigInfo.subpass = 0;
 
     // Create pipeline
     VK_DEBUG('Creating Vulkan graphics pipeline');
     const pointerHolder = new BigUint64Array(1);
     const result = VK.vkCreateGraphicsPipelines(
-      this.#device,
+      this.__device,
       null,
       1,
-      ptr(getInstanceBuffer(this.#pipelineConfigInfo)),
+      ptr(getInstanceBuffer(this.__pipelineConfigInfo)),
       null,
       ptr(pointerHolder),
     );
@@ -720,46 +731,46 @@ export class VkGraphicsPipeline implements Disposable {
     if (result !== VkResult.SUCCESS) {
       throw new DynamicLibError(getResultMessage(result), 'Vulkan');
     }
-    this.#pipelineInstance = Number(pointerHolder[0]!) as Pointer;
+    this.__pipelineInstance = Number(pointerHolder[0]!) as Pointer;
     VK_DEBUG(
-      `Graphics pipeline created: 0x${this.#pipelineInstance.toString(16)}`,
+      `Graphics pipeline created: 0x${this.__pipelineInstance.toString(16)}`,
     );
   }
 
   dispose(): void | Promise<void> {
     VK_DEBUG('Disposing graphics pipeline');
 
-    if (this.#pipelineInstance) {
-      VK.vkDestroyPipeline(this.#device, this.#pipelineInstance, null);
-      this.#pipelineInstance = null;
+    if (this.__pipelineInstance) {
+      VK.vkDestroyPipeline(this.__device, this.__pipelineInstance, null);
+      this.__pipelineInstance = null;
       VK_DEBUG('Pipeline destroyed');
     }
 
-    if (this.#pipelineLayout) {
-      VK.vkDestroyPipelineLayout(this.#device, this.#pipelineLayout, null);
-      this.#pipelineLayout = null;
+    if (this.__pipelineLayout) {
+      VK.vkDestroyPipelineLayout(this.__device, this.__pipelineLayout, null);
+      this.__pipelineLayout = null;
       VK_DEBUG('Pipeline layout destroyed');
     }
 
-    if (this.#descriptorSetLayout) {
+    if (this.__descriptorSetLayout) {
       VK.vkDestroyDescriptorSetLayout(
-        this.#device,
-        this.#descriptorSetLayout,
+        this.__device,
+        this.__descriptorSetLayout,
         null,
       );
-      this.#descriptorSetLayout = null;
+      this.__descriptorSetLayout = null;
       VK_DEBUG('Descriptor set layout destroyed');
     }
 
-    if (this.#vertexModule) {
-      VK.vkDestroyShaderModule(this.#device, this.#vertexModule, null);
-      this.#vertexModule = null;
+    if (this.__vertexModule) {
+      VK.vkDestroyShaderModule(this.__device, this.__vertexModule, null);
+      this.__vertexModule = null;
       VK_DEBUG('Vertex shader module destroyed');
     }
 
-    if (this.#fragmentModule) {
-      VK.vkDestroyShaderModule(this.#device, this.#fragmentModule, null);
-      this.#fragmentModule = null;
+    if (this.__fragmentModule) {
+      VK.vkDestroyShaderModule(this.__device, this.__fragmentModule, null);
+      this.__fragmentModule = null;
       VK_DEBUG('Fragment shader module destroyed');
     }
 

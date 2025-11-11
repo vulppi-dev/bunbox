@@ -38,7 +38,7 @@ export class Node<
   M extends Record<string, any> = Record<string, any>,
   T extends EventMap = {},
 > extends BaseNode<P, M, MergeEventMaps<InputsEventMap, T>> {
-  #plugins: NodePlugin<Node>[] = [];
+  private __plugins: NodePlugin<Node>[] = [];
 
   /**
    * Add a plugin to this node.
@@ -51,14 +51,14 @@ export class Node<
    * @throws {EngineError} If plugin is already added
    */
   addPlugin(plugin: NodePlugin<this>): this {
-    const index = this.#plugins.indexOf(plugin);
+    const index = this.__plugins.indexOf(plugin);
     if (index !== -1) {
       throw new EngineError(
         `Plugin already added to node on ${index} index`,
         'Node',
       );
     }
-    this.#plugins.push(plugin);
+    this.__plugins.push(plugin);
     return this;
   }
 
@@ -69,11 +69,11 @@ export class Node<
    * @returns This node for chaining
    */
   removePlugin(plugin: NodePlugin<this>): this {
-    const index = this.#plugins.indexOf(plugin);
+    const index = this.__plugins.indexOf(plugin);
     if (index === -1) {
       return this;
     }
-    this.#plugins.splice(index, 1);
+    this.__plugins.splice(index, 1);
     return this;
   }
 
@@ -83,7 +83,7 @@ export class Node<
    * @returns Array of plugins (copy, not reference)
    */
   getPlugins(): NodePlugin<Node>[] {
-    return [...this.#plugins];
+    return [...this.__plugins];
   }
 
   /**
@@ -93,7 +93,7 @@ export class Node<
    * @returns This node for chaining
    */
   setPlugins(plugins: NodePlugin<this>[]): this {
-    this.#plugins = [];
+    this.__plugins = [];
     for (const plugin of plugins) {
       this.addPlugin(plugin);
     }
@@ -111,7 +111,7 @@ export class Node<
    */
   [PROCESS_EVENT](delta: number): void {
     this._process(delta);
-    for (const plugin of this.#plugins) {
+    for (const plugin of this.__plugins) {
       plugin.process(this, delta);
     }
   }
@@ -124,7 +124,7 @@ export class Node<
    * @returns Promise that resolves when disposal is complete
    */
   override dispose(): Promise<void> {
-    for (const plugin of this.#plugins) {
+    for (const plugin of this.__plugins) {
       plugin.dispose(this);
     }
     return super.dispose();

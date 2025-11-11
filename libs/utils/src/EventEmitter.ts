@@ -19,8 +19,8 @@ export type MergeEventMaps<A extends EventMap, B extends EventMap> = {
 };
 
 export class EventEmitter<T extends EventMap = {}> extends DirtyState {
-  #isDisposed = false;
-  #listeners: Map<
+  private __isDisposed = false;
+  private __listeners: Map<
     keyof MergeEventMaps<T, BaseEvents>,
     Set<(...args: any[]) => void>
   > = new Map();
@@ -30,15 +30,15 @@ export class EventEmitter<T extends EventMap = {}> extends DirtyState {
   }
 
   get isDisposed() {
-    return this.#isDisposed;
+    return this.__isDisposed;
   }
 
   emit<K extends keyof MergeEventMaps<T, BaseEvents>>(
     eventName: K,
     ...args: MergeEventMaps<T, BaseEvents>[K]
   ): this {
-    if (this.#isDisposed) return this;
-    const set = this.#listeners.get(eventName);
+    if (this.__isDisposed) return this;
+    const set = this.__listeners.get(eventName);
     if (!set || set.size === 0) return this;
 
     const snapshot = [...set];
@@ -56,8 +56,8 @@ export class EventEmitter<T extends EventMap = {}> extends DirtyState {
     eventName: K,
     ...args: MergeEventMaps<T, BaseEvents>[K]
   ) {
-    if (this.#isDisposed) return this;
-    const set = this.#listeners.get(eventName);
+    if (this.__isDisposed) return this;
+    const set = this.__listeners.get(eventName);
     if (!set || set.size === 0) return this;
 
     const snapshot = [...set];
@@ -80,11 +80,11 @@ export class EventEmitter<T extends EventMap = {}> extends DirtyState {
       ...args: MergeEventMaps<T, BaseEvents>[K]
     ) => void | any | Promise<void | any>,
   ): this {
-    if (this.#isDisposed) return this;
-    if (!this.#listeners.has(eventName)) {
-      this.#listeners.set(eventName, new Set());
+    if (this.__isDisposed) return this;
+    if (!this.__listeners.has(eventName)) {
+      this.__listeners.set(eventName, new Set());
     }
-    this.#listeners.get(eventName)!.add(listener);
+    this.__listeners.get(eventName)!.add(listener);
     return this;
   }
 
@@ -94,12 +94,12 @@ export class EventEmitter<T extends EventMap = {}> extends DirtyState {
       ...args: MergeEventMaps<T, BaseEvents>[K]
     ) => void | any | Promise<void | any>,
   ): this {
-    if (this.#isDisposed) return this;
-    const listeners = this.#listeners.get(eventName);
+    if (this.__isDisposed) return this;
+    const listeners = this.__listeners.get(eventName);
     if (listeners) {
       listeners.delete(listener as any);
       if (listeners.size === 0) {
-        this.#listeners.delete(eventName);
+        this.__listeners.delete(eventName);
       }
     }
     return this;
@@ -123,7 +123,7 @@ export class EventEmitter<T extends EventMap = {}> extends DirtyState {
       ...args: MergeEventMaps<T, BaseEvents>[K]
     ) => void | any | Promise<void | any>,
   ): this {
-    if (this.#isDisposed) return this;
+    if (this.__isDisposed) return this;
     const onceListener = (...args: any[]) => {
       // @ts-ignore
       listener(...args);
@@ -135,11 +135,11 @@ export class EventEmitter<T extends EventMap = {}> extends DirtyState {
   clearListeners<K extends keyof MergeEventMaps<T, BaseEvents>>(
     eventName?: K,
   ): this {
-    if (this.#isDisposed) return this;
+    if (this.__isDisposed) return this;
     if (eventName) {
-      this.#listeners.delete(eventName);
+      this.__listeners.delete(eventName);
     } else {
-      this.#listeners.clear();
+      this.__listeners.clear();
     }
     return this;
   }
@@ -147,23 +147,23 @@ export class EventEmitter<T extends EventMap = {}> extends DirtyState {
   hasListeners<K extends keyof MergeEventMaps<T, BaseEvents>>(
     eventName: K,
   ): boolean {
-    const set = this.#listeners.get(eventName);
+    const set = this.__listeners.get(eventName);
     return Boolean(set && set.size > 0);
   }
 
   listenerCount<K extends keyof MergeEventMaps<T, BaseEvents>>(
     eventName?: K,
   ): number {
-    if (eventName) return this.#listeners.get(eventName)?.size ?? 0;
+    if (eventName) return this.__listeners.get(eventName)?.size ?? 0;
     let total = 0;
-    for (const set of this.#listeners.values()) total += set.size;
+    for (const set of this.__listeners.values()) total += set.size;
     return total;
   }
 
   async dispose(): Promise<void> {
-    if (this.#isDisposed) return;
+    if (this.__isDisposed) return;
     this.emit('dispose');
-    this.#isDisposed = true;
-    this.#listeners.clear();
+    this.__isDisposed = true;
+    this.__listeners.clear();
   }
 }

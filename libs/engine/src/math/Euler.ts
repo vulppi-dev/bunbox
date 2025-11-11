@@ -13,10 +13,10 @@ export type EulerOrder = (typeof EULER_ORDERS)[number];
  * Provides methods for common operations on Euler angles.
  */
 export class Euler extends Calculable<3> {
-  #x: number;
-  #y: number;
-  #z: number;
-  #order: EulerOrder;
+  private __x: number;
+  private __y: number;
+  private __z: number;
+  private __order: EulerOrder;
 
   constructor(
     x: number = 0,
@@ -27,40 +27,40 @@ export class Euler extends Calculable<3> {
     super();
     if (!EULER_ORDERS.includes(order))
       throw new Error(`Invalid Euler order: ${order}`);
-    this.#x = x;
-    this.#y = y;
-    this.#z = z;
-    this.#order = order;
+    this.__x = x;
+    this.__y = y;
+    this.__z = z;
+    this.__order = order;
   }
 
   get x(): number {
-    return this.#x;
+    return this.__x;
   }
   get y(): number {
-    return this.#y;
+    return this.__y;
   }
   get z(): number {
-    return this.#z;
+    return this.__z;
   }
   get order(): EulerOrder {
-    return this.#order;
+    return this.__order;
   }
   set x(val: number) {
-    this.#x = val;
+    this.__x = val;
     this.markAsDirty();
   }
   set y(val: number) {
-    this.#y = val;
+    this.__y = val;
     this.markAsDirty();
   }
   set z(val: number) {
-    this.#z = val;
+    this.__z = val;
     this.markAsDirty();
   }
   set order(val: EulerOrder) {
     if (!EULER_ORDERS.includes(val))
       throw new Error(`Invalid Euler order: ${val}`);
-    this.#order = val;
+    this.__order = val;
     this.markAsDirty();
   }
 
@@ -72,9 +72,9 @@ export class Euler extends Calculable<3> {
   override sum(e: this): this {
     if (!(e instanceof Euler))
       throw new Error('Argument must be an instance of Euler');
-    this.#x += e.x;
-    this.#y += e.y;
-    this.#z += e.z;
+    this.__x += e.x;
+    this.__y += e.y;
+    this.__z += e.z;
     return this.markAsDirty();
   }
 
@@ -86,9 +86,9 @@ export class Euler extends Calculable<3> {
   override sub(e: this): this {
     if (!(e instanceof Euler))
       throw new Error('Argument must be an instance of Euler');
-    this.#x -= e.x;
-    this.#y -= e.y;
-    this.#z -= e.z;
+    this.__x -= e.x;
+    this.__y -= e.y;
+    this.__z -= e.z;
     return this.markAsDirty();
   }
 
@@ -100,9 +100,9 @@ export class Euler extends Calculable<3> {
   override mul(e: this): this {
     if (!(e instanceof Euler))
       throw new Error('Argument must be an instance of Euler');
-    this.#x *= e.x;
-    this.#y *= e.y;
-    this.#z *= e.z;
+    this.__x *= e.x;
+    this.__y *= e.y;
+    this.__z *= e.z;
     return this.markAsDirty();
   }
 
@@ -116,9 +116,9 @@ export class Euler extends Calculable<3> {
       throw new Error('Argument must be an instance of Euler');
     if (e.x === 0 || e.y === 0 || e.z === 0)
       throw new Error('Division by zero');
-    this.#x /= e.x;
-    this.#y /= e.y;
-    this.#z /= e.z;
+    this.__x /= e.x;
+    this.__y /= e.y;
+    this.__z /= e.z;
     return this.markAsDirty();
   }
 
@@ -129,9 +129,9 @@ export class Euler extends Calculable<3> {
    */
   override mulS(scalar: number): this {
     if (isNaN(scalar)) throw new Error('Invalid scalar');
-    this.#x *= scalar;
-    this.#y *= scalar;
-    this.#z *= scalar;
+    this.__x *= scalar;
+    this.__y *= scalar;
+    this.__z *= scalar;
     return this.markAsDirty();
   }
 
@@ -142,9 +142,9 @@ export class Euler extends Calculable<3> {
    */
   override divS(scalar: number): this {
     if (scalar === 0) throw new Error('Division by zero');
-    this.#x /= scalar;
-    this.#y /= scalar;
-    this.#z /= scalar;
+    this.__x /= scalar;
+    this.__y /= scalar;
+    this.__z /= scalar;
     return this.markAsDirty();
   }
 
@@ -156,7 +156,7 @@ export class Euler extends Calculable<3> {
   override dot(e: this): number {
     if (!(e instanceof Euler))
       throw new Error('Argument must be an instance of Euler');
-    return this.#x * e.x + this.#y * e.y + this.#z * e.z;
+    return this.__x * e.x + this.__y * e.y + this.__z * e.z;
   }
 
   /**
@@ -169,9 +169,9 @@ export class Euler extends Calculable<3> {
   override set(x: number, y: number, z: number): this {
     if (isNaN(x) || isNaN(y) || isNaN(z))
       throw new Error('Invalid Euler angles');
-    this.#x = x;
-    this.#y = y;
-    this.#z = z;
+    this.__x = x;
+    this.__y = y;
+    this.__z = z;
     return this.markAsDirty();
   }
 
@@ -183,10 +183,10 @@ export class Euler extends Calculable<3> {
   override copy(vector: this): this {
     if (!(vector instanceof Euler))
       throw new Error('Argument must be an instance of Euler');
-    this.#x = vector.#x;
-    this.#y = vector.#y;
-    this.#z = vector.#z;
-    this.#order = vector.order;
+    this.__x = vector.__x;
+    this.__y = vector.__y;
+    this.__z = vector.__z;
+    this.__order = vector.order;
     return this.markAsDirty();
   }
 
@@ -195,7 +195,7 @@ export class Euler extends Calculable<3> {
    * @returns The array representation of the Euler angles.
    */
   override toArray(): FixedArray<number, 3> {
-    return [this.#x, this.#y, this.#z];
+    return [this.__x, this.__y, this.__z];
   }
 
   /**
@@ -203,7 +203,7 @@ export class Euler extends Calculable<3> {
    * @returns The buffer representation of the Euler angles.
    */
   override toBuffer(): Float32Array {
-    return new Float32Array([this.#x, this.#y, this.#z]);
+    return new Float32Array([this.__x, this.__y, this.__z]);
   }
 
   /**
@@ -211,6 +211,6 @@ export class Euler extends Calculable<3> {
    * @returns The string representation of the Euler angles.
    */
   override toString(): string {
-    return `Euler(order: '${this.#order}', x: ${this.#x.toFixed(3)}, y: ${this.#y.toFixed(3)}, z: ${this.#z.toFixed(3)})`;
+    return `Euler(order: '${this.__order}', x: ${this.__x.toFixed(3)}, y: ${this.__y.toFixed(3)}, z: ${this.__z.toFixed(3)})`;
   }
 }

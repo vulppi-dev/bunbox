@@ -17,26 +17,26 @@ export type GamepadSensorEventOptions = {
 } & EventOptions;
 
 export class GamepadSensorEvent extends Event {
-  #deviceId: number;
-  #value: Vector3;
-  #sensorType: SensorType;
+  private __deviceId: number;
+  private __value: Vector3;
+  private __sensorType: SensorType;
 
   constructor(options: GamepadSensorEventOptions) {
     super(options);
-    this.#deviceId = options.deviceId;
-    this.#value = options.value;
-    this.#sensorType = options.sensorType;
+    this.__deviceId = options.deviceId;
+    this.__value = options.value;
+    this.__sensorType = options.sensorType;
   }
 
   get deviceId() {
-    return this.#deviceId;
+    return this.__deviceId;
   }
 
   get value() {
-    return this.#value;
+    return this.__value;
   }
 
   get sensorType() {
-    return this.#sensorType;
+    return this.__sensorType;
   }
 }

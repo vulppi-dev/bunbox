@@ -8,7 +8,7 @@ import {
   vkSubmitInfo,
   VK_WHOLE_SIZE,
 } from '@bunbox/vk';
-import { ptr } from 'bun:ffi';
+import { ptr, type Pointer } from 'bun:ffi';
 import { DynamicLibError } from '../../errors';
 import { AbstractRenderer, type RendererOptions } from '../AbstractRenderer';
 import { VkDevice } from './VkDevice';
@@ -23,63 +23,99 @@ import {
 } from './VkRenderPipeline';
 import type { SampleCount } from '../../resources/types';
 import type { AbstractCamera, Light, Mesh } from '../../nodes';
+import { Color } from '../../math/Color';
+import { Rect } from '../../math/Rect';
 
 export class VkRenderer extends AbstractRenderer {
-  #device: VkDevice | null = null;
+  private __device: VkDevice | null = null;
 
-  #swapchain: VkSwapchain | null = null;
-  #swapchainViews: VkImageView[] = [];
+  private __swapchain: VkSwapchain | null = null;
+  private __swapchainViews: VkImageView[] = [];
 
-  #pipeline: VkRenderPipeline | null = null;
+  private __pipeline: VkRenderPipeline | null = null;
 
-  #sync: VkSync | null = null;
-  #commandPool: VkCommandPool | null = null;
-  #commandBuffers: VkCommandBuffer[] = [];
+  private __sync: VkSync | null = null;
+  private __commandPool: VkCommandPool | null = null;
+  private __commandBuffers: VkCommandBuffer[] = [];
 
-  #swapCount: number = 0;
-  #frameCount: number = 0;
-  #currentFrameIndex: number = 0;
+  private __swapCount: number = 0;
+  private __frameCount: number = 0;
+  private __currentFrameIndex: number = 0;
 
-  #msaa: SampleCount = 1;
+  private __msaa: SampleCount = 1;
 
-  override dispose(): void | Promise<void> {
-    this.#pipeline?.dispose();
-    this.#pipeline = null;
-    this.#swapchainViews.forEach((view) => view.dispose());
-    this.#swapchainViews = [];
-    this.#swapchain?.dispose();
-    this.#swapchain = null;
-    this.#commandPool?.dispose();
-    this.#commandPool = null;
-    this.#commandBuffers.forEach((buffer) => buffer.dispose());
-    this.#commandBuffers = [];
-    this.#sync?.dispose();
-    this.#sync = null;
-    this.#swapCount = 0;
-    this.#frameCount = 0;
-    this.#currentFrameIndex = 0;
-    this.#device?.dispose();
-    this.#device = null;
+  constructor(window: Pointer, options?: RendererOptions) {
+    super(window, options);
+    this.__msaa = options?.msaa ?? 1;
+
+    const [nWindow, display] = getNativeWindow(this._getWindow());
+    this.__device = new VkDevice(nWindow, display);
+    const indices = this.__device.findQueueFamilies();
+    this.__commandPool = new VkCommandPool(
+      this.__device.logicalDevice,
+      indices.graphicsFamily,
+    );
   }
 
-  #recordCommandBuffer(
+  override dispose(): void | Promise<void> {
+    this.__pipeline?.dispose();
+    this.__pipeline = null;
+    this.__swapchainViews.forEach((view) => view.dispose());
+    this.__swapchainViews = [];
+    this.__swapchain?.dispose();
+    this.__swapchain = null;
+    this.__commandPool?.dispose();
+    this.__commandPool = null;
+    this.__commandBuffers.forEach((buffer) => buffer.dispose());
+    this.__commandBuffers = [];
+    this.__sync?.dispose();
+    this.__sync = null;
+    this.__swapCount = 0;
+    this.__frameCount = 0;
+    this.__currentFrameIndex = 0;
+    this.__device?.dispose();
+    this.__device = null;
+  }
+
+  private __recordCommandBuffer(
     commandBuffer: VkCommandBuffer,
     imageIndex: number,
     cameras: AbstractCamera[],
     meshes: Mesh[],
     lights: Light[],
   ): void {
-    // TODO: Implement actual recording logic
-    // This is a placeholder that will be implemented when
-    // we add mesh rendering, materials, and shaders
     commandBuffer.begin();
 
-    // TODO: Record render pass commands here
-    // - Begin render pass for each stage
-    // - Bind pipeline
-    // - Bind vertex/index buffers
-    // - Draw meshes
-    // - End render pass
+    // TODO: Implement actual recording logic
+    // For now, just render a basic clear screen with the clear color
+    if (this.__pipeline?.finalCompositeStage && this.__swapchain) {
+      const stage = this.__pipeline.finalCompositeStage;
+      const framebuffer = stage.framebuffers[imageIndex];
+
+      if (framebuffer) {
+        const renderArea = new Rect(
+          0,
+          0,
+          this.__swapchain.width,
+          this.__swapchain.height,
+        );
+
+        // Use the clear color from the renderer
+        commandBuffer.beginRenderPass(
+          stage.renderPass.instance,
+          framebuffer.framebuffer,
+          renderArea,
+          [this._clearColor],
+        );
+
+        // TODO: Record actual render commands here
+        // - Bind pipeline
+        // - Bind vertex/index buffers
+        // - Draw meshes
+
+        commandBuffer.endRenderPass();
+      }
+    }
 
     commandBuffer.end();
   }
@@ -90,18 +126,23 @@ export class VkRenderer extends AbstractRenderer {
     lights: Light[],
     delta: number,
   ): void {
-    if (!this.#device || !this.#swapchain || !this.#pipeline || !this.#sync) {
+    if (
+      !this.__device ||
+      !this.__swapchain ||
+      !this.__pipeline ||
+      !this.__sync
+    ) {
       return;
     }
 
-    this.#sync.waitForFence(this.#currentFrameIndex);
+    this.__sync.waitForFence(this.__currentFrameIndex);
 
     const imageIndexHolder = new Uint32Array(1);
     const acquireResult = VK.vkAcquireNextImageKHR(
-      this.#device.logicalDevice,
-      this.#swapchain.swapchain,
+      this.__device.logicalDevice,
+      this.__swapchain.swapchain,
       VK_WHOLE_SIZE,
-      this.#sync.getImageAvailableSemaphore(this.#currentFrameIndex),
+      this.__sync.getImageAvailableSemaphore(this.__currentFrameIndex),
       0 as any,
       ptr(imageIndexHolder),
     );
@@ -119,14 +160,14 @@ export class VkRenderer extends AbstractRenderer {
 
     const imageIndex = imageIndexHolder[0]!;
 
-    this.#sync.waitIfImageInFlight(imageIndex);
-    this.#sync.tagImageWithFrameFence(imageIndex, this.#currentFrameIndex);
+    this.__sync.waitIfImageInFlight(imageIndex);
+    this.__sync.tagImageWithFrameFence(imageIndex, this.__currentFrameIndex);
 
-    this.#sync.resetFence(this.#currentFrameIndex);
+    this.__sync.resetFence(this.__currentFrameIndex);
 
-    const commandBuffer = this.#commandBuffers[imageIndex]!;
+    const commandBuffer = this.__commandBuffers[imageIndex]!;
 
-    this.#recordCommandBuffer(
+    this.__recordCommandBuffer(
       commandBuffer,
       imageIndex,
       cameras,
@@ -135,11 +176,11 @@ export class VkRenderer extends AbstractRenderer {
     );
 
     const waitSemaphores = new BigUint64Array([
-      BigInt(this.#sync.getImageAvailableSemaphore(this.#currentFrameIndex)),
+      BigInt(this.__sync.getImageAvailableSemaphore(this.__currentFrameIndex)),
     ]);
     const waitStages = new Uint32Array([0x00000100]);
     const signalSemaphores = new BigUint64Array([
-      BigInt(this.#sync.getRenderFinishedSemaphore(this.#currentFrameIndex)),
+      BigInt(this.__sync.getRenderFinishedSemaphore(this.__currentFrameIndex)),
     ]);
     const commandBufferArray = new BigUint64Array([
       BigInt(commandBuffer.instance),
@@ -155,10 +196,10 @@ export class VkRenderer extends AbstractRenderer {
     submitInfo.pSignalSemaphores = BigInt(ptr(signalSemaphores));
 
     const submitResult = VK.vkQueueSubmit(
-      this.#device.graphicsQueue,
+      this.__device.graphicsQueue,
       1,
       ptr(getInstanceBuffer(submitInfo)),
-      this.#sync.getInFlightFence(this.#currentFrameIndex),
+      this.__sync.getInFlightFence(this.__currentFrameIndex),
     );
 
     if (submitResult !== VkResult.SUCCESS) {
@@ -166,7 +207,7 @@ export class VkRenderer extends AbstractRenderer {
     }
 
     const swapchains = new BigUint64Array([
-      BigInt(this.#swapchain.swapchain),
+      BigInt(this.__swapchain.swapchain),
     ]);
     const imageIndices = new Uint32Array([imageIndex]);
 
@@ -179,7 +220,7 @@ export class VkRenderer extends AbstractRenderer {
     presentInfo.pResults = 0n;
 
     const presentResult = VK.vkQueuePresentKHR(
-      this.#device.presentQueue,
+      this.__device.presentQueue,
       ptr(getInstanceBuffer(presentInfo)),
     );
 
@@ -194,126 +235,117 @@ export class VkRenderer extends AbstractRenderer {
       throw new DynamicLibError(getResultMessage(presentResult), 'Vulkan');
     }
 
-    this.#currentFrameIndex =
-      (this.#currentFrameIndex + 1) % this.#sync.maxFramesInFlight;
-    this.#frameCount++;
+    this.__currentFrameIndex =
+      (this.__currentFrameIndex + 1) % this.__sync.maxFramesInFlight;
+    this.__frameCount++;
   }
 
   /**
    * Set MSAA sample count (1 = disabled)
    */
   setMSAA(sampleCount: SampleCount): void {
-    this.#msaa = sampleCount;
-    this.#pipeline?.setMSAA(sampleCount > 1, sampleCount);
+    this.__msaa = sampleCount;
+    this.__pipeline?.setMSAA(sampleCount > 1, sampleCount);
   }
 
   /**
    * Add a custom post-process stage
    */
   addCustomPostProcess(config: CustomPostProcessConfig): void {
-    this.#pipeline?.addCustomPostProcess(config);
+    this.__pipeline?.addCustomPostProcess(config);
   }
 
   /**
    * Remove a custom post-process stage by name
    */
   removeCustomPostProcess(name: string): boolean {
-    return this.#pipeline?.removeCustomPostProcess(name) ?? false;
+    return this.__pipeline?.removeCustomPostProcess(name) ?? false;
   }
 
   /**
    * Clear all custom post-process stages
    */
   clearCustomPostProcess(): void {
-    this.#pipeline?.clearCustomPostProcess();
+    this.__pipeline?.clearCustomPostProcess();
   }
 
-  protected override _prepare(options?: RendererOptions): void | Promise<void> {
-    this.#msaa = options?.msaa ?? 1;
-
-    const [nWindow, display] = getNativeWindow(this._getWindow());
-    this.#device = new VkDevice(nWindow, display);
-    const indices = this.#device.findQueueFamilies();
-    this.#commandPool = new VkCommandPool(
-      this.#device.logicalDevice,
-      indices.graphicsFamily,
-    );
-  }
-
-  protected override _rebuildSwapChain(width: number, height: number): void {
-    if (!this.#device) {
+  override rebuildFrame(): void {
+    super.rebuildFrame();
+    if (!this.__device) {
       return;
     }
+    const width = this.width;
+    const height = this.height;
 
-    if (this.#pipeline) {
-      this.#swapchainViews.forEach((view) => view.dispose());
-      this.#swapchainViews = [];
-      this.#swapchain?.dispose();
-      this.#swapchain = null;
+    if (this.__pipeline) {
+      this.__swapchainViews.forEach((view) => view.dispose());
+      this.__swapchainViews = [];
+      this.__swapchain?.dispose();
+      this.__swapchain = null;
     }
 
     if (width === 0 || height === 0) {
       return;
     }
 
-    this.#swapchain = new VkSwapchain(this.#device, width, height);
+    this.__swapchain = new VkSwapchain(this.__device, width, height);
 
-    this.#swapCount = this.#swapchain.images.length;
-    this.#frameCount = Math.max(this.#swapCount - 1, 2);
+    this.__swapCount = this.__swapchain.images.length;
+    this.__frameCount = Math.max(this.__swapCount - 1, 2);
 
-    this.#swapchainViews = this.#swapchain.images.map(
+    this.__swapchainViews = this.__swapchain.images.map(
       (image) =>
         new VkImageView({
-          device: this.#device!.logicalDevice,
-          format: this.#swapchain!.format,
+          device: this.__device!.logicalDevice,
+          format: this.__swapchain!.format,
           image: image as any,
           mask: ['color'],
         }),
     );
 
-    if (!this.#pipeline) {
-      this.#pipeline = new VkRenderPipeline(
-        this.#device,
+    if (!this.__pipeline) {
+      this.__pipeline = new VkRenderPipeline(
+        this.__device,
         width,
         height,
-        this.#swapchain.format,
-        this.#swapchain.images,
-        this.#swapchainViews,
+        this.__swapchain.format,
+        this.__swapchain.images,
+        this.__swapchainViews,
       );
 
-      if (this.#msaa > 1) {
-        this.#pipeline.setMSAA(true, this.#msaa);
+      if (this.__msaa > 1) {
+        this.__pipeline.setMSAA(true, this.__msaa);
       }
     } else {
-      this.#pipeline.updateSwapchain(
-        this.#swapchain.images,
-        this.#swapchainViews,
+      this.__pipeline.updateSwapchain(
+        this.__swapchain.images,
+        this.__swapchainViews,
       );
-      this.#pipeline.rebuild(width, height);
+      this.__pipeline.rebuild(width, height);
     }
 
-    if (this.#frameCount === this.#commandBuffers.length) {
-      if (!this.#sync) {
-        this.#sync = new VkSync(
-          this.#device.logicalDevice,
-          this.#swapCount,
-          this.#frameCount,
+    if (this.__frameCount === this.__commandBuffers.length) {
+      if (!this.__sync) {
+        this.__sync = new VkSync(
+          this.__device.logicalDevice,
+          this.__swapCount,
+          this.__frameCount,
         );
       } else {
-        this.#sync.initPerSwapchainImages(this.#swapCount);
+        this.__sync.initPerSwapchainImages(this.__swapCount);
       }
       return;
     }
 
-    this.#commandBuffers.forEach((buffer) => buffer.dispose());
-    this.#commandBuffers = [];
+    this.__commandBuffers.forEach((buffer) => buffer.dispose());
+    this.__commandBuffers = [];
 
-    for (let i = 0; i < this.#swapCount; i++) {
+    for (let i = 0; i < this.__swapCount; i++) {
       const commandBuffer = new VkCommandBuffer(
-        this.#device.logicalDevice,
-        this.#commandPool!.instance,
+        this.__device.logicalDevice,
+        this.__commandPool!.instance,
       );
-      this.#commandBuffers.push(commandBuffer);
+      this.__commandBuffers.push(commandBuffer);
     }
   }
 }

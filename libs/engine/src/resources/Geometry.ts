@@ -66,13 +66,13 @@ import { Vector3 } from '../math';
  * @extends {DirtyState}
  */
 export class Geometry extends DirtyState {
-  #vertex: Float32Array;
-  #normal: Float32Array;
-  #uvs: Float32Array[];
-  #indices: Uint32Array;
+  private __vertex: Float32Array;
+  private __normal: Float32Array;
+  private __uvs: Float32Array[];
+  private __indices: Uint32Array;
 
-  #vertexCount: number;
-  #indexCount: number;
+  private __vertexCount: number;
+  private __indexCount: number;
 
   constructor(vertexLength: number, indexLength: number, uvLayers = 1) {
     super();
@@ -85,15 +85,15 @@ export class Geometry extends DirtyState {
     if (!Number.isInteger(uvLayers) || uvLayers < 0) {
       throw new Error('uvLayers must be a non-negative integer.');
     }
-    this.#vertexCount = vertexLength;
-    this.#indexCount = indexLength;
-    this.#vertex = new Float32Array(vertexLength * 3);
-    this.#normal = new Float32Array(vertexLength * 3);
-    this.#uvs = Array.from(
+    this.__vertexCount = vertexLength;
+    this.__indexCount = indexLength;
+    this.__vertex = new Float32Array(vertexLength * 3);
+    this.__normal = new Float32Array(vertexLength * 3);
+    this.__uvs = Array.from(
       { length: uvLayers },
       () => new Float32Array(vertexLength * 2),
     );
-    this.#indices = new Uint32Array(indexLength);
+    this.__indices = new Uint32Array(indexLength);
   }
 
   /**
@@ -119,15 +119,15 @@ export class Geometry extends DirtyState {
     };
 
     let h = 0x811c9dc5; // FNV-like seed
-    h = mixArray(h, this.#vertex);
-    h = mixArray(h, this.#normal);
-    for (const uv of this.#uvs) h = mixArray(h, uv);
-    h = mixArray(h, this.#indices);
+    h = mixArray(h, this.__vertex);
+    h = mixArray(h, this.__normal);
+    for (const uv of this.__uvs) h = mixArray(h, uv);
+    h = mixArray(h, this.__indices);
 
     const meta = {
-      vc: this.#vertexCount,
-      ic: this.#indexCount,
-      u: this.#uvs.length,
+      vc: this.__vertexCount,
+      ic: this.__indexCount,
+      u: this.__uvs.length,
     };
     return sha(JSON.stringify({ h, meta }), 'hex');
   }
@@ -150,7 +150,7 @@ export class Geometry extends DirtyState {
    * ```
    */
   get vertex(): Float32Array {
-    return this.#vertex;
+    return this.__vertex;
   }
 
   /**
@@ -162,7 +162,7 @@ export class Geometry extends DirtyState {
    * @returns Float32Array with length = vertexCount * 3
    */
   get normal(): Float32Array {
-    return this.#normal;
+    return this.__normal;
   }
 
   /**
@@ -177,7 +177,7 @@ export class Geometry extends DirtyState {
    * @returns Readonly array of Float32Array, each with length = vertexCount * 2
    */
   get uvs(): readonly Float32Array[] {
-    return Object.freeze([...this.#uvs]);
+    return Object.freeze([...this.__uvs]);
   }
 
   /**
@@ -189,44 +189,44 @@ export class Geometry extends DirtyState {
    * @returns Uint32Array with length = indexCount
    */
   get indices(): Uint32Array {
-    return this.#indices;
+    return this.__indices;
   }
 
   /** Number of vertices. */
   get vertexCount(): number {
-    return this.#vertexCount;
+    return this.__vertexCount;
   }
 
   /** Number of indices. */
   get indexCount(): number {
-    return this.#indexCount;
+    return this.__indexCount;
   }
 
   /** Number of UV layers. */
   get uvLayerCount(): number {
-    return this.#uvs.length;
+    return this.__uvs.length;
   }
 
   // ---------- Validation helpers ----------
-  #assertVertexIndex(i: number): void {
-    if (!Number.isInteger(i) || i < 0 || i >= this.#vertexCount) {
+  private __assertVertexIndex(i: number): void {
+    if (!Number.isInteger(i) || i < 0 || i >= this.__vertexCount) {
       throw new Error(
-        `Vertex index out of range [0, ${this.#vertexCount - 1}]: ${i}`,
+        `Vertex index out of range [0, ${this.__vertexCount - 1}]: ${i}`,
       );
     }
   }
 
-  #assertUVLayer(layer: number): void {
-    if (!Number.isInteger(layer) || layer < 0 || layer >= this.#uvs.length) {
+  private __assertUVLayer(layer: number): void {
+    if (!Number.isInteger(layer) || layer < 0 || layer >= this.__uvs.length) {
       throw new Error(
-        `UV layer out of range [0, ${this.#uvs.length - 1}]: ${layer}`,
+        `UV layer out of range [0, ${this.__uvs.length - 1}]: ${layer}`,
       );
     }
   }
 
-  #assertIndexIndex(i: number): void {
-    if (!Number.isInteger(i) || i < 0 || i >= this.#indexCount) {
-      throw new Error(`Index out of range [0, ${this.#indexCount - 1}]: ${i}`);
+  private __assertIndexIndex(i: number): void {
+    if (!Number.isInteger(i) || i < 0 || i >= this.__indexCount) {
+      throw new Error(`Index out of range [0, ${this.__indexCount - 1}]: ${i}`);
     }
   }
 
@@ -243,17 +243,17 @@ export class Geometry extends DirtyState {
    * @throws Error if vertex index is out of range
    */
   setVertex(i: number, x: number, y: number, z: number): this {
-    this.#assertVertexIndex(i);
+    this.__assertVertexIndex(i);
     const o = i * 3;
     if (
-      this.#vertex[o] === x &&
-      this.#vertex[o + 1] === y &&
-      this.#vertex[o + 2] === z
+      this.__vertex[o] === x &&
+      this.__vertex[o + 1] === y &&
+      this.__vertex[o + 2] === z
     )
       return this;
-    this.#vertex[o] = x;
-    this.#vertex[o + 1] = y;
-    this.#vertex[o + 2] = z;
+    this.__vertex[o] = x;
+    this.__vertex[o + 1] = y;
+    this.__vertex[o + 2] = z;
     return this.markAsDirty();
   }
 
@@ -265,9 +265,9 @@ export class Geometry extends DirtyState {
    * @throws Error if vertex index is out of range
    */
   getVertex(i: number): [number, number, number] {
-    this.#assertVertexIndex(i);
+    this.__assertVertexIndex(i);
     const o = i * 3;
-    return [this.#vertex[o]!, this.#vertex[o + 1]!, this.#vertex[o + 2]!];
+    return [this.__vertex[o]!, this.__vertex[o + 1]!, this.__vertex[o + 2]!];
   }
 
   /**
@@ -283,17 +283,17 @@ export class Geometry extends DirtyState {
    * @throws Error if vertex index is out of range
    */
   setNormal(i: number, nx: number, ny: number, nz: number): this {
-    this.#assertVertexIndex(i);
+    this.__assertVertexIndex(i);
     const o = i * 3;
     if (
-      this.#normal[o] === nx &&
-      this.#normal[o + 1] === ny &&
-      this.#normal[o + 2] === nz
+      this.__normal[o] === nx &&
+      this.__normal[o + 1] === ny &&
+      this.__normal[o + 2] === nz
     )
       return this;
-    this.#normal[o] = nx;
-    this.#normal[o + 1] = ny;
-    this.#normal[o + 2] = nz;
+    this.__normal[o] = nx;
+    this.__normal[o + 1] = ny;
+    this.__normal[o + 2] = nz;
     return this.markAsDirty();
   }
 
@@ -305,9 +305,9 @@ export class Geometry extends DirtyState {
    * @throws Error if vertex index is out of range
    */
   getNormal(i: number): [number, number, number] {
-    this.#assertVertexIndex(i);
+    this.__assertVertexIndex(i);
     const o = i * 3;
-    return [this.#normal[o]!, this.#normal[o + 1]!, this.#normal[o + 2]!];
+    return [this.__normal[o]!, this.__normal[o + 1]!, this.__normal[o + 2]!];
   }
 
   /**
@@ -321,9 +321,9 @@ export class Geometry extends DirtyState {
    * @throws Error if layer or vertex index is out of range
    */
   setUV(layer: number, i: number, u: number, v: number): this {
-    this.#assertUVLayer(layer);
-    this.#assertVertexIndex(i);
-    const arr = this.#uvs[layer]!;
+    this.__assertUVLayer(layer);
+    this.__assertVertexIndex(i);
+    const arr = this.__uvs[layer]!;
     const o = i * 2;
     if (arr[o]! === u && arr[o + 1]! === v) return this;
     arr[o] = u;
@@ -340,9 +340,9 @@ export class Geometry extends DirtyState {
    * @throws Error if layer or vertex index is out of range
    */
   getUV(layer: number, i: number): [number, number] {
-    this.#assertUVLayer(layer);
-    this.#assertVertexIndex(i);
-    const arr = this.#uvs[layer]!;
+    this.__assertUVLayer(layer);
+    this.__assertVertexIndex(i);
+    const arr = this.__uvs[layer]!;
     const o = i * 2;
     return [arr[o]!, arr[o + 1]!];
   }
@@ -372,9 +372,9 @@ export class Geometry extends DirtyState {
     if (data.length % 3 !== 0)
       throw new Error('Vertices data length must be a multiple of 3.');
     const count = data.length / 3;
-    if (offsetVertex + count > this.#vertexCount)
+    if (offsetVertex + count > this.__vertexCount)
       throw new Error('Vertices write exceeds vertexCount.');
-    this.#vertex.set(data, offsetVertex * 3);
+    this.__vertex.set(data, offsetVertex * 3);
     return this.markAsDirty();
   }
 
@@ -392,9 +392,9 @@ export class Geometry extends DirtyState {
     if (data.length % 3 !== 0)
       throw new Error('Normals data length must be a multiple of 3.');
     const count = data.length / 3;
-    if (offsetVertex + count > this.#vertexCount)
+    if (offsetVertex + count > this.__vertexCount)
       throw new Error('Normals write exceeds vertexCount.');
-    this.#normal.set(data, offsetVertex * 3);
+    this.__normal.set(data, offsetVertex * 3);
     return this.markAsDirty();
   }
 
@@ -408,15 +408,15 @@ export class Geometry extends DirtyState {
    * @throws Error if data length is not multiple of 2 or exceeds buffer size
    */
   writeUVs(layer: number, data: ArrayLike<number>, offsetVertex = 0): this {
-    this.#assertUVLayer(layer);
+    this.__assertUVLayer(layer);
     if (offsetVertex < 0 || !Number.isInteger(offsetVertex))
       throw new Error('offsetVertex must be a non-negative integer.');
     if (data.length % 2 !== 0)
       throw new Error('UVs data length must be a multiple of 2.');
     const count = data.length / 2;
-    if (offsetVertex + count > this.#vertexCount)
+    if (offsetVertex + count > this.__vertexCount)
       throw new Error('UVs write exceeds vertexCount.');
-    this.#uvs[layer]!.set(data, offsetVertex * 2);
+    this.__uvs[layer]!.set(data, offsetVertex * 2);
     return this.markAsDirty();
   }
 
@@ -442,19 +442,19 @@ export class Geometry extends DirtyState {
   writeIndices(data: ArrayLike<number>, offsetIndex = 0): this {
     if (offsetIndex < 0 || !Number.isInteger(offsetIndex))
       throw new Error('offsetIndex must be a non-negative integer.');
-    if (offsetIndex + data.length > this.#indexCount)
+    if (offsetIndex + data.length > this.__indexCount)
       throw new Error('Indices write exceeds indexCount.');
     // Validate indices range
     for (let i = 0; i < data.length; i++) {
       const v = data[i] as number;
       if (!Number.isInteger(v) || v < 0)
         throw new Error(`Index value must be a non-negative integer: ${v}`);
-      if (v >= this.#vertexCount)
+      if (v >= this.__vertexCount)
         throw new Error(
-          `Index ${v} out of vertex range [0, ${this.#vertexCount - 1}]`,
+          `Index ${v} out of vertex range [0, ${this.__vertexCount - 1}]`,
         );
     }
-    this.#indices.set(data, offsetIndex);
+    this.__indices.set(data, offsetIndex);
     return this.markAsDirty();
   }
 
@@ -467,14 +467,14 @@ export class Geometry extends DirtyState {
    * @throws Error if index position or vertex value is out of range
    */
   setIndex(i: number, value: number): this {
-    this.#assertIndexIndex(i);
-    if (!Number.isInteger(value) || value < 0 || value >= this.#vertexCount) {
+    this.__assertIndexIndex(i);
+    if (!Number.isInteger(value) || value < 0 || value >= this.__vertexCount) {
       throw new Error(
-        `Index value out of range [0, ${this.#vertexCount - 1}]: ${value}`,
+        `Index value out of range [0, ${this.__vertexCount - 1}]: ${value}`,
       );
     }
-    if (this.#indices[i] === value) return this;
-    this.#indices[i] = value >>> 0;
+    if (this.__indices[i] === value) return this;
+    this.__indices[i] = value >>> 0;
     return this.markAsDirty();
   }
 
@@ -486,8 +486,8 @@ export class Geometry extends DirtyState {
    * @throws Error if index position is out of range
    */
   getIndex(i: number): number {
-    this.#assertIndexIndex(i);
-    return this.#indices[i]!;
+    this.__assertIndexIndex(i);
+    return this.__indices[i]!;
   }
 
   // ---------- Utilities ----------
@@ -504,52 +504,52 @@ export class Geometry extends DirtyState {
     let changed = false;
     // positions
     let needFill = false;
-    for (const x of this.#vertex) {
+    for (const x of this.__vertex) {
       if (x !== 0) {
         needFill = true;
         break;
       }
     }
     if (needFill) {
-      this.#vertex.fill(0);
+      this.__vertex.fill(0);
       changed = true;
     }
     // normals
     needFill = false;
-    for (const x of this.#normal) {
+    for (const x of this.__normal) {
       if (x !== 0) {
         needFill = true;
         break;
       }
     }
     if (needFill) {
-      this.#normal.fill(0);
+      this.__normal.fill(0);
       changed = true;
     }
     // uvs
-    for (let i = 0; i < this.#uvs.length; i++) {
+    for (let i = 0; i < this.__uvs.length; i++) {
       let uvChanged = false;
-      for (const x of this.#uvs[i]!) {
+      for (const x of this.__uvs[i]!) {
         if (x !== 0) {
           uvChanged = true;
           break;
         }
       }
       if (uvChanged) {
-        this.#uvs[i]!.fill(0);
+        this.__uvs[i]!.fill(0);
         changed = true;
       }
     }
     // indices
     needFill = false;
-    for (const x of this.#indices) {
+    for (const x of this.__indices) {
       if (x !== 0) {
         needFill = true;
         break;
       }
     }
     if (needFill) {
-      this.#indices.fill(0);
+      this.__indices.fill(0);
       changed = true;
     }
     return changed ? this.markAsDirty() : this;
@@ -573,8 +573,8 @@ export class Geometry extends DirtyState {
    * ```
    */
   computeBounds(): { min: Vector3; max: Vector3 } | null {
-    if (this.#vertexCount === 0) return null;
-    const v = this.#vertex;
+    if (this.__vertexCount === 0) return null;
+    const v = this.__vertex;
     let minX = v[0]!,
       minY = v[1]!,
       minZ = v[2]!;
@@ -609,16 +609,16 @@ export class Geometry extends DirtyState {
    */
   copy(g: Geometry): this {
     if (
-      this.#vertexCount !== g.#vertexCount ||
-      this.#uvs.length !== g.#uvs.length ||
-      this.#indexCount !== g.#indexCount
+      this.__vertexCount !== g.__vertexCount ||
+      this.__uvs.length !== g.__uvs.length ||
+      this.__indexCount !== g.__indexCount
     ) {
-      this.#resize(g.#vertexCount, g.#indexCount, g.#uvs.length);
+      this.__resize(g.__vertexCount, g.__indexCount, g.__uvs.length);
     }
-    this.#vertex.set(g.#vertex);
-    this.#normal.set(g.#normal);
-    for (let i = 0; i < this.#uvs.length; i++) this.#uvs[i]!.set(g.#uvs[i]!);
-    this.#indices.set(g.#indices);
+    this.__vertex.set(g.__vertex);
+    this.__normal.set(g.__normal);
+    for (let i = 0; i < this.__uvs.length; i++) this.__uvs[i]!.set(g.__uvs[i]!);
+    this.__indices.set(g.__indices);
     return this.markAsDirty();
   }
 
@@ -631,21 +631,25 @@ export class Geometry extends DirtyState {
    */
   clone(): this {
     const g = new Geometry(
-      this.#vertexCount,
-      this.#indexCount,
-      this.#uvs.length,
+      this.__vertexCount,
+      this.__indexCount,
+      this.__uvs.length,
     );
-    g.#vertex.set(this.#vertex);
-    g.#normal.set(this.#normal);
-    for (let i = 0; i < this.#uvs.length; i++) g.#uvs[i]!.set(this.#uvs[i]!);
-    g.#indices.set(this.#indices);
+    g.__vertex.set(this.__vertex);
+    g.__normal.set(this.__normal);
+    for (let i = 0; i < this.__uvs.length; i++) g.__uvs[i]!.set(this.__uvs[i]!);
+    g.__indices.set(this.__indices);
     g.markAsDirty();
     return g as this;
   }
-  #resize(vertexCount?: number, indexCount?: number, uvLayers?: number): this {
-    const newV = vertexCount ?? this.#vertexCount;
-    const newI = indexCount ?? this.#indexCount;
-    const newU = uvLayers ?? this.#uvs.length;
+  private __resize(
+    vertexCount?: number,
+    indexCount?: number,
+    uvLayers?: number,
+  ): this {
+    const newV = vertexCount ?? this.__vertexCount;
+    const newI = indexCount ?? this.__indexCount;
+    const newU = uvLayers ?? this.__uvs.length;
     if (!Number.isInteger(newV) || newV < 0)
       throw new Error('vertexCount must be a non-negative integer.');
     if (!Number.isInteger(newI) || newI < 0)
@@ -655,51 +659,51 @@ export class Geometry extends DirtyState {
 
     let changed = false;
 
-    if (newV !== this.#vertexCount) {
+    if (newV !== this.__vertexCount) {
       const pos = new Float32Array(newV * 3);
       pos.set(
-        this.#vertex.subarray(0, Math.min(this.#vertex.length, pos.length)),
+        this.__vertex.subarray(0, Math.min(this.__vertex.length, pos.length)),
       );
-      this.#vertex = pos;
+      this.__vertex = pos;
 
       const nrm = new Float32Array(newV * 3);
       nrm.set(
-        this.#normal.subarray(0, Math.min(this.#normal.length, nrm.length)),
+        this.__normal.subarray(0, Math.min(this.__normal.length, nrm.length)),
       );
-      this.#normal = nrm;
+      this.__normal = nrm;
 
       changed = true;
     }
 
-    if (newU !== this.#uvs.length || newV !== this.#vertexCount) {
+    if (newU !== this.__uvs.length || newV !== this.__vertexCount) {
       const nextUVs: Float32Array[] = Array.from(
         { length: newU },
         () => new Float32Array(newV * 2),
       );
-      const copyLayers = Math.min(this.#uvs.length, newU);
+      const copyLayers = Math.min(this.__uvs.length, newU);
       for (let i = 0; i < copyLayers; i++) {
         nextUVs[i]!.set(
-          this.#uvs[i]!.subarray(
+          this.__uvs[i]!.subarray(
             0,
-            Math.min(this.#uvs[i]!.length, nextUVs[i]!.length),
+            Math.min(this.__uvs[i]!.length, nextUVs[i]!.length),
           ),
         );
       }
-      this.#uvs = nextUVs;
+      this.__uvs = nextUVs;
       changed = true;
     }
 
-    if (newI !== this.#indexCount) {
+    if (newI !== this.__indexCount) {
       const idx = new Uint32Array(newI);
       idx.set(
-        this.#indices.subarray(0, Math.min(this.#indices.length, idx.length)),
+        this.__indices.subarray(0, Math.min(this.__indices.length, idx.length)),
       );
-      this.#indices = idx;
+      this.__indices = idx;
       changed = true;
     }
 
-    this.#vertexCount = newV;
-    this.#indexCount = newI;
+    this.__vertexCount = newV;
+    this.__indexCount = newI;
 
     return changed ? this.markAsDirty() : this;
   }

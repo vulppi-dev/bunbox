@@ -6,10 +6,10 @@ import { AbstractVector } from './AbstractVector';
  * All operations are in-place and return `this` for chaining.
  */
 export class Vector4 extends AbstractVector<4> {
-  #x: number;
-  #y: number;
-  #z: number;
-  #w: number;
+  private __x: number;
+  private __y: number;
+  private __z: number;
+  private __w: number;
 
   /**
    * Create a new Vector4.
@@ -20,91 +20,91 @@ export class Vector4 extends AbstractVector<4> {
    */
   constructor(x: number = 0, y: number = 0, z: number = 0, w: number = 0) {
     super();
-    this.#x = x;
-    this.#y = y;
-    this.#z = z;
-    this.#w = w;
+    this.__x = x;
+    this.__y = y;
+    this.__z = z;
+    this.__w = w;
   }
 
   /** X component */
   get x() {
-    return this.#x;
+    return this.__x;
   }
   /** Y component */
   get y() {
-    return this.#y;
+    return this.__y;
   }
   /** Z component */
   get z() {
-    return this.#z;
+    return this.__z;
   }
   /** W component */
   get w() {
-    return this.#w;
+    return this.__w;
   }
   /** X component */
   set x(value) {
-    this.#x = value;
+    this.__x = value;
     this.markAsDirty();
   }
   /** Y component */
   set y(value) {
-    this.#y = value;
+    this.__y = value;
     this.markAsDirty();
   }
   /** Z component */
   set z(value) {
-    this.#z = value;
+    this.__z = value;
     this.markAsDirty();
   }
   /** W component */
   set w(value) {
-    this.#w = value;
+    this.__w = value;
     this.markAsDirty();
   }
 
   /** Component-wise addition. */
   override sum(vector: this): this {
-    this.#x += vector.x;
-    this.#y += vector.y;
-    this.#z += vector.z;
-    this.#w += vector.w;
+    this.__x += vector.x;
+    this.__y += vector.y;
+    this.__z += vector.z;
+    this.__w += vector.w;
     return this.markAsDirty();
   }
 
   /** Component-wise subtraction. */
   override sub(vector: this): this {
-    this.#x -= vector.x;
-    this.#y -= vector.y;
-    this.#z -= vector.z;
-    this.#w -= vector.w;
+    this.__x -= vector.x;
+    this.__y -= vector.y;
+    this.__z -= vector.z;
+    this.__w -= vector.w;
     return this.markAsDirty();
   }
 
   /** Component-wise multiplication. */
   override mul(vector: this): this {
-    this.#x *= vector.x;
-    this.#y *= vector.y;
-    this.#z *= vector.z;
-    this.#w *= vector.w;
+    this.__x *= vector.x;
+    this.__y *= vector.y;
+    this.__z *= vector.z;
+    this.__w *= vector.w;
     return this.markAsDirty();
   }
 
   /** Component-wise division. */
   override div(vector: this): this {
-    this.#x /= vector.x;
-    this.#y /= vector.y;
-    this.#z /= vector.z;
-    this.#w /= vector.w;
+    this.__x /= vector.x;
+    this.__y /= vector.y;
+    this.__z /= vector.z;
+    this.__w /= vector.w;
     return this.markAsDirty();
   }
 
   /** Multiply by scalar. */
   override mulS(scalar: number): this {
-    this.#x *= scalar;
-    this.#y *= scalar;
-    this.#z *= scalar;
-    this.#w *= scalar;
+    this.__x *= scalar;
+    this.__y *= scalar;
+    this.__z *= scalar;
+    this.__w *= scalar;
     return this.markAsDirty();
   }
 
@@ -113,10 +113,10 @@ export class Vector4 extends AbstractVector<4> {
     if (scalar === 0) {
       throw new Error('Division by zero');
     }
-    this.#x /= scalar;
-    this.#y /= scalar;
-    this.#z /= scalar;
-    this.#w /= scalar;
+    this.__x /= scalar;
+    this.__y /= scalar;
+    this.__z /= scalar;
+    this.__w /= scalar;
     return this.markAsDirty();
   }
 
@@ -132,19 +132,19 @@ export class Vector4 extends AbstractVector<4> {
 
   /** Set all components. */
   override set(x: number, y: number, z: number, w: number): this {
-    this.#x = x;
-    this.#y = y;
-    this.#z = z;
-    this.#w = w;
+    this.__x = x;
+    this.__y = y;
+    this.__z = z;
+    this.__w = w;
     return this.markAsDirty();
   }
 
   /** Copy all components from another vector. */
   override copy(vector: this): this {
-    this.#x = vector.#x;
-    this.#y = vector.#y;
-    this.#z = vector.#z;
-    this.#w = vector.#w;
+    this.__x = vector.__x;
+    this.__y = vector.__y;
+    this.__z = vector.__z;
+    this.__w = vector.__w;
     return this.markAsDirty();
   }
 
@@ -155,7 +155,7 @@ export class Vector4 extends AbstractVector<4> {
 
   /** Returns Float32Array [x, y, z, w]. */
   override toBuffer(): Float32Array {
-    return new Float32Array([this.#x, this.#y, this.#z, this.#w]);
+    return new Float32Array([this.__x, this.__y, this.__z, this.__w]);
   }
 
   /** String representation for debugging. */

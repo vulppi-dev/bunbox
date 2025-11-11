@@ -4,19 +4,19 @@ export type EventOptions = {
 };
 
 export class Event {
-  #type: string;
-  #timestamp: Date;
+  private __type: string;
+  private __timestamp: Date;
 
   constructor({ type, timestamp }: EventOptions) {
-    this.#type = type;
-    this.#timestamp = timestamp;
+    this.__type = type;
+    this.__timestamp = timestamp;
   }
 
   get type() {
-    return this.#type;
+    return this.__type;
   }
 
   get timestamp() {
-    return this.#timestamp;
+    return this.__timestamp;
   }
 }

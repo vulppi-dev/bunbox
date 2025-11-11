@@ -13,14 +13,14 @@ import {
 } from '@bunbox/vk';
 
 export class VkFramebuffer implements Disposable {
-  #device: Pointer;
-  #renderPass: Pointer;
-  #attachments: VkImageView[];
-  #width: number;
-  #height: number;
-  #instance: Pointer | null = null;
+  private __device: Pointer;
+  private __renderPass: Pointer;
+  private __attachments: VkImageView[];
+  private __width: number;
+  private __height: number;
+  private __instance: Pointer | null = null;
 
-  #pointerHolder: BigUint64Array;
+  private __pointerHolder: BigUint64Array;
 
   constructor(
     device: Pointer,
@@ -36,41 +36,41 @@ export class VkFramebuffer implements Disposable {
       );
     }
 
-    this.#device = device;
-    this.#renderPass = renderPass;
-    this.#attachments = attachments;
-    this.#width = width;
-    this.#height = height;
+    this.__device = device;
+    this.__renderPass = renderPass;
+    this.__attachments = attachments;
+    this.__width = width;
+    this.__height = height;
 
-    this.#pointerHolder = new BigUint64Array(1);
-    this.#createFramebuffer();
+    this.__pointerHolder = new BigUint64Array(1);
+    this.__createFramebuffer();
   }
 
   get framebuffer(): Pointer {
-    if (this.#instance === null) {
+    if (this.__instance === null) {
       throw new DynamicLibError(
         'Framebuffer has not been created yet',
         'Vulkan',
       );
     }
-    return this.#instance;
+    return this.__instance;
   }
 
   get width(): number {
-    return this.#width;
+    return this.__width;
   }
 
   get height(): number {
-    return this.#height;
+    return this.__height;
   }
 
   dispose(): void | Promise<void> {
-    if (!this.#instance) return;
+    if (!this.__instance) return;
 
-    VK_DEBUG(`Destroying framebuffer: 0x${this.#instance.toString(16)}`);
-    VK.vkDestroyFramebuffer(this.#device, this.#instance, null);
+    VK_DEBUG(`Destroying framebuffer: 0x${this.__instance.toString(16)}`);
+    VK.vkDestroyFramebuffer(this.__device, this.__instance, null);
     VK_DEBUG('Framebuffer destroyed');
-    this.#instance = null;
+    this.__instance = null;
   }
 
   /**
@@ -83,45 +83,45 @@ export class VkFramebuffer implements Disposable {
     this.dispose();
 
     // Update dimensions
-    this.#width = width;
-    this.#height = height;
+    this.__width = width;
+    this.__height = height;
 
     // Create new framebuffer
-    this.#createFramebuffer();
+    this.__createFramebuffer();
   }
 
-  #createFramebuffer(): void {
+  private __createFramebuffer(): void {
     VK_DEBUG(
-      `Creating framebuffer: ${this.#width}x${this.#height}, ${this.#attachments.length} attachments`,
+      `Creating framebuffer: ${this.__width}x${this.__height}, ${this.__attachments.length} attachments`,
     );
 
     // Collect image view handles
     const attachmentViews = new BigUint64Array(
-      this.#attachments.map((tex) => BigInt(tex.instance)),
+      this.__attachments.map((tex) => BigInt(tex.instance)),
     );
 
     const createInfo = instantiate(vkFramebufferCreateInfo);
     createInfo.sType = VkStructureType.FRAMEBUFFER_CREATE_INFO;
-    createInfo.renderPass = BigInt(this.#renderPass as number);
-    createInfo.attachmentCount = this.#attachments.length;
+    createInfo.renderPass = BigInt(this.__renderPass as number);
+    createInfo.attachmentCount = this.__attachments.length;
     createInfo.pAttachments = BigInt(ptr(attachmentViews));
-    createInfo.width = this.#width;
-    createInfo.height = this.#height;
+    createInfo.width = this.__width;
+    createInfo.height = this.__height;
     createInfo.layers = 1;
 
     const result = VK.vkCreateFramebuffer(
-      this.#device,
+      this.__device,
       ptr(getInstanceBuffer(createInfo)),
       null,
-      ptr(this.#pointerHolder),
+      ptr(this.__pointerHolder),
     );
 
     if (result !== VkResult.SUCCESS) {
       throw new DynamicLibError(getResultMessage(result), 'Vulkan');
     }
 
-    this.#instance = Number(this.#pointerHolder[0]) as Pointer;
-    this.#pointerHolder[0] = 0n;
-    VK_DEBUG(`Framebuffer created: 0x${this.#instance.toString(16)}`);
+    this.__instance = Number(this.__pointerHolder[0]) as Pointer;
+    this.__pointerHolder[0] = 0n;
+    VK_DEBUG(`Framebuffer created: 0x${this.__instance.toString(16)}`);
   }
 }

@@ -40,13 +40,13 @@ export class Node3D<
   M extends Record<string, any> = Record<string, any>,
   T extends EventMap = {},
 > extends Node<P, M, T> {
-  #matrix: Matrix = new Matrix();
-  #position: Vector3 = new Vector3();
-  #scale: Vector3 = new Vector3(1, 1, 1);
-  #rotation: Euler = new Euler(0, 0, 0, 'yzx');
-  #rotationQ: Quaternion | null = null;
+  private __matrix: Matrix = new Matrix();
+  private __position: Vector3 = new Vector3();
+  private __scale: Vector3 = new Vector3(1, 1, 1);
+  private __rotation: Euler = new Euler(0, 0, 0, 'yzx');
+  private __rotationQ: Quaternion | null = null;
 
-  #layer: MaskHelper = new MaskHelper();
+  private __layer: MaskHelper = new MaskHelper();
 
   /**
    * Local transform matrix composed from position, rotation, and scale.
@@ -57,7 +57,7 @@ export class Node3D<
    * @readonly Use position/rotation/scale setters to modify transform
    */
   get transform(): Matrix {
-    return this.#matrix;
+    return this.__matrix;
   }
 
   /**
@@ -66,7 +66,7 @@ export class Node3D<
    * Modifying this vector marks the node dirty and triggers matrix recomposition.
    */
   get position(): Vector3 {
-    return this.#position;
+    return this.__position;
   }
 
   /**
@@ -76,7 +76,7 @@ export class Node3D<
    * Values < 1 shrink, > 1 enlarge.
    */
   get scale(): Vector3 {
-    return this.#scale;
+    return this.__scale;
   }
 
   /**
@@ -86,7 +86,7 @@ export class Node3D<
    * If rotationQ is set, quaternion takes priority.
    */
   get rotation(): Euler {
-    return this.#rotation;
+    return this.__rotation;
   }
 
   /**
@@ -98,7 +98,7 @@ export class Node3D<
    * @remarks Use quaternions to avoid gimbal lock and for smooth interpolation
    */
   get rotationQ(): Quaternion | null {
-    return this.#rotationQ;
+    return this.__rotationQ;
   }
 
   /**
@@ -113,7 +113,7 @@ export class Node3D<
    * ```
    */
   get layer(): MaskHelper {
-    return this.#layer;
+    return this.__layer;
   }
 
   /**
@@ -124,9 +124,9 @@ export class Node3D<
    * @param transform - New transform matrix
    */
   set transform(transform: Matrix) {
-    this.#matrix = transform;
+    this.__matrix = transform;
     this.markAsDirty();
-    this.#matrix.markAsDirty();
+    this.__matrix.markAsDirty();
   }
 
   /**
@@ -135,9 +135,9 @@ export class Node3D<
    * @param position - New position vector
    */
   set position(position: Vector3) {
-    this.#position = position;
+    this.__position = position;
     this.markAsDirty();
-    this.#position.markAsDirty();
+    this.__position.markAsDirty();
   }
 
   /**
@@ -146,9 +146,9 @@ export class Node3D<
    * @param scale - New scale vector
    */
   set scale(scale: Vector3) {
-    this.#scale = scale;
+    this.__scale = scale;
     this.markAsDirty();
-    this.#scale.markAsDirty();
+    this.__scale.markAsDirty();
   }
 
   /**
@@ -157,9 +157,9 @@ export class Node3D<
    * @param rotation - New Euler rotation
    */
   set rotation(rotation: Euler) {
-    this.#rotation = rotation;
+    this.__rotation = rotation;
     this.markAsDirty();
-    this.#rotation.markAsDirty();
+    this.__rotation.markAsDirty();
   }
 
   /**
@@ -170,9 +170,9 @@ export class Node3D<
    * @param rotationQ - New quaternion rotation or null
    */
   set rotationQ(rotationQ: Quaternion | null) {
-    this.#rotationQ = rotationQ;
+    this.__rotationQ = rotationQ;
     this.markAsDirty();
-    this.#rotationQ?.markAsDirty();
+    this.__rotationQ?.markAsDirty();
   }
 
   /**
@@ -186,21 +186,21 @@ export class Node3D<
    */
   override _process(_delta: number): void {
     if (
-      this.#position.isDirty ||
-      this.#scale.isDirty ||
-      this.#rotation.isDirty ||
-      this.#rotationQ?.isDirty
+      this.__position.isDirty ||
+      this.__scale.isDirty ||
+      this.__rotation.isDirty ||
+      this.__rotationQ?.isDirty
     ) {
-      this.#matrix.compose(
-        this.#position,
-        this.#scale,
-        this.#rotationQ || this.#rotation,
+      this.__matrix.compose(
+        this.__position,
+        this.__scale,
+        this.__rotationQ || this.__rotation,
       );
 
-      this.#position.markAsClean();
-      this.#scale.markAsClean();
-      this.#rotation.markAsClean();
-      this.#rotationQ?.markAsClean();
+      this.__position.markAsClean();
+      this.__scale.markAsClean();
+      this.__rotation.markAsClean();
+      this.__rotationQ?.markAsClean();
     }
   }
 }

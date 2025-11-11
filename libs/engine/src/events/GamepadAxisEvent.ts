@@ -15,26 +15,26 @@ export type GamepadAxisEventOptions = {
 } & EventOptions;
 
 export class GamepadAxisEvent extends Event {
-  #deviceId: number;
-  #axis: GamepadAxisType;
-  #value: number;
+  private __deviceId: number;
+  private __axis: GamepadAxisType;
+  private __value: number;
 
   constructor(options: GamepadAxisEventOptions) {
     super(options);
-    this.#deviceId = options.deviceId;
-    this.#axis = options.axis;
-    this.#value = options.value;
+    this.__deviceId = options.deviceId;
+    this.__axis = options.axis;
+    this.__value = options.value;
   }
 
   get deviceId() {
-    return this.#deviceId;
+    return this.__deviceId;
   }
 
   get axis() {
-    return this.#axis;
+    return this.__axis;
   }
 
   get value() {
-    return this.#value;
+    return this.__value;
   }
 }

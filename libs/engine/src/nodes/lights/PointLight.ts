@@ -28,7 +28,7 @@ import { Light } from './Light';
  * ```
  */
 export class PointLight extends Light {
-  #range: number = 10.0;
+  private __range: number = 10.0;
 
   /**
    * Light type identifier.
@@ -48,7 +48,7 @@ export class PointLight extends Light {
    * Default: 10.0
    */
   get range(): number {
-    return this.#range;
+    return this.__range;
   }
 
   /**
@@ -57,7 +57,7 @@ export class PointLight extends Light {
    * @param value - Range in meters (must be > 0)
    */
   set range(value: number) {
-    this.#range = Math.max(0.01, value);
+    this.__range = Math.max(0.01, value);
     this.markAsDirty();
   }
 
@@ -81,7 +81,7 @@ export class PointLight extends Light {
     const distance = Math.sqrt(distanceSq);
 
     // Early out if beyond range
-    if (distance >= this.#range) {
+    if (distance >= this.__range) {
       return 0;
     }
 
@@ -89,7 +89,7 @@ export class PointLight extends Light {
     const attenuation = 1.0 / (1.0 + distanceSq);
 
     // Smooth cutoff at range boundary
-    const rangeFactor = distance / this.#range;
+    const rangeFactor = distance / this.__range;
     const smoothCutoff = 1.0 - rangeFactor * rangeFactor;
 
     return attenuation * Math.max(0, smoothCutoff);

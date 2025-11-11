@@ -17,44 +17,44 @@ export type DisplayEventOptions = {
 } & EventOptions;
 
 export class DisplayEvent extends Event {
-  #displayId: number;
-  #orientation: DisplayOrientation;
-  #x: number;
-  #y: number;
-  #width: number;
-  #height: number;
+  private __displayId: number;
+  private __orientation: DisplayOrientation;
+  private __x: number;
+  private __y: number;
+  private __width: number;
+  private __height: number;
 
   constructor(options: DisplayEventOptions) {
     super(options);
-    this.#displayId = options.displayId;
-    this.#orientation = options.orientation ?? 'unknown';
-    this.#x = options.x;
-    this.#y = options.y;
-    this.#width = options.width;
-    this.#height = options.height;
+    this.__displayId = options.displayId;
+    this.__orientation = options.orientation ?? 'unknown';
+    this.__x = options.x;
+    this.__y = options.y;
+    this.__width = options.width;
+    this.__height = options.height;
   }
 
   get displayId() {
-    return this.#displayId;
+    return this.__displayId;
   }
 
   get orientation() {
-    return this.#orientation;
+    return this.__orientation;
   }
 
   get x() {
-    return this.#x;
+    return this.__x;
   }
 
   get y() {
-    return this.#y;
+    return this.__y;
   }
 
   get width() {
-    return this.#width;
+    return this.__width;
   }
 
   get height() {
-    return this.#height;
+    return this.__height;
   }
 }

@@ -7,7 +7,7 @@ export interface TextureCubeDescriptor extends TextureBaseDescriptor {
 }
 
 export class TextureCube extends TextureBase {
-  #layers: number = 6;
+  private __layers: number = 6;
 
   constructor(desc: TextureCubeDescriptor) {
     super(desc);
@@ -15,12 +15,12 @@ export class TextureCube extends TextureBase {
   }
 
   override get layerCount(): number {
-    return this.#layers;
+    return this.__layers;
   }
   set layers(v: number) {
     const n = Math.max(6, Math.ceil((v | 0) / 6) * 6);
-    if (this.#layers === n) return;
-    this.#layers = n;
+    if (this.__layers === n) return;
+    this.__layers = n;
     this.markAsDirty();
   }
 

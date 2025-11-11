@@ -6,96 +6,96 @@ import { AbstractVector } from './AbstractVector';
  * Commonly used for material base colors, clear colors, etc.
  */
 export class Color extends AbstractVector<4> {
-  #r: number;
-  #g: number;
-  #b: number;
-  #a: number;
+  private __r: number;
+  private __g: number;
+  private __b: number;
+  private __a: number;
 
   constructor(r: number = 0, g: number = 0, b: number = 0, a: number = 1) {
     super();
-    this.#r = r;
-    this.#g = g;
-    this.#b = b;
-    this.#a = a;
+    this.__r = r;
+    this.__g = g;
+    this.__b = b;
+    this.__a = a;
   }
 
   /** Red channel [0..1] */
   get r() {
-    return this.#r;
+    return this.__r;
   }
   /** Green channel [0..1] */
   get g() {
-    return this.#g;
+    return this.__g;
   }
   /** Blue channel [0..1] */
   get b() {
-    return this.#b;
+    return this.__b;
   }
   /** Alpha channel [0..1] */
   get a() {
-    return this.#a;
+    return this.__a;
   }
 
   /** Red channel [0..1] */
   set r(value) {
-    this.#r = value;
+    this.__r = value;
     this.markAsDirty();
   }
   /** Green channel [0..1] */
   set g(value) {
-    this.#g = value;
+    this.__g = value;
     this.markAsDirty();
   }
 
   /** Blue channel [0..1] */
   set b(value) {
-    this.#b = value;
+    this.__b = value;
     this.markAsDirty();
   }
 
   /** Alpha channel [0..1] */
   set a(value) {
-    this.#a = value;
+    this.__a = value;
     this.markAsDirty();
   }
 
   override sum(vector: this): this {
-    this.#r += vector.r;
-    this.#g += vector.g;
-    this.#b += vector.b;
-    this.#a += vector.a;
+    this.__r += vector.r;
+    this.__g += vector.g;
+    this.__b += vector.b;
+    this.__a += vector.a;
     return this.markAsDirty();
   }
 
   override sub(vector: this): this {
-    this.#r -= vector.r;
-    this.#g -= vector.g;
-    this.#b -= vector.b;
-    this.#a -= vector.a;
+    this.__r -= vector.r;
+    this.__g -= vector.g;
+    this.__b -= vector.b;
+    this.__a -= vector.a;
     return this.markAsDirty();
   }
 
   override mul(vector: this): this {
-    this.#r *= vector.r;
-    this.#g *= vector.g;
-    this.#b *= vector.b;
-    this.#a *= vector.a;
+    this.__r *= vector.r;
+    this.__g *= vector.g;
+    this.__b *= vector.b;
+    this.__a *= vector.a;
     return this.markAsDirty();
   }
 
   override div(vector: this): this {
-    this.#r /= vector.r;
-    this.#g /= vector.g;
-    this.#b /= vector.b;
-    this.#a /= vector.a;
+    this.__r /= vector.r;
+    this.__g /= vector.g;
+    this.__b /= vector.b;
+    this.__a /= vector.a;
     return this.markAsDirty();
   }
 
   override mulS(scalar: number): this {
-    this.#r *= scalar;
-    this.#g *= scalar;
-    this.#b *= scalar;
-    this.#a *= scalar;
+    this.__r *= scalar;
+    this.__g *= scalar;
+    this.__b *= scalar;
+    this.__a *= scalar;
     return this.markAsDirty();
   }
 
@@ -103,10 +103,10 @@ export class Color extends AbstractVector<4> {
     if (scalar === 0) {
       throw new Error('Division by zero');
     }
-    this.#r /= scalar;
-    this.#g /= scalar;
-    this.#b /= scalar;
-    this.#a /= scalar;
+    this.__r /= scalar;
+    this.__g /= scalar;
+    this.__b /= scalar;
+    this.__a /= scalar;
     return this.markAsDirty();
   }
 
@@ -120,10 +120,10 @@ export class Color extends AbstractVector<4> {
   }
 
   override set(r: number, g: number, b: number, a: number): this {
-    this.#r = r;
-    this.#g = g;
-    this.#b = b;
-    this.#a = a;
+    this.__r = r;
+    this.__g = g;
+    this.__b = b;
+    this.__a = a;
     return this.markAsDirty();
   }
 
@@ -131,18 +131,18 @@ export class Color extends AbstractVector<4> {
    * Sets the color from an RGB hex like 0xffcc00 and optional alpha.
    */
   setHex(hex: number, alpha?: number): this {
-    this.#r = ((hex >> 16) & 0xff) / 0xff;
-    this.#g = ((hex >> 8) & 0xff) / 0xff;
-    this.#b = (hex & 0xff) / 0xff;
-    this.#a = alpha !== undefined ? alpha : this.#a;
+    this.__r = ((hex >> 16) & 0xff) / 0xff;
+    this.__g = ((hex >> 8) & 0xff) / 0xff;
+    this.__b = (hex & 0xff) / 0xff;
+    this.__a = alpha !== undefined ? alpha : this.__a;
     return this.markAsDirty();
   }
 
   override copy(vector: this): this {
-    this.#r = vector.#r;
-    this.#g = vector.#g;
-    this.#b = vector.#b;
-    this.#a = vector.#a;
+    this.__r = vector.__r;
+    this.__g = vector.__g;
+    this.__b = vector.__b;
+    this.__a = vector.__a;
     return this.markAsDirty();
   }
 
@@ -151,7 +151,7 @@ export class Color extends AbstractVector<4> {
   }
 
   override toBuffer(): Float32Array {
-    return new Float32Array([this.#r, this.#g, this.#b, this.#a]);
+    return new Float32Array([this.__r, this.__g, this.__b, this.__a]);
   }
 
   override toString(): string {

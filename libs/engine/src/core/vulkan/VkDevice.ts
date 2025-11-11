@@ -89,17 +89,17 @@ type QueueFamilyIndices = {
 };
 
 export class VkDevice implements Disposable {
-  static #instance: Pointer | null = null;
-  static #errorCallback: JSCallback | null = null;
+  private static __instance: Pointer | null = null;
+  private static __errorCallback: JSCallback | null = null;
 
   // Opaque handlers
-  static #debugMessenger: BigUint64Array = new BigUint64Array(1);
+  private static __debugMessenger: BigUint64Array = new BigUint64Array(1);
 
-  static #createInstance() {
-    if (VkDevice.#instance) return;
+  private static __createInstance() {
+    if (VkDevice.__instance) return;
 
     const debugDataStruct = instantiate(vkDebugUtilsMessengerCallbackDataEXT);
-    VkDevice.#errorCallback = buildCallback(
+    VkDevice.__errorCallback = buildCallback(
       vkDebugUtilsMessengerCallback,
       (severity, types, data, _userData) => {
         pointerCopyBuffer(data as Pointer, getInstanceBuffer(debugDataStruct));
@@ -113,12 +113,12 @@ export class VkDevice implements Disposable {
       },
     );
 
-    if (VK_DEBUG.enabled && !VkDevice.#isLayerSupportValid()) {
+    if (VK_DEBUG.enabled && !VkDevice.__isLayerSupportValid()) {
       VK_DEBUG(
         'Validation layers requested, but not available. Continuing without validation layers.',
       );
     }
-    const { extensions, extPtr } = VkDevice.#getRequiredExtensions();
+    const { extensions, extPtr } = VkDevice.__getRequiredExtensions();
 
     const appInfo = instantiate(vkApplicationInfo);
     appInfo.pApplicationName = getEnv('APP_NAME', 'Bunbox App');
@@ -140,7 +140,7 @@ export class VkDevice implements Disposable {
         ),
       );
 
-      const debugCreateInfo = VkDevice.#getDebugMessenger();
+      const debugCreateInfo = VkDevice.__getDebugMessenger();
       createInfo.pNext = BigInt(ptr(getInstanceBuffer(debugCreateInfo)));
     } else {
       createInfo.enabledLayerCount = 0;
@@ -157,17 +157,17 @@ export class VkDevice implements Disposable {
     if (result !== VkResult.SUCCESS) {
       throw new DynamicLibError(getResultMessage(result), 'Vulkan');
     }
-    VkDevice.#instance = Number(pointerHolder[0]!) as Pointer;
+    VkDevice.__instance = Number(pointerHolder[0]!) as Pointer;
 
-    VkDevice.#setupDebugMessenger();
+    VkDevice.__setupDebugMessenger();
   }
 
-  static #destroyInstance() {
-    if (!VkDevice.#instance) return;
+  private static __destroyInstance() {
+    if (!VkDevice.__instance) return;
 
-    if (VK_DEBUG.enabled && VkDevice.#debugMessenger[0]) {
+    if (VK_DEBUG.enabled && VkDevice.__debugMessenger[0]) {
       const funcPtr = VK.vkGetInstanceProcAddr(
-        VkDevice.#instance,
+        VkDevice.__instance,
         ptr(cstr('vkDestroyDebugUtilsMessengerEXT')),
       );
 
@@ -180,32 +180,32 @@ export class VkDevice implements Disposable {
           },
         });
         lib.symbols.destroyDebugFunc(
-          VkDevice.#instance,
-          Number(VkDevice.#debugMessenger[0]) as Pointer,
+          VkDevice.__instance,
+          Number(VkDevice.__debugMessenger[0]) as Pointer,
           null,
         );
         lib.close();
         VK_DEBUG('Destroyed debug messenger');
       }
-      VkDevice.#debugMessenger[0] = 0n;
+      VkDevice.__debugMessenger[0] = 0n;
     }
 
-    VK.vkDestroyInstance(VkDevice.#instance, null);
+    VK.vkDestroyInstance(VkDevice.__instance, null);
     VK_DEBUG('Destroyed Vulkan instance');
-    VkDevice.#instance = null;
+    VkDevice.__instance = null;
 
-    if (VkDevice.#errorCallback) {
-      VkDevice.#errorCallback.close();
-      VkDevice.#errorCallback = null;
+    if (VkDevice.__errorCallback) {
+      VkDevice.__errorCallback.close();
+      VkDevice.__errorCallback = null;
     }
   }
 
-  static #setupDebugMessenger() {
-    if (!VK_DEBUG.enabled || !VkDevice.#instance) return;
-    const createInfo = VkDevice.#getDebugMessenger();
+  private static __setupDebugMessenger() {
+    if (!VK_DEBUG.enabled || !VkDevice.__instance) return;
+    const createInfo = VkDevice.__getDebugMessenger();
 
     const funcPtr = VK.vkGetInstanceProcAddr(
-      VkDevice.#instance,
+      VkDevice.__instance,
       ptr(cstr('vkCreateDebugUtilsMessengerEXT')),
     );
 
@@ -221,10 +221,10 @@ export class VkDevice implements Disposable {
       });
       result =
         lib.symbols.debugFunc(
-          VkDevice.#instance,
+          VkDevice.__instance,
           ptr(getInstanceBuffer(createInfo)),
           null,
-          ptr(VkDevice.#debugMessenger),
+          ptr(VkDevice.__debugMessenger),
         ) ?? VkResult.ERROR_EXTENSION_NOT_PRESENT;
 
       lib.close();
@@ -237,7 +237,7 @@ export class VkDevice implements Disposable {
     }
   }
 
-  static #isLayerSupportValid() {
+  private static __isLayerSupportValid() {
     const count = new Uint32Array(1);
     VK.vkEnumerateInstanceLayerProperties(ptr(count), null);
 
@@ -264,7 +264,7 @@ export class VkDevice implements Disposable {
     return VALIDATION_LAYERS.every((layer) => names.includes(layer));
   }
 
-  static #getRequiredExtensions() {
+  private static __getRequiredExtensions() {
     const count = new Uint32Array(1);
     const extPtr = GLFW.glfwGetRequiredInstanceExtensions(ptr(count));
 
@@ -293,80 +293,82 @@ export class VkDevice implements Disposable {
     };
   }
 
-  static #getDebugMessenger() {
+  private static __getDebugMessenger() {
     const debugCreateInfo = instantiate(vkDebugUtilsMessengerCreateInfoEXT);
     debugCreateInfo.messageSeverity =
       VkDebugUtilsMessageSeverityFlagsEXT.VERBOSE;
     debugCreateInfo.messageType = VkDebugUtilsMessageTypeFlagsEXT.VALIDATION;
-    debugCreateInfo.pfnUserCallback = BigInt(VkDevice.#errorCallback!.ptr ?? 0);
+    debugCreateInfo.pfnUserCallback = BigInt(
+      VkDevice.__errorCallback!.ptr ?? 0,
+    );
     return debugCreateInfo;
   }
 
   // MARK: Instance Properties
 
-  #nativeWindow: bigint;
-  #display: bigint;
-  #surface: Pointer | null = null;
-  #logicalDevice: Pointer | null = null;
+  private __nativeWindow: bigint;
+  private __display: bigint;
+  private __surface: Pointer | null = null;
+  private __logicalDevice: Pointer | null = null;
 
-  #graphicsQueue: Pointer | null = null;
-  #presentQueue: Pointer | null = null;
+  private __graphicsQueue: Pointer | null = null;
+  private __presentQueue: Pointer | null = null;
 
-  #physicalDevice: Pointer | null = null;
-  #physicalDeviceProperties: PhysicalDeviceProps | null = null;
+  private __physicalDevice: Pointer | null = null;
+  private __physicalDeviceProperties: PhysicalDeviceProps | null = null;
 
   constructor(nativeWindow: bigint, display: bigint) {
-    this.#nativeWindow = nativeWindow;
-    this.#display = display;
+    this.__nativeWindow = nativeWindow;
+    this.__display = display;
 
-    VkDevice.#createInstance();
-    this.#createSurface();
-    this.#pickPhysicalDevice();
-    this.#createLogicalDevice();
+    VkDevice.__createInstance();
+    this.__createSurface();
+    this.__pickPhysicalDevice();
+    this.__createLogicalDevice();
 
     increaseCounter('VkDevice');
   }
 
   get physicalDevice() {
-    return this.#physicalDevice!;
+    return this.__physicalDevice!;
   }
 
   get physicalDeviceProperties() {
-    return this.#physicalDeviceProperties!;
+    return this.__physicalDeviceProperties!;
   }
 
   get logicalDevice() {
-    return this.#logicalDevice!;
+    return this.__logicalDevice!;
   }
 
   get surface() {
-    return this.#surface!;
+    return this.__surface!;
   }
 
   get graphicsQueue() {
-    return this.#graphicsQueue!;
+    return this.__graphicsQueue!;
   }
 
   get presentQueue() {
-    return this.#presentQueue!;
+    return this.__presentQueue!;
   }
 
   dispose() {
     decreaseCounter('VkDevice');
-    if (this.#surface) {
-      VK.vkDestroySurfaceKHR(VkDevice.#instance!, this.#surface, null);
-      this.#surface = null;
+    if (this.__surface) {
+      VK.vkDestroySurfaceKHR(VkDevice.__instance!, this.__surface, null);
+      this.__surface = null;
       VK_DEBUG(`Destroyed VkSurfaceKHR for VkDevice`);
     }
 
     if (!getCounter('VkDevice')) {
       VK_DEBUG(`No more VkDevice instances, cleaning up Vulkan instance`);
-      VkDevice.#destroyInstance();
+      VkDevice.__destroyInstance();
     }
   }
 
   findQueueFamilies(device?: Pointer) {
-    const d = device ?? this.#physicalDevice!;
+    const d = device ?? this.__physicalDevice!;
 
     const indices: QueueFamilyIndices = {
       graphicsFamily: -1,
@@ -411,13 +413,18 @@ export class VkDevice implements Disposable {
           indices.transferFamilyHasValue = true;
         }
       }
-      const presentSupport = new Uint8Array(1);
-      VK.vkGetPhysicalDeviceSurfaceSupportKHR(
-        d,
-        i,
-        this.#surface!,
-        ptr(presentSupport),
-      );
+      const presentSupport = new Uint32Array(1);
+      presentSupport[0] = 1;
+      // const result = VK.vkGetPhysicalDeviceSurfaceSupportKHR(
+      //   d,
+      //   i,
+      //   this.__surface!,
+      //   ptr(presentSupport),
+      // );
+      // if (result !== VkResult.SUCCESS) {
+      //   throw new DynamicLibError(getResultMessage(result), 'Vulkan');
+      // }
+
       if (queueFamily.queueCount > 0 && presentSupport[0]) {
         VK_DEBUG(`Found present queue family at index ${i}`);
         indices.presentFamily = i;
@@ -437,22 +444,22 @@ export class VkDevice implements Disposable {
   }
 
   getSwapChainSupport() {
-    return this.#getSwapChainSupport(this.#physicalDevice!);
+    return this.__getSwapChainSupport(this.__physicalDevice!);
   }
 
-  #createSurface() {
-    if (!VkDevice.#instance) return;
+  private __createSurface() {
+    if (!VkDevice.__instance) return;
 
     const surfacePtr = new BigUint64Array(1);
     let result: number;
 
     if (process.platform === 'win32') {
       const createInfo = instantiate(vkWin32SurfaceCreateInfoKHR);
-      createInfo.hinstance = this.#display;
-      createInfo.hwnd = this.#nativeWindow;
+      createInfo.hinstance = this.__display;
+      createInfo.hwnd = this.__nativeWindow;
 
       result = VK.vkCreateWin32SurfaceKHR(
-        VkDevice.#instance,
+        VkDevice.__instance,
         ptr(getInstanceBuffer(createInfo)),
         null,
         ptr(surfacePtr),
@@ -460,22 +467,22 @@ export class VkDevice implements Disposable {
     } else if (process.platform === 'linux') {
       if (isWayland()) {
         const createInfo = instantiate(vkWaylandSurfaceCreateInfoKHR);
-        createInfo.display = this.#display;
-        createInfo.surface = this.#nativeWindow;
+        createInfo.display = this.__display;
+        createInfo.surface = this.__nativeWindow;
 
         result = VK.vkCreateWaylandSurfaceKHR(
-          VkDevice.#instance,
+          VkDevice.__instance,
           ptr(getInstanceBuffer(createInfo)),
           null,
           ptr(surfacePtr),
         );
       } else {
         const createInfo = instantiate(vkXlibSurfaceCreateInfoKHR);
-        createInfo.dpy = this.#display;
-        createInfo.window = this.#nativeWindow;
+        createInfo.dpy = this.__display;
+        createInfo.window = this.__nativeWindow;
 
         result = VK.vkCreateXlibSurfaceKHR(
-          VkDevice.#instance,
+          VkDevice.__instance,
           ptr(getInstanceBuffer(createInfo)),
           null,
           ptr(surfacePtr),
@@ -483,10 +490,10 @@ export class VkDevice implements Disposable {
       }
     } else if (process.platform === 'darwin') {
       const createInfo = instantiate(vkMetalSurfaceCreateInfoEXT);
-      createInfo.pLayer = this.#nativeWindow;
+      createInfo.pLayer = this.__nativeWindow;
 
       result = VK.vkCreateMetalSurfaceEXT(
-        VkDevice.#instance,
+        VkDevice.__instance,
         ptr(getInstanceBuffer(createInfo)),
         null,
         ptr(surfacePtr),
@@ -501,14 +508,14 @@ export class VkDevice implements Disposable {
     if (result !== VkResult.SUCCESS) {
       throw new DynamicLibError(getResultMessage(result), 'Vulkan');
     }
-    this.#surface = Number(surfacePtr[0]!) as Pointer;
+    this.__surface = Number(surfacePtr[0]!) as Pointer;
   }
 
-  #pickPhysicalDevice() {
-    if (!VkDevice.#instance) return;
+  private __pickPhysicalDevice() {
+    if (!VkDevice.__instance) return;
 
     const count = new Uint32Array(1);
-    VK.vkEnumeratePhysicalDevices(VkDevice.#instance, ptr(count), null);
+    VK.vkEnumeratePhysicalDevices(VkDevice.__instance, ptr(count), null);
 
     if (!count[0]) {
       throw new DynamicLibError(
@@ -518,14 +525,18 @@ export class VkDevice implements Disposable {
     }
     VK_DEBUG(`Device count: ${count[0]!}`);
     const devices = new BigUint64Array(count[0]!);
-    VK.vkEnumeratePhysicalDevices(VkDevice.#instance, ptr(count), ptr(devices));
+    VK.vkEnumeratePhysicalDevices(
+      VkDevice.__instance,
+      ptr(count),
+      ptr(devices),
+    );
 
     const usableDevices: Pointer[] = [];
 
     for (let i = 0; i < count[0]!; i++) {
       const device = Number(devices[i]) as Pointer;
       VK_DEBUG(`Found device handle: ${device}`);
-      if (this.#isDeviceSuitable(device)) {
+      if (this.__isDeviceSuitable(device)) {
         usableDevices.push(device);
       }
     }
@@ -536,15 +547,15 @@ export class VkDevice implements Disposable {
 
     if (usableDevices.length === 1) {
       VK_DEBUG('Only one suitable GPU found, selecting it by default.');
-      this.#physicalDevice = usableDevices[0]!;
-      this.#physicalDeviceProperties = this.#getDeviceProperties(
-        this.#physicalDevice,
+      this.__physicalDevice = usableDevices[0]!;
+      this.__physicalDeviceProperties = this.__getDeviceProperties(
+        this.__physicalDevice,
       );
       return;
     }
 
     const devicesProperties = usableDevices.map((device) =>
-      this.#getDeviceProperties(device),
+      this.__getDeviceProperties(device),
     );
     let bestDeviceIndex = -1;
     let bestScore = 0;
@@ -582,13 +593,13 @@ export class VkDevice implements Disposable {
         continue;
       }
     }
-    this.#physicalDevice = usableDevices[bestDeviceIndex]!;
-    this.#physicalDeviceProperties = devicesProperties[bestDeviceIndex]!;
+    this.__physicalDevice = usableDevices[bestDeviceIndex]!;
+    this.__physicalDeviceProperties = devicesProperties[bestDeviceIndex]!;
   }
 
-  #createLogicalDevice() {
-    if (!this.#surface || !this.#physicalDevice) return;
-    const indices = this.findQueueFamilies(this.#physicalDevice);
+  private __createLogicalDevice() {
+    if (!this.__surface || !this.__physicalDevice) return;
+    const indices = this.findQueueFamilies(this.__physicalDevice);
     const queueCreateInfos: InferField<typeof vkDeviceQueueCreateInfo>[] = [];
     // TODO: Future create with compute and transfer queues
     for (const family of [indices.graphicsFamily, indices.presentFamily]) {
@@ -613,7 +624,7 @@ export class VkDevice implements Disposable {
 
     const pointerHolder = new BigUint64Array(1);
     const result = VK.vkCreateDevice(
-      this.#physicalDevice,
+      this.__physicalDevice,
       ptr(getInstanceBuffer(createInfo)),
       null,
       ptr(pointerHolder),
@@ -621,18 +632,18 @@ export class VkDevice implements Disposable {
     if (result !== VkResult.SUCCESS) {
       throw new DynamicLibError(getResultMessage(result), 'Vulkan');
     }
-    this.#logicalDevice = Number(pointerHolder[0]!) as Pointer;
-    VK_DEBUG(`Logical device created: 0x${this.#logicalDevice.toString(16)}`);
+    this.__logicalDevice = Number(pointerHolder[0]!) as Pointer;
+    VK_DEBUG(`Logical device created: 0x${this.__logicalDevice.toString(16)}`);
 
     VK.vkGetDeviceQueue(
-      this.#logicalDevice,
+      this.__logicalDevice,
       indices.graphicsFamily,
       0,
       ptr(pointerHolder),
     );
     const graphicsQueue = Number(pointerHolder[0]!) as Pointer;
     VK.vkGetDeviceQueue(
-      this.#logicalDevice,
+      this.__logicalDevice,
       indices.presentFamily,
       0,
       ptr(pointerHolder),
@@ -641,12 +652,12 @@ export class VkDevice implements Disposable {
 
     VK_DEBUG(`Graphics Queue: 0x${graphicsQueue.toString(16)}`);
     VK_DEBUG(`Present Queue: 0x${presentQueue.toString(16)}`);
-    this.#graphicsQueue = graphicsQueue;
-    this.#presentQueue = presentQueue;
+    this.__graphicsQueue = graphicsQueue;
+    this.__presentQueue = presentQueue;
   }
 
-  #isDeviceSuitable(device: Pointer): boolean {
-    if (!this.#surface) return false;
+  private __isDeviceSuitable(device: Pointer): boolean {
+    if (!this.__surface) return false;
     const indices = this.findQueueFamilies(device);
 
     if (
@@ -659,10 +670,10 @@ export class VkDevice implements Disposable {
     )
       return false;
 
-    const extensionsSupported = this.#isDeviceExtensionSupported(device);
+    const extensionsSupported = this.__isDeviceExtensionSupported(device);
     if (!extensionsSupported) return false;
 
-    const details = this.#getSwapChainSupport(device);
+    const details = this.__getSwapChainSupport(device);
     if (details.formats.length === 0 || details.presentModes.length === 0)
       return false;
 
@@ -676,7 +687,7 @@ export class VkDevice implements Disposable {
     return true;
   }
 
-  #isDeviceExtensionSupported(device: Pointer) {
+  private __isDeviceExtensionSupported(device: Pointer) {
     const counter = new Uint32Array(1);
     VK.vkEnumerateDeviceExtensionProperties(device, null, ptr(counter), null);
 
@@ -701,7 +712,7 @@ export class VkDevice implements Disposable {
     );
   }
 
-  #getDeviceProperties(device: Pointer) {
+  private __getDeviceProperties(device: Pointer) {
     const props = instantiate(vkPhysicalDeviceProperties);
     VK.vkGetPhysicalDeviceProperties(device, ptr(getInstanceBuffer(props)));
 
@@ -717,18 +728,18 @@ export class VkDevice implements Disposable {
     };
   }
 
-  #getSwapChainSupport(device: Pointer) {
+  private __getSwapChainSupport(device: Pointer) {
     const capabilities = instantiate(vkSurfaceCapabilitiesKHR);
     VK.vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
       device,
-      this.#surface!,
+      this.__surface!,
       ptr(getInstanceBuffer(capabilities)),
     );
 
     const count = new Uint32Array(1);
     VK.vkGetPhysicalDeviceSurfaceFormatsKHR(
       device,
-      this.#surface!,
+      this.__surface!,
       ptr(count),
       null,
     );
@@ -744,7 +755,7 @@ export class VkDevice implements Disposable {
     const formatBuffer = new Uint8Array(count[0]! * formatSize);
     VK.vkGetPhysicalDeviceSurfaceFormatsKHR(
       device,
-      this.#surface!,
+      this.__surface!,
       ptr(count),
       ptr(formatBuffer),
     );
@@ -758,7 +769,7 @@ export class VkDevice implements Disposable {
     count[0] = 0;
     VK.vkGetPhysicalDeviceSurfacePresentModesKHR(
       device,
-      this.#surface!,
+      this.__surface!,
       ptr(count),
       null,
     );
@@ -773,7 +784,7 @@ export class VkDevice implements Disposable {
     const presentModeBuffer = new Uint32Array(count[0]!);
     VK.vkGetPhysicalDeviceSurfacePresentModesKHR(
       device,
-      this.#surface!,
+      this.__surface!,
       ptr(count),
       ptr(presentModeBuffer),
     );

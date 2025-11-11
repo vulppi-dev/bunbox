@@ -17,10 +17,10 @@ import { Calculable } from '@bunbox/utils';
  * ```
  */
 export class Rect extends Calculable<4> {
-  #x: number;
-  #y: number;
-  #width: number;
-  #height: number;
+  private __x: number;
+  private __y: number;
+  private __width: number;
+  private __height: number;
 
   /**
    * Create a rectangle.
@@ -36,57 +36,57 @@ export class Rect extends Calculable<4> {
     height: number = 1,
   ) {
     super();
-    this.#x = x;
-    this.#y = y;
-    this.#width = width;
-    this.#height = height;
+    this.__x = x;
+    this.__y = y;
+    this.__width = width;
+    this.__height = height;
   }
 
   /** X (left) position */
   get x(): number {
-    return this.#x;
+    return this.__x;
   }
 
   /** Y (top) position */
   get y(): number {
-    return this.#y;
+    return this.__y;
   }
 
   /** Left edge (alias of x) */
   get left(): number {
-    return this.#x;
+    return this.__x;
   }
 
   /** Top edge (alias of y) */
   get top(): number {
-    return this.#y;
+    return this.__y;
   }
 
   /** Right edge (x + width) */
   get right(): number {
-    return this.#x + this.#width;
+    return this.__x + this.__width;
   }
 
   /** Bottom edge (y + height) */
   get bottom(): number {
-    return this.#y + this.#height;
+    return this.__y + this.__height;
   }
 
   /** Width (non-negative recommended) */
   get width(): number {
-    return this.#width;
+    return this.__width;
   }
 
   /** Height (non-negative recommended) */
   get height(): number {
-    return this.#height;
+    return this.__height;
   }
   /**
    * Set right edge. Adjusts width to keep the same x.
    * @param value New right edge coordinate
    */
   set right(value: number) {
-    this.#width = value - this.#x;
+    this.__width = value - this.__x;
     this.markAsDirty();
   }
   /**
@@ -94,130 +94,130 @@ export class Rect extends Calculable<4> {
    * @param value New bottom edge coordinate
    */
   set bottom(value: number) {
-    this.#height = value - this.#y;
+    this.__height = value - this.__y;
     this.markAsDirty();
   }
   /** X (left) position */
   set x(value: number) {
-    this.#x = value;
+    this.__x = value;
     this.markAsDirty();
   }
   /** Y (top) position */
   set y(value: number) {
-    this.#y = value;
+    this.__y = value;
     this.markAsDirty();
   }
   /** Set left edge (alias of x) */
   set left(value: number) {
-    this.#x = value;
+    this.__x = value;
     this.markAsDirty();
   }
   /** Set top edge (alias of y) */
   set top(value: number) {
-    this.#y = value;
+    this.__y = value;
     this.markAsDirty();
   }
   /** Width (non-negative recommended) */
   set width(value: number) {
-    this.#width = value;
+    this.__width = value;
     this.markAsDirty();
   }
   /** Height (non-negative recommended) */
   set height(value: number) {
-    this.#height = value;
+    this.__height = value;
     this.markAsDirty();
   }
 
   /** Component-wise addition with another rect. */
   override sum(vector: this): this {
-    this.#x += vector.#x;
-    this.#y += vector.#y;
-    this.#width += vector.#width;
-    this.#height += vector.#height;
+    this.__x += vector.__x;
+    this.__y += vector.__y;
+    this.__width += vector.__width;
+    this.__height += vector.__height;
     return this.markAsDirty();
   }
 
   /** Component-wise subtraction with another rect. */
   override sub(vector: this): this {
-    this.#x -= vector.#x;
-    this.#y -= vector.#y;
-    this.#width -= vector.#width;
-    this.#height -= vector.#height;
+    this.__x -= vector.__x;
+    this.__y -= vector.__y;
+    this.__width -= vector.__width;
+    this.__height -= vector.__height;
     return this.markAsDirty();
   }
 
   /** Component-wise multiplication with another rect. */
   override mul(vector: this): this {
-    this.#x *= vector.#x;
-    this.#y *= vector.#y;
-    this.#width *= vector.#width;
-    this.#height *= vector.#height;
+    this.__x *= vector.__x;
+    this.__y *= vector.__y;
+    this.__width *= vector.__width;
+    this.__height *= vector.__height;
     return this.markAsDirty();
   }
 
   /** Component-wise division by another rect. */
   override div(vector: this): this {
-    this.#x /= vector.#x;
-    this.#y /= vector.#y;
-    this.#width /= vector.#width;
-    this.#height /= vector.#height;
+    this.__x /= vector.__x;
+    this.__y /= vector.__y;
+    this.__width /= vector.__width;
+    this.__height /= vector.__height;
     return this.markAsDirty();
   }
 
   /** Scale width and height by a scalar (x and y unchanged). */
   override mulS(scalar: number): this {
-    this.#width *= scalar;
-    this.#height *= scalar;
+    this.__width *= scalar;
+    this.__height *= scalar;
     return this.markAsDirty();
   }
 
   /** Divide width and height by a scalar (x and y unchanged). */
   override divS(scalar: number): this {
-    this.#width /= scalar;
-    this.#height /= scalar;
+    this.__width /= scalar;
+    this.__height /= scalar;
     return this.markAsDirty();
   }
 
   /** Dot product across [x, y, width, height]. */
   override dot(vector: this): number {
     return (
-      this.#x * vector.#x +
-      this.#y * vector.#y +
-      this.#width * vector.#width +
-      this.#height * vector.#height
+      this.__x * vector.__x +
+      this.__y * vector.__y +
+      this.__width * vector.__width +
+      this.__height * vector.__height
     );
   }
 
   /** Copy components from another rect. */
   override copy(vector: this): this {
-    this.#x = vector.#x;
-    this.#y = vector.#y;
-    this.#width = vector.#width;
-    this.#height = vector.#height;
+    this.__x = vector.__x;
+    this.__y = vector.__y;
+    this.__width = vector.__width;
+    this.__height = vector.__height;
     return this.markAsDirty();
   }
 
   /** Set all components. */
   override set(x: number, y: number, width: number, height: number): this {
-    this.#x = x;
-    this.#y = y;
-    this.#width = width;
-    this.#height = height;
+    this.__x = x;
+    this.__y = y;
+    this.__width = width;
+    this.__height = height;
     return this.markAsDirty();
   }
 
   /** Returns [x, y, width, height]. */
   override toArray(): [number, number, number, number] {
-    return [this.#x, this.#y, this.#width, this.#height];
+    return [this.__x, this.__y, this.__width, this.__height];
   }
 
   /** Returns Float32Array [x, y, width, height]. */
   override toBuffer(): Float32Array {
-    return new Float32Array([this.#x, this.#y, this.#width, this.#height]);
+    return new Float32Array([this.__x, this.__y, this.__width, this.__height]);
   }
 
   /** String representation for debugging. */
   override toString(): string {
-    return `Rect(${this.#x}, ${this.#y}, ${this.#width}, ${this.#height})`;
+    return `Rect(${this.__x}, ${this.__y}, ${this.__width}, ${this.__height})`;
   }
 }

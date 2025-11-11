@@ -1,4 +1,4 @@
-import simpleShaderSource from './simpleShader.wgsl';
-import triangleShaderSource from './simpleShader.wgsl';
+import simpleShaderSource from './simple_shader.wgsl';
+import triangleShaderSource from './triangle_shader.wgsl';
 
 export { simpleShaderSource, triangleShaderSource };

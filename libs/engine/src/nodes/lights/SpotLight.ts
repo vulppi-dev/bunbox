@@ -32,9 +32,9 @@ import { Light } from './Light';
  * ```
  */
 export class SpotLight extends Light {
-  #range: number = 10.0;
-  #innerAngle: number = Math.PI / 8; // 22.5 degrees
-  #outerAngle: number = Math.PI / 6; // 30 degrees
+  private __range: number = 10.0;
+  private __innerAngle: number = Math.PI / 8; // 22.5 degrees
+  private __outerAngle: number = Math.PI / 6; // 30 degrees
 
   /**
    * Light type identifier.
@@ -53,7 +53,7 @@ export class SpotLight extends Light {
    * Default: 10.0
    */
   get range(): number {
-    return this.#range;
+    return this.__range;
   }
 
   /**
@@ -64,7 +64,7 @@ export class SpotLight extends Light {
    * Default: π/8 (22.5°)
    */
   get innerAngle(): number {
-    return this.#innerAngle;
+    return this.__innerAngle;
   }
 
   /**
@@ -75,7 +75,7 @@ export class SpotLight extends Light {
    * Default: π/6 (30°)
    */
   get outerAngle(): number {
-    return this.#outerAngle;
+    return this.__outerAngle;
   }
 
   /**
@@ -84,7 +84,7 @@ export class SpotLight extends Light {
    * @param value - Range in meters (must be > 0)
    */
   set range(value: number) {
-    this.#range = Math.max(0.01, value);
+    this.__range = Math.max(0.01, value);
     this.markAsDirty();
   }
 
@@ -94,7 +94,7 @@ export class SpotLight extends Light {
    * @param value - Angle in radians (0 to outerAngle)
    */
   set innerAngle(value: number) {
-    this.#innerAngle = Math.max(0, Math.min(value, this.#outerAngle));
+    this.__innerAngle = Math.max(0, Math.min(value, this.__outerAngle));
     this.markAsDirty();
   }
 
@@ -104,7 +104,7 @@ export class SpotLight extends Light {
    * @param value - Angle in radians (innerAngle to π)
    */
   set outerAngle(value: number) {
-    this.#outerAngle = Math.max(this.#innerAngle, Math.min(value, Math.PI));
+    this.__outerAngle = Math.max(this.__innerAngle, Math.min(value, Math.PI));
     this.markAsDirty();
   }
 
@@ -147,7 +147,7 @@ export class SpotLight extends Light {
     const distance = Math.sqrt(distanceSq);
 
     // Early out if beyond range
-    if (distance >= this.#range) {
+    if (distance >= this.__range) {
       return 0;
     }
 
@@ -160,7 +160,7 @@ export class SpotLight extends Light {
     const angle = Math.acos(Math.max(-1, Math.min(1, cosAngle)));
 
     // Early out if outside outer cone
-    if (angle > this.#outerAngle) {
+    if (angle > this.__outerAngle) {
       return 0;
     }
 
@@ -168,14 +168,14 @@ export class SpotLight extends Light {
     const distanceAttenuation = 1.0 / (1.0 + distanceSq);
 
     // Smooth range cutoff
-    const rangeFactor = distance / this.#range;
+    const rangeFactor = distance / this.__range;
     const smoothRangeCutoff = 1.0 - rangeFactor * rangeFactor;
 
     // Angular attenuation (smoothstep between inner and outer angles)
     let angularAttenuation = 1.0;
-    if (angle > this.#innerAngle) {
+    if (angle > this.__innerAngle) {
       const angleFactor =
-        (angle - this.#innerAngle) / (this.#outerAngle - this.#innerAngle);
+        (angle - this.__innerAngle) / (this.__outerAngle - this.__innerAngle);
       // Smoothstep
       angularAttenuation =
         1.0 - angleFactor * angleFactor * (3.0 - 2.0 * angleFactor);

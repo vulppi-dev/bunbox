@@ -23,12 +23,12 @@ export type BufferUsage = 'vertex' | 'index' | 'uniform' | 'staging';
  * Manages GPU buffer allocation, memory binding, and data transfer
  */
 export class VkBuffer implements Disposable {
-  #device: Pointer;
-  #physicalDevice: Pointer;
-  #instance: Pointer;
-  #memory: Pointer;
-  #size: bigint;
-  #usage: BufferUsage;
+  private __device: Pointer;
+  private __physicalDevice: Pointer;
+  private __instance: Pointer;
+  private __memory: Pointer;
+  private __size: bigint;
+  private __usage: BufferUsage;
 
   constructor(
     device: Pointer,
@@ -37,17 +37,17 @@ export class VkBuffer implements Disposable {
     usage: BufferUsage,
     data?: ArrayBufferView,
   ) {
-    this.#device = device;
-    this.#physicalDevice = physicalDevice;
-    this.#size = BigInt(size);
-    this.#usage = usage;
+    this.__device = device;
+    this.__physicalDevice = physicalDevice;
+    this.__size = BigInt(size);
+    this.__usage = usage;
 
     VK_DEBUG(`Creating ${usage} buffer of size ${size} bytes`);
 
-    this.#instance = this.#createBuffer(size, usage);
-    this.#memory = this.#allocateMemory();
+    this.__instance = this.__createBuffer(size, usage);
+    this.__memory = this.__allocateMemory();
 
-    VK_DEBUG(`Buffer created: 0x${this.#instance.toString(16)}`);
+    VK_DEBUG(`Buffer created: 0x${this.__instance.toString(16)}`);
 
     if (data) {
       this.upload(data);
@@ -55,33 +55,33 @@ export class VkBuffer implements Disposable {
   }
 
   get instance(): Pointer {
-    return this.#instance;
+    return this.__instance;
   }
 
   get memory(): Pointer {
-    return this.#memory;
+    return this.__memory;
   }
 
   get size(): bigint {
-    return this.#size;
+    return this.__size;
   }
 
   get usage(): BufferUsage {
-    return this.#usage;
+    return this.__usage;
   }
 
   /**
    * Upload data to the buffer
    */
   upload(data: ArrayBufferView): void {
-    VK_DEBUG(`Uploading ${data.byteLength} bytes to ${this.#usage} buffer`);
+    VK_DEBUG(`Uploading ${data.byteLength} bytes to ${this.__usage} buffer`);
 
     const dataPointer = new BigUint64Array(1);
     const result = VK.vkMapMemory(
-      this.#device,
-      this.#memory,
+      this.__device,
+      this.__memory,
       0n,
-      this.#size,
+      this.__size,
       0,
       ptr(dataPointer),
     );
@@ -101,38 +101,38 @@ export class VkBuffer implements Disposable {
     );
 
     // Create a view of the mapped memory and copy
-    const copySize = Math.min(sourceBuffer.byteLength, Number(this.#size));
+    const copySize = Math.min(sourceBuffer.byteLength, Number(this.__size));
     const destBuffer = new Uint8Array(
       // @ts-expect-error - Bun FFI allows creating typed array from pointer
-      Buffer.from(mappedMemory, Number(this.#size)),
+      Buffer.from(mappedMemory, Number(this.__size)),
     );
     destBuffer.set(sourceBuffer.subarray(0, copySize));
 
-    VK.vkUnmapMemory(this.#device, this.#memory);
+    VK.vkUnmapMemory(this.__device, this.__memory);
 
     VK_DEBUG('Upload complete');
   }
 
   dispose(): void | Promise<void> {
     VK_DEBUG(
-      `Destroying ${this.#usage} buffer: 0x${this.#instance.toString(16)}`,
+      `Destroying ${this.__usage} buffer: 0x${this.__instance.toString(16)}`,
     );
 
-    if (this.#memory) {
-      VK.vkFreeMemory(this.#device, this.#memory, null);
+    if (this.__memory) {
+      VK.vkFreeMemory(this.__device, this.__memory, null);
     }
 
-    if (this.#instance) {
-      VK.vkDestroyBuffer(this.#device, this.#instance, null);
+    if (this.__instance) {
+      VK.vkDestroyBuffer(this.__device, this.__instance, null);
     }
 
     VK_DEBUG('Buffer destroyed');
   }
 
-  #createBuffer(size: number, usage: BufferUsage): Pointer {
+  private __createBuffer(size: number, usage: BufferUsage): Pointer {
     const createInfo = instantiate(vkBufferCreateInfo);
     createInfo.size = BigInt(size);
-    createInfo.usage = this.#getUsageFlags(usage);
+    createInfo.usage = this.__getUsageFlags(usage);
     createInfo.sharingMode = VkSharingMode.EXCLUSIVE;
     createInfo.queueFamilyIndexCount = 0;
     createInfo.pQueueFamilyIndices = 0n;
@@ -140,7 +140,7 @@ export class VkBuffer implements Disposable {
 
     const bufferPointer = new BigUint64Array(1);
     const result = VK.vkCreateBuffer(
-      this.#device,
+      this.__device,
       ptr(getInstanceBuffer(createInfo)),
       null,
       ptr(bufferPointer),
@@ -153,17 +153,17 @@ export class VkBuffer implements Disposable {
     return Number(bufferPointer[0]!) as Pointer;
   }
 
-  #allocateMemory(): Pointer {
+  private __allocateMemory(): Pointer {
     const memRequirements = instantiate(vkMemoryRequirements);
     VK.vkGetBufferMemoryRequirements(
-      this.#device,
-      this.#instance,
+      this.__device,
+      this.__instance,
       ptr(getInstanceBuffer(memRequirements)),
     );
 
     const allocInfo = instantiate(vkMemoryAllocateInfo);
     allocInfo.allocationSize = memRequirements.size;
-    allocInfo.memoryTypeIndex = this.#findMemoryType(
+    allocInfo.memoryTypeIndex = this.__findMemoryType(
       memRequirements.memoryTypeBits,
       VkMemoryPropertyFlagBits.HOST_VISIBLE_BIT |
         VkMemoryPropertyFlagBits.HOST_COHERENT_BIT,
@@ -171,7 +171,7 @@ export class VkBuffer implements Disposable {
 
     const memoryPointer = new BigUint64Array(1);
     const result = VK.vkAllocateMemory(
-      this.#device,
+      this.__device,
       ptr(getInstanceBuffer(allocInfo)),
       null,
       ptr(memoryPointer),
@@ -185,24 +185,24 @@ export class VkBuffer implements Disposable {
 
     // Bind buffer to memory
     const bindResult = VK.vkBindBufferMemory(
-      this.#device,
-      this.#instance,
+      this.__device,
+      this.__instance,
       memory,
       0n,
     );
 
     if (bindResult !== VkResult.SUCCESS) {
-      VK.vkFreeMemory(this.#device, memory, null);
+      VK.vkFreeMemory(this.__device, memory, null);
       throw new DynamicLibError(getResultMessage(bindResult), 'Vulkan');
     }
 
     return memory;
   }
 
-  #findMemoryType(typeFilter: number, properties: number): number {
+  private __findMemoryType(typeFilter: number, properties: number): number {
     const memProperties = instantiate(vkPhysicalDeviceMemoryProperties);
     VK.vkGetPhysicalDeviceMemoryProperties(
-      this.#physicalDevice,
+      this.__physicalDevice,
       ptr(getInstanceBuffer(memProperties)),
     );
 
@@ -222,7 +222,7 @@ export class VkBuffer implements Disposable {
     );
   }
 
-  #getUsageFlags(usage: BufferUsage): number {
+  private __getUsageFlags(usage: BufferUsage): number {
     switch (usage) {
       case 'vertex':
         return VkBufferUsageFlagBits.VERTEX_BUFFER_BIT;

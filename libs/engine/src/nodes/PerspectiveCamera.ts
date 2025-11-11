@@ -30,8 +30,8 @@ import { AbstractCamera } from './AbstractCamera';
  * ```
  */
 export class PerspectiveCamera extends AbstractCamera {
-  #fov: number = Math.PI * 0.333;
-  #aspect: number = 1;
+  private __fov: number = Math.PI * 0.333;
+  private __aspect: number = 1;
 
   /**
    * Vertical field of view in radians.
@@ -48,7 +48,7 @@ export class PerspectiveCamera extends AbstractCamera {
    * - 90°: Math.PI / 2
    */
   get fov(): number {
-    return this.#fov;
+    return this.__fov;
   }
 
   /**
@@ -64,7 +64,7 @@ export class PerspectiveCamera extends AbstractCamera {
    * ```
    */
   get aspect(): number {
-    return this.#aspect;
+    return this.__aspect;
   }
 
   /**
@@ -73,7 +73,7 @@ export class PerspectiveCamera extends AbstractCamera {
    * @param value - FOV in radians (typically 0.5 to 2.0)
    */
   set fov(value: number) {
-    this.#fov = value;
+    this.__fov = value;
     this.markAsDirty();
   }
 
@@ -83,7 +83,7 @@ export class PerspectiveCamera extends AbstractCamera {
    * @param value - Width / height (typically 1.333 to 2.0)
    */
   set aspect(value: number) {
-    this.#aspect = value;
+    this.__aspect = value;
     this.markAsDirty();
   }
 
@@ -102,11 +102,11 @@ export class PerspectiveCamera extends AbstractCamera {
    * @override
    */
   protected override _processProjectionMatrix(): void {
-    const a = this.#aspect || 1;
+    const a = this.__aspect || 1;
     const n = this.near;
     const fFar = this.far;
 
-    const f = 1 / Math.tan(this.#fov * 0.5);
+    const f = 1 / Math.tan(this.__fov * 0.5);
 
     const invNF = 1 / (n - fFar);
     const A = fFar * invNF;

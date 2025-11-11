@@ -23,8 +23,8 @@ import { Node3D } from './Node3D';
  * ```
  */
 export class Mesh extends Node3D {
-  #geometry: GeometryPointer | null = null;
-  #material: Material | null = null;
+  private __geometry: GeometryPointer | null = null;
+  private __material: Material | null = null;
 
   /**
    * Geometry containing vertex/index data to be rendered.
@@ -32,7 +32,7 @@ export class Mesh extends Node3D {
    * Use GeometryManager to create geometry pointers from Geometry instances.
    */
   get geometry(): GeometryPointer | null {
-    return this.#geometry;
+    return this.__geometry;
   }
 
   /**
@@ -41,7 +41,7 @@ export class Mesh extends Node3D {
    * Includes shader, textures, uniforms, and rasterization state.
    */
   get material(): Material | null {
-    return this.#material;
+    return this.__material;
   }
 
   /**
@@ -52,7 +52,7 @@ export class Mesh extends Node3D {
    * @param value - Geometry pointer or null to clear
    */
   set geometry(value: GeometryPointer | null) {
-    this.#geometry = value;
+    this.__geometry = value;
     this.markAsDirty();
   }
 
@@ -64,7 +64,7 @@ export class Mesh extends Node3D {
    * @param value - Material instance or null to clear
    */
   set material(value: Material | null) {
-    this.#material = value;
+    this.__material = value;
     this.markAsDirty();
   }
 }

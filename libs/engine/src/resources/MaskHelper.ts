@@ -57,16 +57,16 @@ import { sha } from 'bun';
  */
 export class MaskHelper extends DirtyState {
   /** Internal 32-bit unsigned mask. Default is 255 (bits 0..7 enabled). */
-  #value = 255 >>> 0;
+  private __value = 255 >>> 0;
 
   // Validation helpers
-  #validateIndex(index: number): void {
+  private __validateIndex(index: number): void {
     if (!Number.isInteger(index))
       throw new Error('Mask index must be an integer.');
     if (index < 0 || index > 31)
       throw new Error('Mask index must be between 0 and 31.');
   }
-  #validateMask(mask: number): void {
+  private __validateMask(mask: number): void {
     if (!Number.isFinite(mask) || !Number.isInteger(mask))
       throw new Error('Mask value must be a finite integer.');
     if (mask < 0 || mask > 0xffffffff)
@@ -81,7 +81,7 @@ export class MaskHelper extends DirtyState {
    * @returns Hex string representing the mask state
    */
   get hash(): string {
-    return sha(JSON.stringify({ m: this.#value >>> 0 }), 'hex');
+    return sha(JSON.stringify({ m: this.__value >>> 0 }), 'hex');
   }
 
   // Bit queries
@@ -101,8 +101,8 @@ export class MaskHelper extends DirtyState {
    * ```
    */
   has(index: number): boolean {
-    this.#validateIndex(index);
-    return ((this.#value >>> index) & 1) === 1;
+    this.__validateIndex(index);
+    return ((this.__value >>> index) & 1) === 1;
   }
   /**
    * Legacy alias for {@link has}.
@@ -131,14 +131,14 @@ export class MaskHelper extends DirtyState {
    * ```
    */
   setBit(index: number, state: boolean): this {
-    this.#validateIndex(index);
-    const before = this.#value >>> 0;
+    this.__validateIndex(index);
+    const before = this.__value >>> 0;
     let next = before;
     if (state) next = before | (1 << index);
     else next = before & ~(1 << index);
     next >>>= 0;
     if (next === before) return this;
-    this.#value = next;
+    this.__value = next;
     return this.markAsDirty();
   }
   /**
@@ -164,11 +164,11 @@ export class MaskHelper extends DirtyState {
    * ```
    */
   toggle(index: number): this {
-    this.#validateIndex(index);
-    const before = this.#value >>> 0;
+    this.__validateIndex(index);
+    const before = this.__value >>> 0;
     const next = (before ^ (1 << index)) >>> 0;
     if (next === before) return this;
-    this.#value = next;
+    this.__value = next;
     return this.markAsDirty();
   }
   /**
@@ -187,7 +187,7 @@ export class MaskHelper extends DirtyState {
    * @returns Mask value [0, 4294967295]
    */
   get(): number {
-    return this.#value >>> 0;
+    return this.__value >>> 0;
   }
   /**
    * Set the entire mask value at once.
@@ -206,10 +206,10 @@ export class MaskHelper extends DirtyState {
    * ```
    */
   set(value: number): this {
-    this.#validateMask(value);
+    this.__validateMask(value);
     const next = value >>> 0;
-    if (next === this.#value) return this;
-    this.#value = next;
+    if (next === this.__value) return this;
+    this.__value = next;
     return this.markAsDirty();
   }
 
@@ -238,9 +238,9 @@ export class MaskHelper extends DirtyState {
    * @returns this for chaining
    */
   copy(m: MaskHelper): this {
-    const next = m.#value >>> 0;
-    if (next === this.#value) return this;
-    this.#value = next;
+    const next = m.__value >>> 0;
+    if (next === this.__value) return this;
+    this.__value = next;
     return this.markAsDirty();
   }
 
@@ -251,7 +251,7 @@ export class MaskHelper extends DirtyState {
    */
   clone(): this {
     const n = new MaskHelper();
-    n.#value = this.#value >>> 0;
+    n.__value = this.__value >>> 0;
     n.markAsDirty();
     return n as this;
   }
@@ -280,7 +280,7 @@ export class MaskHelper extends DirtyState {
    * ```
    */
   overlaps(mask: MaskHelper): boolean {
-    return (this.#value & mask.#value) !== 0;
+    return (this.__value & mask.__value) !== 0;
   }
   /**
    * Legacy alias for {@link overlaps}.
@@ -294,21 +294,21 @@ export class MaskHelper extends DirtyState {
     const mask =
       typeof maskOrHelper === 'number'
         ? maskOrHelper >>> 0
-        : maskOrHelper.#value >>> 0;
-    return (this.#value & mask) !== 0;
+        : maskOrHelper.__value >>> 0;
+    return (this.__value & mask) !== 0;
   }
 
   hasAll(maskOrHelper: number | MaskHelper): boolean {
     const mask =
       typeof maskOrHelper === 'number'
         ? maskOrHelper >>> 0
-        : maskOrHelper.#value >>> 0;
-    return (this.#value & mask) === mask >>> 0;
+        : maskOrHelper.__value >>> 0;
+    return (this.__value & mask) === mask >>> 0;
   }
 
   toArray(): number[] {
     const out: number[] = [];
-    const m = this.#value >>> 0;
+    const m = this.__value >>> 0;
     for (let i = 0; i < 32; i++) if ((m & (1 << i)) !== 0) out.push(i);
     return out;
   }
@@ -317,7 +317,7 @@ export class MaskHelper extends DirtyState {
     if (!Array.isArray(indices)) throw new Error('Indices must be an array.');
     let mask = 0;
     for (const idx of indices) {
-      this.#validateIndex(idx);
+      this.__validateIndex(idx);
       mask |= 1 << idx;
     }
     return this.set(mask >>> 0);
@@ -331,6 +331,6 @@ export class MaskHelper extends DirtyState {
   }
 
   override toString(): string {
-    return `MaskHelper(0x${(this.#value >>> 0).toString(16).padStart(8, '0')})`;
+    return `MaskHelper(0x${(this.__value >>> 0).toString(16).padStart(8, '0')})`;
   }
 }

@@ -9,94 +9,94 @@ import { VkBuffer } from './VkBuffer';
  * Manages GPU buffers for vertex data, indices, and UV coordinates
  */
 export class VkGeometry implements Disposable {
-  #device: Pointer;
-  #physicalDevice: Pointer;
-  #geometry: Geometry;
+  private __device: Pointer;
+  private __physicalDevice: Pointer;
+  private __geometry: Geometry;
 
-  #vertexBuffer: VkBuffer | null = null;
-  #normalBuffer: VkBuffer | null = null;
-  #indexBuffer: VkBuffer | null = null;
-  #uvBuffers: VkBuffer[] = [];
+  private __vertexBuffer: VkBuffer | null = null;
+  private __normalBuffer: VkBuffer | null = null;
+  private __indexBuffer: VkBuffer | null = null;
+  private __uvBuffers: VkBuffer[] = [];
 
-  #isDirty: boolean = true;
+  private __isDirty: boolean = true;
 
   constructor(device: Pointer, physicalDevice: Pointer, geometry: Geometry) {
-    this.#device = device;
-    this.#physicalDevice = physicalDevice;
-    this.#geometry = geometry;
+    this.__device = device;
+    this.__physicalDevice = physicalDevice;
+    this.__geometry = geometry;
 
     VK_DEBUG(
       `Creating VkGeometry: ${geometry.vertexCount} vertices, ${geometry.indexCount} indices, ${geometry.uvLayerCount} UV layers`,
     );
 
-    this.#createBuffers();
+    this.__createBuffers();
   }
 
   get vertexBuffer(): VkBuffer | null {
-    return this.#vertexBuffer;
+    return this.__vertexBuffer;
   }
 
   get normalBuffer(): VkBuffer | null {
-    return this.#normalBuffer;
+    return this.__normalBuffer;
   }
 
   get indexBuffer(): VkBuffer | null {
-    return this.#indexBuffer;
+    return this.__indexBuffer;
   }
 
   get uvBuffers(): readonly VkBuffer[] {
-    return this.#uvBuffers;
+    return this.__uvBuffers;
   }
 
   get geometry(): Geometry {
-    return this.#geometry;
+    return this.__geometry;
   }
 
   get vertexCount(): number {
-    return this.#geometry.vertexCount;
+    return this.__geometry.vertexCount;
   }
 
   get indexCount(): number {
-    return this.#geometry.indexCount;
+    return this.__geometry.indexCount;
   }
 
   /**
    * Update GPU buffers if geometry data has changed
    */
   update(): void {
-    if (!this.#geometry.isDirty && !this.#isDirty) {
+    if (!this.__geometry.isDirty && !this.__isDirty) {
       return;
     }
 
     VK_DEBUG('Updating VkGeometry buffers');
 
     // Upload vertex data
-    if (this.#vertexBuffer) {
-      this.#vertexBuffer.upload(this.#geometry.vertex);
+    if (this.__vertexBuffer) {
+      this.__vertexBuffer.upload(this.__geometry.vertex);
     }
 
     // Upload normal data
-    if (this.#normalBuffer) {
-      this.#normalBuffer.upload(this.#geometry.normal);
+    if (this.__normalBuffer) {
+      this.__normalBuffer.upload(this.__geometry.normal);
     }
 
     // Upload index data
-    if (this.#indexBuffer) {
-      this.#indexBuffer.upload(this.#geometry.indices);
+    if (this.__indexBuffer) {
+      this.__indexBuffer.upload(this.__geometry.indices);
     }
 
     // Upload UV data
-    const uvs = this.#geometry.uvs;
+    const uvs = this.__geometry.uvs;
     for (let i = 0; i < uvs.length; i++) {
-      const uvBuffer = this.#uvBuffers[i];
+      const uvBuffer = this.__uvBuffers[i];
       const uvData = uvs[i];
       if (uvBuffer && uvData) {
         uvBuffer.upload(uvData);
       }
     }
 
-    this.#geometry.markAsClean();
-    this.#isDirty = false;
+    this.__geometry.markAsClean();
+    this.__isDirty = false;
 
     VK_DEBUG('VkGeometry buffers updated');
   }
@@ -107,28 +107,28 @@ export class VkGeometry implements Disposable {
   rebuild(): void {
     VK_DEBUG('Rebuilding VkGeometry buffers');
 
-    this.#releaseBuffers();
-    this.#createBuffers();
-    this.#isDirty = true;
+    this.__releaseBuffers();
+    this.__createBuffers();
+    this.__isDirty = true;
     this.update();
   }
 
   dispose(): void | Promise<void> {
     VK_DEBUG('Disposing VkGeometry');
-    this.#releaseBuffers();
+    this.__releaseBuffers();
   }
 
-  #createBuffers(): void {
-    const vertexCount = this.#geometry.vertexCount;
-    const indexCount = this.#geometry.indexCount;
-    const uvLayerCount = this.#geometry.uvLayerCount;
+  private __createBuffers(): void {
+    const vertexCount = this.__geometry.vertexCount;
+    const indexCount = this.__geometry.indexCount;
+    const uvLayerCount = this.__geometry.uvLayerCount;
 
     // Create vertex buffer (3 floats per vertex: x, y, z)
     if (vertexCount > 0) {
       const vertexSize = vertexCount * 3 * Float32Array.BYTES_PER_ELEMENT;
-      this.#vertexBuffer = new VkBuffer(
-        this.#device,
-        this.#physicalDevice,
+      this.__vertexBuffer = new VkBuffer(
+        this.__device,
+        this.__physicalDevice,
         vertexSize,
         'vertex',
       );
@@ -138,9 +138,9 @@ export class VkGeometry implements Disposable {
     // Create normal buffer (3 floats per vertex: x, y, z)
     if (vertexCount > 0) {
       const normalSize = vertexCount * 3 * Float32Array.BYTES_PER_ELEMENT;
-      this.#normalBuffer = new VkBuffer(
-        this.#device,
-        this.#physicalDevice,
+      this.__normalBuffer = new VkBuffer(
+        this.__device,
+        this.__physicalDevice,
         normalSize,
         'vertex',
       );
@@ -150,9 +150,9 @@ export class VkGeometry implements Disposable {
     // Create index buffer
     if (indexCount > 0) {
       const indexSize = indexCount * Uint32Array.BYTES_PER_ELEMENT;
-      this.#indexBuffer = new VkBuffer(
-        this.#device,
-        this.#physicalDevice,
+      this.__indexBuffer = new VkBuffer(
+        this.__device,
+        this.__physicalDevice,
         indexSize,
         'index',
       );
@@ -164,28 +164,28 @@ export class VkGeometry implements Disposable {
       const uvSize = vertexCount * 2 * Float32Array.BYTES_PER_ELEMENT;
       for (let i = 0; i < uvLayerCount; i++) {
         const uvBuffer = new VkBuffer(
-          this.#device,
-          this.#physicalDevice,
+          this.__device,
+          this.__physicalDevice,
           uvSize,
           'vertex',
         );
-        this.#uvBuffers.push(uvBuffer);
+        this.__uvBuffers.push(uvBuffer);
         VK_DEBUG(`Created UV buffer ${i}: ${uvSize} bytes`);
       }
     }
   }
 
-  #releaseBuffers(): void {
-    this.#vertexBuffer?.dispose();
-    this.#vertexBuffer = null;
+  private __releaseBuffers(): void {
+    this.__vertexBuffer?.dispose();
+    this.__vertexBuffer = null;
 
-    this.#normalBuffer?.dispose();
-    this.#normalBuffer = null;
+    this.__normalBuffer?.dispose();
+    this.__normalBuffer = null;
 
-    this.#indexBuffer?.dispose();
-    this.#indexBuffer = null;
+    this.__indexBuffer?.dispose();
+    this.__indexBuffer = null;
 
-    this.#uvBuffers.forEach((buffer) => buffer.dispose());
-    this.#uvBuffers = [];
+    this.__uvBuffers.forEach((buffer) => buffer.dispose());
+    this.__uvBuffers = [];
   }
 }

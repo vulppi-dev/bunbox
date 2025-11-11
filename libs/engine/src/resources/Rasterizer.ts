@@ -74,11 +74,11 @@ export type BlendState = {
 };
 
 export class Rasterizer extends DirtyState {
-  #hash = '';
-  #fillMode: RasterizerFillMode = 'fill';
-  #cull: RasterizerCullMode = 'none';
-  #frontFace: RasterizerFrontFace = 'cw';
-  #depthStencil: DepthStencilState = {
+  private __hash = '';
+  private __fillMode: RasterizerFillMode = 'fill';
+  private __cull: RasterizerCullMode = 'none';
+  private __frontFace: RasterizerFrontFace = 'cw';
+  private __depthStencil: DepthStencilState = {
     format: 'depth24plus',
     depthWriteEnabled: true,
     depthCompare: 'less',
@@ -100,12 +100,12 @@ export class Rasterizer extends DirtyState {
     depthBiasSlopeScale: 0,
     depthBiasClamp: 0,
   };
-  #multisample: MultisampleState = {
+  private __multisample: MultisampleState = {
     count: 1,
     mask: new MaskHelper(),
     alphaToCoverageEnabled: false,
   };
-  #blend: BlendState = {
+  private __blend: BlendState = {
     enabled: false,
     color: { srcFactor: 'one', dstFactor: 'zero', operation: 'add' },
     alpha: { srcFactor: 'one', dstFactor: 'zero', operation: 'add' },
@@ -138,41 +138,41 @@ export class Rasterizer extends DirtyState {
     if (options.multisample) this.updateMultisample(options.multisample);
     if (options.blend) this.updateBlend(options.blend);
     // Ensure hash is initialized even if no options provided
-    if (!this.#hash) this.#updateHash();
+    if (!this.__hash) this.__updateHash();
     // Match Material behavior (new instances start dirty)
     this.markAsDirty();
   }
 
   get fillMode(): RasterizerFillMode {
-    return this.#fillMode;
+    return this.__fillMode;
   }
 
   get cull(): RasterizerCullMode {
-    return this.#cull;
+    return this.__cull;
   }
 
   get frontFace(): RasterizerFrontFace {
-    return this.#frontFace;
+    return this.__frontFace;
   }
 
   get hash(): string {
-    return this.#hash;
+    return this.__hash;
   }
 
   // Depth/Stencil
   get depthStencil(): Readonly<DepthStencilState> {
     return {
-      ...this.#depthStencil,
-      stencilFront: { ...this.#depthStencil.stencilFront },
-      stencilBack: { ...this.#depthStencil.stencilBack },
+      ...this.__depthStencil,
+      stencilFront: { ...this.__depthStencil.stencilFront },
+      stencilBack: { ...this.__depthStencil.stencilBack },
       stencilReadMask: (() => {
         const m = new MaskHelper();
-        m.set(this.#depthStencil.stencilReadMask.get()).markAsClean();
+        m.set(this.__depthStencil.stencilReadMask.get()).markAsClean();
         return m;
       })(),
       stencilWriteMask: (() => {
         const m = new MaskHelper();
-        m.set(this.#depthStencil.stencilWriteMask.get()).markAsClean();
+        m.set(this.__depthStencil.stencilWriteMask.get()).markAsClean();
         return m;
       })(),
     };
@@ -181,10 +181,10 @@ export class Rasterizer extends DirtyState {
   // Multisample
   get multisample(): Readonly<MultisampleState> {
     return {
-      ...this.#multisample,
+      ...this.__multisample,
       mask: (() => {
         const m = new MaskHelper();
-        m.set(this.#multisample.mask.get()).markAsClean();
+        m.set(this.__multisample.mask.get()).markAsClean();
         return m;
       })(),
     };
@@ -193,41 +193,41 @@ export class Rasterizer extends DirtyState {
   // Blend
   get blend(): Readonly<BlendState> {
     return {
-      enabled: this.#blend.enabled,
-      color: { ...this.#blend.color },
-      alpha: { ...this.#blend.alpha },
+      enabled: this.__blend.enabled,
+      color: { ...this.__blend.color },
+      alpha: { ...this.__blend.alpha },
       writeMask: (() => {
         const m = new MaskHelper();
-        m.set(this.#blend.writeMask.get()).markAsClean();
+        m.set(this.__blend.writeMask.get()).markAsClean();
         return m;
       })(),
     };
   }
 
   set fillMode(v: RasterizerFillMode) {
-    if (this.#fillMode === v) return;
-    this.#fillMode = v;
-    this.#updateHash();
+    if (this.__fillMode === v) return;
+    this.__fillMode = v;
+    this.__updateHash();
     this.markAsDirty();
   }
 
   set cull(v: RasterizerCullMode) {
-    if (this.#cull === v) return;
-    this.#cull = v;
-    this.#updateHash();
+    if (this.__cull === v) return;
+    this.__cull = v;
+    this.__updateHash();
     this.markAsDirty();
   }
 
   set frontFace(v: RasterizerFrontFace) {
-    if (this.#frontFace === v) return;
-    this.#frontFace = v;
-    this.#updateHash();
+    if (this.__frontFace === v) return;
+    this.__frontFace = v;
+    this.__updateHash();
     this.markAsDirty();
   }
 
   set depthStencil(v: DepthStencilState) {
-    if (this.#deepEqualDepthStencil(this.#depthStencil, v)) return;
-    this.#depthStencil = {
+    if (this.__deepEqualDepthStencil(this.__depthStencil, v)) return;
+    this.__depthStencil = {
       ...v,
       stencilFront: { ...v.stencilFront },
       stencilBack: { ...v.stencilBack },
@@ -242,18 +242,18 @@ export class Rasterizer extends DirtyState {
         return m;
       })(),
     };
-    this.#updateHash();
+    this.__updateHash();
     this.markAsDirty();
   }
 
   set multisample(v: MultisampleState) {
     if (
-      this.#multisample.count === v.count &&
-      this.#multisample.mask.get() === v.mask.get() &&
-      this.#multisample.alphaToCoverageEnabled === v.alphaToCoverageEnabled
+      this.__multisample.count === v.count &&
+      this.__multisample.mask.get() === v.mask.get() &&
+      this.__multisample.alphaToCoverageEnabled === v.alphaToCoverageEnabled
     )
       return;
-    this.#multisample = {
+    this.__multisample = {
       ...v,
       mask: (() => {
         const m = new MaskHelper();
@@ -261,13 +261,13 @@ export class Rasterizer extends DirtyState {
         return m;
       })(),
     };
-    this.#updateHash();
+    this.__updateHash();
     this.markAsDirty();
   }
 
   set blend(v: BlendState) {
-    if (this.#deepEqualBlend(this.#blend, v)) return;
-    this.#blend = {
+    if (this.__deepEqualBlend(this.__blend, v)) return;
+    this.__blend = {
       enabled: v.enabled,
       color: { ...v.color },
       alpha: { ...v.alpha },
@@ -277,21 +277,21 @@ export class Rasterizer extends DirtyState {
         return m;
       })(),
     };
-    this.#updateHash();
+    this.__updateHash();
     this.markAsDirty();
   }
 
   // Public instance methods (must come after getters/setters)
   updateDepthStencil(patch: Partial<DepthStencilState>): this {
     const next: DepthStencilState = {
-      ...this.#depthStencil,
+      ...this.__depthStencil,
       ...patch,
       stencilFront: {
-        ...this.#depthStencil.stencilFront,
+        ...this.__depthStencil.stencilFront,
         ...(patch.stencilFront ?? {}),
       },
       stencilBack: {
-        ...this.#depthStencil.stencilBack,
+        ...this.__depthStencil.stencilBack,
         ...(patch.stencilBack ?? {}),
       },
     };
@@ -300,90 +300,93 @@ export class Rasterizer extends DirtyState {
   }
 
   updateMultisample(patch: Partial<MultisampleState>): this {
-    this.multisample = { ...this.#multisample, ...patch };
+    this.multisample = { ...this.__multisample, ...patch };
     return this;
   }
 
   updateBlend(patch: Partial<BlendState>): this {
     this.blend = {
-      enabled: patch.enabled ?? this.#blend.enabled,
-      color: { ...this.#blend.color, ...(patch.color ?? {}) },
-      alpha: { ...this.#blend.alpha, ...(patch.alpha ?? {}) },
-      writeMask: patch.writeMask ?? this.#blend.writeMask,
+      enabled: patch.enabled ?? this.__blend.enabled,
+      color: { ...this.__blend.color, ...(patch.color ?? {}) },
+      alpha: { ...this.__blend.alpha, ...(patch.alpha ?? {}) },
+      writeMask: patch.writeMask ?? this.__blend.writeMask,
     };
     return this;
   }
 
   equals(other: Rasterizer): boolean {
     return (
-      this.#fillMode === other.#fillMode &&
-      this.#cull === other.#cull &&
-      this.#frontFace === other.#frontFace &&
-      this.#deepEqualDepthStencil(this.#depthStencil, other.#depthStencil) &&
-      this.#deepEqualMultisample(this.#multisample, other.#multisample) &&
-      this.#deepEqualBlend(this.#blend, other.#blend)
+      this.__fillMode === other.__fillMode &&
+      this.__cull === other.__cull &&
+      this.__frontFace === other.__frontFace &&
+      this.__deepEqualDepthStencil(this.__depthStencil, other.__depthStencil) &&
+      this.__deepEqualMultisample(this.__multisample, other.__multisample) &&
+      this.__deepEqualBlend(this.__blend, other.__blend)
     );
   }
 
   copy(other: Rasterizer): this {
     if (this.equals(other)) return this;
-    this.fillMode = other.#fillMode;
-    this.cull = other.#cull;
-    this.frontFace = other.#frontFace;
-    this.depthStencil = other.#depthStencil;
-    this.multisample = other.#multisample;
-    this.blend = other.#blend;
+    this.fillMode = other.__fillMode;
+    this.cull = other.__cull;
+    this.frontFace = other.__frontFace;
+    this.depthStencil = other.__depthStencil;
+    this.multisample = other.__multisample;
+    this.blend = other.__blend;
     return this;
   }
 
   clone(): Rasterizer {
     const r = new Rasterizer({
-      fillMode: this.#fillMode,
-      cull: this.#cull,
-      frontFace: this.#frontFace,
-      depthStencil: this.#depthStencil,
-      multisample: this.#multisample,
-      blend: this.#blend,
+      fillMode: this.__fillMode,
+      cull: this.__cull,
+      frontFace: this.__frontFace,
+      depthStencil: this.__depthStencil,
+      multisample: this.__multisample,
+      blend: this.__blend,
     });
     r.markAsDirty();
     return r;
   }
 
-  #updateHash() {
-    this.#hash = sha(
+  private __updateHash() {
+    this.__hash = sha(
       JSON.stringify({
-        fillMode: this.#fillMode,
-        cull: this.#cull,
-        frontFace: this.#frontFace,
+        fillMode: this.__fillMode,
+        cull: this.__cull,
+        frontFace: this.__frontFace,
         depthStencil: {
-          format: this.#depthStencil.format,
-          depthWriteEnabled: this.#depthStencil.depthWriteEnabled,
-          depthCompare: this.#depthStencil.depthCompare,
-          stencilFront: this.#depthStencil.stencilFront,
-          stencilBack: this.#depthStencil.stencilBack,
-          stencilReadMask: this.#depthStencil.stencilReadMask.get(),
-          stencilWriteMask: this.#depthStencil.stencilWriteMask.get(),
-          depthBias: this.#depthStencil.depthBias,
-          depthBiasSlopeScale: this.#depthStencil.depthBiasSlopeScale,
-          depthBiasClamp: this.#depthStencil.depthBiasClamp,
+          format: this.__depthStencil.format,
+          depthWriteEnabled: this.__depthStencil.depthWriteEnabled,
+          depthCompare: this.__depthStencil.depthCompare,
+          stencilFront: this.__depthStencil.stencilFront,
+          stencilBack: this.__depthStencil.stencilBack,
+          stencilReadMask: this.__depthStencil.stencilReadMask.get(),
+          stencilWriteMask: this.__depthStencil.stencilWriteMask.get(),
+          depthBias: this.__depthStencil.depthBias,
+          depthBiasSlopeScale: this.__depthStencil.depthBiasSlopeScale,
+          depthBiasClamp: this.__depthStencil.depthBiasClamp,
         },
         multisample: {
-          count: this.#multisample.count,
-          mask: this.#multisample.mask.get(),
-          alphaToCoverageEnabled: this.#multisample.alphaToCoverageEnabled,
+          count: this.__multisample.count,
+          mask: this.__multisample.mask.get(),
+          alphaToCoverageEnabled: this.__multisample.alphaToCoverageEnabled,
         },
         blend: {
-          enabled: this.#blend.enabled,
-          color: this.#blend.color,
-          alpha: this.#blend.alpha,
-          writeMask: this.#blend.writeMask.get(),
+          enabled: this.__blend.enabled,
+          color: this.__blend.color,
+          alpha: this.__blend.alpha,
+          writeMask: this.__blend.writeMask.get(),
         },
       }),
       'hex',
     );
   }
 
-  #deepEqualDepthStencil(a: DepthStencilState, b: DepthStencilState): boolean {
+  private __deepEqualDepthStencil(
+    a: DepthStencilState,
+    b: DepthStencilState,
+  ): boolean {
     return (
       a.format === b.format &&
       a.depthWriteEnabled === b.depthWriteEnabled &&
@@ -393,12 +396,15 @@ export class Rasterizer extends DirtyState {
       a.depthBias === b.depthBias &&
       a.depthBiasSlopeScale === b.depthBiasSlopeScale &&
       a.depthBiasClamp === b.depthBiasClamp &&
-      this.#deepEqualFace(a.stencilFront, b.stencilFront) &&
-      this.#deepEqualFace(a.stencilBack, b.stencilBack)
+      this.__deepEqualFace(a.stencilFront, b.stencilFront) &&
+      this.__deepEqualFace(a.stencilBack, b.stencilBack)
     );
   }
 
-  #deepEqualFace(a: DepthStencilFaceState, b: DepthStencilFaceState): boolean {
+  private __deepEqualFace(
+    a: DepthStencilFaceState,
+    b: DepthStencilFaceState,
+  ): boolean {
     return (
       a.compare === b.compare &&
       a.failOp === b.failOp &&
@@ -407,7 +413,10 @@ export class Rasterizer extends DirtyState {
     );
   }
 
-  #deepEqualMultisample(a: MultisampleState, b: MultisampleState): boolean {
+  private __deepEqualMultisample(
+    a: MultisampleState,
+    b: MultisampleState,
+  ): boolean {
     return (
       a.count === b.count &&
       a.mask.get() === b.mask.get() &&
@@ -415,7 +424,7 @@ export class Rasterizer extends DirtyState {
     );
   }
 
-  #deepEqualBlend(a: BlendState, b: BlendState): boolean {
+  private __deepEqualBlend(a: BlendState, b: BlendState): boolean {
     return (
       a.enabled === b.enabled &&
       a.writeMask.get() === b.writeMask.get() &&

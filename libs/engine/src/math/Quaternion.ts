@@ -4,49 +4,49 @@ import type { Vector3 } from './Vector3';
 
 /** Represents a rotation in 3D space. */
 export class Quaternion extends AbstractVector<4> {
-  #w: number;
-  #x: number;
-  #y: number;
-  #z: number;
+  private __w: number;
+  private __x: number;
+  private __y: number;
+  private __z: number;
 
   constructor(w: number = 1, x: number = 0, y: number = 0, z: number = 0) {
     super();
-    this.#w = w;
-    this.#x = x;
-    this.#y = y;
-    this.#z = z;
+    this.__w = w;
+    this.__x = x;
+    this.__y = y;
+    this.__z = z;
   }
 
   /** Scalar component */
   get w() {
-    return this.#w;
+    return this.__w;
   }
   /** X vector component */
   get x() {
-    return this.#x;
+    return this.__x;
   }
   /** Y vector component */
   get y() {
-    return this.#y;
+    return this.__y;
   }
   /** Z vector component */
   get z() {
-    return this.#z;
+    return this.__z;
   }
   set w(value) {
-    this.#w = value;
+    this.__w = value;
     this.markAsDirty();
   }
   set x(value) {
-    this.#x = value;
+    this.__x = value;
     this.markAsDirty();
   }
   set y(value) {
-    this.#y = value;
+    this.__y = value;
     this.markAsDirty();
   }
   set z(value) {
-    this.#z = value;
+    this.__z = value;
     this.markAsDirty();
   }
 
@@ -56,10 +56,10 @@ export class Quaternion extends AbstractVector<4> {
    * @returns This quaternion after addition.
    */
   override sum(vector: this): this {
-    this.#w += vector.w;
-    this.#x += vector.x;
-    this.#y += vector.y;
-    this.#z += vector.z;
+    this.__w += vector.w;
+    this.__x += vector.x;
+    this.__y += vector.y;
+    this.__z += vector.z;
     return this.markAsDirty();
   }
 
@@ -69,27 +69,27 @@ export class Quaternion extends AbstractVector<4> {
    * @returns This quaternion after subtraction.
    */
   override sub(vector: this): this {
-    this.#w -= vector.w;
-    this.#x -= vector.x;
-    this.#y -= vector.y;
-    this.#z -= vector.z;
+    this.__w -= vector.w;
+    this.__x -= vector.x;
+    this.__y -= vector.y;
+    this.__z -= vector.z;
     return this.markAsDirty();
   }
 
   /** Multiplies this quaternion by another (Hamilton product). */
   override mul(vector: this): this {
-    const w1 = this.#w,
-      x1 = this.#x,
-      y1 = this.#y,
-      z1 = this.#z;
-    const w2 = vector.#w,
-      x2 = vector.#x,
-      y2 = vector.#y,
-      z2 = vector.#z;
-    this.#w = w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2;
-    this.#x = w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2;
-    this.#y = w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2;
-    this.#z = w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2;
+    const w1 = this.__w,
+      x1 = this.__x,
+      y1 = this.__y,
+      z1 = this.__z;
+    const w2 = vector.__w,
+      x2 = vector.__x,
+      y2 = vector.__y,
+      z2 = vector.__z;
+    this.__w = w1 * w2 - x1 * x2 - y1 * y2 - z1 * z2;
+    this.__x = w1 * x2 + x1 * w2 + y1 * z2 - z1 * y2;
+    this.__y = w1 * y2 - x1 * z2 + y1 * w2 + z1 * x2;
+    this.__z = w1 * z2 + x1 * y2 - y1 * x2 + z1 * w2;
     return this.markAsDirty();
   }
 
@@ -106,10 +106,10 @@ export class Quaternion extends AbstractVector<4> {
    * @returns This quaternion after multiplication.
    */
   override mulS(scalar: number): this {
-    this.#w *= scalar;
-    this.#x *= scalar;
-    this.#y *= scalar;
-    this.#z *= scalar;
+    this.__w *= scalar;
+    this.__x *= scalar;
+    this.__y *= scalar;
+    this.__z *= scalar;
     return this.markAsDirty();
   }
 
@@ -120,10 +120,10 @@ export class Quaternion extends AbstractVector<4> {
    */
   override divS(scalar: number): this {
     if (scalar === 0) throw new Error('Division by zero');
-    this.#w /= scalar;
-    this.#x /= scalar;
-    this.#y /= scalar;
-    this.#z /= scalar;
+    this.__w /= scalar;
+    this.__x /= scalar;
+    this.__y /= scalar;
+    this.__z /= scalar;
     return this.markAsDirty();
   }
 
@@ -134,10 +134,10 @@ export class Quaternion extends AbstractVector<4> {
    */
   override dot(vector: this): number {
     return (
-      this.#w * vector.w +
-      this.#x * vector.x +
-      this.#y * vector.y +
-      this.#z * vector.z
+      this.__w * vector.w +
+      this.__x * vector.x +
+      this.__y * vector.y +
+      this.__z * vector.z
     );
   }
 
@@ -145,20 +145,20 @@ export class Quaternion extends AbstractVector<4> {
   override normalize(): this {
     const n = this.length();
     if (n > 0) {
-      this.#w /= n;
-      this.#x /= n;
-      this.#y /= n;
-      this.#z /= n;
+      this.__w /= n;
+      this.__x /= n;
+      this.__y /= n;
+      this.__z /= n;
     }
     return this.markAsDirty();
   }
 
   /** Sets quaternion components. */
   override set(w: number, x: number, y: number, z: number): this {
-    this.#w = w;
-    this.#x = x;
-    this.#y = y;
-    this.#z = z;
+    this.__w = w;
+    this.__x = x;
+    this.__y = y;
+    this.__z = z;
     return this.markAsDirty();
   }
 
@@ -168,21 +168,21 @@ export class Quaternion extends AbstractVector<4> {
    * @returns This quaternion after copying the components.
    */
   override copy(vector: this): this {
-    this.#w = vector.w;
-    this.#x = vector.x;
-    this.#y = vector.y;
-    this.#z = vector.z;
+    this.__w = vector.w;
+    this.__x = vector.x;
+    this.__y = vector.y;
+    this.__z = vector.z;
     return this.markAsDirty();
   }
 
   /** Returns [w, x, y, z] array. */
   override toArray(): FixedArray<number, 4> {
-    return [this.#w, this.#x, this.#y, this.#z];
+    return [this.__w, this.__x, this.__y, this.__z];
   }
 
   /** Returns Float32Array [w, x, y, z]. */
   override toBuffer(): Float32Array {
-    return new Float32Array([this.#w, this.#x, this.#y, this.#z]);
+    return new Float32Array([this.__w, this.__x, this.__y, this.__z]);
   }
 
   /**
@@ -190,12 +190,12 @@ export class Quaternion extends AbstractVector<4> {
    * @returns The string representation of the quaternion.
    */
   override toString(): string {
-    return `Quaternion(w: ${this.#w}, x: ${this.#x}, y: ${this.#y}, z: ${this.#z})`;
+    return `Quaternion(w: ${this.__w}, x: ${this.__x}, y: ${this.__y}, z: ${this.__z})`;
   }
 
   /** Returns the conjugate quaternion. */
   conjugate(): this {
-    return new Quaternion(this.#w, -this.#x, -this.#y, -this.#z) as this;
+    return new Quaternion(this.__w, -this.__x, -this.__y, -this.__z) as this;
   }
 
   /** Returns the inverse quaternion. */

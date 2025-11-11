@@ -5,8 +5,8 @@ import { Vector3 } from './Vector3';
  * Equation: normal.x * x + normal.y * y + normal.z * z + distance = 0
  */
 export class Plane {
-  #normal: Vector3;
-  #distance: number;
+  private __normal: Vector3;
+  private __distance: number;
 
   /**
    * Create plane from three points in 3D space.
@@ -29,16 +29,16 @@ export class Plane {
   }
 
   constructor(normal: Vector3 = new Vector3(0, 1, 0), distance: number = 0) {
-    this.#normal = normal.clone().normalize();
-    this.#distance = distance;
+    this.__normal = normal.clone().normalize();
+    this.__distance = distance;
   }
 
   get normal(): Vector3 {
-    return this.#normal;
+    return this.__normal;
   }
 
   get distance(): number {
-    return this.#distance;
+    return this.__distance;
   }
 
   /**
@@ -55,11 +55,11 @@ export class Plane {
    * Normalize the plane equation.
    */
   normalize(): this {
-    const length = this.#normal.length();
+    const length = this.__normal.length();
     if (length > 0) {
       const invLength = 1 / length;
-      this.#normal.mulS(invLength);
-      this.#distance *= invLength;
+      this.__normal.mulS(invLength);
+      this.__distance *= invLength;
     }
     return this;
   }

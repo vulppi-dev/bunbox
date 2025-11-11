@@ -6,10 +6,10 @@ import type { Vector3 } from './Vector3';
  * Used for frustum culling to determine object visibility.
  */
 export class Frustum {
-  #planes: [Plane, Plane, Plane, Plane, Plane, Plane];
+  private __planes: [Plane, Plane, Plane, Plane, Plane, Plane];
 
   constructor() {
-    this.#planes = [
+    this.__planes = [
       new Plane(), // Left
       new Plane(), // Right
       new Plane(), // Top
@@ -23,7 +23,7 @@ export class Frustum {
    * Get the frustum planes.
    */
   get planes(): [Plane, Plane, Plane, Plane, Plane, Plane] {
-    return this.#planes;
+    return this.__planes;
   }
 
   /**
@@ -31,7 +31,7 @@ export class Frustum {
    */
   setPlane(index: number, plane: Plane): void {
     if (index >= 0 && index < 6) {
-      this.#planes[index] = plane;
+      this.__planes[index] = plane;
     }
   }
 
@@ -41,7 +41,7 @@ export class Frustum {
    * @returns true if point is inside or on frustum
    */
   containsPoint(point: Vector3): boolean {
-    for (const plane of this.#planes) {
+    for (const plane of this.__planes) {
       if (plane.distanceToPoint(point) < 0) {
         return false;
       }
@@ -56,7 +56,7 @@ export class Frustum {
    * @returns true if sphere intersects or is inside frustum
    */
   intersectsSphere(center: Vector3, radius: number): boolean {
-    for (const plane of this.#planes) {
+    for (const plane of this.__planes) {
       if (plane.distanceToPoint(center) < -radius) {
         return false;
       }
@@ -71,7 +71,7 @@ export class Frustum {
    * @returns true if AABB intersects or is inside frustum
    */
   intersectsBox(min: Vector3, max: Vector3): boolean {
-    for (const plane of this.#planes) {
+    for (const plane of this.__planes) {
       // Find the positive vertex (farthest along plane normal)
       const px = plane.normal.x >= 0 ? max.x : min.x;
       const py = plane.normal.y >= 0 ? max.y : min.y;
@@ -97,7 +97,7 @@ export class Frustum {
   clone(): Frustum {
     const frustum = new Frustum();
     for (let i = 0; i < 6; i++) {
-      frustum.#planes[i] = this.#planes[i]!.clone();
+      frustum.__planes[i] = this.__planes[i]!.clone();
     }
     return frustum;
   }

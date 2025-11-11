@@ -6,20 +6,20 @@ export type ClipboardEventOptions = {
 } & EventOptions;
 
 export class ClipboardEvent extends Event {
-  #origin: 'self' | 'external';
-  #mimeTypes: string[];
+  private __origin: 'self' | 'external';
+  private __mimeTypes: string[];
 
   constructor(options: ClipboardEventOptions) {
     super(options);
-    this.#origin = options.origin;
-    this.#mimeTypes = options.mimeTypes;
+    this.__origin = options.origin;
+    this.__mimeTypes = options.mimeTypes;
   }
 
   get origin() {
-    return this.#origin;
+    return this.__origin;
   }
 
   get mimeTypes() {
-    return this.#mimeTypes;
+    return this.__mimeTypes;
   }
 }

@@ -46,14 +46,14 @@ import {
  * ```
  */
 export class RenderPassBuilder {
-  #name?: string;
-  #attachments: AttachmentConfig[] = [];
+  private __name?: string;
+  private __attachments: AttachmentConfig[] = [];
 
   /**
    * Set the name of the render pass (for debugging)
    */
   setName(name: string): this {
-    this.#name = name;
+    this.__name = name;
     return this;
   }
 
@@ -75,8 +75,8 @@ export class RenderPassBuilder {
       ...config,
     };
 
-    this.#validateAttachment(attachment);
-    this.#attachments.push(attachment);
+    this.__validateAttachment(attachment);
+    this.__attachments.push(attachment);
     return this;
   }
 
@@ -101,8 +101,8 @@ export class RenderPassBuilder {
       ...config,
     };
 
-    this.#validateAttachment(attachment);
-    this.#attachments.push(attachment);
+    this.__validateAttachment(attachment);
+    this.__attachments.push(attachment);
     return this;
   }
 
@@ -110,8 +110,8 @@ export class RenderPassBuilder {
    * Add a generic attachment with full control
    */
   addAttachment(config: AttachmentConfig): this {
-    this.#validateAttachment(config);
-    this.#attachments.push(config);
+    this.__validateAttachment(config);
+    this.__attachments.push(config);
     return this;
   }
 
@@ -119,7 +119,7 @@ export class RenderPassBuilder {
    * Helper: Configure for multisampling
    */
   withMultisample(samples: SampleCount): this {
-    for (const attachment of this.#attachments) {
+    for (const attachment of this.__attachments) {
       attachment.samples = samples;
     }
     return this;
@@ -129,19 +129,19 @@ export class RenderPassBuilder {
    * Build the final RenderPassConfig
    */
   build(): RenderPassConfig {
-    if (this.#attachments.length === 0) {
+    if (this.__attachments.length === 0) {
       throw new Error('Cannot build RenderPass: no attachments defined');
     }
 
     return {
-      attachments: [...this.#attachments],
-      name: this.#name,
+      attachments: [...this.__attachments],
+      name: this.__name,
     };
   }
 
   // Validation methods
 
-  #validateAttachment(attachment: AttachmentConfig): void {
+  private __validateAttachment(attachment: AttachmentConfig): void {
     if (!attachment.format) {
       throw new Error('Attachment format is required');
     }

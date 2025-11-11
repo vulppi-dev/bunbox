@@ -29,10 +29,10 @@ import { Node3D } from '../Node3D';
  * ```
  */
 export abstract class Light extends Node3D {
-  #color: Color = new Color(1, 1, 1, 1);
-  #intensity: number = 1.0;
-  #castShadows: boolean = false;
-  #enabled: boolean = true;
+  private __color: Color = new Color(1, 1, 1, 1);
+  private __intensity: number = 1.0;
+  private __castShadows: boolean = false;
+  private __enabled: boolean = true;
 
   /**
    * Get the light type identifier.
@@ -53,7 +53,7 @@ export abstract class Light extends Node3D {
    * Default: white (1, 1, 1)
    */
   get color(): Color {
-    return this.#color;
+    return this.__color;
   }
 
   /**
@@ -67,7 +67,7 @@ export abstract class Light extends Node3D {
    * Default: 1.0
    */
   get intensity(): number {
-    return this.#intensity;
+    return this.__intensity;
   }
 
   /**
@@ -78,7 +78,7 @@ export abstract class Light extends Node3D {
    * Default: false
    */
   get castShadows(): boolean {
-    return this.#castShadows;
+    return this.__castShadows;
   }
 
   /**
@@ -89,7 +89,7 @@ export abstract class Light extends Node3D {
    * Default: true
    */
   get enabled(): boolean {
-    return this.#enabled;
+    return this.__enabled;
   }
 
   /**
@@ -98,8 +98,8 @@ export abstract class Light extends Node3D {
    * @param value - New color (RGB)
    */
   set color(value: Color) {
-    this.#color = value;
-    this.#color.markAsDirty();
+    this.__color = value;
+    this.__color.markAsDirty();
     this.markAsDirty();
   }
 
@@ -109,7 +109,7 @@ export abstract class Light extends Node3D {
    * @param value - Brightness multiplier (typically 0-10)
    */
   set intensity(value: number) {
-    this.#intensity = value;
+    this.__intensity = value;
     this.markAsDirty();
   }
 
@@ -119,7 +119,7 @@ export abstract class Light extends Node3D {
    * @param value - True to cast shadows
    */
   set castShadows(value: boolean) {
-    this.#castShadows = value;
+    this.__castShadows = value;
     this.markAsDirty();
   }
 
@@ -129,7 +129,7 @@ export abstract class Light extends Node3D {
    * @param value - True to enable
    */
   set enabled(value: boolean) {
-    this.#enabled = value;
+    this.__enabled = value;
     this.markAsDirty();
   }
 

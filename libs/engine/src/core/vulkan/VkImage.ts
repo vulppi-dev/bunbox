@@ -28,7 +28,7 @@ import { VK_DEBUG } from '../../singleton/logger';
  * Handles memory allocation and binding automatically.
  */
 export class VkImage implements Disposable {
-  static #mapFormat(format: TextureFormat): number {
+  private static __mapFormat(format: TextureFormat): number {
     const formatMap: Record<TextureFormat, number> = {
       // 8-bit normalized
       rgba8unorm: VkFormat.R8G8B8A8_UNORM,
@@ -79,7 +79,7 @@ export class VkImage implements Disposable {
     return formatMap[format];
   }
 
-  static #mapSampleCount(sampleCount: SampleCount): number {
+  private static __mapSampleCount(sampleCount: SampleCount): number {
     const sampleMap: Record<SampleCount, number> = {
       1: VkSampleCountFlagBits.COUNT_1_BIT,
       2: VkSampleCountFlagBits.COUNT_2_BIT,
@@ -90,7 +90,7 @@ export class VkImage implements Disposable {
     return sampleMap[sampleCount];
   }
 
-  static #mapUsage(usage: readonly string[]): number {
+  private static __mapUsage(usage: readonly string[]): number {
     let usageFlags = 0;
 
     for (const u of usage) {
@@ -119,7 +119,7 @@ export class VkImage implements Disposable {
     return usageFlags;
   }
 
-  static #findMemoryType(
+  private static __findMemoryType(
     physicalDevice: Pointer,
     typeFilter: number,
     properties: number,
@@ -149,90 +149,90 @@ export class VkImage implements Disposable {
 
   // MARK: Instance props
 
-  #device: Pointer;
-  #physicalDevice: Pointer;
-  #instance: Pointer;
-  #memory: Pointer;
-  #width: number;
-  #height: number;
-  #depth: number;
-  #mipLevels: number;
-  #format: number;
-  #currentLayout: number;
+  private __device: Pointer;
+  private __physicalDevice: Pointer;
+  private __instance: Pointer;
+  private __memory: Pointer;
+  private __width: number;
+  private __height: number;
+  private __depth: number;
+  private __mipLevels: number;
+  private __format: number;
+  private __currentLayout: number;
 
   constructor(device: Pointer, physicalDevice: Pointer, texture: TextureBase) {
-    this.#device = device;
-    this.#physicalDevice = physicalDevice;
-    this.#width = texture.width;
-    this.#height = texture.height;
-    this.#depth = texture.depth;
-    this.#mipLevels = texture.mipLevels;
-    this.#format = VkImage.#mapFormat(texture.format);
-    this.#currentLayout = VkImageLayout.UNDEFINED;
+    this.__device = device;
+    this.__physicalDevice = physicalDevice;
+    this.__width = texture.width;
+    this.__height = texture.height;
+    this.__depth = texture.depth;
+    this.__mipLevels = texture.mipLevels;
+    this.__format = VkImage.__mapFormat(texture.format);
+    this.__currentLayout = VkImageLayout.UNDEFINED;
 
     VK_DEBUG(
-      `Creating image: ${this.#width}x${this.#height}x${this.#depth}, format: ${texture.format}, mips: ${this.#mipLevels}`,
+      `Creating image: ${this.__width}x${this.__height}x${this.__depth}, format: ${texture.format}, mips: ${this.__mipLevels}`,
     );
 
-    this.#instance = this.#createImage(texture);
-    this.#memory = this.#allocateAndBindMemory();
+    this.__instance = this.__createImage(texture);
+    this.__memory = this.__allocateAndBindMemory();
 
-    VK_DEBUG(`Image created: 0x${this.#instance.toString(16)}`);
+    VK_DEBUG(`Image created: 0x${this.__instance.toString(16)}`);
   }
 
   get instance() {
-    return this.#instance;
+    return this.__instance;
   }
 
   get memory() {
-    return this.#memory;
+    return this.__memory;
   }
 
   get width() {
-    return this.#width;
+    return this.__width;
   }
 
   get height() {
-    return this.#height;
+    return this.__height;
   }
 
   get depth() {
-    return this.#depth;
+    return this.__depth;
   }
 
   get mipLevels() {
-    return this.#mipLevels;
+    return this.__mipLevels;
   }
 
   get format() {
-    return this.#format;
+    return this.__format;
   }
 
   get layout() {
-    return this.#currentLayout;
+    return this.__currentLayout;
   }
 
   dispose(): void | Promise<void> {
-    VK_DEBUG(`Destroying image: 0x${this.#instance.toString(16)}`);
-    VK.vkDestroyImage(this.#device, this.#instance, null);
-    VK.vkFreeMemory(this.#device, this.#memory, null);
+    VK_DEBUG(`Destroying image: 0x${this.__instance.toString(16)}`);
+    VK.vkDestroyImage(this.__device, this.__instance, null);
+    VK.vkFreeMemory(this.__device, this.__memory, null);
     VK_DEBUG('Image destroyed');
   }
 
-  #createImage(texture: TextureBase): Pointer {
+  private __createImage(texture: TextureBase): Pointer {
     const createInfo = instantiate(vkImageCreateInfo);
     createInfo.flags = 0;
     createInfo.imageType =
-      this.#depth > 1 ? VkImageType.TYPE_3D : VkImageType.TYPE_2D;
-    createInfo.format = this.#format;
-    createInfo.extent.width = this.#width;
-    createInfo.extent.height = this.#height;
-    createInfo.extent.depth = this.#depth;
-    createInfo.mipLevels = this.#mipLevels;
+      this.__depth > 1 ? VkImageType.TYPE_3D : VkImageType.TYPE_2D;
+    createInfo.format = this.__format;
+    createInfo.extent.width = this.__width;
+    createInfo.extent.height = this.__height;
+    createInfo.extent.depth = this.__depth;
+    createInfo.mipLevels = this.__mipLevels;
     createInfo.arrayLayers = texture.layerCount;
-    createInfo.samples = VkImage.#mapSampleCount(texture.sampleCount);
+    createInfo.samples = VkImage.__mapSampleCount(texture.sampleCount);
     createInfo.tiling = VkImageTiling.OPTIMAL;
-    createInfo.usage = VkImage.#mapUsage(texture.usage);
+    createInfo.usage = VkImage.__mapUsage(texture.usage);
     createInfo.sharingMode = 0; // VkSharingMode.EXCLUSIVE
     createInfo.queueFamilyIndexCount = 0;
     createInfo.pQueueFamilyIndices = 0n;
@@ -240,7 +240,7 @@ export class VkImage implements Disposable {
 
     const pointerHolder = new BigUint64Array(1);
     const result = VK.vkCreateImage(
-      this.#device,
+      this.__device,
       ptr(getInstanceBuffer(createInfo)),
       null,
       ptr(pointerHolder),
@@ -253,12 +253,12 @@ export class VkImage implements Disposable {
     return Number(pointerHolder[0]!) as Pointer;
   }
 
-  #allocateAndBindMemory(): Pointer {
+  private __allocateAndBindMemory(): Pointer {
     // Get memory requirements
     const memRequirements = instantiate(vkMemoryRequirements);
     VK.vkGetImageMemoryRequirements(
-      this.#device,
-      this.#instance,
+      this.__device,
+      this.__instance,
       ptr(getInstanceBuffer(memRequirements)),
     );
 
@@ -267,8 +267,8 @@ export class VkImage implements Disposable {
     );
 
     // Find suitable memory type
-    const memoryTypeIndex = VkImage.#findMemoryType(
-      this.#physicalDevice,
+    const memoryTypeIndex = VkImage.__findMemoryType(
+      this.__physicalDevice,
       memRequirements.memoryTypeBits,
       VkMemoryPropertyFlagBits.DEVICE_LOCAL_BIT,
     );
@@ -280,14 +280,14 @@ export class VkImage implements Disposable {
 
     const memoryHolder = new BigUint64Array(1);
     const allocResult = VK.vkAllocateMemory(
-      this.#device,
+      this.__device,
       ptr(getInstanceBuffer(allocInfo)),
       null,
       ptr(memoryHolder),
     );
 
     if (allocResult !== VkResult.SUCCESS) {
-      VK.vkDestroyImage(this.#device, this.#instance, null);
+      VK.vkDestroyImage(this.__device, this.__instance, null);
       throw new DynamicLibError(getResultMessage(allocResult), 'Vulkan');
     }
 
@@ -295,15 +295,15 @@ export class VkImage implements Disposable {
 
     // Bind memory to image
     const bindResult = VK.vkBindImageMemory(
-      this.#device,
-      this.#instance,
+      this.__device,
+      this.__instance,
       memory,
       0n,
     );
 
     if (bindResult !== VkResult.SUCCESS) {
-      VK.vkFreeMemory(this.#device, memory, null);
-      VK.vkDestroyImage(this.#device, this.#instance, null);
+      VK.vkFreeMemory(this.__device, memory, null);
+      VK.vkDestroyImage(this.__device, this.__instance, null);
       throw new DynamicLibError(getResultMessage(bindResult), 'Vulkan');
     }
 

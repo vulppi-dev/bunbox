@@ -1,7 +1,7 @@
 import { GLFW } from '@bunbox/glfw';
 import { type Disposable } from '@bunbox/utils';
 import { ptr, type Pointer } from 'bun:ffi';
-import { Vector2 } from '../math';
+import { Color, Vector2 } from '../math';
 import type { AbstractCamera, Light, Mesh } from '../nodes';
 
 export interface RendererOptions {
@@ -9,42 +9,56 @@ export interface RendererOptions {
 }
 
 export abstract class AbstractRenderer implements Disposable {
-  #windowPtr: Pointer;
+  private __windowPtr: Pointer;
 
-  #width: Int32Array;
-  #height: Int32Array;
+  private __width: Int32Array;
+  private __height: Int32Array;
+
+  protected _clearColor: Color = new Color(0, 0, 0, 1);
 
   constructor(window: Pointer, options?: RendererOptions) {
     // Prepare auxiliary buffers
-    this.#width = new Int32Array(1);
-    this.#height = new Int32Array(1);
+    this.__width = new Int32Array(1);
+    this.__height = new Int32Array(1);
 
     // Initialize window
-    this.#windowPtr = window;
-    this._prepare(options);
+    this.__windowPtr = window;
     this.rebuildFrame();
   }
 
-  rebuildFrame(): void {
-    this.#loadFramebufferSize();
-    const width = this.#width[0]!;
-    const height = this.#height[0]!;
-    this._rebuildSwapChain(width, height);
+  get width(): number {
+    return this.__width[0]!;
   }
 
-  #loadFramebufferSize() {
-    if (!this.#windowPtr) {
+  get height(): number {
+    return this.__height[0]!;
+  }
+
+  rebuildFrame(): void {
+    this.__loadFramebufferSize();
+  }
+
+  private __loadFramebufferSize() {
+    if (!this.__windowPtr) {
       return new Vector2();
     }
     GLFW.glfwGetFramebufferSize(
-      this.#windowPtr,
-      ptr(this.#width),
-      ptr(this.#height),
+      this.__windowPtr,
+      ptr(this.__width),
+      ptr(this.__height),
     );
   }
 
   protected _getWindow() {
-    return this.#windowPtr;
+    return this.__windowPtr;
+  }
+
+  getClearColor(): Color {
+    return this._clearColor;
+  }
+
+  setClearColor(color: Color): void {
+    this._clearColor = color;
   }
 
   abstract dispose(): void | Promise<void>;
@@ -54,6 +68,4 @@ export abstract class AbstractRenderer implements Disposable {
     lights: Light[],
     delta: number,
   ): void;
-  protected abstract _prepare(options?: RendererOptions): void | Promise<void>;
-  protected abstract _rebuildSwapChain(width: number, height: number): void;
 }

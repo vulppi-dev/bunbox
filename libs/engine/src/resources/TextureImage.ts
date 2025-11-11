@@ -8,14 +8,14 @@ export interface TextureImageDescriptor extends TextureBaseDescriptor {
 }
 
 export class TextureImage extends TextureBase {
-  #data?: Uint8Array;
-  #dataHash?: string;
+  private __data?: Uint8Array;
+  private __dataHash?: string;
 
   constructor(desc: TextureImageDescriptor) {
     super(desc);
     if (desc.data) {
-      this.#data = desc.data;
-      this.#dataHash = sha(desc.data, 'hex');
+      this.__data = desc.data;
+      this.__dataHash = sha(desc.data, 'hex');
     }
   }
 
@@ -26,17 +26,17 @@ export class TextureImage extends TextureBase {
     return 1;
   }
   get data(): Uint8Array | undefined {
-    return this.#data;
+    return this.__data;
   }
   set data(v: Uint8Array | undefined) {
-    if (this.#data === v) return;
-    this.#data = v;
-    this.#dataHash = v ? sha(v, 'hex') : undefined;
+    if (this.__data === v) return;
+    this.__data = v;
+    this.__dataHash = v ? sha(v, 'hex') : undefined;
     this.markAsDirty();
   }
 
   protected override _extraHashKey(): string | undefined {
-    return this.#dataHash;
+    return this.__dataHash;
   }
 
   protected _kind(): '2d' {

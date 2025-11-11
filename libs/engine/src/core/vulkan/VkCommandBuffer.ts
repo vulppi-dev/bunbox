@@ -26,41 +26,41 @@ import type { VkBuffer } from './VkBuffer';
  * Records GPU commands for rendering and compute operations
  */
 export class VkCommandBuffer implements Disposable {
-  #device: Pointer;
-  #commandPool: Pointer;
-  #instance: Pointer;
-  #isRecording: boolean = false;
+  private __device: Pointer;
+  private __commandPool: Pointer;
+  private __instance: Pointer;
+  private __isRecording: boolean = false;
 
   constructor(device: Pointer, commandPool: Pointer) {
-    this.#device = device;
-    this.#commandPool = commandPool;
+    this.__device = device;
+    this.__commandPool = commandPool;
 
     VK_DEBUG('Allocating command buffer');
 
-    this.#instance = this.#allocateCommandBuffer();
+    this.__instance = this.__allocateCommandBuffer();
 
-    VK_DEBUG(`Command buffer allocated: 0x${this.#instance.toString(16)}`);
+    VK_DEBUG(`Command buffer allocated: 0x${this.__instance.toString(16)}`);
   }
 
   /**
    * Begin recording commands into the command buffer
    */
   begin(): void {
-    if (this.#isRecording) {
+    if (this.__isRecording) {
       throw new DynamicLibError(
         'Command buffer is already recording',
         'Vulkan',
       );
     }
 
-    VK_DEBUG(`Beginning command buffer: 0x${this.#instance.toString(16)}`);
+    VK_DEBUG(`Beginning command buffer: 0x${this.__instance.toString(16)}`);
 
     const beginInfo = instantiate(vkCommandBufferBeginInfo);
     beginInfo.flags = 0;
     beginInfo.pInheritanceInfo = 0n;
 
     const result = VK.vkBeginCommandBuffer(
-      this.#instance,
+      this.__instance,
       ptr(getInstanceBuffer(beginInfo)),
     );
 
@@ -68,7 +68,7 @@ export class VkCommandBuffer implements Disposable {
       throw new DynamicLibError(getResultMessage(result), 'Vulkan');
     }
 
-    this.#isRecording = true;
+    this.__isRecording = true;
     VK_DEBUG('Command buffer recording started');
   }
 
@@ -76,19 +76,19 @@ export class VkCommandBuffer implements Disposable {
    * End recording commands into the command buffer
    */
   end(): void {
-    if (!this.#isRecording) {
+    if (!this.__isRecording) {
       throw new DynamicLibError('Command buffer is not recording', 'Vulkan');
     }
 
-    VK_DEBUG(`Ending command buffer: 0x${this.#instance.toString(16)}`);
+    VK_DEBUG(`Ending command buffer: 0x${this.__instance.toString(16)}`);
 
-    const result = VK.vkEndCommandBuffer(this.#instance);
+    const result = VK.vkEndCommandBuffer(this.__instance);
 
     if (result !== VkResult.SUCCESS) {
       throw new DynamicLibError(getResultMessage(result), 'Vulkan');
     }
 
-    this.#isRecording = false;
+    this.__isRecording = false;
     VK_DEBUG('Command buffer recording ended');
   }
 
@@ -101,7 +101,7 @@ export class VkCommandBuffer implements Disposable {
     renderArea: Rect,
     clearValues?: Color[],
   ): void {
-    if (!this.#isRecording) {
+    if (!this.__isRecording) {
       throw new DynamicLibError(
         'Cannot begin render pass: command buffer is not recording',
         'Vulkan',
@@ -138,7 +138,7 @@ export class VkCommandBuffer implements Disposable {
     }
 
     VK.vkCmdBeginRenderPass(
-      this.#instance,
+      this.__instance,
       ptr(getInstanceBuffer(renderPassInfo)),
       VkSubpassContents.INLINE,
     );
@@ -150,7 +150,7 @@ export class VkCommandBuffer implements Disposable {
    * End the current render pass
    */
   endRenderPass(): void {
-    if (!this.#isRecording) {
+    if (!this.__isRecording) {
       throw new DynamicLibError(
         'Cannot end render pass: command buffer is not recording',
         'Vulkan',
@@ -158,7 +158,7 @@ export class VkCommandBuffer implements Disposable {
     }
 
     VK_DEBUG('Ending render pass');
-    VK.vkCmdEndRenderPass(this.#instance);
+    VK.vkCmdEndRenderPass(this.__instance);
     VK_DEBUG('Render pass ended');
   }
 
@@ -166,7 +166,7 @@ export class VkCommandBuffer implements Disposable {
    * Bind a graphics pipeline
    */
   bindPipeline(pipeline: Pointer): void {
-    if (!this.#isRecording) {
+    if (!this.__isRecording) {
       throw new DynamicLibError(
         'Cannot bind pipeline: command buffer is not recording',
         'Vulkan',
@@ -175,7 +175,7 @@ export class VkCommandBuffer implements Disposable {
 
     VK_DEBUG(`Binding pipeline: 0x${pipeline.toString(16)}`);
     VK.vkCmdBindPipeline(
-      this.#instance,
+      this.__instance,
       VkPipelineBindPoint.GRAPHICS,
       pipeline,
     );
@@ -189,7 +189,7 @@ export class VkCommandBuffer implements Disposable {
     buffers: VkBuffer[],
     offsets?: bigint[],
   ): void {
-    if (!this.#isRecording) {
+    if (!this.__isRecording) {
       throw new DynamicLibError(
         'Cannot bind vertex buffers: command buffer is not recording',
         'Vulkan',
@@ -212,7 +212,7 @@ export class VkCommandBuffer implements Disposable {
       : new BigUint64Array(buffers.length).fill(0n);
 
     VK.vkCmdBindVertexBuffers(
-      this.#instance,
+      this.__instance,
       firstBinding,
       buffers.length,
       ptr(bufferPointers),
@@ -230,7 +230,7 @@ export class VkCommandBuffer implements Disposable {
     offset: bigint = 0n,
     indexType: 'uint16' | 'uint32' = 'uint32',
   ): void {
-    if (!this.#isRecording) {
+    if (!this.__isRecording) {
       throw new DynamicLibError(
         'Cannot bind index buffer: command buffer is not recording',
         'Vulkan',
@@ -243,7 +243,7 @@ export class VkCommandBuffer implements Disposable {
       indexType === 'uint16' ? VkIndexType.UINT16 : VkIndexType.UINT32;
 
     VK.vkCmdBindIndexBuffer(
-      this.#instance,
+      this.__instance,
       buffer.instance,
       offset,
       vkIndexType,
@@ -263,7 +263,7 @@ export class VkCommandBuffer implements Disposable {
     minDepth: number = 0.0,
     maxDepth: number = 1.0,
   ): void {
-    if (!this.#isRecording) {
+    if (!this.__isRecording) {
       throw new DynamicLibError(
         'Cannot set viewport: command buffer is not recording',
         'Vulkan',
@@ -278,14 +278,19 @@ export class VkCommandBuffer implements Disposable {
     viewport.minDepth = minDepth;
     viewport.maxDepth = maxDepth;
 
-    VK.vkCmdSetViewport(this.#instance, 0, 1, ptr(getInstanceBuffer(viewport)));
+    VK.vkCmdSetViewport(
+      this.__instance,
+      0,
+      1,
+      ptr(getInstanceBuffer(viewport)),
+    );
   }
 
   /**
    * Set scissor rectangle dynamically
    */
   setScissor(rect: Rect): void {
-    if (!this.#isRecording) {
+    if (!this.__isRecording) {
       throw new DynamicLibError(
         'Cannot set scissor: command buffer is not recording',
         'Vulkan',
@@ -298,7 +303,7 @@ export class VkCommandBuffer implements Disposable {
     scissor.extent.width = Math.floor(rect.width);
     scissor.extent.height = Math.floor(rect.height);
 
-    VK.vkCmdSetScissor(this.#instance, 0, 1, ptr(getInstanceBuffer(scissor)));
+    VK.vkCmdSetScissor(this.__instance, 0, 1, ptr(getInstanceBuffer(scissor)));
   }
 
   /**
@@ -310,7 +315,7 @@ export class VkCommandBuffer implements Disposable {
     firstVertex: number = 0,
     firstInstance: number = 0,
   ): void {
-    if (!this.#isRecording) {
+    if (!this.__isRecording) {
       throw new DynamicLibError(
         'Cannot draw: command buffer is not recording',
         'Vulkan',
@@ -319,7 +324,7 @@ export class VkCommandBuffer implements Disposable {
 
     VK_DEBUG(`Drawing: ${vertexCount} vertices, ${instanceCount} instances`);
     VK.vkCmdDraw(
-      this.#instance,
+      this.__instance,
       vertexCount,
       instanceCount,
       firstVertex,
@@ -337,7 +342,7 @@ export class VkCommandBuffer implements Disposable {
     vertexOffset: number = 0,
     firstInstance: number = 0,
   ): void {
-    if (!this.#isRecording) {
+    if (!this.__isRecording) {
       throw new DynamicLibError(
         'Cannot draw indexed: command buffer is not recording',
         'Vulkan',
@@ -348,7 +353,7 @@ export class VkCommandBuffer implements Disposable {
       `Drawing indexed: ${indexCount} indices, ${instanceCount} instances`,
     );
     VK.vkCmdDrawIndexed(
-      this.#instance,
+      this.__instance,
       indexCount,
       instanceCount,
       firstIndex,
@@ -358,33 +363,33 @@ export class VkCommandBuffer implements Disposable {
   }
 
   get instance() {
-    return this.#instance;
+    return this.__instance;
   }
 
   get isRecording() {
-    return this.#isRecording;
+    return this.__isRecording;
   }
 
   dispose(): void | Promise<void> {
-    VK_DEBUG(`Freeing command buffer: 0x${this.#instance.toString(16)}`);
+    VK_DEBUG(`Freeing command buffer: 0x${this.__instance.toString(16)}`);
     VK.vkFreeCommandBuffers(
-      this.#device,
-      this.#commandPool,
+      this.__device,
+      this.__commandPool,
       1,
-      ptr(new BigUint64Array([BigInt(this.#instance)])),
+      ptr(new BigUint64Array([BigInt(this.__instance)])),
     );
     VK_DEBUG('Command buffer freed');
   }
 
-  #allocateCommandBuffer(): Pointer {
+  private __allocateCommandBuffer(): Pointer {
     const allocInfo = instantiate(vkCommandBufferAllocateInfo);
-    allocInfo.commandPool = BigInt(this.#commandPool);
+    allocInfo.commandPool = BigInt(this.__commandPool);
     allocInfo.level = VkCommandBufferLevel.PRIMARY;
     allocInfo.commandBufferCount = 1;
 
     const commandBuffers = new BigUint64Array(1);
     const result = VK.vkAllocateCommandBuffers(
-      this.#device,
+      this.__device,
       ptr(getInstanceBuffer(allocInfo)),
       ptr(commandBuffers),
     );

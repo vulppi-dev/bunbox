@@ -140,25 +140,25 @@ export type SamplerDescriptor = {
  */
 export class Sampler extends DirtyState {
   // Global cache to deduplicate equivalent samplers (label is not part of the key)
-  static #cache: Map<string, Sampler> = new Map();
+  private static __cache: Map<string, Sampler> = new Map();
 
-  #label = '';
+  private __label = '';
 
-  #minFilter: FilterMode = 'linear';
-  #magFilter: FilterMode = 'linear';
-  #mipmapFilter: MipmapFilter = 'linear';
+  private __minFilter: FilterMode = 'linear';
+  private __magFilter: FilterMode = 'linear';
+  private __mipmapFilter: MipmapFilter = 'linear';
 
-  #addressModeU: AddressMode = 'repeat';
-  #addressModeV: AddressMode = 'repeat';
-  #addressModeW: AddressMode = 'repeat';
+  private __addressModeU: AddressMode = 'repeat';
+  private __addressModeV: AddressMode = 'repeat';
+  private __addressModeW: AddressMode = 'repeat';
 
-  #lodMinClamp = 0;
-  #lodMaxClamp = 32;
+  private __lodMinClamp = 0;
+  private __lodMaxClamp = 32;
 
-  #compare: CompareFunction | null = null;
-  #maxAnisotropy = 1;
-  #normalizedCoordinates = true;
-  #borderColor: BorderColor = 'opaque-black';
+  private __compare: CompareFunction | null = null;
+  private __maxAnisotropy = 1;
+  private __normalizedCoordinates = true;
+  private __borderColor: BorderColor = 'opaque-black';
 
   // ----------- Presets for plug & play -----------
 
@@ -293,190 +293,190 @@ export class Sampler extends DirtyState {
   }
 
   get label() {
-    return this.#label;
+    return this.__label;
   }
   get minFilter() {
-    return this.#minFilter;
+    return this.__minFilter;
   }
   get magFilter() {
-    return this.#magFilter;
+    return this.__magFilter;
   }
   get mipmapFilter() {
-    return this.#mipmapFilter;
+    return this.__mipmapFilter;
   }
   get addressModeU() {
-    return this.#addressModeU;
+    return this.__addressModeU;
   }
   get addressModeV() {
-    return this.#addressModeV;
+    return this.__addressModeV;
   }
   get addressModeW() {
-    return this.#addressModeW;
+    return this.__addressModeW;
   }
   get lodMinClamp() {
-    return this.#lodMinClamp;
+    return this.__lodMinClamp;
   }
   get lodMaxClamp() {
-    return this.#lodMaxClamp;
+    return this.__lodMaxClamp;
   }
   get compare(): CompareFunction | null {
-    return this.#compare;
+    return this.__compare;
   }
   get maxAnisotropy() {
-    return this.#maxAnisotropy;
+    return this.__maxAnisotropy;
   }
   get normalizedCoordinates() {
-    return this.#normalizedCoordinates;
+    return this.__normalizedCoordinates;
   }
   get borderColor() {
-    return this.#borderColor;
+    return this.__borderColor;
   }
 
   /** Stable string key to deduplicate/cachelize samplers. */
   get hash(): string {
     const key = {
-      min: this.#minFilter,
-      mag: this.#magFilter,
-      mip: this.#mipmapFilter,
-      wrapU: this.#addressModeU,
-      wrapV: this.#addressModeV,
-      wrapW: this.#addressModeW,
-      lodMin: this.#lodMinClamp,
-      lodMax: this.#lodMaxClamp,
-      cmp: this.#compare ?? 'none',
-      aniso: this.#maxAnisotropy,
-      norm: this.#normalizedCoordinates ? 1 : 0,
-      border: this.#borderColor,
+      min: this.__minFilter,
+      mag: this.__magFilter,
+      mip: this.__mipmapFilter,
+      wrapU: this.__addressModeU,
+      wrapV: this.__addressModeV,
+      wrapW: this.__addressModeW,
+      lodMin: this.__lodMinClamp,
+      lodMax: this.__lodMaxClamp,
+      cmp: this.__compare ?? 'none',
+      aniso: this.__maxAnisotropy,
+      norm: this.__normalizedCoordinates ? 1 : 0,
+      border: this.__borderColor,
     };
     return sha(JSON.stringify(key), 'hex');
   }
 
   set label(v: string) {
-    if (this.#label === v) return;
-    this.#label = v;
+    if (this.__label === v) return;
+    this.__label = v;
     this.markAsDirty();
   }
   set minFilter(v: FilterMode) {
-    if (this.#minFilter === v) return;
-    this.#minFilter = v;
+    if (this.__minFilter === v) return;
+    this.__minFilter = v;
     this.markAsDirty();
   }
   set magFilter(v: FilterMode) {
-    if (this.#magFilter === v) return;
-    this.#magFilter = v;
+    if (this.__magFilter === v) return;
+    this.__magFilter = v;
     this.markAsDirty();
   }
   set mipmapFilter(v: MipmapFilter) {
-    if (this.#mipmapFilter === v) return;
-    this.#mipmapFilter = v;
+    if (this.__mipmapFilter === v) return;
+    this.__mipmapFilter = v;
     this.markAsDirty();
   }
   set addressModeU(v: AddressMode) {
-    if (this.#addressModeU === v) return;
-    this.#addressModeU = v;
+    if (this.__addressModeU === v) return;
+    this.__addressModeU = v;
     this.markAsDirty();
   }
   set addressModeV(v: AddressMode) {
-    if (this.#addressModeV === v) return;
-    this.#addressModeV = v;
+    if (this.__addressModeV === v) return;
+    this.__addressModeV = v;
     this.markAsDirty();
   }
   set addressModeW(v: AddressMode) {
-    if (this.#addressModeW === v) return;
-    this.#addressModeW = v;
+    if (this.__addressModeW === v) return;
+    this.__addressModeW = v;
     this.markAsDirty();
   }
   set lodMinClamp(v: number) {
     const nv = Math.max(0, v);
-    if (this.#lodMinClamp === nv) return;
-    this.#lodMinClamp = nv;
-    if (this.#lodMaxClamp < this.#lodMinClamp) {
-      this.#lodMaxClamp = this.#lodMinClamp;
+    if (this.__lodMinClamp === nv) return;
+    this.__lodMinClamp = nv;
+    if (this.__lodMaxClamp < this.__lodMinClamp) {
+      this.__lodMaxClamp = this.__lodMinClamp;
     }
     this.markAsDirty();
   }
   set lodMaxClamp(v: number) {
     const nv = Math.max(0, v);
-    if (this.#lodMaxClamp === nv) return;
-    this.#lodMaxClamp = nv;
-    if (this.#lodMaxClamp < this.#lodMinClamp) {
-      this.#lodMinClamp = this.#lodMaxClamp;
+    if (this.__lodMaxClamp === nv) return;
+    this.__lodMaxClamp = nv;
+    if (this.__lodMaxClamp < this.__lodMinClamp) {
+      this.__lodMinClamp = this.__lodMaxClamp;
     }
     this.markAsDirty();
   }
   set compare(v: CompareFunction | null) {
-    if (this.#compare === v) return;
-    this.#compare = v;
+    if (this.__compare === v) return;
+    this.__compare = v;
     this.markAsDirty();
   }
   set maxAnisotropy(v: number) {
     const nv = Math.min(16, Math.max(1, Math.floor(v)));
-    if (this.#maxAnisotropy === nv) return;
-    this.#maxAnisotropy = nv;
+    if (this.__maxAnisotropy === nv) return;
+    this.__maxAnisotropy = nv;
     this.markAsDirty();
   }
   set normalizedCoordinates(v: boolean) {
-    if (this.#normalizedCoordinates === v) return;
-    this.#normalizedCoordinates = v;
+    if (this.__normalizedCoordinates === v) return;
+    this.__normalizedCoordinates = v;
     this.markAsDirty();
   }
   set borderColor(v: BorderColor) {
-    if (this.#borderColor === v) return;
-    this.#borderColor = v;
+    if (this.__borderColor === v) return;
+    this.__borderColor = v;
     this.markAsDirty();
   }
 
   equals(other: Sampler): boolean {
     return (
-      this.#minFilter === other.#minFilter &&
-      this.#magFilter === other.#magFilter &&
-      this.#mipmapFilter === other.#mipmapFilter &&
-      this.#addressModeU === other.#addressModeU &&
-      this.#addressModeV === other.#addressModeV &&
-      this.#addressModeW === other.#addressModeW &&
-      this.#lodMinClamp === other.#lodMinClamp &&
-      this.#lodMaxClamp === other.#lodMaxClamp &&
-      this.#compare === other.#compare &&
-      this.#maxAnisotropy === other.#maxAnisotropy &&
-      this.#normalizedCoordinates === other.#normalizedCoordinates &&
-      this.#borderColor === other.#borderColor
+      this.__minFilter === other.__minFilter &&
+      this.__magFilter === other.__magFilter &&
+      this.__mipmapFilter === other.__mipmapFilter &&
+      this.__addressModeU === other.__addressModeU &&
+      this.__addressModeV === other.__addressModeV &&
+      this.__addressModeW === other.__addressModeW &&
+      this.__lodMinClamp === other.__lodMinClamp &&
+      this.__lodMaxClamp === other.__lodMaxClamp &&
+      this.__compare === other.__compare &&
+      this.__maxAnisotropy === other.__maxAnisotropy &&
+      this.__normalizedCoordinates === other.__normalizedCoordinates &&
+      this.__borderColor === other.__borderColor
     );
   }
 
   clone(): Sampler {
     return new Sampler({
-      label: this.#label,
-      minFilter: this.#minFilter,
-      magFilter: this.#magFilter,
-      mipmapFilter: this.#mipmapFilter,
-      addressModeU: this.#addressModeU,
-      addressModeV: this.#addressModeV,
-      addressModeW: this.#addressModeW,
-      lodMinClamp: this.#lodMinClamp,
-      lodMaxClamp: this.#lodMaxClamp,
-      compare: this.#compare,
-      maxAnisotropy: this.#maxAnisotropy,
-      normalizedCoordinates: this.#normalizedCoordinates,
-      borderColor: this.#borderColor,
+      label: this.__label,
+      minFilter: this.__minFilter,
+      magFilter: this.__magFilter,
+      mipmapFilter: this.__mipmapFilter,
+      addressModeU: this.__addressModeU,
+      addressModeV: this.__addressModeV,
+      addressModeW: this.__addressModeW,
+      lodMinClamp: this.__lodMinClamp,
+      lodMaxClamp: this.__lodMaxClamp,
+      compare: this.__compare,
+      maxAnisotropy: this.__maxAnisotropy,
+      normalizedCoordinates: this.__normalizedCoordinates,
+      borderColor: this.__borderColor,
     });
   }
 
   /** Fast copy from another sampler (single dirty mark). */
   copy(other: Sampler): this {
-    if (this.equals(other) && this.#label === other.#label) return this;
-    this.#label = other.#label;
-    this.#minFilter = other.#minFilter;
-    this.#magFilter = other.#magFilter;
-    this.#mipmapFilter = other.#mipmapFilter;
-    this.#addressModeU = other.#addressModeU;
-    this.#addressModeV = other.#addressModeV;
-    this.#addressModeW = other.#addressModeW;
-    this.#lodMinClamp = other.#lodMinClamp;
-    this.#lodMaxClamp = other.#lodMaxClamp;
-    this.#compare = other.#compare;
-    this.#maxAnisotropy = other.#maxAnisotropy;
-    this.#normalizedCoordinates = other.#normalizedCoordinates;
-    this.#borderColor = other.#borderColor;
+    if (this.equals(other) && this.__label === other.__label) return this;
+    this.__label = other.__label;
+    this.__minFilter = other.__minFilter;
+    this.__magFilter = other.__magFilter;
+    this.__mipmapFilter = other.__mipmapFilter;
+    this.__addressModeU = other.__addressModeU;
+    this.__addressModeV = other.__addressModeV;
+    this.__addressModeW = other.__addressModeW;
+    this.__lodMinClamp = other.__lodMinClamp;
+    this.__lodMaxClamp = other.__lodMaxClamp;
+    this.__compare = other.__compare;
+    this.__maxAnisotropy = other.__maxAnisotropy;
+    this.__normalizedCoordinates = other.__normalizedCoordinates;
+    this.__borderColor = other.__borderColor;
     return this.markAsDirty();
   }
 }

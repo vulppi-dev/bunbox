@@ -35,17 +35,17 @@ export class BaseNode<
   M extends Record<string, any> = Record<string, any>,
   T extends EventMap = {},
 > extends EventEmitter<MergeEventMaps<NodeEvents, T>> {
-  readonly #id: string;
-  readonly #properties: P;
+  readonly __id: string;
+  readonly __properties: P;
   metadata: Partial<M> = {};
 
-  #name: string = '';
-  #parent: BaseNode | null = null;
-  #children: Set<BaseNode> = new Set();
-  #enabled: boolean = true;
-  #tags: Set<string> = new Set();
+  private __name: string = '';
+  private __parent: BaseNode | null = null;
+  private __children: Set<BaseNode> = new Set();
+  private __enabled: boolean = true;
+  private __tags: Set<string> = new Set();
 
-  #bindMap: Map<string, () => void> = new Map();
+  private __bindMap: Map<string, () => void> = new Map();
 
   /**
    * Create a new node.
@@ -53,8 +53,8 @@ export class BaseNode<
    */
   constructor(name?: string) {
     super();
-    this.#id = ulid();
-    this.#properties = new Proxy({} as P, {
+    this.__id = ulid();
+    this.__properties = new Proxy({} as P, {
       set: (target, prop, value) => {
         const key = prop as keyof P;
         if (target[key] !== value) {
@@ -74,7 +74,7 @@ export class BaseNode<
     });
 
     if (name) {
-      this.#name = name;
+      this.__name = name;
     }
   }
 
@@ -82,7 +82,7 @@ export class BaseNode<
    * Unique identifier of this node. Generated using ULID.
    */
   get id() {
-    return this.#id;
+    return this.__id;
   }
 
   /**
@@ -91,38 +91,38 @@ export class BaseNode<
    * - Use for gameplay/state properties that should trigger updates.
    */
   get properties() {
-    return this.#properties;
+    return this.__properties;
   }
 
   /**
    * The parent node, or `null` if this node is the root of its tree.
    */
   get parent() {
-    return this.#parent;
+    return this.__parent;
   }
 
   /**
    * Read-only snapshot of direct children.
    */
   get children(): readonly BaseNode[] {
-    return Object.freeze([...this.#children]);
+    return Object.freeze([...this.__children]);
   }
 
   /**
    * Node name used for indexing and lookups via `findByName`.
    */
   get name() {
-    return this.#name;
+    return this.__name;
   }
 
   /**
    * Change the node name. Updates the name index and emits `rename`.
    */
   set name(value: string) {
-    if (this.#name === value) return;
+    if (this.__name === value) return;
 
-    const oldName = this.#name;
-    this.#name = value;
+    const oldName = this.__name;
+    this.__name = value;
     this.markAsDirty();
 
     (this as BaseNode).emit('rename', this as BaseNode, oldName, value);
@@ -133,7 +133,7 @@ export class BaseNode<
    * Whether this node is enabled. Disabled nodes are ignored by traversal by default.
    */
   get isEnabled(): boolean {
-    return this.#enabled;
+    return this.__enabled;
   }
 
   /** Enable this node. */
@@ -152,8 +152,8 @@ export class BaseNode<
    * Note: By design, the `enabled-change` event payload includes only the node itself.
    */
   setEnabled(value: boolean): this {
-    if (this.#enabled === value) return this;
-    this.#enabled = value;
+    if (this.__enabled === value) return this;
+    this.__enabled = value;
     this.markAsDirty();
     (this as BaseNode).emit('enabled-change', this as BaseNode);
     return this;
@@ -167,9 +167,9 @@ export class BaseNode<
    * @returns `true` if the tag was added, `false` if it already existed.
    */
   addTag(tag: string): boolean {
-    if (!tag || this.#tags.has(tag)) return false;
+    if (!tag || this.__tags.has(tag)) return false;
 
-    this.#tags.add(tag);
+    this.__tags.add(tag);
     this.markAsDirty();
     (this as BaseNode).emit('tag-change', this as BaseNode, tag, 'add');
 
@@ -182,9 +182,9 @@ export class BaseNode<
    * @returns `true` if the tag was removed, `false` if it didn't exist.
    */
   removeTag(tag: string): boolean {
-    if (!this.#tags.has(tag)) return false;
+    if (!this.__tags.has(tag)) return false;
 
-    this.#tags.delete(tag);
+    this.__tags.delete(tag);
     this.markAsDirty();
     (this as BaseNode).emit('tag-change', this as BaseNode, tag, 'remove');
 
@@ -197,7 +197,7 @@ export class BaseNode<
    * @returns `true` if the node has the tag, `false` otherwise.
    */
   hasTag(tag: string): boolean {
-    return this.#tags.has(tag);
+    return this.__tags.has(tag);
   }
 
   /**
@@ -205,7 +205,7 @@ export class BaseNode<
    * @returns A read-only array of tags.
    */
   getTags(): readonly string[] {
-    return Object.freeze([...this.#tags]);
+    return Object.freeze([...this.__tags]);
   }
 
   /**
@@ -213,8 +213,8 @@ export class BaseNode<
    * @returns The number of tags that were removed.
    */
   clearTags(): number {
-    const count = this.#tags.size;
-    const tags = [...this.#tags];
+    const count = this.__tags.size;
+    const tags = [...this.__tags];
 
     for (const tag of tags) {
       this.removeTag(tag);
@@ -223,11 +223,11 @@ export class BaseNode<
     return count;
   }
 
-  #isAncestorOf(node: BaseNode): boolean {
-    let curr: BaseNode | null = node.#parent;
+  private __isAncestorOf(node: BaseNode): boolean {
+    let curr: BaseNode | null = node.__parent;
     while (curr) {
       if (curr === this) return true;
-      curr = curr.#parent;
+      curr = curr.__parent;
     }
     return false;
   }
@@ -243,19 +243,19 @@ export class BaseNode<
     if (child === this) {
       throw new Error('Cannot add a node as a child of itself');
     }
-    if (child.#isAncestorOf(this as BaseNode)) {
+    if (child.__isAncestorOf(this as BaseNode)) {
       throw new Error('Cannot add an ancestor as a child (cycle detected)');
     }
 
-    if (child.#parent) {
-      child.#parent.removeChild(child);
+    if (child.__parent) {
+      child.__parent.removeChild(child);
     }
 
-    if (child.#parent === this) return true;
-    if (this.#children.has(child)) return true;
+    if (child.__parent === this) return true;
+    if (this.__children.has(child)) return true;
 
-    this.#children.add(child);
-    child.#parent = this as any;
+    this.__children.add(child);
+    child.__parent = this as any;
     this.markAsDirty();
     (this as BaseNode).emit('add-child', child);
 
@@ -283,7 +283,7 @@ export class BaseNode<
       }),
     ];
 
-    this.#bindMap.set(child.id, () => {
+    this.__bindMap.set(child.id, () => {
       for (const off of unsubscribe) off();
     });
 
@@ -297,18 +297,18 @@ export class BaseNode<
    * @returns `false` if the child was not attached, otherwise `true`.
    */
   removeChild(child: BaseNode) {
-    if (!this.#children.has(child)) {
+    if (!this.__children.has(child)) {
       return false;
     }
 
-    this.#children.delete(child);
-    child.#parent = null;
+    this.__children.delete(child);
+    child.__parent = null;
 
     // Unbind child events
-    const unbind = this.#bindMap.get(child.id);
+    const unbind = this.__bindMap.get(child.id);
     if (unbind) {
       unbind();
-      this.#bindMap.delete(child.id);
+      this.__bindMap.delete(child.id);
     }
 
     this.markAsDirty();
@@ -324,7 +324,7 @@ export class BaseNode<
    * @returns The node with the given ID, or null if not found.
    */
   getById(id: string): BaseNode | null {
-    if (this.#id === id) return this as BaseNode;
+    if (this.__id === id) return this as BaseNode;
 
     const root = this.getRoot();
     if (root instanceof Root) {
@@ -392,8 +392,8 @@ export class BaseNode<
    */
   getRoot(): BaseNode | Root {
     let node: BaseNode | Root = this as any;
-    while (node instanceof BaseNode && node.#parent) {
-      node = node.#parent;
+    while (node instanceof BaseNode && node.__parent) {
+      node = node.__parent;
     }
     return node;
   }
@@ -426,7 +426,7 @@ export class BaseNode<
 
     if (order === 'pre') visitor(this as BaseNode);
 
-    for (const child of this.#children) {
+    for (const child of this.__children) {
       child.traverse(visitor, { includeDisabled, order });
     }
 
@@ -443,16 +443,16 @@ export class BaseNode<
    */
   override async dispose(): Promise<void> {
     // Step 1: Remove from parent tree
-    if (this.#parent) {
-      this.#parent.removeChild(this as BaseNode);
+    if (this.__parent) {
+      this.__parent.removeChild(this as BaseNode);
     }
 
     // Step 2: Dispose children in post-order (leaf to root)
-    const snapshot = [...this.#children];
+    const snapshot = [...this.__children];
     for (const child of snapshot) {
       await child.dispose();
     }
-    this.#children.clear();
+    this.__children.clear();
 
     // Step 3: Dispose self (emits 'dispose' event and marks as disposed)
     await super.dispose();
@@ -472,43 +472,43 @@ export class Root<
   M extends Record<string, any> = Record<string, any>,
   T extends EventMap = {},
 > extends BaseNode<P, M, T> {
-  readonly #nodeIdMap = new Map<string, BaseNode>();
-  readonly #nodeNameMap = new Map<string, Set<BaseNode>>();
-  readonly #nodeTagMap = new Map<string, Set<BaseNode>>();
+  readonly __nodeIdMap = new Map<string, BaseNode>();
+  readonly __nodeNameMap = new Map<string, Set<BaseNode>>();
+  readonly __nodeTagMap = new Map<string, Set<BaseNode>>();
 
   constructor(name?: string) {
     super(name);
 
     // Register self
-    this.#nodeIdMap.set(this.id, this);
+    this.__nodeIdMap.set(this.id, this);
     if (this.name) {
-      if (!this.#nodeNameMap.has(this.name)) {
-        this.#nodeNameMap.set(this.name, new Set());
+      if (!this.__nodeNameMap.has(this.name)) {
+        this.__nodeNameMap.set(this.name, new Set());
       }
-      this.#nodeNameMap.get(this.name)!.add(this);
+      this.__nodeNameMap.get(this.name)!.add(this);
     }
     // Register self tags
-    this.#registerNodeTags(this);
+    this.__registerNodeTags(this);
 
     // Listen to rename events from descendants to update name index
     // @ts-expect-error - Event typing is complex but we know the signature
     this.on('rename', (...args: [BaseNode, string, string]) => {
       const [node, oldName, newName] = args;
-      this.#updateNodeName(node, oldName, newName);
+      this.__updateNodeName(node, oldName, newName);
     });
 
     // Listen to add-child events to register nodes
     // @ts-expect-error - Event typing is complex but we know the signature
     this.on('add-child', (...args: [BaseNode]) => {
       const [child] = args;
-      this.#registerNode(child);
+      this.__registerNode(child);
     });
 
     // Listen to remove-child events to unregister nodes
     // @ts-expect-error - Event typing is complex but we know the signature
     this.on('remove-child', (...args: [BaseNode]) => {
       const [child] = args;
-      this.#unregisterNode(child);
+      this.__unregisterNode(child);
     });
 
     // Listen to tag-change events to update tag index
@@ -516,9 +516,9 @@ export class Root<
     this.on('tag-change', (...args: [BaseNode, string, 'add' | 'remove']) => {
       const [node, tag, action] = args;
       if (action === 'add') {
-        this.#addTagToIndex(node, tag);
+        this.__addTagToIndex(node, tag);
       } else {
-        this.#removeTagFromIndex(node, tag);
+        this.__removeTagFromIndex(node, tag);
       }
     });
   }
@@ -526,111 +526,115 @@ export class Root<
   /**
    * Register a node and all its descendants in the maps.
    */
-  #registerNode(node: BaseNode): void {
+  private __registerNode(node: BaseNode): void {
     // Register by ID
-    this.#nodeIdMap.set(node.id, node);
+    this.__nodeIdMap.set(node.id, node);
 
     // Register by name
     if (node.name) {
-      if (!this.#nodeNameMap.has(node.name)) {
-        this.#nodeNameMap.set(node.name, new Set());
+      if (!this.__nodeNameMap.has(node.name)) {
+        this.__nodeNameMap.set(node.name, new Set());
       }
-      this.#nodeNameMap.get(node.name)!.add(node);
+      this.__nodeNameMap.get(node.name)!.add(node);
     }
 
     // Register tags
-    this.#registerNodeTags(node);
+    this.__registerNodeTags(node);
 
     // Register all children recursively
     for (const child of node.children) {
-      this.#registerNode(child);
+      this.__registerNode(child);
     }
   }
 
   /**
    * Unregister a node and all its descendants from the maps.
    */
-  #unregisterNode(node: BaseNode): void {
+  private __unregisterNode(node: BaseNode): void {
     // Unregister by ID
-    this.#nodeIdMap.delete(node.id);
+    this.__nodeIdMap.delete(node.id);
 
     // Unregister by name
-    if (node.name && this.#nodeNameMap.has(node.name)) {
-      this.#nodeNameMap.get(node.name)!.delete(node);
-      if (this.#nodeNameMap.get(node.name)!.size === 0) {
-        this.#nodeNameMap.delete(node.name);
+    if (node.name && this.__nodeNameMap.has(node.name)) {
+      this.__nodeNameMap.get(node.name)!.delete(node);
+      if (this.__nodeNameMap.get(node.name)!.size === 0) {
+        this.__nodeNameMap.delete(node.name);
       }
     }
 
     // Unregister tags
-    this.#unregisterNodeTags(node);
+    this.__unregisterNodeTags(node);
 
     // Unregister all children recursively
     for (const child of node.children) {
-      this.#unregisterNode(child);
+      this.__unregisterNode(child);
     }
   }
 
   /**
    * Update node name in the index.
    */
-  #updateNodeName(node: BaseNode, oldName: string, newName: string): void {
+  private __updateNodeName(
+    node: BaseNode,
+    oldName: string,
+    newName: string,
+  ): void {
     // Remove from old name index
-    if (oldName && this.#nodeNameMap.has(oldName)) {
-      this.#nodeNameMap.get(oldName)!.delete(node);
-      if (this.#nodeNameMap.get(oldName)!.size === 0) {
-        this.#nodeNameMap.delete(oldName);
+    if (oldName && this.__nodeNameMap.has(oldName)) {
+      this.__nodeNameMap.get(oldName)!.delete(node);
+      if (this.__nodeNameMap.get(oldName)!.size === 0) {
+        this.__nodeNameMap.delete(oldName);
       }
     }
 
     // Add to new name index
     if (newName) {
-      if (!this.#nodeNameMap.has(newName)) {
-        this.#nodeNameMap.set(newName, new Set());
+      if (!this.__nodeNameMap.has(newName)) {
+        this.__nodeNameMap.set(newName, new Set());
       }
-      this.#nodeNameMap.get(newName)!.add(node);
+      this.__nodeNameMap.get(newName)!.add(node);
     }
   }
 
   /**
    * Add a tag to the index for a specific node.
    */
-  #addTagToIndex(node: BaseNode, tag: string): void {
+  private __addTagToIndex(node: BaseNode, tag: string): void {
     if (!tag) return;
 
-    if (!this.#nodeTagMap.has(tag)) {
-      this.#nodeTagMap.set(tag, new Set());
+    if (!this.__nodeTagMap.has(tag)) {
+      this.__nodeTagMap.set(tag, new Set());
     }
-    this.#nodeTagMap.get(tag)!.add(node);
+    this.__nodeTagMap.get(tag)!.add(node);
   }
 
   /**
    * Remove a tag from the index for a specific node.
    */
-  #removeTagFromIndex(node: BaseNode, tag: string): void {
-    if (!tag || !this.#nodeTagMap.has(tag)) return;
+  private __removeTagFromIndex(node: BaseNode, tag: string): void {
+    if (!tag || !this.__nodeTagMap.has(tag)) return;
 
-    this.#nodeTagMap.get(tag)!.delete(node);
-    if (this.#nodeTagMap.get(tag)!.size === 0) {
-      this.#nodeTagMap.delete(tag);
+    this.__nodeTagMap.get(tag)!.delete(node);
+    if (this.__nodeTagMap.get(tag)!.size === 0) {
+      this.__nodeTagMap.delete(tag);
     }
   }
 
   /**
    * Register all tags of a node in the index.
    */
-  #registerNodeTags(node: BaseNode): void {
+  private __registerNodeTags(node: BaseNode): void {
     for (const tag of node.getTags()) {
-      this.#addTagToIndex(node, tag);
+      this.__addTagToIndex(node, tag);
     }
   }
 
   /**
    * Unregister all tags of a node from the index.
    */
-  #unregisterNodeTags(node: BaseNode): void {
+  private __unregisterNodeTags(node: BaseNode): void {
     for (const tag of node.getTags()) {
-      this.#removeTagFromIndex(node, tag);
+      this.__removeTagFromIndex(node, tag);
     }
   }
 
@@ -638,14 +642,14 @@ export class Root<
    * Find a node by its unique ID.
    */
   override getById(id: string): BaseNode | null {
-    return this.#nodeIdMap.get(id) ?? null;
+    return this.__nodeIdMap.get(id) ?? null;
   }
 
   /**
    * Find all nodes with the given name.
    */
   override findByName(name: string): BaseNode[] {
-    return [...(this.#nodeNameMap.get(name) ?? [])];
+    return [...(this.__nodeNameMap.get(name) ?? [])];
   }
 
   /**
@@ -654,7 +658,7 @@ export class Root<
    * @returns An array of nodes that have the specified tag.
    */
   override findByTag(tag: string): BaseNode[] {
-    return [...(this.#nodeTagMap.get(tag) ?? [])];
+    return [...(this.__nodeTagMap.get(tag) ?? [])];
   }
 
   /**
@@ -682,7 +686,7 @@ export class Root<
     if (tags.length === 1) return this.findByTag(tags[0]!);
 
     // Start with nodes that have the first tag
-    const firstTagNodes = this.#nodeTagMap.get(tags[0]!);
+    const firstTagNodes = this.__nodeTagMap.get(tags[0]!);
     if (!firstTagNodes) return [];
 
     // Filter nodes that have all other tags
@@ -700,27 +704,27 @@ export class Root<
    * Get all registered node IDs.
    */
   getAllIds(): string[] {
-    return [...this.#nodeIdMap.keys()];
+    return [...this.__nodeIdMap.keys()];
   }
 
   /**
    * Get all registered node names.
    */
   getAllNames(): string[] {
-    return [...this.#nodeNameMap.keys()];
+    return [...this.__nodeNameMap.keys()];
   }
 
   /**
    * Get all registered tags across all nodes.
    */
   getAllTags(): string[] {
-    return [...this.#nodeTagMap.keys()];
+    return [...this.__nodeTagMap.keys()];
   }
 
   /**
    * Get the total number of registered nodes.
    */
   get nodeCount(): number {
-    return this.#nodeIdMap.size;
+    return this.__nodeIdMap.size;
   }
 }

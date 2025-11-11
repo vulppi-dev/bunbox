@@ -35,11 +35,11 @@ import { Node3D } from './Node3D';
  * ```
  */
 export abstract class AbstractCamera extends Node3D {
-  #near: number = 0.1;
-  #far: number = 1000;
+  private __near: number = 0.1;
+  private __far: number = 1000;
 
-  #projectionMatrix: Matrix = new Matrix();
-  #frustum: Frustum | null = null;
+  private __projectionMatrix: Matrix = new Matrix();
+  private __frustum: Frustum | null = null;
 
   /**
    * Near clipping plane distance in meters.
@@ -48,7 +48,7 @@ export abstract class AbstractCamera extends Node3D {
    * Default: 0.1
    */
   get near(): number {
-    return this.#near;
+    return this.__near;
   }
 
   /**
@@ -58,7 +58,7 @@ export abstract class AbstractCamera extends Node3D {
    * Default: 1000
    */
   get far(): number {
-    return this.#far;
+    return this.__far;
   }
 
   /**
@@ -69,7 +69,7 @@ export abstract class AbstractCamera extends Node3D {
    * @readonly Computed by subclass via _processProjectionMatrix()
    */
   get projectionMatrix(): Matrix {
-    return this.#projectionMatrix;
+    return this.__projectionMatrix;
   }
 
   /**
@@ -78,7 +78,7 @@ export abstract class AbstractCamera extends Node3D {
    * @param value - Distance in meters (must be > 0)
    */
   set near(value: number) {
-    this.#near = value;
+    this.__near = value;
     this.markAsDirty();
   }
 
@@ -88,7 +88,7 @@ export abstract class AbstractCamera extends Node3D {
    * @param value - Distance in meters (must be > near)
    */
   set far(value: number) {
-    this.#far = value;
+    this.__far = value;
     this.markAsDirty();
   }
 
@@ -144,10 +144,10 @@ export abstract class AbstractCamera extends Node3D {
    */
   getFrustum(viewMatrix: Matrix): Frustum {
     // Recompute frustum if dirty or not yet created
-    if (!this.#frustum || this.isDirty || this.transform.isDirty) {
+    if (!this.__frustum || this.isDirty || this.transform.isDirty) {
       this._updateFrustum(viewMatrix);
     }
-    return this.#frustum!;
+    return this.__frustum!;
   }
 
   /**
@@ -162,7 +162,7 @@ export abstract class AbstractCamera extends Node3D {
   override _process(_deltaTime: number): void {
     if (this.isDirty || this.transform.isDirty) {
       this._processProjectionMatrix();
-      this.#frustum = null; // Invalidate frustum cache
+      this.__frustum = null; // Invalidate frustum cache
       this.transform.markAsClean();
       this.markAsClean();
     }
@@ -179,17 +179,17 @@ export abstract class AbstractCamera extends Node3D {
    */
   protected _updateFrustum(viewMatrix: Matrix): void {
     // Compute view-projection matrix
-    const vp = this.#projectionMatrix.clone().mulL(viewMatrix);
+    const vp = this.__projectionMatrix.clone().mulL(viewMatrix);
     const m = vp.toArray();
 
     // Create frustum if needed
-    if (!this.#frustum) {
-      this.#frustum = new Frustum();
+    if (!this.__frustum) {
+      this.__frustum = new Frustum();
     }
 
     // Extract frustum planes from view-projection matrix
     // Left plane: m3 + m0, m7 + m4, m11 + m8, m15 + m12
-    this.#frustum.setPlane(
+    this.__frustum.setPlane(
       0,
       new Plane(
         new Vector3(m[3] + m[0], m[7] + m[4], m[11] + m[8]),
@@ -198,7 +198,7 @@ export abstract class AbstractCamera extends Node3D {
     );
 
     // Right plane: m3 - m0, m7 - m4, m11 - m8, m15 - m12
-    this.#frustum.setPlane(
+    this.__frustum.setPlane(
       1,
       new Plane(
         new Vector3(m[3] - m[0], m[7] - m[4], m[11] - m[8]),
@@ -207,7 +207,7 @@ export abstract class AbstractCamera extends Node3D {
     );
 
     // Bottom plane: m3 + m1, m7 + m5, m11 + m9, m15 + m13
-    this.#frustum.setPlane(
+    this.__frustum.setPlane(
       2,
       new Plane(
         new Vector3(m[3] + m[1], m[7] + m[5], m[11] + m[9]),
@@ -216,7 +216,7 @@ export abstract class AbstractCamera extends Node3D {
     );
 
     // Top plane: m3 - m1, m7 - m5, m11 - m9, m15 - m13
-    this.#frustum.setPlane(
+    this.__frustum.setPlane(
       3,
       new Plane(
         new Vector3(m[3] - m[1], m[7] - m[5], m[11] - m[9]),
@@ -225,7 +225,7 @@ export abstract class AbstractCamera extends Node3D {
     );
 
     // Near plane: m3 + m2, m7 + m6, m11 + m10, m15 + m14
-    this.#frustum.setPlane(
+    this.__frustum.setPlane(
       4,
       new Plane(
         new Vector3(m[3] + m[2], m[7] + m[6], m[11] + m[10]),
@@ -234,7 +234,7 @@ export abstract class AbstractCamera extends Node3D {
     );
 
     // Far plane: m3 - m2, m7 - m6, m11 - m10, m15 - m14
-    this.#frustum.setPlane(
+    this.__frustum.setPlane(
       5,
       new Plane(
         new Vector3(m[3] - m[2], m[7] - m[6], m[11] - m[10]),
