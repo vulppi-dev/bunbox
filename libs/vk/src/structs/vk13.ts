@@ -157,7 +157,7 @@ export const vkBufferMemoryBarrier2 = struct({
   dstAccessMask: u64(),
   srcQueueFamilyIndex: u32(),
   dstQueueFamilyIndex: u32(),
-  buffer: ptrAny(),
+  buffer: u64(),
   offset: u64(),
   size: u64(),
 });
@@ -173,7 +173,7 @@ export const vkImageMemoryBarrier2 = struct({
   newLayout: i32(),
   srcQueueFamilyIndex: u32(),
   dstQueueFamilyIndex: u32(),
-  image: ptrAny(),
+  image: u64(),
   subresourceRange: struct({
     aspectMask: u32(),
     baseMipLevel: u32(),

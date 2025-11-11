@@ -156,6 +156,11 @@ function getDefaultValue(field: AllFields): unknown {
     return field.default;
   }
 
+  // If the field is a pointer, always return 0n
+  if (isPointerField(field)) {
+    return 0n;
+  }
+
   switch (field.type) {
     case 'bool':
       return false;
@@ -176,7 +181,8 @@ function getDefaultValue(field: AllFields): unknown {
       return '';
     case 'array': {
       if (typeof field.length === 'number' && field.length > 0) {
-        return new Array(field.length).fill(0);
+        const elementDefault = getDefaultValue(field.to);
+        return new Array(field.length).fill(elementDefault);
       }
       return 0n;
     }

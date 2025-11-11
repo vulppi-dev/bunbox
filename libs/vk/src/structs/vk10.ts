@@ -306,7 +306,7 @@ export const vkMemoryAllocateInfo = struct({
 export const vkMappedMemoryRange = struct({
   sType: i32(VkStructureType.MAPPED_MEMORY_RANGE),
   pNext: ptrAny(),
-  memory: ptrAny(),
+  memory: u64(),
   offset: u64(),
   size: u64(),
 });
@@ -354,7 +354,7 @@ export const vkBufferViewCreateInfo = struct({
   sType: i32(VkStructureType.BUFFER_VIEW_CREATE_INFO),
   pNext: ptrAny(),
   flags: u32(),
-  buffer: ptrAny(),
+  buffer: u64(),
   format: i32(),
   offset: u64(),
   range: u64(),
@@ -388,7 +388,7 @@ export const vkImageViewCreateInfo = struct({
   sType: i32(VkStructureType.IMAGE_VIEW_CREATE_INFO),
   pNext: ptrAny(),
   flags: u32(),
-  image: ptrAny(),
+  image: u64(),
   viewType: i32(),
   format: i32(),
   components: struct({
@@ -430,7 +430,7 @@ export const vkImageMemoryBarrier = struct({
   newLayout: i32(),
   srcQueueFamilyIndex: u32(),
   dstQueueFamilyIndex: u32(),
-  image: ptrAny(),
+  image: u64(),
   subresourceRange: vkImageSubresourceRange,
 });
 
@@ -441,7 +441,7 @@ export const vkPipelineShaderStageCreateInfo = struct({
   pNext: ptrAny(),
   flags: u32(),
   stage: u32(),
-  module: ptrAny(),
+  module: u64(),
   pName: string(),
   pSpecializationInfo: ptrAny(),
 });
@@ -598,10 +598,10 @@ export const vkGraphicsPipelineCreateInfo = struct({
   pDepthStencilState: ptrAny(),
   pColorBlendState: ptrAny(),
   pDynamicState: ptrAny(),
-  layout: ptrAny(),
-  renderPass: ptrAny(),
+  layout: u64(),
+  renderPass: u64(),
   subpass: u32(),
-  basePipelineHandle: ptrAny(),
+  basePipelineHandle: u64(),
   basePipelineIndex: i32(),
 });
 
@@ -610,8 +610,8 @@ export const vkComputePipelineCreateInfo = struct({
   pNext: ptrAny(),
   flags: u32(),
   stage: vkPipelineShaderStageCreateInfo,
-  layout: ptrAny(),
-  basePipelineHandle: ptrAny(),
+  layout: u64(),
+  basePipelineHandle: u64(),
   basePipelineIndex: i32(),
 });
 
@@ -673,7 +673,7 @@ export const vkFramebufferCreateInfo = struct({
   sType: i32(VkStructureType.FRAMEBUFFER_CREATE_INFO),
   pNext: ptrAny(),
   flags: u32(),
-  renderPass: ptrAny(),
+  renderPass: u64(),
   attachmentCount: u32(),
   pAttachments: ptrAny(),
   width: u32(),
@@ -684,8 +684,8 @@ export const vkFramebufferCreateInfo = struct({
 export const vkRenderPassBeginInfo = struct({
   sType: i32(VkStructureType.RENDER_PASS_BEGIN_INFO),
   pNext: ptrAny(),
-  renderPass: ptrAny(),
-  framebuffer: ptrAny(),
+  renderPass: u64(),
+  framebuffer: u64(),
   renderArea: vkRect2D,
   clearValueCount: u32(),
   pClearValues: ptrAny(),
@@ -703,7 +703,7 @@ export const vkCommandPoolCreateInfo = struct({
 export const vkCommandBufferAllocateInfo = struct({
   sType: i32(VkStructureType.COMMAND_BUFFER_ALLOCATE_INFO),
   pNext: ptrAny(),
-  commandPool: ptrAny(),
+  commandPool: u64(),
   level: i32(),
   commandBufferCount: u32(),
 });
@@ -762,19 +762,19 @@ export const vkDescriptorPoolCreateInfo = struct({
 export const vkDescriptorSetAllocateInfo = struct({
   sType: i32(VkStructureType.DESCRIPTOR_SET_ALLOCATE_INFO),
   pNext: ptrAny(),
-  descriptorPool: ptrAny(),
+  descriptorPool: u64(),
   descriptorSetCount: u32(),
   pSetLayouts: ptrAny(),
 });
 
 export const vkDescriptorImageInfo = struct({
-  sampler: ptrAny(),
-  imageView: ptrAny(),
+  sampler: u64(),
+  imageView: u64(),
   imageLayout: i32(),
 });
 
 export const vkDescriptorBufferInfo = struct({
-  buffer: ptrAny(),
+  buffer: u64(),
   offset: u64(),
   range: u64(),
 });
@@ -782,7 +782,7 @@ export const vkDescriptorBufferInfo = struct({
 export const vkWriteDescriptorSet = struct({
   sType: i32(VkStructureType.WRITE_DESCRIPTOR_SET),
   pNext: ptrAny(),
-  dstSet: ptrAny(),
+  dstSet: u64(),
   dstBinding: u32(),
   dstArrayElement: u32(),
   descriptorCount: u32(),
@@ -795,10 +795,10 @@ export const vkWriteDescriptorSet = struct({
 export const vkCopyDescriptorSet = struct({
   sType: i32(VkStructureType.COPY_DESCRIPTOR_SET),
   pNext: ptrAny(),
-  srcSet: ptrAny(),
+  srcSet: u64(),
   srcBinding: u32(),
   srcArrayElement: u32(),
-  dstSet: ptrAny(),
+  dstSet: u64(),
   dstBinding: u32(),
   dstArrayElement: u32(),
   descriptorCount: u32(),

@@ -152,23 +152,10 @@ export class VkSwapchain implements Disposable {
     createInfo.imageArrayLayers = 1;
     createInfo.imageUsage = VkImageUsageFlagBits.COLOR_ATTACHMENT_BIT;
 
-    const indices = this.__device.findQueueFamilies();
-    if (indices.graphicsFamily !== indices.presentFamily) {
-      createInfo.imageSharingMode = VkSharingMode.CONCURRENT;
-      createInfo.queueFamilyIndexCount = 2;
-      createInfo.pQueueFamilyIndices = BigInt(
-        ptr(
-          new BigUint64Array([
-            BigInt(indices.graphicsFamily!),
-            BigInt(indices.presentFamily!),
-          ]),
-        ),
-      );
-    } else {
-      createInfo.imageSharingMode = VkSharingMode.EXCLUSIVE;
-      createInfo.queueFamilyIndexCount = 0;
-      createInfo.pQueueFamilyIndices = 0n;
-    }
+    const indices = this.__device.findQueueFamily();
+    createInfo.imageSharingMode = VkSharingMode.EXCLUSIVE;
+    createInfo.queueFamilyIndexCount = 0;
+    createInfo.pQueueFamilyIndices = 0n;
     createInfo.preTransform = details.capabilities.currentTransform;
     createInfo.compositeAlpha = VkCompositeAlphaFlagBitsKHR.INHERIT_BIT_KHR;
     createInfo.presentMode = selectedPresentMode;

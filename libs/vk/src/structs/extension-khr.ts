@@ -32,7 +32,7 @@ export const vkSwapchainCreateInfoKHR = struct({
   sType: i32(VkStructureType.SWAPCHAIN_CREATE_INFO_KHR),
   pNext: ptrAny(),
   flags: u32(),
-  surface: ptrAny(),
+  surface: u64(),
   minImageCount: u32(),
   imageFormat: i32(),
   imageColorSpace: i32(),
@@ -46,7 +46,7 @@ export const vkSwapchainCreateInfoKHR = struct({
   compositeAlpha: i32(),
   presentMode: i32(),
   clipped: u32(),
-  oldSwapchain: ptrAny(),
+  oldSwapchain: u64(),
 });
 
 // MARK: VK_KHR_win32_surface

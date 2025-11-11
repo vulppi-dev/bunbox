@@ -30,9 +30,9 @@ export const vkCreateBuffer = {
  *   const VkAllocationCallbacks* pAllocator)`
  */
 export const vkDestroyBuffer = {
-  args: ['ptr', 'ptr', 'ptr'] as [
+  args: ['ptr', 'u64', 'ptr'] as [
     device: 'ptr',
-    buffer: 'ptr',
+    buffer: 'u64',
     pAllocator: 'ptr',
   ],
   returns: 'void',
@@ -48,10 +48,10 @@ export const vkDestroyBuffer = {
  *   VkDeviceSize memoryOffset)`
  */
 export const vkBindBufferMemory = {
-  args: ['ptr', 'ptr', 'ptr', 'u64'] as [
+  args: ['ptr', 'u64', 'u64', 'u64'] as [
     device: 'ptr',
-    buffer: 'ptr',
-    memory: 'ptr',
+    buffer: 'u64',
+    memory: 'u64',
     memoryOffset: 'u64',
   ],
   returns: 'i32',
@@ -66,9 +66,9 @@ export const vkBindBufferMemory = {
  *   VkMemoryRequirements* pMemoryRequirements)`
  */
 export const vkGetBufferMemoryRequirements = {
-  args: ['ptr', 'ptr', 'ptr'] as [
+  args: ['ptr', 'u64', 'ptr'] as [
     device: 'ptr',
-    buffer: 'ptr',
+    buffer: 'u64',
     pMemoryRequirements: 'ptr',
   ],
   returns: 'void',
@@ -104,9 +104,9 @@ export const vkCreateImage = {
  *   const VkAllocationCallbacks* pAllocator)`
  */
 export const vkDestroyImage = {
-  args: ['ptr', 'ptr', 'ptr'] as [
+  args: ['ptr', 'u64', 'ptr'] as [
     device: 'ptr',
-    image: 'ptr',
+    image: 'u64',
     pAllocator: 'ptr',
   ],
   returns: 'void',
@@ -122,10 +122,10 @@ export const vkDestroyImage = {
  *   VkDeviceSize memoryOffset)`
  */
 export const vkBindImageMemory = {
-  args: ['ptr', 'ptr', 'ptr', 'u64'] as [
+  args: ['ptr', 'u64', 'u64', 'u64'] as [
     device: 'ptr',
-    image: 'ptr',
-    memory: 'ptr',
+    image: 'u64',
+    memory: 'u64',
     memoryOffset: 'u64',
   ],
   returns: 'i32',
@@ -140,9 +140,9 @@ export const vkBindImageMemory = {
  *   VkMemoryRequirements* pMemoryRequirements)`
  */
 export const vkGetImageMemoryRequirements = {
-  args: ['ptr', 'ptr', 'ptr'] as [
+  args: ['ptr', 'u64', 'ptr'] as [
     device: 'ptr',
-    image: 'ptr',
+    image: 'u64',
     pMemoryRequirements: 'ptr',
   ],
   returns: 'void',
@@ -176,9 +176,9 @@ export const vkCreateImageView = {
  *   const VkAllocationCallbacks* pAllocator)`
  */
 export const vkDestroyImageView = {
-  args: ['ptr', 'ptr', 'ptr'] as [
+  args: ['ptr', 'u64', 'ptr'] as [
     device: 'ptr',
-    imageView: 'ptr',
+    imageView: 'u64',
     pAllocator: 'ptr',
   ],
   returns: 'void',
@@ -214,9 +214,9 @@ export const vkCreateShaderModule = {
  *   const VkAllocationCallbacks* pAllocator)`
  */
 export const vkDestroyShaderModule = {
-  args: ['ptr', 'ptr', 'ptr'] as [
+  args: ['ptr', 'u64', 'ptr'] as [
     device: 'ptr',
-    shaderModule: 'ptr',
+    shaderModule: 'u64',
     pAllocator: 'ptr',
   ],
   returns: 'void',
@@ -252,9 +252,9 @@ export const vkCreateDescriptorSetLayout = {
  *   const VkAllocationCallbacks* pAllocator)`
  */
 export const vkDestroyDescriptorSetLayout = {
-  args: ['ptr', 'ptr', 'ptr'] as [
+  args: ['ptr', 'u64', 'ptr'] as [
     device: 'ptr',
-    descriptorSetLayout: 'ptr',
+    descriptorSetLayout: 'u64',
     pAllocator: 'ptr',
   ],
   returns: 'void',
@@ -290,9 +290,9 @@ export const vkCreatePipelineLayout = {
  *   const VkAllocationCallbacks* pAllocator)`
  */
 export const vkDestroyPipelineLayout = {
-  args: ['ptr', 'ptr', 'ptr'] as [
+  args: ['ptr', 'u64', 'ptr'] as [
     device: 'ptr',
-    pipelineLayout: 'ptr',
+    pipelineLayout: 'u64',
     pAllocator: 'ptr',
   ],
   returns: 'void',
@@ -328,9 +328,9 @@ export const vkCreateRenderPass = {
  *   const VkAllocationCallbacks* pAllocator)`
  */
 export const vkDestroyRenderPass = {
-  args: ['ptr', 'ptr', 'ptr'] as [
+  args: ['ptr', 'u64', 'ptr'] as [
     device: 'ptr',
-    renderPass: 'ptr',
+    renderPass: 'u64',
     pAllocator: 'ptr',
   ],
   returns: 'void',
@@ -366,9 +366,9 @@ export const vkCreateFramebuffer = {
  *   const VkAllocationCallbacks* pAllocator)`
  */
 export const vkDestroyFramebuffer = {
-  args: ['ptr', 'ptr', 'ptr'] as [
+  args: ['ptr', 'u64', 'ptr'] as [
     device: 'ptr',
-    framebuffer: 'ptr',
+    framebuffer: 'u64',
     pAllocator: 'ptr',
   ],
   returns: 'void',
@@ -388,9 +388,9 @@ export const vkDestroyFramebuffer = {
  *   VkPipeline* pPipelines)`
  */
 export const vkCreateGraphicsPipelines = {
-  args: ['ptr', 'ptr', 'u32', 'ptr', 'ptr', 'ptr'] as [
+  args: ['ptr', 'u64', 'u32', 'ptr', 'ptr', 'ptr'] as [
     device: 'ptr',
-    pipelineCache: 'ptr',
+    pipelineCache: 'u64',
     createInfoCount: 'u32',
     pCreateInfos: 'ptr',
     pAllocator: 'ptr',
@@ -411,9 +411,9 @@ export const vkCreateGraphicsPipelines = {
  *   VkPipeline* pPipelines)`
  */
 export const vkCreateComputePipelines = {
-  args: ['ptr', 'ptr', 'u32', 'ptr', 'ptr', 'ptr'] as [
+  args: ['ptr', 'u64', 'u32', 'ptr', 'ptr', 'ptr'] as [
     device: 'ptr',
-    pipelineCache: 'ptr',
+    pipelineCache: 'u64',
     createInfoCount: 'u32',
     pCreateInfos: 'ptr',
     pAllocator: 'ptr',
@@ -431,9 +431,9 @@ export const vkCreateComputePipelines = {
  *   const VkAllocationCallbacks* pAllocator)`
  */
 export const vkDestroyPipeline = {
-  args: ['ptr', 'ptr', 'ptr'] as [
+  args: ['ptr', 'u64', 'ptr'] as [
     device: 'ptr',
-    pipeline: 'ptr',
+    pipeline: 'u64',
     pAllocator: 'ptr',
   ],
   returns: 'void',
@@ -469,9 +469,9 @@ export const vkCreateCommandPool = {
  *   const VkAllocationCallbacks* pAllocator)`
  */
 export const vkDestroyCommandPool = {
-  args: ['ptr', 'ptr', 'ptr'] as [
+  args: ['ptr', 'u64', 'ptr'] as [
     device: 'ptr',
-    commandPool: 'ptr',
+    commandPool: 'u64',
     pAllocator: 'ptr',
   ],
   returns: 'void',
@@ -486,9 +486,9 @@ export const vkDestroyCommandPool = {
  *   VkCommandPoolResetFlags flags)`
  */
 export const vkResetCommandPool = {
-  args: ['ptr', 'ptr', 'u32'] as [
+  args: ['ptr', 'u64', 'u32'] as [
     device: 'ptr',
-    commandPool: 'ptr',
+    commandPool: 'u64',
     flags: 'u32',
   ],
   returns: 'i32',
@@ -521,9 +521,9 @@ export const vkAllocateCommandBuffers = {
  *   const VkCommandBuffer* pCommandBuffers)`
  */
 export const vkFreeCommandBuffers = {
-  args: ['ptr', 'ptr', 'u32', 'ptr'] as [
+  args: ['ptr', 'u64', 'u32', 'ptr'] as [
     device: 'ptr',
-    commandPool: 'ptr',
+    commandPool: 'u64',
     commandBufferCount: 'u32',
     pCommandBuffers: 'ptr',
   ],
@@ -576,10 +576,10 @@ export const vkResetCommandBuffer = {
  *   VkPipeline pipeline)`
  */
 export const vkCmdBindPipeline = {
-  args: ['ptr', 'i32', 'ptr'] as [
+  args: ['ptr', 'i32', 'u64'] as [
     commandBuffer: 'ptr',
     pipelineBindPoint: 'i32',
-    pipeline: 'ptr',
+    pipeline: 'u64',
   ],
   returns: 'void',
 } as const satisfies FFIFunction;
@@ -653,9 +653,9 @@ export const vkCmdBindVertexBuffers = {
  *   VkIndexType indexType)`
  */
 export const vkCmdBindIndexBuffer = {
-  args: ['ptr', 'ptr', 'u64', 'i32'] as [
+  args: ['ptr', 'u64', 'u64', 'i32'] as [
     commandBuffer: 'ptr',
-    buffer: 'ptr',
+    buffer: 'u64',
     offset: 'u64',
     indexType: 'i32',
   ],
@@ -717,10 +717,10 @@ export const vkCmdDrawIndexed = {
  *   const VkBufferCopy* pRegions)`
  */
 export const vkCmdCopyBuffer = {
-  args: ['ptr', 'ptr', 'ptr', 'u32', 'ptr'] as [
+  args: ['ptr', 'u64', 'u64', 'u32', 'ptr'] as [
     commandBuffer: 'ptr',
-    srcBuffer: 'ptr',
-    dstBuffer: 'ptr',
+    srcBuffer: 'u64',
+    dstBuffer: 'u64',
     regionCount: 'u32',
     pRegions: 'ptr',
   ],
@@ -740,11 +740,11 @@ export const vkCmdCopyBuffer = {
  *   const VkImageCopy* pRegions)`
  */
 export const vkCmdCopyImage = {
-  args: ['ptr', 'ptr', 'i32', 'ptr', 'i32', 'u32', 'ptr'] as [
+  args: ['ptr', 'u64', 'i32', 'u64', 'i32', 'u32', 'ptr'] as [
     commandBuffer: 'ptr',
-    srcImage: 'ptr',
+    srcImage: 'u64',
     srcImageLayout: 'i32',
-    dstImage: 'ptr',
+    dstImage: 'u64',
     dstImageLayout: 'i32',
     regionCount: 'u32',
     pRegions: 'ptr',
@@ -764,10 +764,10 @@ export const vkCmdCopyImage = {
  *   const VkBufferImageCopy* pRegions)`
  */
 export const vkCmdCopyBufferToImage = {
-  args: ['ptr', 'ptr', 'ptr', 'i32', 'u32', 'ptr'] as [
+  args: ['ptr', 'u64', 'u64', 'i32', 'u32', 'ptr'] as [
     commandBuffer: 'ptr',
-    srcBuffer: 'ptr',
-    dstImage: 'ptr',
+    srcBuffer: 'u64',
+    dstImage: 'u64',
     dstImageLayout: 'i32',
     regionCount: 'u32',
     pRegions: 'ptr',

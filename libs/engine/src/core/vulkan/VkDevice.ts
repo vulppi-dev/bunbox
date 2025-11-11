@@ -11,6 +11,7 @@ import {
   getResultMessage,
   makeVersion,
   VK,
+  VK_TRUE,
   vkApplicationInfo,
   VkDebugUtilsMessageSeverityFlagsEXT,
   VkDebugUtilsMessageTypeFlagsEXT,
@@ -75,17 +76,6 @@ type PhysicalDeviceProps = {
   sparseProperties: InferField<
     typeof vkPhysicalDeviceProperties
   >['sparseProperties'];
-};
-
-type QueueFamilyIndices = {
-  graphicsFamily: number;
-  presentFamily: number;
-  computeFamily: number;
-  transferFamily: number;
-  graphicsFamilyHasValue: boolean;
-  presentFamilyHasValue: boolean;
-  computeFamilyHasValue: boolean;
-  transferFamilyHasValue: boolean;
 };
 
 export class VkDevice implements Disposable {
@@ -308,11 +298,10 @@ export class VkDevice implements Disposable {
 
   private __nativeWindow: bigint;
   private __display: bigint;
-  private __surface: Pointer | null = null;
+  private __surface: bigint = 0n;
   private __logicalDevice: Pointer | null = null;
 
-  private __graphicsQueue: Pointer | null = null;
-  private __presentQueue: Pointer | null = null;
+  private __familyQueue: Pointer | null = null;
 
   private __physicalDevice: Pointer | null = null;
   private __physicalDeviceProperties: PhysicalDeviceProps | null = null;
@@ -345,19 +334,15 @@ export class VkDevice implements Disposable {
     return this.__surface!;
   }
 
-  get graphicsQueue() {
-    return this.__graphicsQueue!;
-  }
-
-  get presentQueue() {
-    return this.__presentQueue!;
+  get familyQueue() {
+    return this.__familyQueue!;
   }
 
   dispose() {
     decreaseCounter('VkDevice');
     if (this.__surface) {
       VK.vkDestroySurfaceKHR(VkDevice.__instance!, this.__surface, null);
-      this.__surface = null;
+      this.__surface = 0n;
       VK_DEBUG(`Destroyed VkSurfaceKHR for VkDevice`);
     }
 
@@ -367,19 +352,14 @@ export class VkDevice implements Disposable {
     }
   }
 
-  findQueueFamilies(device?: Pointer) {
+  findQueueFamily(device?: Pointer) {
     const d = device ?? this.__physicalDevice!;
 
-    const indices: QueueFamilyIndices = {
-      graphicsFamily: -1,
-      presentFamily: -1,
-      computeFamily: -1,
-      transferFamily: -1,
-      graphicsFamilyHasValue: false,
-      presentFamilyHasValue: false,
-      computeFamilyHasValue: false,
-      transferFamilyHasValue: false,
-    };
+    let graphicsFamilyHasValue = false;
+    let presentFamilyHasValue = false;
+    let computeFamilyHasValue = false;
+    let transferFamilyHasValue = false;
+    let family = -1;
 
     const count = new Uint32Array(1);
     VK.vkGetPhysicalDeviceQueueFamilyProperties(d, ptr(count), null);
@@ -399,48 +379,49 @@ export class VkDevice implements Disposable {
       if (queueFamily.queueCount > 0) {
         if (queueFamily.queueFlags & VkQueueFlagBits.GRAPHICS_BIT) {
           VK_DEBUG(`Found graphics queue family at index ${i}`);
-          indices.graphicsFamily = i;
-          indices.graphicsFamilyHasValue = true;
+          graphicsFamilyHasValue = true;
         }
         if (queueFamily.queueFlags & VkQueueFlagBits.COMPUTE_BIT) {
           VK_DEBUG(`Found compute queue family at index ${i}`);
-          indices.computeFamily = i;
-          indices.computeFamilyHasValue = true;
+          computeFamilyHasValue = true;
         }
         if (queueFamily.queueFlags & VkQueueFlagBits.TRANSFER_BIT) {
           VK_DEBUG(`Found transfer queue family at index ${i}`);
-          indices.transferFamily = i;
-          indices.transferFamilyHasValue = true;
+          transferFamilyHasValue = true;
         }
       }
       const presentSupport = new Uint32Array(1);
-      presentSupport[0] = 1;
-      // const result = VK.vkGetPhysicalDeviceSurfaceSupportKHR(
-      //   d,
-      //   i,
-      //   this.__surface!,
-      //   ptr(presentSupport),
-      // );
-      // if (result !== VkResult.SUCCESS) {
-      //   throw new DynamicLibError(getResultMessage(result), 'Vulkan');
-      // }
+      const result = VK.vkGetPhysicalDeviceSurfaceSupportKHR(
+        d,
+        i,
+        this.__surface!,
+        ptr(presentSupport),
+      );
+      if (result !== VkResult.SUCCESS) {
+        throw new DynamicLibError(getResultMessage(result), 'Vulkan');
+      }
 
       if (queueFamily.queueCount > 0 && presentSupport[0]) {
         VK_DEBUG(`Found present queue family at index ${i}`);
-        indices.presentFamily = i;
-        indices.presentFamilyHasValue = true;
+        presentFamilyHasValue = true;
       }
       if (
-        indices.graphicsFamilyHasValue &&
-        indices.presentFamilyHasValue &&
-        indices.computeFamilyHasValue &&
-        indices.transferFamilyHasValue
+        graphicsFamilyHasValue &&
+        presentFamilyHasValue &&
+        computeFamilyHasValue &&
+        transferFamilyHasValue
       ) {
+        family = i;
         break;
       }
+
+      graphicsFamilyHasValue = false;
+      presentFamilyHasValue = false;
+      computeFamilyHasValue = false;
+      transferFamilyHasValue = false;
     }
 
-    return indices;
+    return family;
   }
 
   getSwapChainSupport() {
@@ -508,7 +489,7 @@ export class VkDevice implements Disposable {
     if (result !== VkResult.SUCCESS) {
       throw new DynamicLibError(getResultMessage(result), 'Vulkan');
     }
-    this.__surface = Number(surfacePtr[0]!) as Pointer;
+    this.__surface = surfacePtr[0]!;
   }
 
   private __pickPhysicalDevice() {
@@ -525,11 +506,14 @@ export class VkDevice implements Disposable {
     }
     VK_DEBUG(`Device count: ${count[0]!}`);
     const devices = new BigUint64Array(count[0]!);
-    VK.vkEnumeratePhysicalDevices(
+    const result = VK.vkEnumeratePhysicalDevices(
       VkDevice.__instance,
       ptr(count),
       ptr(devices),
     );
+    if (result !== VkResult.SUCCESS) {
+      throw new DynamicLibError(getResultMessage(result), 'Vulkan');
+    }
 
     const usableDevices: Pointer[] = [];
 
@@ -599,28 +583,33 @@ export class VkDevice implements Disposable {
 
   private __createLogicalDevice() {
     if (!this.__surface || !this.__physicalDevice) return;
-    const indices = this.findQueueFamilies(this.__physicalDevice);
-    const queueCreateInfos: InferField<typeof vkDeviceQueueCreateInfo>[] = [];
-    // TODO: Future create with compute and transfer queues
-    for (const family of [indices.graphicsFamily, indices.presentFamily]) {
-      const queueCreateInfo = instantiate(vkDeviceQueueCreateInfo);
-      queueCreateInfo.queueFamilyIndex = family;
-      queueCreateInfo.queueCount = 1;
-      queueCreateInfo.pQueuePriorities = BigInt(ptr(new Float32Array([1.0])));
-      queueCreateInfos.push(queueCreateInfo);
-    }
+    const family = this.findQueueFamily(this.__physicalDevice);
+
+    const priorities = new Float32Array([1.0]);
+    const queueCreateInfo = instantiate(vkDeviceQueueCreateInfo);
+    queueCreateInfo.queueFamilyIndex = family;
+    queueCreateInfo.queueCount = 1;
+    queueCreateInfo.pQueuePriorities = BigInt(ptr(priorities));
 
     const deviceFeatures = instantiate(vkPhysicalDeviceFeatures);
-    deviceFeatures.samplerAnisotropy = 1;
+    deviceFeatures.samplerAnisotropy = VK_TRUE;
+
+    // Keep extension name strings alive
+    const extensionNames = VALIDATION_DEVICE_EXTENSIONS.map(cstr);
+    const extensionNamePtrs = new BigUint64Array(
+      extensionNames.map((name) => BigInt(ptr(name))),
+    );
 
     const createInfo = instantiate(vkDeviceCreateInfo);
-    createInfo.queueCreateInfoCount = queueCreateInfos.length;
+    createInfo.queueCreateInfoCount = 1;
     createInfo.pQueueCreateInfos = BigInt(
-      ptr(getInstanceBuffer(queueCreateInfos)),
+      ptr(getInstanceBuffer(queueCreateInfo)),
     );
     createInfo.pEnabledFeatures = BigInt(
       ptr(getInstanceBuffer(deviceFeatures)),
     );
+    createInfo.enabledExtensionCount = VALIDATION_DEVICE_EXTENSIONS.length;
+    createInfo.ppEnabledExtensionNames = BigInt(ptr(extensionNamePtrs));
 
     const pointerHolder = new BigUint64Array(1);
     const result = VK.vkCreateDevice(
@@ -635,40 +624,19 @@ export class VkDevice implements Disposable {
     this.__logicalDevice = Number(pointerHolder[0]!) as Pointer;
     VK_DEBUG(`Logical device created: 0x${this.__logicalDevice.toString(16)}`);
 
-    VK.vkGetDeviceQueue(
-      this.__logicalDevice,
-      indices.graphicsFamily,
-      0,
-      ptr(pointerHolder),
-    );
-    const graphicsQueue = Number(pointerHolder[0]!) as Pointer;
-    VK.vkGetDeviceQueue(
-      this.__logicalDevice,
-      indices.presentFamily,
-      0,
-      ptr(pointerHolder),
-    );
-    const presentQueue = Number(pointerHolder[0]!) as Pointer;
+    pointerHolder[0] = 0n;
+    VK.vkGetDeviceQueue(this.__logicalDevice, family, 0, ptr(pointerHolder));
+    const queue = Number(pointerHolder[0]!) as Pointer;
 
-    VK_DEBUG(`Graphics Queue: 0x${graphicsQueue.toString(16)}`);
-    VK_DEBUG(`Present Queue: 0x${presentQueue.toString(16)}`);
-    this.__graphicsQueue = graphicsQueue;
-    this.__presentQueue = presentQueue;
+    VK_DEBUG(`Family Queue: 0x${queue.toString(16)}`);
+    this.__familyQueue = queue;
   }
 
   private __isDeviceSuitable(device: Pointer): boolean {
     if (!this.__surface) return false;
-    const indices = this.findQueueFamilies(device);
+    const family = this.findQueueFamily(device);
 
-    if (
-      !(
-        indices.graphicsFamilyHasValue &&
-        indices.presentFamilyHasValue &&
-        indices.computeFamilyHasValue &&
-        indices.transferFamilyHasValue
-      )
-    )
-      return false;
+    if (family < 0) return false;
 
     const extensionsSupported = this.__isDeviceExtensionSupported(device);
     if (!extensionsSupported) return false;

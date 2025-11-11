@@ -11,9 +11,9 @@ import type { FFIFunction } from 'bun:ffi';
  *   const VkAllocationCallbacks* pAllocator)`
  */
 export const vkDestroySurfaceKHR = {
-  args: ['ptr', 'ptr', 'ptr'] as [
+  args: ['ptr', 'u64', 'ptr'] as [
     instance: 'ptr',
-    surface: 'ptr',
+    surface: 'u64',
     pAllocator: 'ptr',
   ],
   returns: 'void',
@@ -29,10 +29,10 @@ export const vkDestroySurfaceKHR = {
  *   VkBool32* pSupported)`
  */
 export const vkGetPhysicalDeviceSurfaceSupportKHR = {
-  args: ['ptr', 'u32', 'ptr', 'ptr'] as [
+  args: ['ptr', 'u32', 'u64', 'ptr'] as [
     physicalDevice: 'ptr',
     queueFamilyIndex: 'u32',
-    surface: 'ptr',
+    surface: 'u64',
     pSupported: 'ptr',
   ],
   returns: 'i32',
@@ -47,9 +47,9 @@ export const vkGetPhysicalDeviceSurfaceSupportKHR = {
  *   VkSurfaceCapabilitiesKHR* pSurfaceCapabilities)`
  */
 export const vkGetPhysicalDeviceSurfaceCapabilitiesKHR = {
-  args: ['ptr', 'ptr', 'ptr'] as [
+  args: ['ptr', 'u64', 'ptr'] as [
     physicalDevice: 'ptr',
-    surface: 'ptr',
+    surface: 'u64',
     pSurfaceCapabilities: 'ptr',
   ],
   returns: 'i32',
@@ -65,9 +65,9 @@ export const vkGetPhysicalDeviceSurfaceCapabilitiesKHR = {
  *   VkSurfaceFormatKHR* pSurfaceFormats)`
  */
 export const vkGetPhysicalDeviceSurfaceFormatsKHR = {
-  args: ['ptr', 'ptr', 'ptr', 'ptr'] as [
+  args: ['ptr', 'u64', 'ptr', 'ptr'] as [
     physicalDevice: 'ptr',
-    surface: 'ptr',
+    surface: 'u64',
     pSurfaceFormatCount: 'ptr',
     pSurfaceFormats: 'ptr',
   ],
@@ -84,9 +84,9 @@ export const vkGetPhysicalDeviceSurfaceFormatsKHR = {
  *   VkPresentModeKHR* pPresentModes)`
  */
 export const vkGetPhysicalDeviceSurfacePresentModesKHR = {
-  args: ['ptr', 'ptr', 'ptr', 'ptr'] as [
+  args: ['ptr', 'u64', 'ptr', 'ptr'] as [
     physicalDevice: 'ptr',
-    surface: 'ptr',
+    surface: 'u64',
     pPresentModeCount: 'ptr',
     pPresentModes: 'ptr',
   ],
@@ -123,9 +123,9 @@ export const vkCreateSwapchainKHR = {
  *   const VkAllocationCallbacks* pAllocator)`
  */
 export const vkDestroySwapchainKHR = {
-  args: ['ptr', 'ptr', 'ptr'] as [
+  args: ['ptr', 'u64', 'ptr'] as [
     device: 'ptr',
-    swapchain: 'ptr',
+    swapchain: 'u64',
     pAllocator: 'ptr',
   ],
   returns: 'void',
@@ -141,9 +141,9 @@ export const vkDestroySwapchainKHR = {
  *   VkImage* pSwapchainImages)`
  */
 export const vkGetSwapchainImagesKHR = {
-  args: ['ptr', 'ptr', 'ptr', 'ptr'] as [
+  args: ['ptr', 'u64', 'ptr', 'ptr'] as [
     device: 'ptr',
-    swapchain: 'ptr',
+    swapchain: 'u64',
     pSwapchainImageCount: 'ptr',
     pSwapchainImages: 'ptr',
   ],
@@ -162,12 +162,12 @@ export const vkGetSwapchainImagesKHR = {
  *   uint32_t* pImageIndex)`
  */
 export const vkAcquireNextImageKHR = {
-  args: ['ptr', 'ptr', 'u64', 'ptr', 'ptr', 'ptr'] as [
+  args: ['ptr', 'u64', 'u64', 'u64', 'u64', 'ptr'] as [
     device: 'ptr',
-    swapchain: 'ptr',
+    swapchain: 'u64',
     timeout: 'u64',
-    semaphore: 'ptr',
-    fence: 'ptr',
+    semaphore: 'u64',
+    fence: 'u64',
     pImageIndex: 'ptr',
   ],
   returns: 'i32',

@@ -50,11 +50,8 @@ export class VkRenderer extends AbstractRenderer {
 
     const [nWindow, display] = getNativeWindow(this._getWindow());
     this.__device = new VkDevice(nWindow, display);
-    const indices = this.__device.findQueueFamilies();
-    this.__commandPool = new VkCommandPool(
-      this.__device.logicalDevice,
-      indices.graphicsFamily,
-    );
+    const family = this.__device.findQueueFamily();
+    this.__commandPool = new VkCommandPool(this.__device.logicalDevice, family);
   }
 
   override dispose(): void | Promise<void> {
@@ -196,7 +193,7 @@ export class VkRenderer extends AbstractRenderer {
     submitInfo.pSignalSemaphores = BigInt(ptr(signalSemaphores));
 
     const submitResult = VK.vkQueueSubmit(
-      this.__device.graphicsQueue,
+      this.__device.familyQueue,
       1,
       ptr(getInstanceBuffer(submitInfo)),
       this.__sync.getInFlightFence(this.__currentFrameIndex),
@@ -220,7 +217,7 @@ export class VkRenderer extends AbstractRenderer {
     presentInfo.pResults = 0n;
 
     const presentResult = VK.vkQueuePresentKHR(
-      this.__device.presentQueue,
+      this.__device.familyQueue,
       ptr(getInstanceBuffer(presentInfo)),
     );
 

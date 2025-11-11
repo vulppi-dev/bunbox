@@ -5,6 +5,7 @@ Garantir que a implementação está correta observe as documentações nos site
 - Bun => https://bun.com/docs, https://bun.com/reference
 - GLFW => https://glfw.org/docs/latest/topics.html
 - Vulkan => https://www.khronos.org/registry/vulkan/specs/1.3-extensions/html/vkspec.html
+- Vulkan => https://docs.vulkan.org/spec/latest/index.html
 
 ## Linguagem e padrões
 

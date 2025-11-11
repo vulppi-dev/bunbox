@@ -254,7 +254,7 @@ export const vkSemaphoreWaitInfo = struct({
 export const vkSemaphoreSignalInfo = struct({
   sType: i32(VkStructureType12.SEMAPHORE_SIGNAL_INFO),
   pNext: ptrAny(),
-  semaphore: ptrAny(),
+  semaphore: u64(),
   value: u64(),
 });
 

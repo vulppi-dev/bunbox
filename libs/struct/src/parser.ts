@@ -272,7 +272,7 @@ export function instantiate<F extends StructField<any>>(
     throw new Error('Structs not setup. Please call setupStruct first.');
   }
 
-  const { pack } = ___STRUCTS_SETUP___!;
+  const { pack, stringToPointer } = ___STRUCTS_SETUP___!;
   const fieldCopy = structuredClone(field);
   const { size, offsets } = calculateFieldSize(fieldCopy, pack);
 
@@ -311,6 +311,16 @@ export function instantiate<F extends StructField<any>>(
     const targetView = new Uint8Array(buffer);
     const sourceView = new Uint8Array(sourceBuffer, actualOffset, size);
     targetView.set(sourceView);
+  } else {
+    // Apply default values when no copyBuffer is provided
+    const fieldEntries = Object.entries(fieldCopy.fields);
+    fieldEntries.forEach(([_, childField], index) => {
+      const [childOffset] = offsets![index]!;
+      writeFieldValue(childField, undefined, view, childOffset, {
+        pack,
+        stringToPointer,
+      });
+    });
   }
 
   const proxy = createStructProxy(

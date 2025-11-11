@@ -72,16 +72,16 @@ export const vkPhysicalDeviceMemoryProperties2 = struct({
 export const vkBindBufferMemoryInfo = struct({
   sType: i32(VkStructureType11.BIND_BUFFER_MEMORY_INFO),
   pNext: ptrAny(),
-  buffer: ptrAny(),
-  memory: ptrAny(),
+  buffer: u64(),
+  memory: u64(),
   memoryOffset: u64(),
 });
 
 export const vkBindImageMemoryInfo = struct({
   sType: i32(VkStructureType11.BIND_IMAGE_MEMORY_INFO),
   pNext: ptrAny(),
-  image: ptrAny(),
-  memory: ptrAny(),
+  image: u64(),
+  memory: u64(),
   memoryOffset: u64(),
 });
 
@@ -104,8 +104,8 @@ export const vkMemoryDedicatedRequirements = struct({
 export const vkMemoryDedicatedAllocateInfo = struct({
   sType: i32(VkStructureType11.MEMORY_DEDICATED_ALLOCATE_INFO),
   pNext: ptrAny(),
-  image: ptrAny(),
-  buffer: ptrAny(),
+  image: u64(),
+  buffer: u64(),
 });
 
 export const vkMemoryAllocateFlagsInfo = struct({
@@ -125,13 +125,13 @@ export const vkDeviceGroupDeviceCreateInfo = struct({
 export const vkBufferMemoryRequirementsInfo2 = struct({
   sType: i32(VkStructureType11.BUFFER_MEMORY_REQUIREMENTS_INFO_2),
   pNext: ptrAny(),
-  buffer: ptrAny(),
+  buffer: u64(),
 });
 
 export const vkImageMemoryRequirementsInfo2 = struct({
   sType: i32(VkStructureType11.IMAGE_MEMORY_REQUIREMENTS_INFO_2),
   pNext: ptrAny(),
-  image: ptrAny(),
+  image: u64(),
 });
 
 export const vkMemoryRequirements2 = struct({
@@ -165,7 +165,7 @@ export const vkSamplerYcbcrConversionCreateInfo = struct({
 export const vkSamplerYcbcrConversionInfo = struct({
   sType: i32(VkStructureType11.SAMPLER_YCBCR_CONVERSION_INFO),
   pNext: ptrAny(),
-  conversion: ptrAny(),
+  conversion: u64(),
 });
 
 export const vkDescriptorUpdateTemplateCreateInfo = struct({
@@ -175,9 +175,9 @@ export const vkDescriptorUpdateTemplateCreateInfo = struct({
   descriptorUpdateEntryCount: u32(),
   pDescriptorUpdateEntries: ptrAny(),
   templateType: i32(),
-  descriptorSetLayout: ptrAny(),
+  descriptorSetLayout: u64(),
   pipelineBindPoint: i32(),
-  pipelineLayout: ptrAny(),
+  pipelineLayout: u64(),
   set: u32(),
 });
 

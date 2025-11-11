@@ -62,11 +62,11 @@ export const vkGetDeviceQueue = {
  *   VkFence fence)`
  */
 export const vkQueueSubmit = {
-  args: ['ptr', 'u32', 'ptr', 'ptr'] as [
+  args: ['ptr', 'u32', 'ptr', 'u64'] as [
     queue: 'ptr',
     submitCount: 'u32',
     pSubmits: 'ptr',
-    fence: 'ptr',
+    fence: 'u64',
   ],
   returns: 'i32',
 } as const satisfies FFIFunction;
@@ -135,9 +135,9 @@ export const vkAllocateMemory = {
  *   const VkAllocationCallbacks* pAllocator)`
  */
 export const vkFreeMemory = {
-  args: ['ptr', 'ptr', 'ptr'] as [
+  args: ['ptr', 'u64', 'ptr'] as [
     device: 'ptr',
-    memory: 'ptr',
+    memory: 'u64',
     pAllocator: 'ptr',
   ],
   returns: 'void',
@@ -155,9 +155,9 @@ export const vkFreeMemory = {
  *   void** ppData)`
  */
 export const vkMapMemory = {
-  args: ['ptr', 'ptr', 'u64', 'u64', 'u32', 'ptr'] as [
+  args: ['ptr', 'u64', 'u64', 'u64', 'u32', 'ptr'] as [
     device: 'ptr',
-    memory: 'ptr',
+    memory: 'u64',
     offset: 'u64',
     size: 'u64',
     flags: 'u32',
@@ -174,7 +174,7 @@ export const vkMapMemory = {
  *   VkDeviceMemory memory)`
  */
 export const vkUnmapMemory = {
-  args: ['ptr', 'ptr'] as [device: 'ptr', memory: 'ptr'],
+  args: ['ptr', 'u64'] as [device: 'ptr', memory: 'u64'],
   returns: 'void',
 } as const satisfies FFIFunction;
 
@@ -221,9 +221,9 @@ export const vkInvalidateMappedMemoryRanges = {
  *   VkDeviceSize* pCommittedMemoryInBytes)`
  */
 export const vkGetDeviceMemoryCommitment = {
-  args: ['ptr', 'ptr', 'ptr'] as [
+  args: ['ptr', 'u64', 'ptr'] as [
     device: 'ptr',
-    memory: 'ptr',
+    memory: 'u64',
     pCommittedMemoryInBytes: 'ptr',
   ],
   returns: 'void',
@@ -259,9 +259,9 @@ export const vkCreateFence = {
  *   const VkAllocationCallbacks* pAllocator)`
  */
 export const vkDestroyFence = {
-  args: ['ptr', 'ptr', 'ptr'] as [
+  args: ['ptr', 'u64', 'ptr'] as [
     device: 'ptr',
-    fence: 'ptr',
+    fence: 'u64',
     pAllocator: 'ptr',
   ],
   returns: 'void',
@@ -292,7 +292,7 @@ export const vkResetFences = {
  *   VkFence fence)`
  */
 export const vkGetFenceStatus = {
-  args: ['ptr', 'ptr'] as [device: 'ptr', fence: 'ptr'],
+  args: ['ptr', 'u64'] as [device: 'ptr', fence: 'u64'],
   returns: 'i32',
 } as const satisfies FFIFunction;
 
@@ -345,9 +345,9 @@ export const vkCreateSemaphore = {
  *   const VkAllocationCallbacks* pAllocator)`
  */
 export const vkDestroySemaphore = {
-  args: ['ptr', 'ptr', 'ptr'] as [
+  args: ['ptr', 'u64', 'ptr'] as [
     device: 'ptr',
-    semaphore: 'ptr',
+    semaphore: 'u64',
     pAllocator: 'ptr',
   ],
   returns: 'void',
@@ -381,9 +381,9 @@ export const vkCreateEvent = {
  *   const VkAllocationCallbacks* pAllocator)`
  */
 export const vkDestroyEvent = {
-  args: ['ptr', 'ptr', 'ptr'] as [
+  args: ['ptr', 'u64', 'ptr'] as [
     device: 'ptr',
-    event: 'ptr',
+    event: 'u64',
     pAllocator: 'ptr',
   ],
   returns: 'void',
@@ -397,7 +397,7 @@ export const vkDestroyEvent = {
  *   VkEvent event)`
  */
 export const vkGetEventStatus = {
-  args: ['ptr', 'ptr'] as [device: 'ptr', event: 'ptr'],
+  args: ['ptr', 'u64'] as [device: 'ptr', event: 'u64'],
   returns: 'i32',
 } as const satisfies FFIFunction;
 
@@ -409,7 +409,7 @@ export const vkGetEventStatus = {
  *   VkEvent event)`
  */
 export const vkSetEvent = {
-  args: ['ptr', 'ptr'] as [device: 'ptr', event: 'ptr'],
+  args: ['ptr', 'u64'] as [device: 'ptr', event: 'u64'],
   returns: 'i32',
 } as const satisfies FFIFunction;
 
@@ -421,6 +421,6 @@ export const vkSetEvent = {
  *   VkEvent event)`
  */
 export const vkResetEvent = {
-  args: ['ptr', 'ptr'] as [device: 'ptr', event: 'ptr'],
+  args: ['ptr', 'u64'] as [device: 'ptr', event: 'u64'],
   returns: 'i32',
 } as const satisfies FFIFunction;
