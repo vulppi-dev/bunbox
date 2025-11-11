@@ -344,6 +344,8 @@ export enum VkImageLayout {
   TRANSFER_SRC_OPTIMAL = 6,
   TRANSFER_DST_OPTIMAL = 7,
   PREINITIALIZED = 8,
+  // Extension: VK_KHR_swapchain
+  PRESENT_SRC_KHR = 1000001002,
 }
 
 // MARK: Image Usage

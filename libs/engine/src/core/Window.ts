@@ -362,10 +362,6 @@ export class Window extends Root<never, never, WindowEventMap> {
     return this.__state;
   }
 
-  get backgroundColor(): Color {
-    return new Color();
-  }
-
   /**
    * Set MSAA (Multi-Sample Anti-Aliasing) sample count
    * @param sampleCount Number of samples (1 = disabled, 2, 4, or 8)
@@ -413,8 +409,6 @@ export class Window extends Root<never, never, WindowEventMap> {
     if (this.__windowPtr)
       GLFW.glfwSetWindowTitle(this.__windowPtr, cstr(this.__title));
   }
-
-  set backgroundColor(color: Color) {}
 
   set clearColor(color: Color) {
     this.__renderer.setClearColor(color);

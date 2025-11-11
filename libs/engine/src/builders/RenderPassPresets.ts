@@ -350,9 +350,10 @@ export class RenderPassPresets {
       .setName('Final Composite')
       .addColorAttachment({
         format: 'swapchain',
-        loadOp: 'dont-care',
+        loadOp: 'clear',
         storeOp: 'store',
         finalLayout: 'present-src',
+        clearValue: { color: [0.0, 0.0, 0.0, 1.0] },
       })
       .build();
   }

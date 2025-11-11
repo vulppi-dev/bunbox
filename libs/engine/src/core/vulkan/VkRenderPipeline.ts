@@ -44,7 +44,8 @@ export interface CustomPostProcessConfig {
  * 4. Forward Rendering
  * 5. Transparency
  * 6. Custom Post-Process (user-defined)
- * 7. Final Composite to Swapchain
+ * 7. Clear Screen (off-screen with clear color)
+ * 8. Final Composite to Swapchain (copies clear screen to presentation)
  */
 export class VkRenderPipeline implements Disposable {
   private __device: VkDevice;
@@ -62,6 +63,7 @@ export class VkRenderPipeline implements Disposable {
   private __forwardStage: RenderStage | null = null;
   private __transparencyStage: RenderStage | null = null;
   private __customPostProcessStages: RenderStage[] = [];
+  private __clearScreenStage: RenderStage | null = null;
   private __finalCompositeStage: RenderStage | null = null;
 
   private __customPostProcessConfigs: CustomPostProcessConfig[] = [];
@@ -106,6 +108,10 @@ export class VkRenderPipeline implements Disposable {
 
   get customPostProcessStages(): RenderStage[] {
     return this.__customPostProcessStages;
+  }
+
+  get clearScreenStage(): RenderStage | null {
+    return this.__clearScreenStage;
   }
 
   get finalCompositeStage(): RenderStage | null {
@@ -216,6 +222,7 @@ export class VkRenderPipeline implements Disposable {
     this.__buildForwardStage();
     this.__buildTransparencyStage();
     this.__buildCustomPostProcessStages();
+    this.__buildClearScreenStage();
     this.__buildFinalCompositeStage();
 
     VK_DEBUG('Render pipeline built successfully');
@@ -228,6 +235,7 @@ export class VkRenderPipeline implements Disposable {
     this.__disposeForwardStage();
     this.__disposeTransparencyStage();
     this.__disposeCustomPostProcessStages();
+    this.__disposeClearScreenStage();
     this.__disposeFinalCompositeStage();
   }
 
@@ -670,6 +678,68 @@ export class VkRenderPipeline implements Disposable {
     }
   }
 
+  private __buildClearScreenStage(): void {
+    const config = RenderPassPresets.offscreen('r16g16b16a16-sfloat', false);
+    const renderPass = new VkRenderPass(
+      this.__device.logicalDevice,
+      config,
+      this.__swapchainFormat,
+    );
+
+    const colorTexture = new TextureImage({
+      label: 'Clear Screen',
+      width: this.__width,
+      height: this.__height,
+      sampleCount: 1,
+      format: 'rgba16float',
+      usage: ['color-target', 'sampler'],
+      mipLevels: 1,
+    });
+
+    const colorImages: VkImage[] = [];
+    const colorViews: VkImageView[] = [];
+    const framebuffers: VkFramebuffer[] = [];
+
+    for (let i = 0; i < this.__swapchainImages.length; i++) {
+      const colorImage = new VkImage(
+        this.__device.logicalDevice,
+        this.__device.physicalDevice,
+        colorTexture,
+      );
+
+      const colorView = new VkImageView({
+        device: this.__device.logicalDevice,
+        format: colorImage.format,
+        image: colorImage.instance,
+        mask: ['color'],
+      });
+
+      const framebuffer = new VkFramebuffer(
+        this.__device.logicalDevice,
+        renderPass.instance,
+        [colorView],
+        this.__width,
+        this.__height,
+      );
+
+      colorImages.push(colorImage);
+      colorViews.push(colorView);
+      framebuffers.push(framebuffer);
+    }
+
+    this.__clearScreenStage = {
+      name: 'Clear Screen',
+      renderPass,
+      framebuffers,
+      resources: {
+        colorImages,
+        colorViews,
+      },
+    };
+
+    VK_DEBUG('Clear screen stage created');
+  }
+
   private __buildFinalCompositeStage(): void {
     const config = RenderPassPresets.finalComposite();
     const renderPass = new VkRenderPass(
@@ -765,6 +835,16 @@ export class VkRenderPipeline implements Disposable {
       stage.renderPass.dispose();
     }
     this.__customPostProcessStages = [];
+  }
+
+  private __disposeClearScreenStage(): void {
+    if (!this.__clearScreenStage) return;
+
+    this.__clearScreenStage.framebuffers.forEach((fb) => fb.dispose());
+    this.__clearScreenStage.resources.colorViews.forEach((v) => v.dispose());
+    this.__clearScreenStage.resources.colorImages.forEach((i) => i.dispose());
+    this.__clearScreenStage.renderPass.dispose();
+    this.__clearScreenStage = null;
   }
 
   private __disposeFinalCompositeStage(): void {

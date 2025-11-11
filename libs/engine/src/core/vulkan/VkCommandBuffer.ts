@@ -32,6 +32,7 @@ export class VkCommandBuffer implements Disposable {
   private __commandPool: Pointer;
   private __instance: Pointer;
   private __isRecording: boolean = false;
+  private __clearValuesBuffer: Uint8Array | null = null;
 
   constructor(device: Pointer, commandPool: Pointer) {
     this.__device = device;
@@ -124,17 +125,18 @@ export class VkCommandBuffer implements Disposable {
 
     if (clearValues && clearValues.length > 0) {
       const length = sizeOf(vkClearValue);
-      const clearValuesBfr = new Uint8Array(clearValues.length * length);
+      this.__clearValuesBuffer = new Uint8Array(clearValues.length * length);
       const cv = instantiate(vkClearValue);
       for (let i = 0; i < clearValues.length; i++) {
         cv.color.float32 = clearValues[i]!.toArray();
-        clearValuesBfr.set(new Uint8Array(getInstanceBuffer(cv)), i * length);
+        this.__clearValuesBuffer.set(new Uint8Array(getInstanceBuffer(cv)), i * length);
       }
       renderPassInfo.clearValueCount = clearValues.length;
-      renderPassInfo.pClearValues = BigInt(ptr(clearValuesBfr));
+      renderPassInfo.pClearValues = BigInt(ptr(this.__clearValuesBuffer));
     } else {
       renderPassInfo.clearValueCount = 0;
       renderPassInfo.pClearValues = 0n;
+      this.__clearValuesBuffer = null;
     }
 
     VK.vkCmdBeginRenderPass(

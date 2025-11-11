@@ -7,6 +7,8 @@ Garantir que a implementação está correta observe as documentações nos site
 - Vulkan => https://www.khronos.org/registry/vulkan/specs/1.3-extensions/html/vkspec.html
 - Vulkan => https://docs.vulkan.org/spec/latest/index.html
 
+> Obs: Considere a versão 1.1 como base para Vulkan, a menos que uma feature específica de uma versão mais recente seja requisitada. 
+
 ## Linguagem e padrões
 
 A linguagem utilizada será typescript em sua maioria, apenas que especificamente for pedido, fará em outra linguagem.

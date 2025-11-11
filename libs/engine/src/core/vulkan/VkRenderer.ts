@@ -103,7 +103,7 @@ export class VkRenderer extends AbstractRenderer {
     );
 
     // TODO: Implement actual recording logic
-    // For now, just render a basic clear screen with the clear color
+    // For now, render clear screen directly to swapchain
     if (this.__pipeline?.finalCompositeStage && this.__swapchain) {
       const stage = this.__pipeline.finalCompositeStage;
       const framebuffer = stage.framebuffers[imageIndex];
@@ -116,12 +116,12 @@ export class VkRenderer extends AbstractRenderer {
           this.__swapchain.height,
         );
 
-        // Final composite uses loadOp: 'dont-care', so no clear values needed
+        // Render with clear color directly to swapchain
         commandBuffer.beginRenderPass(
           stage.renderPass.instance,
           framebuffer.framebuffer,
           renderArea,
-          undefined,
+          [this._clearColor],
         );
 
         // TODO: Record actual render commands here

@@ -115,7 +115,7 @@ export class VkRenderPass implements Disposable {
       'shader-read-only': VkImageLayout.SHADER_READ_ONLY_OPTIMAL,
       'transfer-src': VkImageLayout.TRANSFER_SRC_OPTIMAL,
       'transfer-dst': VkImageLayout.TRANSFER_DST_OPTIMAL,
-      'present-src': VkImageLayout.COLOR_ATTACHMENT_OPTIMAL,
+      'present-src': VkImageLayout.PRESENT_SRC_KHR,
       'depth-read-only-stencil-attachment':
         VkImageLayout.DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
       'depth-attachment-stencil-read-only':
