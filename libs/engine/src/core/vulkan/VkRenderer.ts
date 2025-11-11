@@ -62,10 +62,10 @@ export class VkRenderer extends AbstractRenderer {
     this.__swapchainViews = [];
     this.__swapchain?.dispose();
     this.__swapchain = null;
-    this.__commandPool?.dispose();
-    this.__commandPool = null;
     this.__commandBuffers.forEach((buffer) => buffer.dispose());
     this.__commandBuffers = [];
+    this.__commandPool?.dispose();
+    this.__commandPool = null;
     this.__sync?.dispose();
     this.__sync = null;
     this.__swapCount = 0;

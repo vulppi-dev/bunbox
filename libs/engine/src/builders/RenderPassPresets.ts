@@ -352,6 +352,7 @@ export class RenderPassPresets {
         format: 'swapchain',
         loadOp: 'clear',
         storeOp: 'store',
+        initialLayout: 'undefined',
         finalLayout: 'present-src',
         clearValue: { color: [0.0, 0.0, 0.0, 1.0] },
       })

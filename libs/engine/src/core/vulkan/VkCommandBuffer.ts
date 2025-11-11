@@ -46,6 +46,28 @@ export class VkCommandBuffer implements Disposable {
   }
 
   /**
+   * Reset the command buffer to initial state
+   */
+  reset(): void {
+    if (this.__isRecording) {
+      throw new DynamicLibError(
+        'Cannot reset command buffer while recording',
+        'Vulkan',
+      );
+    }
+
+    VK_DEBUG(`Resetting command buffer: 0x${this.__instance.toString(16)}`);
+
+    const result = VK.vkResetCommandBuffer(this.__instance, 0);
+
+    if (result !== VkResult.SUCCESS) {
+      throw new DynamicLibError(getResultMessage(result), 'Vulkan');
+    }
+
+    VK_DEBUG('Command buffer reset');
+  }
+
+  /**
    * Begin recording commands into the command buffer
    */
   begin(): void {
@@ -59,7 +81,7 @@ export class VkCommandBuffer implements Disposable {
     VK_DEBUG(`Beginning command buffer: 0x${this.__instance.toString(16)}`);
 
     const beginInfo = instantiate(vkCommandBufferBeginInfo);
-    beginInfo.flags = 0;
+    beginInfo.flags = 0x00000001; // VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
     beginInfo.pInheritanceInfo = 0n;
 
     const result = VK.vkBeginCommandBuffer(
@@ -129,7 +151,10 @@ export class VkCommandBuffer implements Disposable {
       const cv = instantiate(vkClearValue);
       for (let i = 0; i < clearValues.length; i++) {
         cv.color.float32 = clearValues[i]!.toArray();
-        this.__clearValuesBuffer.set(new Uint8Array(getInstanceBuffer(cv)), i * length);
+        this.__clearValuesBuffer.set(
+          new Uint8Array(getInstanceBuffer(cv)),
+          i * length,
+        );
       }
       renderPassInfo.clearValueCount = clearValues.length;
       renderPassInfo.pClearValues = BigInt(ptr(this.__clearValuesBuffer));

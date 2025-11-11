@@ -82,13 +82,6 @@ export class VkSwapchain implements Disposable {
 
   dispose(): void | Promise<void> {
     VK_DEBUG(`Destroying swapchain: 0x${this.__swapchain.toString(16)}`);
-    for (let i = 0; i < this.__swapchainImages.length; i++) {
-      VK.vkDestroyImage(
-        this.__device.logicalDevice,
-        Number(this.__swapchainImages[i]) as Pointer,
-        null,
-      );
-    }
     VK.vkDestroySwapchainKHR(
       this.__device.logicalDevice,
       this.__swapchain,
