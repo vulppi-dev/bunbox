@@ -3,6 +3,7 @@ import type { Disposable } from '@bunbox/utils';
 import {
   getResultMessage,
   VK,
+  VkComponentSwizzle,
   VkImageAspectFlagBits,
   vkImageViewCreateInfo,
   VkImageViewType,
@@ -16,7 +17,7 @@ type VkImageViewMask = 'color' | 'depth' | 'stencil' | 'metadata';
 
 type VkImageViewProps = {
   device: Pointer;
-  image: Pointer;
+  image: bigint;
   format: number;
   mask: VkImageViewMask[];
 };
@@ -59,6 +60,10 @@ export class VkImageView implements Disposable {
     viewCreateInfo.image = BigInt(props.image);
     viewCreateInfo.viewType = VkImageViewType.TYPE_2D;
     viewCreateInfo.format = props.format;
+    viewCreateInfo.components.r = VkComponentSwizzle.IDENTITY;
+    viewCreateInfo.components.g = VkComponentSwizzle.IDENTITY;
+    viewCreateInfo.components.b = VkComponentSwizzle.IDENTITY;
+    viewCreateInfo.components.a = VkComponentSwizzle.IDENTITY;
 
     viewCreateInfo.subresourceRange.aspectMask = VkImageView.getAspectMask(
       props.mask,

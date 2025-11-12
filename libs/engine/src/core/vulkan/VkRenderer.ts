@@ -3,29 +3,30 @@ import { getInstanceBuffer, instantiate } from '@bunbox/struct';
 import {
   getResultMessage,
   VK,
-  VkResult,
-  vkPresentInfoKHR,
-  vkSubmitInfo,
   VK_WHOLE_SIZE,
+  vkPresentInfoKHR,
+  VkResult,
+  vkSubmitInfo,
 } from '@bunbox/vk';
 import { ptr, type Pointer } from 'bun:ffi';
 import { DynamicLibError } from '../../errors';
+import { Cube } from '../../math';
+import { Rect } from '../../math/Rect';
+import type { AbstractCamera, Light, Mesh } from '../../nodes';
+import type { SampleCount } from '../../resources/types';
+import { VK_DEBUG } from '../../singleton/logger';
 import { AbstractRenderer, type RendererOptions } from '../AbstractRenderer';
-import { VkDevice } from './VkDevice';
-import { VkCommandPool } from './VkCommandPool';
-import { VkSwapchain } from './VkSwapchain';
-import { VkImageView } from './VkImageView';
 import { VkCommandBuffer } from './VkCommandBuffer';
-import { VkSync } from './VkSync';
+import { VkCommandPool } from './VkCommandPool';
+import { VkDevice } from './VkDevice';
+import { VkImageView } from './VkImageView';
 import {
   VkRenderPipeline,
   type CustomPostProcessConfig,
 } from './VkRenderPipeline';
-import type { SampleCount } from '../../resources/types';
-import type { AbstractCamera, Light, Mesh } from '../../nodes';
-import { Color } from '../../math/Color';
-import { Rect } from '../../math/Rect';
-import { Cube } from '../../math';
+import { VkSwapchain } from './VkSwapchain';
+import { VkSync } from './VkSync';
+import { VkGraphicsPipeline } from './VkGraphicsPipeline';
 
 export class VkRenderer extends AbstractRenderer {
   private __device: VkDevice | null = null;
@@ -45,6 +46,9 @@ export class VkRenderer extends AbstractRenderer {
 
   private __msaa: SampleCount = 1;
 
+  // TODO: Temporary pipeline for testing
+  private __temp_pipeline: VkGraphicsPipeline | null = null;
+
   constructor(window: Pointer, options?: RendererOptions) {
     super(window, options);
     this.__msaa = options?.msaa ?? 1;
@@ -52,7 +56,11 @@ export class VkRenderer extends AbstractRenderer {
     const [nWindow, display] = getNativeWindow(this._getWindow());
     this.__device = new VkDevice(nWindow, display);
     const family = this.__device.findQueueFamily();
+
     this.__commandPool = new VkCommandPool(this.__device.logicalDevice, family);
+    VK_DEBUG(
+      `Vulkan Renderer initialized with device: ${this.__device.physicalDeviceProperties.deviceName}`,
+    );
   }
 
   override dispose(): void | Promise<void> {
@@ -62,12 +70,12 @@ export class VkRenderer extends AbstractRenderer {
     this.__swapchainViews = [];
     this.__swapchain?.dispose();
     this.__swapchain = null;
+    this.__sync?.dispose();
+    this.__sync = null;
     this.__commandBuffers.forEach((buffer) => buffer.dispose());
     this.__commandBuffers = [];
     this.__commandPool?.dispose();
     this.__commandPool = null;
-    this.__sync?.dispose();
-    this.__sync = null;
     this.__swapCount = 0;
     this.__frameCount = 0;
     this.__currentFrameIndex = 0;
@@ -294,6 +302,15 @@ export class VkRenderer extends AbstractRenderer {
     const width = this.width;
     const height = this.height;
 
+    if (this.__sync) {
+      this.__sync.waitDeviceIdle();
+    }
+
+    if (this.__temp_pipeline) {
+      this.__temp_pipeline.dispose();
+      this.__temp_pipeline = null;
+    }
+
     if (this.__swapchain) {
       this.__swapchainViews.forEach((view) => view.dispose());
       this.__swapchainViews = [];
@@ -315,8 +332,8 @@ export class VkRenderer extends AbstractRenderer {
         new VkImageView({
           device: this.__device!.logicalDevice,
           format: this.__swapchain!.format,
-          image: image as any,
           mask: ['color'],
+          image,
         }),
     );
 
@@ -341,19 +358,28 @@ export class VkRenderer extends AbstractRenderer {
       this.__pipeline.rebuild(width, height);
     }
 
-    if (!this.__sync) {
-      this.__sync = new VkSync(
-        this.__device.logicalDevice,
-        this.__swapCount,
-        this.__frameCount,
-      );
-    } else {
-      this.__sync.initPerSwapchainImages(this.__swapCount);
-    }
-
     if (this.__frameCount === this.__commandBuffers.length) {
+      if (!this.__sync) {
+        this.__sync = new VkSync(
+          this.__device.logicalDevice,
+          this.__frameCount,
+          this.__swapCount,
+        );
+      } else {
+        this.__sync.initPerSwapchainImages(this.__swapCount);
+      }
       return;
     }
+
+    if (this.__sync) {
+      this.__sync.dispose();
+    }
+
+    this.__sync = new VkSync(
+      this.__device.logicalDevice,
+      this.__frameCount,
+      this.__swapCount,
+    );
 
     this.__commandBuffers.forEach((buffer) => buffer.dispose());
     this.__commandBuffers = [];

@@ -52,7 +52,7 @@ export class VkRenderPipeline implements Disposable {
   private __width: number;
   private __height: number;
   private __swapchainFormat: number;
-  private __swapchainImages: Pointer[];
+  private __swapchainImages: bigint[];
   private __swapchainImageViews: VkImageView[];
   private __sampleCount: SampleCount = 1;
   private __msaaEnabled: boolean = false;
@@ -73,7 +73,7 @@ export class VkRenderPipeline implements Disposable {
     width: number,
     height: number,
     swapchainFormat: number,
-    swapchainImages: Pointer[],
+    swapchainImages: bigint[],
     swapchainImageViews: VkImageView[],
   ) {
     this.__device = device;
@@ -196,7 +196,7 @@ export class VkRenderPipeline implements Disposable {
    * Update swapchain references
    */
   updateSwapchain(
-    swapchainImages: Pointer[],
+    swapchainImages: bigint[],
     swapchainImageViews: VkImageView[],
   ): void {
     VK_DEBUG('Updating pipeline swapchain references');

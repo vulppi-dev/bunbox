@@ -80,22 +80,22 @@ export class VkSync implements Disposable {
   /**
    * Gets semaphore handle for image availability at specified frame index.
    */
-  getImageAvailableSemaphore(frameIndex: number): Pointer {
-    return Number(this.__imageAvailableSemaphores[frameIndex]) as Pointer;
+  getImageAvailableSemaphore(frameIndex: number): bigint {
+    return this.__imageAvailableSemaphores[frameIndex]!;
   }
 
   /**
    * Gets semaphore handle for render completion at specified frame index.
    */
-  getRenderFinishedSemaphore(frameIndex: number): Pointer {
-    return Number(this.__renderFinishedSemaphores[frameIndex]) as Pointer;
+  getRenderFinishedSemaphore(frameIndex: number): bigint {
+    return this.__renderFinishedSemaphores[frameIndex]!;
   }
 
   /**
    * Gets fence handle for frame in-flight tracking at specified frame index.
    */
-  getInFlightFence(frameIndex: number): Pointer {
-    return Number(this.__inFlightFences[frameIndex]) as Pointer;
+  getInFlightFence(frameIndex: number): bigint {
+    return this.__inFlightFences[frameIndex]!;
   }
 
   /**
@@ -159,6 +159,13 @@ export class VkSync implements Disposable {
       return;
     const fence = this.getInFlightFence(frameIndex);
     this.__imageInFlightFences[imageIndex] = BigInt(fence);
+  }
+
+  waitDeviceIdle(): void {
+    const result = VK.vkDeviceWaitIdle(this.__device);
+    if (result !== VkResult.SUCCESS) {
+      throw new DynamicLibError(getResultMessage(result), 'Vulkan');
+    }
   }
 
   dispose(): void | Promise<void> {

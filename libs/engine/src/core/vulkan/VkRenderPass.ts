@@ -125,6 +125,8 @@ export class VkRenderPass implements Disposable {
     return layoutMap[layout];
   }
 
+  // MARK: Instance properties
+
   private __device: Pointer;
   private __renderPass: Pointer | null = null;
   private __config: RenderPassConfig;
@@ -191,11 +193,7 @@ export class VkRenderPass implements Disposable {
       const attachment = attachments[i]!;
       const isDepth = isDepthFormat(attachment.format);
 
-      const attachmentDesc = instantiate(
-        vkAttachmentDescription,
-        attachmentDescBuffer,
-        i,
-      );
+      const attachmentDesc = instantiate(vkAttachmentDescription);
       attachmentDesc.flags = 0;
       attachmentDesc.format = VkRenderPass.__mapFormat(
         attachment.format,
@@ -229,6 +227,10 @@ export class VkRenderPass implements Disposable {
           isDepth ? 'depth-stencil-attachment' : 'color-attachment',
         );
       }
+      attachmentDescBuffer.set(
+        new Uint8Array(getInstanceBuffer(attachmentDesc)),
+        i * attachmentDescSize,
+      );
     }
 
     // Create attachment references for the subpass
@@ -253,18 +255,22 @@ export class VkRenderPass implements Disposable {
     );
 
     for (let i = 0; i < colorAttachmentRefs.length; i++) {
-      const ref = instantiate(vkAttachmentReference, colorRefsBuffer, i);
+      const ref = instantiate(vkAttachmentReference);
       ref.attachment = colorAttachmentRefs[i]!;
       ref.layout = VkImageLayout.COLOR_ATTACHMENT_OPTIMAL;
+      colorRefsBuffer.set(
+        new Uint8Array(getInstanceBuffer(ref)),
+        i * colorRefSize,
+      );
     }
 
     // Create depth attachment reference if exists
     let depthRefBuffer: Uint8Array | null = null;
     if (depthAttachmentRef !== null) {
-      depthRefBuffer = new Uint8Array(colorRefSize);
-      const depthRef = instantiate(vkAttachmentReference, depthRefBuffer, 0);
+      const depthRef = instantiate(vkAttachmentReference);
       depthRef.attachment = depthAttachmentRef;
       depthRef.layout = VkImageLayout.DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+      depthRefBuffer = new Uint8Array(getInstanceBuffer(depthRef));
     }
 
     // Create subpass description

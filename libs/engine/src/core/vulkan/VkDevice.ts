@@ -207,6 +207,11 @@ export class VkDevice implements Disposable {
 
   dispose() {
     decreaseCounter('VkDevice');
+    if (this.__logicalDevice) {
+      VK.vkDestroyDevice(this.__logicalDevice, null);
+      VK_DEBUG('Logical device destroyed');
+      this.__logicalDevice = null;
+    }
     if (this.__surface) {
       VK.vkDestroySurfaceKHR(VkDevice.__instance!, this.__surface, null);
       this.__surface = 0n;

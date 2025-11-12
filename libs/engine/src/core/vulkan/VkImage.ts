@@ -151,7 +151,7 @@ export class VkImage implements Disposable {
 
   private __device: Pointer;
   private __physicalDevice: Pointer;
-  private __instance: Pointer;
+  private __instance: bigint;
   private __memory: Pointer;
   private __width: number;
   private __height: number;
@@ -219,7 +219,7 @@ export class VkImage implements Disposable {
     VK_DEBUG('Image destroyed');
   }
 
-  private __createImage(texture: TextureBase): Pointer {
+  private __createImage(texture: TextureBase): bigint {
     const createInfo = instantiate(vkImageCreateInfo);
     createInfo.flags = 0;
     createInfo.imageType =
@@ -250,7 +250,7 @@ export class VkImage implements Disposable {
       throw new DynamicLibError(getResultMessage(result), 'Vulkan');
     }
 
-    return Number(pointerHolder[0]!) as Pointer;
+    return pointerHolder[0]!;
   }
 
   private __allocateAndBindMemory(): Pointer {

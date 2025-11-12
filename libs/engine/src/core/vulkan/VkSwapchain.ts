@@ -4,6 +4,7 @@ import {
   getResultMessage,
   VK,
   VK_NULL_HANDLE,
+  VK_TRUE,
   VkColorSpaceKHR,
   VkCompositeAlphaFlagBitsKHR,
   VkFormat,
@@ -73,9 +74,9 @@ export class VkSwapchain implements Disposable {
   }
 
   get images() {
-    const imgs: Pointer[] = [];
+    const imgs: bigint[] = [];
     for (let i = 0; i < this.__swapchainImages.length; i++) {
-      imgs.push(Number(this.__swapchainImages[i]) as Pointer);
+      imgs.push(this.__swapchainImages[i]!);
     }
     return imgs;
   }
@@ -97,7 +98,7 @@ export class VkSwapchain implements Disposable {
     const selectedFormat =
       details.formats.find(
         (format) =>
-          format.format === VkFormat.B8G8R8A8_UNORM &&
+          format.format === VkFormat.B8G8R8A8_SRGB &&
           format.colorSpace === VkColorSpaceKHR.SRGB_NONLINEAR_KHR,
       ) || details.formats[0]!;
     const selectedPresentMode = details.presentModes.includes(
@@ -146,9 +147,10 @@ export class VkSwapchain implements Disposable {
     createInfo.queueFamilyIndexCount = 0;
     createInfo.pQueueFamilyIndices = 0n;
     createInfo.preTransform = details.capabilities.currentTransform;
-    createInfo.compositeAlpha = VkCompositeAlphaFlagBitsKHR.INHERIT_BIT_KHR;
+
+    createInfo.compositeAlpha = VkCompositeAlphaFlagBitsKHR.OPAQUE_BIT_KHR;
     createInfo.presentMode = selectedPresentMode;
-    createInfo.clipped = 1;
+    createInfo.clipped = VK_TRUE;
     createInfo.oldSwapchain = VK_NULL_HANDLE;
 
     VK_DEBUG('Creating Vulkan swapchain');

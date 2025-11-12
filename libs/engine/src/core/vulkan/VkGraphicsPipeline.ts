@@ -2,6 +2,7 @@ import { isWgslValid, wgslToSpirvBin } from '@bunbox/naga';
 import {
   getInstanceBuffer,
   instantiate,
+  sizeOf,
   type InferField,
 } from '@bunbox/struct';
 import type { Disposable } from '@bunbox/utils';
@@ -57,42 +58,9 @@ import type {
   StencilOperation,
 } from '../../resources';
 import { VK_DEBUG } from '../../singleton/logger';
+import type { VkShaderModules } from './VkShaderModules';
 
 export class VkGraphicsPipeline implements Disposable {
-  private static __normalizeShaderSource(shaderData: Uint8Array) {
-    const padding = shaderData.byteLength % Uint32Array.BYTES_PER_ELEMENT;
-    if (padding === 0) {
-      return shaderData;
-    }
-
-    const paddedLength =
-      shaderData.byteLength + (Uint32Array.BYTES_PER_ELEMENT - padding);
-    const paddedShaderData = new Uint8Array(paddedLength);
-    paddedShaderData.set(shaderData);
-    return paddedShaderData;
-  }
-
-  private static __createShaderModule(device: Pointer, shaderData: Uint8Array) {
-    const createInfo = instantiate(vkShaderModuleCreateInfo);
-    createInfo.codeSize = BigInt(shaderData.byteLength);
-    createInfo.pCode = BigInt(ptr(shaderData));
-
-    const pointerHolder = new BigUint64Array(1);
-    const result = VK.vkCreateShaderModule(
-      device,
-      ptr(getInstanceBuffer(createInfo)),
-      null,
-      ptr(pointerHolder),
-    );
-
-    if (result !== VkResult.SUCCESS) {
-      throw new DynamicLibError(getResultMessage(result), 'Vulkan');
-    }
-    const shaderModule = Number(pointerHolder[0]!) as Pointer;
-    VK_DEBUG(`Shader module created: 0x${shaderModule.toString(16)}`);
-    return shaderModule;
-  }
-
   private static __getVkTopology(primitive: MaterialPrimitive) {
     switch (primitive) {
       case 'points':
@@ -274,23 +242,13 @@ export class VkGraphicsPipeline implements Disposable {
   }
 
   private __device: Pointer;
-  private __material: Material;
+  private __module: VkShaderModules;
 
   private __pipelineInstance: Pointer | null = null;
   private __pipelineLayout: Pointer | null = null;
   private __descriptorSetLayout: Pointer | null = null;
 
-  private __vertexModule: Pointer | null = null;
-  private __fragmentModule: Pointer | null = null;
-
-  // Shader stage structs
-  private __vertexStageInfo = instantiate(vkPipelineShaderStageCreateInfo);
-  private __fragmentStageInfo = instantiate(vkPipelineShaderStageCreateInfo);
-  private __shaderStages: BigUint64Array;
-
   private __dynamicStages: Uint32Array;
-
-  // Config structs
   private __dynamicInfo = instantiate(vkPipelineDynamicStateCreateInfo);
   private __viewportInfo = instantiate(vkPipelineViewportStateCreateInfo);
   private __inputAssemblyInfo = instantiate(
@@ -311,84 +269,11 @@ export class VkGraphicsPipeline implements Disposable {
   private __vertexInputInfo = instantiate(vkPipelineVertexInputStateCreateInfo);
   private __pipelineConfigInfo = instantiate(vkGraphicsPipelineCreateInfo);
 
-  constructor(device: Pointer, renderPass: Pointer, material: Material) {
+  constructor(device: Pointer, renderPass: Pointer, module: VkShaderModules) {
     this.__device = device;
-    this.__material = material;
+    this.__module = module;
 
     VK_DEBUG('Creating graphics pipeline');
-
-    if (Object.keys(material.entries).length !== 2) {
-      throw new DynamicLibError(
-        'The material must specify both vertex and fragment entry points',
-        'Vulkan',
-      );
-    }
-
-    // Validate and compile vertex shader
-    const vertexShader =
-      typeof material.shader === 'string'
-        ? material.shader
-        : material.shader.vertex || '';
-    if (
-      !vertexShader.includes('@vertex') ||
-      !vertexShader.includes(material.entries.vertex!)
-    ) {
-      throw new DynamicLibError(
-        'Vertex shader or entry point not found',
-        'Vulkan',
-      );
-    }
-    if (!isWgslValid(vertexShader)) {
-      throw new DynamicLibError('Invalid vertex WGSL shader', 'Vulkan');
-    }
-    const vertexData = VkGraphicsPipeline.__normalizeShaderSource(
-      wgslToSpirvBin(vertexShader, 'vertex', material.entries.vertex!),
-    );
-
-    // Validate and compile fragment shader
-    const fragmentShader =
-      typeof material.shader === 'string'
-        ? material.shader
-        : material.shader.fragment || '';
-    if (
-      !fragmentShader.includes('@fragment') ||
-      !fragmentShader.includes(material.entries.fragment!)
-    ) {
-      throw new DynamicLibError(
-        'Fragment shader or entry point not found',
-        'Vulkan',
-      );
-    }
-    if (!isWgslValid(fragmentShader)) {
-      throw new DynamicLibError('Invalid fragment WGSL shader', 'Vulkan');
-    }
-    const fragmentData = VkGraphicsPipeline.__normalizeShaderSource(
-      wgslToSpirvBin(fragmentShader, 'fragment', material.entries.fragment!),
-    );
-
-    // Create shader modules
-    this.__vertexModule = VkGraphicsPipeline.__createShaderModule(
-      this.__device,
-      vertexData,
-    );
-    this.__fragmentModule = VkGraphicsPipeline.__createShaderModule(
-      this.__device,
-      fragmentData,
-    );
-
-    // Configure shader stages
-    this.__vertexStageInfo.stage = VkShaderStageFlagBits.VERTEX_BIT;
-    this.__vertexStageInfo.module = BigInt(this.__vertexModule);
-    this.__vertexStageInfo.pName = material.entries.vertex!;
-
-    this.__fragmentStageInfo.stage = VkShaderStageFlagBits.FRAGMENT_BIT;
-    this.__fragmentStageInfo.module = BigInt(this.__fragmentModule);
-    this.__fragmentStageInfo.pName = material.entries.fragment!;
-
-    this.__shaderStages = new BigUint64Array([
-      BigInt(ptr(getInstanceBuffer(this.__vertexStageInfo))),
-      BigInt(ptr(getInstanceBuffer(this.__fragmentStageInfo))),
-    ]);
 
     this.__dynamicStages = new Uint32Array([
       VkDynamicState.VIEWPORT,
@@ -414,10 +299,6 @@ export class VkGraphicsPipeline implements Disposable {
 
   get instance(): Pointer {
     return this.__pipelineInstance!;
-  }
-
-  get material(): Material {
-    return this.__material;
   }
 
   /**
@@ -452,8 +333,8 @@ export class VkGraphicsPipeline implements Disposable {
     this.__pipelineConfigInfo.pVertexInputState = BigInt(
       ptr(getInstanceBuffer(this.__vertexInputInfo)),
     );
-    this.__pipelineConfigInfo.stageCount = this.__shaderStages.length;
-    this.__pipelineConfigInfo.pStages = BigInt(ptr(this.__shaderStages));
+    this.__pipelineConfigInfo.stageCount = 2;
+    this.__pipelineConfigInfo.pStages = BigInt(this.__module.stages);
   }
 
   /**
@@ -467,7 +348,7 @@ export class VkGraphicsPipeline implements Disposable {
     let bindingIndex = 0;
 
     // Process constants
-    const constants = this.__material.schema.constants;
+    const constants = this.__module.material.schema.constants;
     if (constants) {
       for (const [key, definition] of Object.entries(constants)) {
         const binding = instantiate(vkDescriptorSetLayoutBinding);
@@ -485,7 +366,7 @@ export class VkGraphicsPipeline implements Disposable {
     }
 
     // Process mutables
-    const mutables = this.__material.schema.mutables;
+    const mutables = this.__module.material.schema.mutables;
     if (mutables) {
       for (const [key, definition] of Object.entries(mutables)) {
         const binding = instantiate(vkDescriptorSetLayoutBinding);
@@ -597,12 +478,12 @@ export class VkGraphicsPipeline implements Disposable {
 
     // Configure topology
     this.__inputAssemblyInfo.topology = VkGraphicsPipeline.__getVkTopology(
-      this.__material.primitive,
+      this.__module.material.primitive,
     );
     this.__inputAssemblyInfo.primitiveRestartEnable = VK_TRUE;
 
     // Configure rasterizer
-    const rasterizer = this.__material.rasterizer;
+    const rasterizer = this.__module.material.rasterizer;
     this.__rasterizationInfo.depthClampEnable = VK_FALSE;
     this.__rasterizationInfo.rasterizerDiscardEnable = VK_FALSE;
     this.__rasterizationInfo.polygonMode =
@@ -760,18 +641,6 @@ export class VkGraphicsPipeline implements Disposable {
       );
       this.__descriptorSetLayout = null;
       VK_DEBUG('Descriptor set layout destroyed');
-    }
-
-    if (this.__vertexModule) {
-      VK.vkDestroyShaderModule(this.__device, this.__vertexModule, null);
-      this.__vertexModule = null;
-      VK_DEBUG('Vertex shader module destroyed');
-    }
-
-    if (this.__fragmentModule) {
-      VK.vkDestroyShaderModule(this.__device, this.__fragmentModule, null);
-      this.__fragmentModule = null;
-      VK_DEBUG('Fragment shader module destroyed');
     }
 
     VK_DEBUG('Graphics pipeline disposed');
