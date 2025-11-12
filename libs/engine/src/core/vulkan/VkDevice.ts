@@ -1,4 +1,4 @@
-import { GLFW, isWayland } from '@bunbox/glfw';
+import { isWayland } from '@bunbox/glfw';
 import {
   getInstanceBuffer,
   instanceToJSON,
@@ -13,11 +13,6 @@ import {
   VK,
   VK_TRUE,
   vkApplicationInfo,
-  VkDebugUtilsMessageSeverityFlagsEXT,
-  VkDebugUtilsMessageTypeFlagsEXT,
-  vkDebugUtilsMessengerCallback,
-  vkDebugUtilsMessengerCallbackDataEXT,
-  vkDebugUtilsMessengerCreateInfoEXT,
   vkDeviceCreateInfo,
   vkDeviceQueueCreateInfo,
   vkInstanceCreateInfo,
@@ -35,7 +30,10 @@ import {
   vkWin32SurfaceCreateInfoKHR,
   vkXlibSurfaceCreateInfoKHR,
 } from '@bunbox/vk';
-import { CString, JSCallback, linkSymbols, ptr, type Pointer } from 'bun:ffi';
+import { cc, ptr, type Pointer } from 'bun:ffi';
+import { mkdtempSync, writeFileSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 import { DynamicLibError } from '../../errors';
 import {
   decreaseCounter,
@@ -43,24 +41,62 @@ import {
   increaseCounter,
 } from '../../global/counter';
 import { VK_DEBUG } from '../../singleton/logger';
-import {
-  buildCallback,
-  cstr,
-  pointerCopyBuffer,
-  undoCstr,
-} from '../../utils/buffer';
+import { cstr, undoCstr } from '../../utils/buffer';
 import { getEnv } from '../../utils/env';
 
-const INSTANCE_LAYERS_ADD = [
-  'VK_EXT_debug_utils',
-  'VK_EXT_swapchain_colorspace',
-  ...(process.platform === 'darwin'
-    ? ['VK_KHR_portability_enumeration', 'VK_KHR_portability_subset']
-    : []),
-];
-const VALIDATION_LAYERS = [
-  'VK_LAYER_KHRONOS_validation',
-];
+const tempCC = join(
+  mkdtempSync(join(tmpdir(), 'bunbox-vk-instance-extensions-')),
+  'instanceExtensions.c',
+);
+writeFileSync(
+  tempCC,
+  /* C */ `
+int instanceExtensions(const char * const **extensions) {
+  static const char * const list[] = {
+    "VK_KHR_surface",
+    "VK_KHR_win32_surface",
+    "VK_EXT_swapchain_colorspace",
+    "VK_EXT_debug_utils"
+  };
+
+  *extensions = list;
+  return (int)(sizeof list / sizeof list[0]);
+}
+
+int instanceExtensionsDarwin(const char * const **extensions) {
+   static const char * const list[] = {
+    "VK_KHR_surface",
+    "VK_KHR_win32_surface",
+    "VK_EXT_swapchain_colorspace",
+    "VK_EXT_debug_utils"
+    "VK_KHR_portability_enumeration",
+    "VK_KHR_portability_subset"
+  };
+
+  *extensions = list;
+  return (int)(sizeof list / sizeof list[0]);
+}
+`,
+);
+
+const { symbols: CC, close: closeCC } = cc({
+  source: tempCC,
+  symbols: {
+    instanceExtensions: {
+      args: ['ptr'],
+      returns: 'i32',
+    },
+    instanceExtensionsDarwin: {
+      args: ['ptr'],
+      returns: 'i32',
+    },
+  },
+});
+
+process.on('beforeExit', () => {
+  closeCC();
+});
+
 const VALIDATION_DEVICE_EXTENSIONS = [
   'VK_KHR_swapchain',
 ];
@@ -80,35 +116,15 @@ type PhysicalDeviceProps = {
 
 export class VkDevice implements Disposable {
   private static __instance: Pointer | null = null;
-  private static __errorCallback: JSCallback | null = null;
-
-  // Opaque handlers
-  private static __debugMessenger: BigUint64Array = new BigUint64Array(1);
 
   private static __createInstance() {
     if (VkDevice.__instance) return;
 
-    const debugDataStruct = instantiate(vkDebugUtilsMessengerCallbackDataEXT);
-    VkDevice.__errorCallback = buildCallback(
-      vkDebugUtilsMessengerCallback,
-      (severity, types, data, _userData) => {
-        pointerCopyBuffer(data as Pointer, getInstanceBuffer(debugDataStruct));
-
-        VK_DEBUG(
-          'Vulkan Debug Message:',
-          `Severity: ${severity}, Types: ${types}, Message: ${debugDataStruct.pMessage} `,
-        );
-
-        return 0;
-      },
-    );
-
-    if (VK_DEBUG.enabled && !VkDevice.__isLayerSupportValid()) {
-      VK_DEBUG(
-        'Validation layers requested, but not available. Continuing without validation layers.',
-      );
-    }
-    const { extensions, extPtr } = VkDevice.__getRequiredExtensions();
+    const extensionsPtr = new BigUint64Array(1);
+    const extensionCount =
+      process.platform === 'darwin'
+        ? CC.instanceExtensionsDarwin(ptr(extensionsPtr))
+        : CC.instanceExtensions(ptr(extensionsPtr));
 
     const appInfo = instantiate(vkApplicationInfo);
     appInfo.pApplicationName = getEnv('APP_NAME', 'Bunbox App');
@@ -119,23 +135,10 @@ export class VkDevice implements Disposable {
 
     const createInfo = instantiate(vkInstanceCreateInfo);
     createInfo.pApplicationInfo = BigInt(ptr(getInstanceBuffer(appInfo)));
-    createInfo.enabledExtensionCount = extensions.length;
-    createInfo.ppEnabledExtensionNames = BigInt(extPtr);
-
-    if (VK_DEBUG.enabled) {
-      createInfo.enabledLayerCount = VALIDATION_LAYERS.length;
-      createInfo.ppEnabledLayerNames = BigInt(
-        ptr(
-          new BigUint64Array(VALIDATION_LAYERS.map(cstr).map(ptr).map(BigInt)),
-        ),
-      );
-
-      const debugCreateInfo = VkDevice.__getDebugMessenger();
-      createInfo.pNext = BigInt(ptr(getInstanceBuffer(debugCreateInfo)));
-    } else {
-      createInfo.enabledLayerCount = 0;
-      createInfo.ppEnabledLayerNames = 0n;
-    }
+    createInfo.enabledExtensionCount = extensionCount;
+    createInfo.ppEnabledExtensionNames = extensionsPtr[0]!;
+    createInfo.enabledLayerCount = 0;
+    createInfo.ppEnabledLayerNames = 0n;
 
     const pointerHolder = new BigUint64Array(1);
     const result = VK.vkCreateInstance(
@@ -148,150 +151,14 @@ export class VkDevice implements Disposable {
       throw new DynamicLibError(getResultMessage(result), 'Vulkan');
     }
     VkDevice.__instance = Number(pointerHolder[0]!) as Pointer;
-
-    VkDevice.__setupDebugMessenger();
   }
 
   private static __destroyInstance() {
     if (!VkDevice.__instance) return;
 
-    if (VK_DEBUG.enabled && VkDevice.__debugMessenger[0]) {
-      const funcPtr = VK.vkGetInstanceProcAddr(
-        VkDevice.__instance,
-        ptr(cstr('vkDestroyDebugUtilsMessengerEXT')),
-      );
-
-      if (funcPtr) {
-        const lib = linkSymbols({
-          destroyDebugFunc: {
-            args: ['ptr', 'ptr', 'ptr'],
-            return: 'void',
-            ptr: funcPtr,
-          },
-        });
-        lib.symbols.destroyDebugFunc(
-          VkDevice.__instance,
-          Number(VkDevice.__debugMessenger[0]) as Pointer,
-          null,
-        );
-        lib.close();
-        VK_DEBUG('Destroyed debug messenger');
-      }
-      VkDevice.__debugMessenger[0] = 0n;
-    }
-
     VK.vkDestroyInstance(VkDevice.__instance, null);
     VK_DEBUG('Destroyed Vulkan instance');
     VkDevice.__instance = null;
-
-    if (VkDevice.__errorCallback) {
-      VkDevice.__errorCallback.close();
-      VkDevice.__errorCallback = null;
-    }
-  }
-
-  private static __setupDebugMessenger() {
-    if (!VK_DEBUG.enabled || !VkDevice.__instance) return;
-    const createInfo = VkDevice.__getDebugMessenger();
-
-    const funcPtr = VK.vkGetInstanceProcAddr(
-      VkDevice.__instance,
-      ptr(cstr('vkCreateDebugUtilsMessengerEXT')),
-    );
-
-    let result: number = VkResult.SUCCESS;
-
-    if (funcPtr) {
-      const lib = linkSymbols({
-        debugFunc: {
-          args: ['ptr', 'ptr', 'ptr', 'ptr'],
-          return: 'i32',
-          ptr: funcPtr,
-        },
-      });
-      result =
-        lib.symbols.debugFunc(
-          VkDevice.__instance,
-          ptr(getInstanceBuffer(createInfo)),
-          null,
-          ptr(VkDevice.__debugMessenger),
-        ) ?? VkResult.ERROR_EXTENSION_NOT_PRESENT;
-
-      lib.close();
-    } else {
-      result = VkResult.ERROR_EXTENSION_NOT_PRESENT;
-    }
-
-    if (result !== VkResult.SUCCESS) {
-      throw new DynamicLibError(getResultMessage(result), 'Vulkan');
-    }
-  }
-
-  private static __isLayerSupportValid() {
-    const count = new Uint32Array(1);
-    VK.vkEnumerateInstanceLayerProperties(ptr(count), null);
-
-    const size = sizeOf(vkLayerProperties);
-    const buffer = new Uint8Array(count[0]! * size);
-
-    VK.vkEnumerateInstanceLayerProperties(ptr(count), ptr(buffer));
-
-    const layers: InferField<typeof vkLayerProperties>[] = [];
-    for (let i = 0; i < count[0]!; i++) {
-      const layer = instantiate(vkLayerProperties, buffer, i);
-      layers.push(layer);
-    }
-    const formattedLayers = layers.map((layer) => ({
-      layerName: undoCstr(layer.layerName),
-      specVersion: layer.specVersion,
-      implementationVersion: layer.implementationVersion,
-      description: undoCstr(layer.description),
-    }));
-
-    const names = formattedLayers.map((layer) => layer.layerName);
-    VK_DEBUG('Vulkan Layers:', names.join(', '));
-
-    return VALIDATION_LAYERS.every((layer) => names.includes(layer));
-  }
-
-  private static __getRequiredExtensions() {
-    const count = new Uint32Array(1);
-    const extPtr = GLFW.glfwGetRequiredInstanceExtensions(ptr(count));
-
-    if (!extPtr || !count[0]) {
-      throw new DynamicLibError(
-        'Failed to get required GLFW extensions',
-        'Vulkan',
-      );
-    }
-
-    const extPtrBfr = new BigUint64Array(count[0]!);
-    pointerCopyBuffer(extPtr, extPtrBfr.buffer);
-
-    const exts: string[] = [];
-    for (let i = 0; i < count[0]!; i++) {
-      const p = Number(extPtrBfr[i]!) as Pointer;
-      exts.push(new CString(p).toString());
-    }
-
-    return {
-      extensions: [
-        ...exts,
-        // TODO:...INSTANCE_LAYERS_ADD, --- FUTURE FIX ---
-      ],
-      extPtr,
-    };
-  }
-
-  private static __getDebugMessenger() {
-    const debugCreateInfo = instantiate(vkDebugUtilsMessengerCreateInfoEXT);
-    debugCreateInfo.messageSeverity =
-      VkDebugUtilsMessageSeverityFlagsEXT.VERBOSE;
-    debugCreateInfo.messageType = VkDebugUtilsMessageTypeFlagsEXT.VALIDATION;
-    debugCreateInfo.pfnUserCallback = BigInt(
-      VkDevice.__errorCallback!.ptr ?? 0,
-    );
-    return debugCreateInfo;
   }
 
   // MARK: Instance Properties

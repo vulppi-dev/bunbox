@@ -9,6 +9,7 @@ import {
   u32,
   u64,
   u8,
+  union,
 } from '@bunbox/struct';
 import { VkStructureType } from '../enums';
 
@@ -445,8 +446,9 @@ export const vkClearDepthStencilValue = struct({
   stencil: u32(),
 });
 
-export const vkClearValue = struct({
+export const vkClearValue = union({
   color: vkClearColorValue,
+  depthStencil: vkClearDepthStencilValue,
 });
 
 // MARK: Pipeline Structures
