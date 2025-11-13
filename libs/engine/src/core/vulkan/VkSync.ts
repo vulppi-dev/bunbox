@@ -3,7 +3,9 @@ import { type Disposable } from '@bunbox/utils';
 import {
   getResultMessage,
   VK,
+  VkFenceCreateFlagBits,
   vkFenceCreateInfo,
+  VkPipelineStageFlagBits,
   vkSemaphoreCreateInfo,
   VkResult,
   VK_WHOLE_SIZE,
@@ -12,7 +14,6 @@ import { ptr, type Pointer } from 'bun:ffi';
 import { DynamicLibError } from '../../errors';
 import { VK_DEBUG } from '../../singleton/logger';
 
-const VK_FENCE_CREATE_SIGNALED_BIT = 0x00000001;
 const MAX_FRAMES_IN_FLIGHT = 2;
 
 /**
@@ -22,13 +23,19 @@ const MAX_FRAMES_IN_FLIGHT = 2;
  * Implements frame-in-flight management to allow multiple frames to be processed simultaneously.
  */
 export class VkSync implements Disposable {
+  /**
+   * Default pipeline stage for waiting on image availability.
+   * Color attachment output is when the swapchain image is actually written to.
+   */
+  static readonly DEFAULT_WAIT_STAGE =
+    VkPipelineStageFlagBits.COLOR_ATTACHMENT_OUTPUT_BIT;
+
   private __device: Pointer;
 
   private __imageAvailableSemaphores: BigUint64Array;
   private __renderFinishedSemaphores: BigUint64Array;
   private __inFlightFences: BigUint64Array;
 
-  // NOVO: por imagem do swapchain (tamanho S)
   private __imageInFlightFences: BigUint64Array;
 
   constructor(
@@ -227,7 +234,7 @@ export class VkSync implements Disposable {
   ): void {
     const pointerHolder = new BigUint64Array(1);
     const createInfo = instantiate(vkFenceCreateInfo);
-    createInfo.flags = signaled ? VK_FENCE_CREATE_SIGNALED_BIT : 0;
+    createInfo.flags = signaled ? VkFenceCreateFlagBits.SIGNALED_BIT : 0;
 
     const result = VK.vkCreateFence(
       this.__device,

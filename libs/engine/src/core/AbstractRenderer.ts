@@ -2,7 +2,7 @@ import { GLFW } from '@bunbox/glfw';
 import { type Disposable } from '@bunbox/utils';
 import { ptr, type Pointer } from 'bun:ffi';
 import { Color, Vector2 } from '../math';
-import type { AbstractCamera, Light, Mesh } from '../nodes';
+import type { AbstractCamera, Environment, Light, Mesh } from '../nodes';
 
 export interface RendererOptions {
   msaa?: 1 | 2 | 4 | 8;
@@ -62,9 +62,10 @@ export abstract class AbstractRenderer implements Disposable {
 
   abstract dispose(): void | Promise<void>;
   abstract render(
+    delta: number,
     cameras: AbstractCamera[],
     meshes: Mesh[],
     lights: Light[],
-    delta: number,
+    env?: Environment,
   ): void;
 }

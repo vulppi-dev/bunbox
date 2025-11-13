@@ -1,3 +1,4 @@
+import type { SampleCount } from '../resources';
 import { RenderPassBuilder } from './RenderPassBuilder';
 import type { RenderPassConfig } from './RenderPassConfig';
 import type { Format } from './RenderPassTypes';
@@ -13,22 +14,34 @@ export class RenderPassPresets {
    * Attachments:
    * - 0: Color (swapchain format)
    * - 1: Depth (d32-sfloat)
+   *
+   * @param samples MSAA sample count (1, 2, 4, 8)
+   * @param depthLoadOp Load operation for depth ('clear' or 'load' for depth pre-pass)
+   * @param depthStoreOp Store operation for depth ('dont-care' or 'store' for reuse)
    */
-  static forward(): RenderPassConfig {
+  static forward(
+    samples?: SampleCount,
+    depthLoadOp: 'clear' | 'load' = 'clear',
+    depthStoreOp: 'dont-care' | 'store' = 'dont-care',
+    colorFormat: Format = 'r16g16b16a16-sfloat',
+    colorFinal: 'color-attachment' | 'shader-read-only' = 'color-attachment',
+  ): RenderPassConfig {
     return new RenderPassBuilder()
       .setName('Forward Rendering')
       .addColorAttachment({
-        format: 'swapchain',
+        format: colorFormat,
         loadOp: 'clear',
         storeOp: 'store',
-        finalLayout: 'present-src',
+        finalLayout: colorFinal,
         clearValue: { color: [0.0, 0.0, 0.0, 1.0] },
+        samples,
       })
       .addDepthAttachment({
         format: 'd32-sfloat',
-        loadOp: 'clear',
-        storeOp: 'dont-care',
+        loadOp: depthLoadOp,
+        storeOp: depthStoreOp,
         clearValue: { depthStencil: { depth: 1.0, stencil: 0 } },
+        samples,
       })
       .build();
   }
@@ -274,14 +287,15 @@ export class RenderPassPresets {
    *
    * Note: Use this before forward rendering to cull occluded fragments early
    */
-  static depthPrePass(): RenderPassConfig {
+  static depthPrePass(samples: SampleCount): RenderPassConfig {
     return new RenderPassBuilder()
       .setName('Depth Pre-Pass')
       .addDepthAttachment({
         format: 'd32-sfloat',
         loadOp: 'clear',
         storeOp: 'store',
-        finalLayout: 'shader-read-only',
+        finalLayout: 'depth-stencil-attachment',
+        samples,
         clearValue: { depthStencil: { depth: 1.0 } },
       })
       .build();
@@ -318,20 +332,22 @@ export class RenderPassPresets {
    *
    * Note: Should be rendered after opaque geometry with depth testing enabled
    */
-  static transparency(): RenderPassConfig {
+  static transparency(samples?: SampleCount): RenderPassConfig {
     return new RenderPassBuilder()
       .setName('Transparency Pass')
       .addColorAttachment({
         format: 'r16g16b16a16-sfloat',
         loadOp: 'load',
         storeOp: 'store',
-        finalLayout: 'shader-read-only',
+        finalLayout: 'color-attachment',
+        samples,
       })
       .addDepthAttachment({
         format: 'd32-sfloat',
         loadOp: 'load',
         storeOp: 'store',
-        finalLayout: 'shader-read-only',
+        finalLayout: 'depth-stencil-attachment',
+        samples,
       })
       .build();
   }

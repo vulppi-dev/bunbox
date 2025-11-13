@@ -30,7 +30,7 @@ import { buildCallback, cstr, pointerCopyBuffer } from '../utils/buffer';
 import type { AbstractRenderer } from './AbstractRenderer';
 import { VkRenderer } from './vulkan/VkRenderer';
 import { Node, PROCESS_EVENT } from '../nodes/Node';
-import { AbstractCamera, Light, Mesh } from '../nodes';
+import { AbstractCamera, Environment, Light, Mesh } from '../nodes';
 
 // Setup struct pointer/string conversions globally
 setupStruct({
@@ -159,6 +159,7 @@ export class Window extends Root<never, never, WindowEventMap> {
   private __meshStack: Mesh[] = [];
   private __cameraStack: AbstractCamera[] = [];
   private __lightStack: Light[] = [];
+  private __environment: Environment | null = null;
 
   private __scheduleDirty: boolean = true;
 
@@ -888,6 +889,7 @@ export class Window extends Root<never, never, WindowEventMap> {
     const nextCameraStack: AbstractCamera[] = [];
     const nextMeshStack: Mesh[] = [];
     const nextLightStack: Light[] = [];
+    let env: Environment | null = null;
     this.traverse(
       (n) => {
         if (n !== this && n instanceof Node) {
@@ -901,6 +903,9 @@ export class Window extends Root<never, never, WindowEventMap> {
           if (n instanceof Light) {
             nextLightStack.push(n);
           }
+          if (n instanceof Environment) {
+            env = n;
+          }
         }
       },
       { ignoreType: Window, includeDisabled: true },
@@ -909,6 +914,7 @@ export class Window extends Root<never, never, WindowEventMap> {
     this.__cameraStack = nextCameraStack;
     this.__meshStack = nextMeshStack;
     this.__lightStack = nextLightStack;
+    this.__environment = env ?? null;
     this.__scheduleDirty = false;
   }
 
@@ -927,10 +933,11 @@ export class Window extends Root<never, never, WindowEventMap> {
       this.markAsClean();
     }
     this.__renderer.render(
+      delta,
       this.__cameraStack,
       this.__meshStack,
       this.__lightStack,
-      delta,
+      this.__environment ?? undefined,
     );
   }
 }

@@ -12,13 +12,14 @@ import { ptr, type Pointer } from 'bun:ffi';
 import { DynamicLibError } from '../../errors';
 import { Cube } from '../../math';
 import { Rect } from '../../math/Rect';
-import type { AbstractCamera, Light, Mesh } from '../../nodes';
-import type { SampleCount } from '../../resources/types';
+import type { AbstractCamera, Environment, Light, Mesh } from '../../nodes';
+import type { SampleCount } from '../../resources/types/aliases';
 import { VK_DEBUG } from '../../singleton/logger';
 import { AbstractRenderer, type RendererOptions } from '../AbstractRenderer';
 import { VkCommandBuffer } from './VkCommandBuffer';
 import { VkCommandPool } from './VkCommandPool';
 import { VkDevice } from './VkDevice';
+import { VkGraphicsPipeline } from './VkGraphicsPipeline';
 import { VkImageView } from './VkImageView';
 import {
   VkRenderPipeline,
@@ -26,7 +27,6 @@ import {
 } from './VkRenderPipeline';
 import { VkSwapchain } from './VkSwapchain';
 import { VkSync } from './VkSync';
-import { VkGraphicsPipeline } from './VkGraphicsPipeline';
 
 export class VkRenderer extends AbstractRenderer {
   private __device: VkDevice | null = null;
@@ -64,6 +64,8 @@ export class VkRenderer extends AbstractRenderer {
   }
 
   override dispose(): void | Promise<void> {
+    this.__sync?.waitDeviceIdle();
+
     this.__pipeline?.dispose();
     this.__pipeline = null;
     this.__swapchainViews.forEach((view) => view.dispose());
@@ -83,72 +85,12 @@ export class VkRenderer extends AbstractRenderer {
     this.__device = null;
   }
 
-  private __recordCommandBuffer(
-    commandBuffer: VkCommandBuffer,
-    imageIndex: number,
-    cameras: AbstractCamera[],
-    meshes: Mesh[],
-    lights: Light[],
-  ): void {
-    commandBuffer.begin();
-    commandBuffer.setViewport(
-      new Cube(
-        0,
-        0,
-        0,
-        this.__swapchain ? this.__swapchain.width : 0,
-        this.__swapchain ? this.__swapchain.height : 0,
-        1.0,
-      ),
-    );
-    commandBuffer.setScissor(
-      new Rect(
-        0,
-        0,
-        this.__swapchain ? this.__swapchain.width : 0,
-        this.__swapchain ? this.__swapchain.height : 0,
-      ),
-    );
-
-    // TODO: Implement actual recording logic
-    // For now, render clear screen directly to swapchain
-    if (this.__pipeline?.finalCompositeStage && this.__swapchain) {
-      const stage = this.__pipeline.finalCompositeStage;
-      const framebuffer = stage.framebuffers[imageIndex];
-
-      if (framebuffer) {
-        const renderArea = new Rect(
-          0,
-          0,
-          this.__swapchain.width,
-          this.__swapchain.height,
-        );
-
-        // Render with clear color directly to swapchain
-        commandBuffer.beginRenderPass(
-          stage.renderPass.instance,
-          framebuffer.framebuffer,
-          renderArea,
-          [this._clearColor],
-        );
-
-        // TODO: Record actual render commands here
-        // - Bind pipeline
-        // - Bind vertex/index buffers
-        // - Draw meshes
-
-        commandBuffer.endRenderPass();
-      }
-    }
-
-    commandBuffer.end();
-  }
-
   override render(
+    delta: number,
     cameras: AbstractCamera[],
     meshes: Mesh[],
     lights: Light[],
-    delta: number,
+    env?: Environment,
   ): void {
     if (
       !this.__device ||
@@ -171,15 +113,15 @@ export class VkRenderer extends AbstractRenderer {
       ptr(imageIndexHolder),
     );
 
-    if (
-      acquireResult === VkResult.ERROR_OUT_OF_DATE_KHR ||
-      acquireResult === VkResult.SUBOPTIMAL_KHR
-    ) {
+    if (acquireResult === VkResult.ERROR_OUT_OF_DATE_KHR) {
       this.rebuildFrame();
       return;
     }
 
-    if (acquireResult !== VkResult.SUCCESS) {
+    if (
+      acquireResult !== VkResult.SUCCESS &&
+      acquireResult !== VkResult.SUBOPTIMAL_KHR
+    ) {
       throw new DynamicLibError(getResultMessage(acquireResult), 'Vulkan');
     }
 
@@ -193,17 +135,19 @@ export class VkRenderer extends AbstractRenderer {
     const commandBuffer = this.__commandBuffers[imageIndex]!;
 
     this.__recordCommandBuffer(
+      delta,
       commandBuffer,
       imageIndex,
       cameras,
       meshes,
       lights,
+      env,
     );
 
     const waitSemaphores = new BigUint64Array([
       BigInt(this.__sync.getImageAvailableSemaphore(this.__currentFrameIndex)),
     ]);
-    const waitStages = new Uint32Array([0x00000100]);
+    const waitStages = new Uint32Array([VkSync.DEFAULT_WAIT_STAGE]);
     const signalSemaphores = new BigUint64Array([
       BigInt(this.__sync.getRenderFinishedSemaphore(this.__currentFrameIndex)),
     ]);
@@ -253,6 +197,7 @@ export class VkRenderer extends AbstractRenderer {
       presentResult === VkResult.ERROR_OUT_OF_DATE_KHR ||
       presentResult === VkResult.SUBOPTIMAL_KHR
     ) {
+      this.rebuildFrame();
       return;
     }
 
@@ -391,5 +336,61 @@ export class VkRenderer extends AbstractRenderer {
       );
       this.__commandBuffers.push(commandBuffer);
     }
+  }
+
+  private __recordCommandBuffer(
+    delta: number,
+    commandBuffer: VkCommandBuffer,
+    imageIndex: number,
+    cameras: AbstractCamera[],
+    meshes: Mesh[],
+    lights: Light[],
+    env?: Environment,
+  ): void {
+    commandBuffer.begin();
+    commandBuffer.setViewport(
+      new Cube(
+        0,
+        0,
+        0,
+        this.__swapchain ? this.__swapchain.width : 0,
+        this.__swapchain ? this.__swapchain.height : 0,
+        1.0,
+      ),
+    );
+    commandBuffer.setScissor(
+      new Rect(
+        0,
+        0,
+        this.__swapchain ? this.__swapchain.width : 0,
+        this.__swapchain ? this.__swapchain.height : 0,
+      ),
+    );
+
+    if (this.__pipeline && this.__swapchain) {
+      const stage = this.__pipeline.finalCompositeStage;
+      const framebuffer = stage.framebuffers[imageIndex];
+
+      if (framebuffer) {
+        const renderArea = new Rect(
+          0,
+          0,
+          this.__swapchain.width,
+          this.__swapchain.height,
+        );
+
+        // Render with clear color directly to swapchain
+        commandBuffer.beginRenderPass(
+          stage.renderPass.instance,
+          framebuffer.instance,
+          renderArea,
+          [this._clearColor],
+        );
+
+        commandBuffer.endRenderPass();
+      }
+    }
+
+    commandBuffer.end();
   }
 }

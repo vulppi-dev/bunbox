@@ -6,7 +6,7 @@ import type {
   AddressMode,
   CompareFunction,
   BorderColor,
-} from './types';
+} from './types/aliases';
 
 /**
  * Configuration descriptor for texture sampling behavior.

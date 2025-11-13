@@ -14,6 +14,7 @@ import {
   VkSubpassContents,
   vkViewport,
   vkClearValue,
+  VkCommandBufferUsageFlagBits,
 } from '@bunbox/vk';
 import { ptr, type Pointer } from 'bun:ffi';
 import { DynamicLibError } from '../../errors';
@@ -81,7 +82,7 @@ export class VkCommandBuffer implements Disposable {
     VK_DEBUG(`Beginning command buffer: 0x${this.__instance.toString(16)}`);
 
     const beginInfo = instantiate(vkCommandBufferBeginInfo);
-    beginInfo.flags = 0x00000001; // VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT
+    beginInfo.flags = VkCommandBufferUsageFlagBits.ONE_TIME_SUBMIT_BIT;
     beginInfo.pInheritanceInfo = 0n;
 
     const result = VK.vkBeginCommandBuffer(
@@ -403,8 +404,8 @@ export class VkCommandBuffer implements Disposable {
 
   private __allocateCommandBuffer(): Pointer {
     const allocInfo = instantiate(vkCommandBufferAllocateInfo);
-    allocInfo.commandPool = BigInt(this.__commandPool);
     allocInfo.level = VkCommandBufferLevel.PRIMARY;
+    allocInfo.commandPool = BigInt(this.__commandPool);
     allocInfo.commandBufferCount = 1;
 
     const commandBuffers = new BigUint64Array(1);

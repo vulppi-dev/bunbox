@@ -1,4 +1,4 @@
-export * from './types';
+export * from './types/aliases';
 export * from './Geometry';
 export * from './MaskHelper';
 export * from './Rasterizer';

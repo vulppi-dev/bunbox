@@ -8,7 +8,7 @@ import type {
   CompareFunction,
   StencilOperation,
   DepthStencilFormat,
-} from './types';
+} from './types/aliases';
 
 export type DepthStencilFaceState = {
   compare: CompareFunction;

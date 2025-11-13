@@ -58,7 +58,7 @@ import type {
   StencilOperation,
 } from '../../resources';
 import { VK_DEBUG } from '../../singleton/logger';
-import type { VkShaderModules } from './VkShaderModules';
+import { VkShaderModules } from './VkShaderModules';
 
 export class VkGraphicsPipeline implements Disposable {
   private static __getVkTopology(primitive: MaterialPrimitive) {
@@ -269,9 +269,9 @@ export class VkGraphicsPipeline implements Disposable {
   private __vertexInputInfo = instantiate(vkPipelineVertexInputStateCreateInfo);
   private __pipelineConfigInfo = instantiate(vkGraphicsPipelineCreateInfo);
 
-  constructor(device: Pointer, renderPass: Pointer, module: VkShaderModules) {
+  constructor(device: Pointer, renderPass: Pointer, material: Material) {
     this.__device = device;
-    this.__module = module;
+    this.__module = new VkShaderModules(device, material);
 
     VK_DEBUG('Creating graphics pipeline');
 

@@ -1,15 +1,14 @@
 import type { Disposable } from '@bunbox/utils';
-import type { Pointer } from 'bun:ffi';
 import { RenderPassPresets } from '../../builders';
 import type { RenderPassConfig } from '../../builders/RenderPassConfig';
+import type { SampleCount } from '../../resources';
+import { TextureImage } from '../../resources';
 import { VK_DEBUG } from '../../singleton/logger';
+import type { VkDevice } from './VkDevice';
 import { VkFramebuffer } from './VkFramebuffer';
 import { VkImage } from './VkImage';
 import { VkImageView } from './VkImageView';
 import { VkRenderPass } from './VkRenderPass';
-import { TextureImage } from '../../resources';
-import type { VkDevice } from './VkDevice';
-import type { SampleCount } from '../../resources/types';
 
 /**
  * Stage in the render pipeline
@@ -21,8 +20,10 @@ export interface RenderStage {
   resources: {
     colorImages: VkImage[];
     colorViews: VkImageView[];
-    depthImage?: VkImage;
-    depthView?: VkImageView;
+    depthImages?: VkImage[];
+    depthViews?: VkImageView[];
+    resolveImages?: VkImage[];
+    resolveViews?: VkImageView[];
   };
 }
 
@@ -41,11 +42,24 @@ export interface CustomPostProcessConfig {
  * 1. Shadow Maps
  * 2. Depth Pre-pass
  * 3. Light Culling
- * 4. Forward Rendering
- * 5. Transparency
- * 6. Custom Post-Process (user-defined)
- * 7. Clear Screen (off-screen with clear color)
- * 8. Final Composite to Swapchain (copies clear screen to presentation)
+ * 4. Forward Rendering (opaque)
+ * 5. Transparency (blended on same buffer)
+ * 6. **MSAA Resolve** (if enabled): vkCmdResolveImage/vkCmdBlitImage
+ *    - Source: Forward colorImages (MSAA)
+ *    - Target: Forward resolveImages (1×)
+ * 7. Custom Post-Process (user-defined, reads resolveImages or colorImages)
+ * 8. Final Composite to Swapchain
+ *
+ * ## MSAA Handling:
+ * - Forward and Transparency render to the same MSAA buffer (colorImages N×)
+ * - After transparency, resolve colorImages → resolveImages (1×)
+ * - Post-process and subsequent stages read from resolveImages
+ * - Use getMSAAResolveTarget() to get resolve source/destination
+ *
+ * ## Depth Buffer Sharing:
+ * - Depth Pre-pass creates shared depth buffers (N× if MSAA)
+ * - Forward: loadOp=LOAD, storeOp=STORE (preserves writes)
+ * - Transparency: loadOp=LOAD, storeOp=STORE (depth test only, no writes)
  */
 export class VkRenderPipeline implements Disposable {
   private __device: VkDevice;
@@ -63,7 +77,6 @@ export class VkRenderPipeline implements Disposable {
   private __forwardStage: RenderStage | null = null;
   private __transparencyStage: RenderStage | null = null;
   private __customPostProcessStages: RenderStage[] = [];
-  private __clearScreenStage: RenderStage | null = null;
   private __finalCompositeStage: RenderStage | null = null;
 
   private __customPostProcessConfigs: CustomPostProcessConfig[] = [];
@@ -86,36 +99,32 @@ export class VkRenderPipeline implements Disposable {
     this.__buildPipeline();
   }
 
-  get shadowMapStage(): RenderStage | null {
-    return this.__shadowMapStage;
+  get shadowMapStage(): RenderStage {
+    return this.__shadowMapStage!;
   }
 
-  get depthPrePassStage(): RenderStage | null {
-    return this.__depthPrePassStage;
+  get depthPrePassStage(): RenderStage {
+    return this.__depthPrePassStage!;
   }
 
-  get lightCullingStage(): RenderStage | null {
-    return this.__lightCullingStage;
+  get lightCullingStage(): RenderStage {
+    return this.__lightCullingStage!;
   }
 
-  get forwardStage(): RenderStage | null {
-    return this.__forwardStage;
+  get forwardStage(): RenderStage {
+    return this.__forwardStage!;
   }
 
-  get transparencyStage(): RenderStage | null {
-    return this.__transparencyStage;
+  get transparencyStage(): RenderStage {
+    return this.__transparencyStage!;
   }
 
   get customPostProcessStages(): RenderStage[] {
     return this.__customPostProcessStages;
   }
 
-  get clearScreenStage(): RenderStage | null {
-    return this.__clearScreenStage;
-  }
-
-  get finalCompositeStage(): RenderStage | null {
-    return this.__finalCompositeStage;
+  get finalCompositeStage(): RenderStage {
+    return this.__finalCompositeStage!;
   }
 
   get msaaEnabled(): boolean {
@@ -124,6 +133,33 @@ export class VkRenderPipeline implements Disposable {
 
   get sampleCount(): SampleCount {
     return this.__sampleCount;
+  }
+
+  /**
+   * Get resolve target for MSAA (if enabled)
+   * These images should be populated via vkCmdResolveImage or vkCmdBlitImage
+   * after the transparency pass completes.
+   *
+   * @returns Resolve images and views when MSAA is enabled, undefined otherwise
+   */
+  getMSAAResolveTarget():
+    | { images: VkImage[]; views: VkImageView[] }
+    | undefined {
+    if (!this.__msaaEnabled || !this.__forwardStage) {
+      return undefined;
+    }
+
+    const resolveImages = this.__forwardStage.resources.resolveImages;
+    const resolveViews = this.__forwardStage.resources.resolveViews;
+
+    if (!resolveImages || !resolveViews) {
+      return undefined;
+    }
+
+    return {
+      images: resolveImages,
+      views: resolveViews,
+    };
   }
 
   /**
@@ -198,14 +234,24 @@ export class VkRenderPipeline implements Disposable {
   updateSwapchain(
     swapchainImages: bigint[],
     swapchainImageViews: VkImageView[],
+    width?: number,
+    height?: number,
+    format?: number,
   ): void {
     VK_DEBUG('Updating pipeline swapchain references');
 
     this.__swapchainImages = swapchainImages;
     this.__swapchainImageViews = swapchainImageViews;
 
-    this.__disposeFinalCompositeStage();
-    this.__buildFinalCompositeStage();
+    if (format !== undefined) {
+      this.__swapchainFormat = format;
+    }
+
+    if (width !== undefined && height !== undefined) {
+      this.rebuild(width, height);
+    } else {
+      this.rebuild(this.__width, this.__height);
+    }
   }
 
   dispose(): void | Promise<void> {
@@ -222,7 +268,6 @@ export class VkRenderPipeline implements Disposable {
     this.__buildForwardStage();
     this.__buildTransparencyStage();
     this.__buildCustomPostProcessStages();
-    this.__buildClearScreenStage();
     this.__buildFinalCompositeStage();
 
     VK_DEBUG('Render pipeline built successfully');
@@ -235,7 +280,6 @@ export class VkRenderPipeline implements Disposable {
     this.__disposeForwardStage();
     this.__disposeTransparencyStage();
     this.__disposeCustomPostProcessStages();
-    this.__disposeClearScreenStage();
     this.__disposeFinalCompositeStage();
   }
 
@@ -254,7 +298,7 @@ export class VkRenderPipeline implements Disposable {
       height: shadowMapSize,
       sampleCount: 1,
       format: 'depth32float',
-      usage: ['depth-stencil-target'],
+      usage: ['depth-stencil-target', 'sampler'],
       mipLevels: 1,
     });
 
@@ -286,8 +330,8 @@ export class VkRenderPipeline implements Disposable {
       resources: {
         colorImages: [],
         colorViews: [],
-        depthImage,
-        depthView,
+        depthImages: [depthImage],
+        depthViews: [depthView],
       },
     };
 
@@ -295,7 +339,7 @@ export class VkRenderPipeline implements Disposable {
   }
 
   private __buildDepthPrePassStage(): void {
-    const config = RenderPassPresets.depthPrePass();
+    const config = RenderPassPresets.depthPrePass(this.__sampleCount);
     const renderPass = new VkRenderPass(
       this.__device.logicalDevice,
       config,
@@ -308,7 +352,7 @@ export class VkRenderPipeline implements Disposable {
       height: this.__height,
       sampleCount: this.__sampleCount,
       format: 'depth32float',
-      usage: ['depth-stencil-target'],
+      usage: ['depth-stencil-target', 'sampler'],
       mipLevels: 1,
     });
 
@@ -350,8 +394,8 @@ export class VkRenderPipeline implements Disposable {
       resources: {
         colorImages: [],
         colorViews: [],
-        depthImage: depthImages[0],
-        depthView: depthViews[0],
+        depthImages: depthImages,
+        depthViews: depthViews,
       },
     };
 
@@ -371,8 +415,8 @@ export class VkRenderPipeline implements Disposable {
       width: this.__width,
       height: this.__height,
       sampleCount: 1,
-      format: 'r32float',
-      usage: ['color-target'],
+      format: 'r32uint',
+      usage: ['color-target', 'sampler'],
       mipLevels: 1,
     });
 
@@ -421,17 +465,13 @@ export class VkRenderPipeline implements Disposable {
   }
 
   private __buildForwardStage(): void {
-    let config = RenderPassPresets.forward();
-
-    if (this.__msaaEnabled) {
-      config = {
-        ...config,
-        attachments: config.attachments.map((att) => ({
-          ...att,
-          samples: this.__sampleCount,
-        })),
-      };
-    }
+    const config = RenderPassPresets.forward(
+      this.__msaaEnabled ? this.__sampleCount : undefined,
+      'load',
+      'store',
+      'r16g16b16a16-sfloat',
+      'color-attachment',
+    );
 
     const renderPass = new VkRenderPass(
       this.__device.logicalDevice,
@@ -439,72 +479,119 @@ export class VkRenderPipeline implements Disposable {
       this.__swapchainFormat,
     );
 
-    const colorTexture = new TextureImage({
-      label: 'Forward Rendering',
-      width: this.__width,
-      height: this.__height,
-      sampleCount: this.__sampleCount,
-      format: 'rgba16float',
-      usage: ['color-target'],
-      mipLevels: 1,
-    });
-
-    const depthTexture = new TextureImage({
-      label: 'Forward Depth',
-      width: this.__width,
-      height: this.__height,
-      sampleCount: this.__sampleCount,
-      format: 'depth32float',
-      usage: ['depth-stencil-target'],
-      mipLevels: 1,
-    });
-
     const colorImages: VkImage[] = [];
     const colorViews: VkImageView[] = [];
-    const depthImages: VkImage[] = [];
-    const depthViews: VkImageView[] = [];
+    const resolveImages: VkImage[] = [];
+    const resolveViews: VkImageView[] = [];
     const framebuffers: VkFramebuffer[] = [];
 
-    for (let i = 0; i < this.__swapchainImages.length; i++) {
-      const colorImage = new VkImage(
-        this.__device.logicalDevice,
-        this.__device.physicalDevice,
-        colorTexture,
-      );
-
-      const colorView = new VkImageView({
-        device: this.__device.logicalDevice,
-        format: colorImage.format,
-        image: colorImage.instance,
-        mask: ['color'],
+    if (this.__msaaEnabled) {
+      // MSAA: Forward and Transparency render to colorMsaaImage (N×).
+      // After transparency completes, use vkCmdResolveImage or vkCmdBlitImage
+      // to resolve colorMsaaImage → colorResolveImage (1×).
+      // Post-process stages read from colorResolveImage.
+      const colorMsaaTexture = new TextureImage({
+        label: 'Forward Rendering MSAA',
+        width: this.__width,
+        height: this.__height,
+        sampleCount: this.__sampleCount,
+        format: 'rgba16float',
+        usage: ['color-target', 'transfer-src'],
+        mipLevels: 1,
       });
 
-      const depthImage = new VkImage(
-        this.__device.logicalDevice,
-        this.__device.physicalDevice,
-        depthTexture,
-      );
-
-      const depthView = new VkImageView({
-        device: this.__device.logicalDevice,
-        format: depthImage.format,
-        image: depthImage.instance,
-        mask: ['depth'],
+      const colorResolveTexture = new TextureImage({
+        label: 'Forward Rendering Resolve',
+        width: this.__width,
+        height: this.__height,
+        sampleCount: 1,
+        format: 'rgba16float',
+        usage: ['color-target', 'sampler', 'transfer-dst'],
+        mipLevels: 1,
       });
 
-      const framebuffer = new VkFramebuffer(
-        this.__device.logicalDevice,
-        renderPass.instance,
-        [colorView, depthView],
-        this.__width,
-        this.__height,
-      );
+      for (let i = 0; i < this.__swapchainImages.length; i++) {
+        const colorMsaaImage = new VkImage(
+          this.__device.logicalDevice,
+          this.__device.physicalDevice,
+          colorMsaaTexture,
+        );
 
-      colorImages.push(colorImage);
-      colorViews.push(colorView);
-      depthImages.push(depthImage);
-      depthViews.push(depthView);
-      framebuffers.push(framebuffer);
+        const colorMsaaView = new VkImageView({
+          device: this.__device.logicalDevice,
+          format: colorMsaaImage.format,
+          image: colorMsaaImage.instance,
+          mask: ['color'],
+        });
+
+        const colorResolveImage = new VkImage(
+          this.__device.logicalDevice,
+          this.__device.physicalDevice,
+          colorResolveTexture,
+        );
+
+        const colorResolveView = new VkImageView({
+          device: this.__device.logicalDevice,
+          format: colorResolveImage.format,
+          image: colorResolveImage.instance,
+          mask: ['color'],
+        });
+
+        const depthView = this.__depthPrePassStage!.resources.depthViews![i]!;
+
+        const framebuffer = new VkFramebuffer(
+          this.__device.logicalDevice,
+          renderPass.instance,
+          [colorMsaaView, depthView],
+          this.__width,
+          this.__height,
+        );
+
+        colorImages.push(colorMsaaImage);
+        colorViews.push(colorMsaaView);
+        resolveImages.push(colorResolveImage);
+        resolveViews.push(colorResolveView);
+        framebuffers.push(framebuffer);
+      }
+    } else {
+      const colorTexture = new TextureImage({
+        label: 'Forward Rendering',
+        width: this.__width,
+        height: this.__height,
+        sampleCount: 1,
+        format: 'rgba16float',
+        usage: ['color-target', 'sampler'],
+        mipLevels: 1,
+      });
+
+      for (let i = 0; i < this.__swapchainImages.length; i++) {
+        const colorImage = new VkImage(
+          this.__device.logicalDevice,
+          this.__device.physicalDevice,
+          colorTexture,
+        );
+
+        const colorView = new VkImageView({
+          device: this.__device.logicalDevice,
+          format: colorImage.format,
+          image: colorImage.instance,
+          mask: ['color'],
+        });
+
+        const depthView = this.__depthPrePassStage!.resources.depthViews![i]!;
+
+        const framebuffer = new VkFramebuffer(
+          this.__device.logicalDevice,
+          renderPass.instance,
+          [colorView, depthView],
+          this.__width,
+          this.__height,
+        );
+
+        colorImages.push(colorImage);
+        colorViews.push(colorView);
+        framebuffers.push(framebuffer);
+      }
     }
 
     this.__forwardStage = {
@@ -514,8 +601,8 @@ export class VkRenderPipeline implements Disposable {
       resources: {
         colorImages,
         colorViews,
-        depthImage: depthImages[0],
-        depthView: depthViews[0],
+        resolveImages: this.__msaaEnabled ? resolveImages : undefined,
+        resolveViews: this.__msaaEnabled ? resolveViews : undefined,
       },
     };
 
@@ -523,65 +610,22 @@ export class VkRenderPipeline implements Disposable {
   }
 
   private __buildTransparencyStage(): void {
-    const config = RenderPassPresets.transparency();
+    const config = RenderPassPresets.transparency(
+      this.__msaaEnabled ? this.__sampleCount : undefined,
+    );
+
     const renderPass = new VkRenderPass(
       this.__device.logicalDevice,
       config,
       this.__swapchainFormat,
     );
 
-    const colorTexture = new TextureImage({
-      label: 'Transparency',
-      width: this.__width,
-      height: this.__height,
-      sampleCount: this.__sampleCount,
-      format: 'rgba16float',
-      usage: ['color-target'],
-      mipLevels: 1,
-    });
-
-    const depthTexture = new TextureImage({
-      label: 'Transparency Depth',
-      width: this.__width,
-      height: this.__height,
-      sampleCount: this.__sampleCount,
-      format: 'depth32float',
-      usage: ['depth-stencil-target'],
-      mipLevels: 1,
-    });
-
-    const colorImages: VkImage[] = [];
-    const colorViews: VkImageView[] = [];
-    const depthImages: VkImage[] = [];
-    const depthViews: VkImageView[] = [];
     const framebuffers: VkFramebuffer[] = [];
 
     for (let i = 0; i < this.__swapchainImages.length; i++) {
-      const colorImage = new VkImage(
-        this.__device.logicalDevice,
-        this.__device.physicalDevice,
-        colorTexture,
-      );
-
-      const colorView = new VkImageView({
-        device: this.__device.logicalDevice,
-        format: colorImage.format,
-        image: colorImage.instance,
-        mask: ['color'],
-      });
-
-      const depthImage = new VkImage(
-        this.__device.logicalDevice,
-        this.__device.physicalDevice,
-        depthTexture,
-      );
-
-      const depthView = new VkImageView({
-        device: this.__device.logicalDevice,
-        format: depthImage.format,
-        image: depthImage.instance,
-        mask: ['depth'],
-      });
+      // Draw on the same color buffer as forward (MSAA or single-sample)
+      const colorView = this.__forwardStage!.resources.colorViews[i]!;
+      const depthView = this.__depthPrePassStage!.resources.depthViews![i]!;
 
       const framebuffer = new VkFramebuffer(
         this.__device.logicalDevice,
@@ -591,10 +635,6 @@ export class VkRenderPipeline implements Disposable {
         this.__height,
       );
 
-      colorImages.push(colorImage);
-      colorViews.push(colorView);
-      depthImages.push(depthImage);
-      depthViews.push(depthView);
       framebuffers.push(framebuffer);
     }
 
@@ -603,10 +643,8 @@ export class VkRenderPipeline implements Disposable {
       renderPass,
       framebuffers,
       resources: {
-        colorImages,
-        colorViews,
-        depthImage: depthImages[0],
-        depthView: depthViews[0],
+        colorImages: [],
+        colorViews: [],
       },
     };
 
@@ -629,7 +667,7 @@ export class VkRenderPipeline implements Disposable {
         height: this.__height,
         sampleCount: 1,
         format: 'rgba16float',
-        usage: ['color-target'],
+        usage: ['color-target', 'sampler'],
         mipLevels: 1,
       });
 
@@ -678,68 +716,6 @@ export class VkRenderPipeline implements Disposable {
     }
   }
 
-  private __buildClearScreenStage(): void {
-    const config = RenderPassPresets.offscreen('r16g16b16a16-sfloat', false);
-    const renderPass = new VkRenderPass(
-      this.__device.logicalDevice,
-      config,
-      this.__swapchainFormat,
-    );
-
-    const colorTexture = new TextureImage({
-      label: 'Clear Screen',
-      width: this.__width,
-      height: this.__height,
-      sampleCount: 1,
-      format: 'rgba16float',
-      usage: ['color-target', 'sampler'],
-      mipLevels: 1,
-    });
-
-    const colorImages: VkImage[] = [];
-    const colorViews: VkImageView[] = [];
-    const framebuffers: VkFramebuffer[] = [];
-
-    for (let i = 0; i < this.__swapchainImages.length; i++) {
-      const colorImage = new VkImage(
-        this.__device.logicalDevice,
-        this.__device.physicalDevice,
-        colorTexture,
-      );
-
-      const colorView = new VkImageView({
-        device: this.__device.logicalDevice,
-        format: colorImage.format,
-        image: colorImage.instance,
-        mask: ['color'],
-      });
-
-      const framebuffer = new VkFramebuffer(
-        this.__device.logicalDevice,
-        renderPass.instance,
-        [colorView],
-        this.__width,
-        this.__height,
-      );
-
-      colorImages.push(colorImage);
-      colorViews.push(colorView);
-      framebuffers.push(framebuffer);
-    }
-
-    this.__clearScreenStage = {
-      name: 'Clear Screen',
-      renderPass,
-      framebuffers,
-      resources: {
-        colorImages,
-        colorViews,
-      },
-    };
-
-    VK_DEBUG('Clear screen stage created');
-  }
-
   private __buildFinalCompositeStage(): void {
     const config = RenderPassPresets.finalComposite();
     const renderPass = new VkRenderPass(
@@ -781,8 +757,8 @@ export class VkRenderPipeline implements Disposable {
     this.__shadowMapStage.framebuffers.forEach((fb) => fb.dispose());
     this.__shadowMapStage.resources.colorViews.forEach((v) => v.dispose());
     this.__shadowMapStage.resources.colorImages.forEach((i) => i.dispose());
-    this.__shadowMapStage.resources.depthView?.dispose();
-    this.__shadowMapStage.resources.depthImage?.dispose();
+    this.__shadowMapStage.resources.depthViews?.forEach((v) => v.dispose());
+    this.__shadowMapStage.resources.depthImages?.forEach((i) => i.dispose());
     this.__shadowMapStage.renderPass.dispose();
     this.__shadowMapStage = null;
   }
@@ -793,6 +769,8 @@ export class VkRenderPipeline implements Disposable {
     this.__depthPrePassStage.framebuffers.forEach((fb) => fb.dispose());
     this.__depthPrePassStage.resources.colorViews.forEach((v) => v.dispose());
     this.__depthPrePassStage.resources.colorImages.forEach((i) => i.dispose());
+    this.__depthPrePassStage.resources.depthViews?.forEach((v) => v.dispose());
+    this.__depthPrePassStage.resources.depthImages?.forEach((i) => i.dispose());
     this.__depthPrePassStage.renderPass.dispose();
     this.__depthPrePassStage = null;
   }
@@ -803,6 +781,8 @@ export class VkRenderPipeline implements Disposable {
     this.__lightCullingStage.framebuffers.forEach((fb) => fb.dispose());
     this.__lightCullingStage.resources.colorViews.forEach((v) => v.dispose());
     this.__lightCullingStage.resources.colorImages.forEach((i) => i.dispose());
+    this.__lightCullingStage.resources.depthViews?.forEach((v) => v.dispose());
+    this.__lightCullingStage.resources.depthImages?.forEach((i) => i.dispose());
     this.__lightCullingStage.renderPass.dispose();
     this.__lightCullingStage = null;
   }
@@ -813,6 +793,10 @@ export class VkRenderPipeline implements Disposable {
     this.__forwardStage.framebuffers.forEach((fb) => fb.dispose());
     this.__forwardStage.resources.colorViews.forEach((v) => v.dispose());
     this.__forwardStage.resources.colorImages.forEach((i) => i.dispose());
+    this.__forwardStage.resources.depthViews?.forEach((v) => v.dispose());
+    this.__forwardStage.resources.depthImages?.forEach((i) => i.dispose());
+    this.__forwardStage.resources.resolveViews?.forEach((v) => v.dispose());
+    this.__forwardStage.resources.resolveImages?.forEach((i) => i.dispose());
     this.__forwardStage.renderPass.dispose();
     this.__forwardStage = null;
   }
@@ -823,6 +807,8 @@ export class VkRenderPipeline implements Disposable {
     this.__transparencyStage.framebuffers.forEach((fb) => fb.dispose());
     this.__transparencyStage.resources.colorViews.forEach((v) => v.dispose());
     this.__transparencyStage.resources.colorImages.forEach((i) => i.dispose());
+    this.__transparencyStage.resources.depthViews?.forEach((v) => v.dispose());
+    this.__transparencyStage.resources.depthImages?.forEach((i) => i.dispose());
     this.__transparencyStage.renderPass.dispose();
     this.__transparencyStage = null;
   }
@@ -832,19 +818,13 @@ export class VkRenderPipeline implements Disposable {
       stage.framebuffers.forEach((fb) => fb.dispose());
       stage.resources.colorViews.forEach((v) => v.dispose());
       stage.resources.colorImages.forEach((i) => i.dispose());
+      stage.resources.depthViews?.forEach((v) => v.dispose());
+      stage.resources.depthImages?.forEach((i) => i.dispose());
+      stage.resources.resolveViews?.forEach((v) => v.dispose());
+      stage.resources.resolveImages?.forEach((i) => i.dispose());
       stage.renderPass.dispose();
     }
     this.__customPostProcessStages = [];
-  }
-
-  private __disposeClearScreenStage(): void {
-    if (!this.__clearScreenStage) return;
-
-    this.__clearScreenStage.framebuffers.forEach((fb) => fb.dispose());
-    this.__clearScreenStage.resources.colorViews.forEach((v) => v.dispose());
-    this.__clearScreenStage.resources.colorImages.forEach((i) => i.dispose());
-    this.__clearScreenStage.renderPass.dispose();
-    this.__clearScreenStage = null;
   }
 
   private __disposeFinalCompositeStage(): void {

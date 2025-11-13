@@ -1,7 +1,7 @@
 import { DirtyState } from '@bunbox/utils';
 import { sha } from 'bun';
 import { ulid } from 'ulid';
-import type { TextureFormat, SampleCount, TextureUsage } from './types';
+import type { TextureFormat, SampleCount, TextureUsage } from './types/aliases';
 
 /**
  * Descriptor for creating texture instances.

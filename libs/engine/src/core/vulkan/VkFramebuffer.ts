@@ -46,7 +46,7 @@ export class VkFramebuffer implements Disposable {
     this.__createFramebuffer();
   }
 
-  get framebuffer(): Pointer {
+  get instance(): Pointer {
     if (this.__instance === null) {
       throw new DynamicLibError(
         'Framebuffer has not been created yet',
