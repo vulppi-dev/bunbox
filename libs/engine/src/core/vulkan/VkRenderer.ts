@@ -311,7 +311,7 @@ export class VkRenderer extends AbstractRenderer {
           this.__swapCount,
         );
       } else {
-        this.__sync.initPerSwapchainImages(this.__swapCount);
+        this.__sync.updateImagesCount(this.__swapCount);
       }
       return;
     }

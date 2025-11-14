@@ -81,6 +81,14 @@ export class VkSwapchain implements Disposable {
     return imgs;
   }
 
+  get imageCount() {
+    return this.__swapchainImages.length;
+  }
+
+  get frameCount() {
+    return Math.max(this.imageCount - 1, 2);
+  }
+
   dispose(): void | Promise<void> {
     VK_DEBUG(`Destroying swapchain: 0x${this.__swapchain.toString(16)}`);
     VK.vkDestroySwapchainKHR(

@@ -14,8 +14,6 @@ import { ptr, type Pointer } from 'bun:ffi';
 import { DynamicLibError } from '../../errors';
 import { VK_DEBUG } from '../../singleton/logger';
 
-const MAX_FRAMES_IN_FLIGHT = 2;
-
 /**
  * Manages Vulkan synchronization primitives for rendering.
  *
@@ -40,8 +38,8 @@ export class VkSync implements Disposable {
 
   constructor(
     device: Pointer,
-    maxFramesInFlight: number = MAX_FRAMES_IN_FLIGHT,
-    maxSwapchainImages: number = MAX_FRAMES_IN_FLIGHT,
+    maxFramesInFlight: number,
+    maxSwapchainImages: number,
   ) {
     this.__device = device;
 
@@ -77,10 +75,14 @@ export class VkSync implements Disposable {
     return this.__inFlightFences.length;
   }
 
+  get maxImagesInFlight(): number {
+    return this.__imageInFlightFences.length;
+  }
+
   /**
-   * Initializes per-swapchain-image fences to track which images are currently in flight.
+   * Updates the number of images in flight to match the swapchain image count.
    */
-  initPerSwapchainImages(swapchainImageCount: number): void {
+  updateImagesCount(swapchainImageCount: number): void {
     this.__imageInFlightFences = new BigUint64Array(swapchainImageCount); // zera (0n)
   }
 

@@ -1,9 +1,10 @@
+import { EngineContext } from './core/EngineContext';
 import { Window } from './index';
 
-const win = new Window('Test Window');
+const context = new EngineContext();
 
-win.clearColor.setHex(0x0, 0.7); // Set background color to a shade of blue
+const win = new Window('Test Window', context);
 
-// setTimeout(() => {
-//   win.dispose();
-// }, 3000);
+setTimeout(() => {
+  win.dispose();
+}, 3000);
