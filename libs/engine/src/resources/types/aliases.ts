@@ -187,26 +187,21 @@ export type TextureFormat =
   | 'astc-12x12-unorm-srgb' // ASTC 12x12 sRGB
 
   // Depth/Stencil Formats
-  | 'depth16unorm' // D16 unsigned normalized (mobile friendly)
-  | 'depth24plus' // D24 (implementation dependent, may be D24 or D32F)
-  | 'depth24unorm-stencil8' // D24 unsigned normalized + S8 (not widely supported)
-  | 'depth32float' // D32F float (high precision depth for shadows)
-  | 'depth32float-stencil8' // D32F float + S8 unsigned integer
-  | 'depth24plus-stencil8' // D24+ + S8 (implementation dependent)
+  | 'depth16-unorm' // D16 unsigned normalized (mobile friendly)
+  | 'depth24-plus' // D24 (implementation dependent, may be D24 or D32F)
+  | 'depth24-unorm-stencil8' // D24 unsigned normalized + S8 (not widely supported)
+  | 'depth32-float' // D32F float (high precision depth for shadows)
+  | 'depth32-float-stencil8' // D32F float + S8 unsigned integer
+  | 'depth24-plus-stencil8' // D24+ + S8 (implementation dependent)
   | 'stencil8'; // S8 stencil only
-
-/**
- * Multi-sample anti-aliasing sample count.
- */
-export type SampleCount = 1 | 2 | 4 | 8;
 
 /**
  * Texture usage flags (string-based for clarity).
  */
 export type TextureUsage =
-  | 'sampler'
-  | 'color-target'
-  | 'depth-stencil-target'
+  | 'sampled'
+  | 'color-attachment'
+  | 'depth-stencil-attachment'
   | 'storage'
   | 'transfer-src'
   | 'transfer-dst';
@@ -224,7 +219,7 @@ export type RasterizerCullMode = 'none' | 'front' | 'back' | 'all';
 /**
  * Rasterizer front face winding order.
  */
-export type RasterizerFrontFace = 'cw' | 'ccw';
+export type RasterizerFrontFace = 'clockwise' | 'counter-clockwise';
 
 /**
  * Stencil operation.
@@ -243,10 +238,115 @@ export type StencilOperation =
  * Depth/stencil texture format.
  */
 export type DepthStencilFormat =
-  | 'depth16unorm'
-  | 'depth24plus'
-  | 'depth24unorm-stencil8'
-  | 'depth32float'
-  | 'depth32float-stencil8'
-  | 'depth24plus-stencil8'
+  | 'depth16-unorm'
+  | 'depth24-plus'
+  | 'depth24-unorm-stencil8'
+  | 'depth32-float'
+  | 'depth32-float-stencil8'
+  | 'depth24-plus-stencil8'
   | 'stencil8';
+
+/**
+ * Sample count for multisampling (MSAA)
+ */
+export type SampleCount = 1 | 2 | 4 | 8 | 16 | 32 | 64;
+
+/**
+ * Load operation at the start of a render pass
+ */
+export type LoadOp =
+  | 'load' // Load existing contents
+  | 'clear' // Clear to a specified value
+  | 'dont-care'; // Don't care about existing contents
+
+/**
+ * Store operation at the end of a render pass
+ */
+export type StoreOp =
+  | 'store' // Store results to memory
+  | 'dont-care'; // Don't care about storing results
+
+/**
+ * Image layout describing how image data is organized
+ */
+export type ImageLayout =
+  | 'undefined' // Initial state, contents undefined
+  | 'general' // General-purpose layout
+  | 'color-attachment' // Optimal for color attachment
+  | 'depth-stencil-attachment' // Optimal for depth/stencil attachment
+  | 'depth-stencil-read-only' // Read-only depth/stencil
+  | 'shader-read-only' // Read-only in shaders
+  | 'transfer-src' // Source of transfer operation
+  | 'transfer-dst' // Destination of transfer operation
+  | 'present-src' // Presentable to display
+  | 'depth-read-only-stencil-attachment' // Depth read-only, stencil writable
+  | 'depth-attachment-stencil-read-only'; // Depth writable, stencil read-only
+
+/**
+ * Blend factor for color blending
+ */
+export type BlendFactor =
+  | 'zero'
+  | 'one'
+  | 'src'
+  | 'one-minus-src'
+  | 'src-alpha'
+  | 'one-minus-src-alpha'
+  | 'dst'
+  | 'one-minus-dst'
+  | 'dst-alpha'
+  | 'one-minus-dst-alpha'
+  | 'src-alpha-saturated'
+  | 'constant'
+  | 'one-minus-constant';
+
+/**
+ * Blend operation for color blending
+ */
+export type BlendOperation =
+  | 'add'
+  | 'subtract'
+  | 'reverse-subtract'
+  | 'min'
+  | 'max';
+
+/**
+ * Image format types
+ * Supports common formats across graphics APIs
+ */
+export type ComponentFormat =
+  // Special token for swapchain format
+  | 'swapchain'
+  // 8-bit normalized formats
+  | 'r8-unorm'
+  | 'r8g8-unorm'
+  | 'r8g8b8-unorm'
+  | 'r8g8b8a8-unorm'
+  | 'b8g8r8a8-unorm'
+  | 'r8-snorm'
+  | 'r8g8-snorm'
+  | 'r8g8b8a8-snorm'
+  // 16-bit formats
+  | 'r16-unorm'
+  | 'r16-sfloat'
+  | 'r16g16-unorm'
+  | 'r16g16-sfloat'
+  | 'r16g16b16a16-unorm'
+  | 'r16g16b16a16-sfloat'
+  // 32-bit formats
+  | 'r32-uint'
+  | 'r32-sint'
+  | 'r32-sfloat'
+  | 'r32g32-sfloat'
+  | 'r32g32b32-sfloat'
+  | 'r32g32b32a32-sfloat'
+  // Depth formats
+  | 'd16-unorm'
+  | 'd32-sfloat'
+  // Depth-stencil formats
+  | 'd16-unorm-s8-uint'
+  | 'd24-unorm-s8-uint'
+  | 'd32-sfloat-s8-uint'
+  // sRGB formats
+  | 'r8g8b8a8-srgb'
+  | 'b8g8r8a8-srgb';

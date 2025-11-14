@@ -297,8 +297,8 @@ export class VkRenderPipeline implements Disposable {
       width: shadowMapSize,
       height: shadowMapSize,
       sampleCount: 1,
-      format: 'depth32float',
-      usage: ['depth-stencil-target', 'sampler'],
+      format: 'depth32-float',
+      usage: ['depth-stencil-attachment', 'sampled'],
       mipLevels: 1,
     });
 
@@ -351,8 +351,8 @@ export class VkRenderPipeline implements Disposable {
       width: this.__width,
       height: this.__height,
       sampleCount: this.__sampleCount,
-      format: 'depth32float',
-      usage: ['depth-stencil-target', 'sampler'],
+      format: 'depth32-float',
+      usage: ['depth-stencil-attachment', 'sampled'],
       mipLevels: 1,
     });
 
@@ -416,7 +416,7 @@ export class VkRenderPipeline implements Disposable {
       height: this.__height,
       sampleCount: 1,
       format: 'r32uint',
-      usage: ['color-target', 'sampler'],
+      usage: ['color-attachment', 'sampled'],
       mipLevels: 1,
     });
 
@@ -496,7 +496,7 @@ export class VkRenderPipeline implements Disposable {
         height: this.__height,
         sampleCount: this.__sampleCount,
         format: 'rgba16float',
-        usage: ['color-target', 'transfer-src'],
+        usage: ['color-attachment', 'transfer-src'],
         mipLevels: 1,
       });
 
@@ -506,7 +506,7 @@ export class VkRenderPipeline implements Disposable {
         height: this.__height,
         sampleCount: 1,
         format: 'rgba16float',
-        usage: ['color-target', 'sampler', 'transfer-dst'],
+        usage: ['color-attachment', 'sampled', 'transfer-dst'],
         mipLevels: 1,
       });
 
@@ -560,7 +560,7 @@ export class VkRenderPipeline implements Disposable {
         height: this.__height,
         sampleCount: 1,
         format: 'rgba16float',
-        usage: ['color-target', 'sampler'],
+        usage: ['color-attachment', 'sampled'],
         mipLevels: 1,
       });
 
@@ -667,7 +667,7 @@ export class VkRenderPipeline implements Disposable {
         height: this.__height,
         sampleCount: 1,
         format: 'rgba16float',
-        usage: ['color-target', 'sampler'],
+        usage: ['color-attachment', 'sampled'],
         mipLevels: 1,
       });
 

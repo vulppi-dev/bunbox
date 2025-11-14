@@ -29,14 +29,14 @@ export interface TextureBaseDescriptor {
   sampleCount?: SampleCount;
   /**
    * Pixel format of the texture data.
-   * Common formats: 'rgba8unorm', 'bgra8unorm', 'depth24plus'
+   * Common formats: 'rgba8unorm', 'bgra8unorm', 'depth24-plus'
    * @default 'rgba8unorm'
    */
   format?: TextureFormat;
   /**
    * Bitmask defining allowed usages of the texture.
    * Multiple usages can be combined.
-   * @default ['sampler', 'color-target']
+   * @default ['sampled', 'color-attachment']
    */
   usage?: TextureUsage[];
 }
@@ -98,7 +98,7 @@ export abstract class TextureBase extends DirtyState {
   private __mipLevels: number = 1;
   private __sampleCount: SampleCount = 1;
   private __format: TextureFormat = 'rgba8unorm';
-  private __usage: TextureUsage[] = ['sampler', 'color-target'];
+  private __usage: TextureUsage[] = ['sampled', 'color-attachment'];
 
   protected constructor(desc: TextureBaseDescriptor) {
     super();
@@ -111,7 +111,7 @@ export abstract class TextureBase extends DirtyState {
     this.__sampleCount = desc.sampleCount ?? 1;
     this.__usage = Array.isArray(desc.usage)
       ? [...new Set(desc.usage)]
-      : ['sampler', 'color-target'];
+      : ['sampled', 'color-attachment'];
   }
 
   /** Unique identifier generated at creation time */

@@ -1,10 +1,10 @@
 import type {
-  Format,
+  ComponentFormat,
   ImageLayout,
   LoadOp,
   SampleCount,
   StoreOp,
-} from './RenderPassTypes';
+} from '../resources';
 
 /**
  * Attachment configuration for RenderPass
@@ -15,7 +15,7 @@ export interface AttachmentConfig {
    * Format of the attachment
    * Can be swapchain format token or specific format
    */
-  format: Format;
+  format: ComponentFormat;
 
   /**
    * Number of samples for multisampling

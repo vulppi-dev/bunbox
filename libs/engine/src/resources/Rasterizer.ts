@@ -8,6 +8,9 @@ import type {
   CompareFunction,
   StencilOperation,
   DepthStencilFormat,
+  SampleCount,
+  BlendFactor,
+  BlendOperation,
 } from './types/aliases';
 
 export type DepthStencilFaceState = {
@@ -32,33 +35,12 @@ export type DepthStencilState = {
 
 // Multisample
 export type MultisampleState = {
-  count: 1 | 2 | 4 | 8 | 16;
+  count: SampleCount;
   mask: MaskHelper;
   alphaToCoverageEnabled: boolean;
 };
 
 // Blend
-export type BlendFactor =
-  | 'zero'
-  | 'one'
-  | 'src'
-  | 'one-minus-src'
-  | 'src-alpha'
-  | 'one-minus-src-alpha'
-  | 'dst'
-  | 'one-minus-dst'
-  | 'dst-alpha'
-  | 'one-minus-dst-alpha'
-  | 'src-alpha-saturated'
-  | 'constant'
-  | 'one-minus-constant';
-
-export type BlendOperation =
-  | 'add'
-  | 'subtract'
-  | 'reverse-subtract'
-  | 'min'
-  | 'max';
 
 export type BlendComponent = {
   srcFactor: BlendFactor;
@@ -77,9 +59,9 @@ export class Rasterizer extends DirtyState {
   private __hash = '';
   private __fillMode: RasterizerFillMode = 'fill';
   private __cull: RasterizerCullMode = 'none';
-  private __frontFace: RasterizerFrontFace = 'cw';
+  private __frontFace: RasterizerFrontFace = 'clockwise';
   private __depthStencil: DepthStencilState = {
-    format: 'depth24plus',
+    format: 'depth24-plus',
     depthWriteEnabled: true,
     depthCompare: 'less',
     stencilFront: {

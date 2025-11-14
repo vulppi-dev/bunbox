@@ -1,8 +1,6 @@
-import { isWgslValid, wgslToSpirvBin } from '@bunbox/naga';
 import {
   getInstanceBuffer,
   instantiate,
-  sizeOf,
   type InferField,
 } from '@bunbox/struct';
 import type { Disposable } from '@bunbox/utils';
@@ -31,18 +29,14 @@ import {
   vkPipelineLayoutCreateInfo,
   vkPipelineMultisampleStateCreateInfo,
   vkPipelineRasterizationStateCreateInfo,
-  vkPipelineShaderStageCreateInfo,
   vkPipelineVertexInputStateCreateInfo,
   vkPipelineViewportStateCreateInfo,
   VkPolygonMode,
   VkPrimitiveTopology,
-  vkRect2D,
   VkResult,
   VkSampleCountFlagBits,
-  vkShaderModuleCreateInfo,
   VkShaderStageFlagBits,
   VkStencilOp,
-  vkViewport,
 } from '@bunbox/vk';
 import { ptr, type Pointer } from 'bun:ffi';
 import type { Material, MaterialPrimitive } from '../../builders';
@@ -55,6 +49,7 @@ import type {
   RasterizerCullMode,
   RasterizerFillMode,
   RasterizerFrontFace,
+  SampleCount,
   StencilOperation,
 } from '../../resources';
 import { VK_DEBUG } from '../../singleton/logger';
@@ -153,7 +148,7 @@ export class VkGraphicsPipeline implements Disposable {
     }
   }
 
-  private static __getVkSampleCount(count: 1 | 2 | 4 | 8 | 16) {
+  private static __getVkSampleCount(count: SampleCount) {
     switch (count) {
       case 1:
         return VkSampleCountFlagBits.COUNT_1_BIT;

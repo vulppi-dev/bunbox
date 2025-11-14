@@ -182,12 +182,12 @@ export class VkImage implements Disposable {
       'astc-12x12-unorm-srgb': VkFormat.ASTC_12x12_SRGB_BLOCK,
 
       // Depth/Stencil Formats
-      depth16unorm: VkFormat.D16_UNORM,
-      depth24plus: VkFormat.D24_UNORM_S8_UINT,
-      'depth24unorm-stencil8': VkFormat.D24_UNORM_S8_UINT,
-      depth32float: VkFormat.D32_SFLOAT,
-      'depth32float-stencil8': VkFormat.D32_SFLOAT_S8_UINT,
-      'depth24plus-stencil8': VkFormat.D24_UNORM_S8_UINT,
+      'depth16-unorm': VkFormat.D16_UNORM,
+      'depth24-plus': VkFormat.D24_UNORM_S8_UINT,
+      'depth24-unorm-stencil8': VkFormat.D24_UNORM_S8_UINT,
+      'depth32-float': VkFormat.D32_SFLOAT,
+      'depth32-float-stencil8': VkFormat.D32_SFLOAT_S8_UINT,
+      'depth24-plus-stencil8': VkFormat.D24_UNORM_S8_UINT,
       stencil8: VkFormat.S8_UINT,
     };
 
@@ -200,6 +200,9 @@ export class VkImage implements Disposable {
       2: VkSampleCountFlagBits.COUNT_2_BIT,
       4: VkSampleCountFlagBits.COUNT_4_BIT,
       8: VkSampleCountFlagBits.COUNT_8_BIT,
+      16: VkSampleCountFlagBits.COUNT_16_BIT,
+      32: VkSampleCountFlagBits.COUNT_32_BIT,
+      64: VkSampleCountFlagBits.COUNT_64_BIT,
     };
 
     return sampleMap[sampleCount];
@@ -210,13 +213,13 @@ export class VkImage implements Disposable {
 
     for (const u of usage) {
       switch (u) {
-        case 'sampler':
+        case 'sampled':
           usageFlags |= VkImageUsageFlagBits.SAMPLED_BIT;
           break;
-        case 'color-target':
+        case 'color-attachment':
           usageFlags |= VkImageUsageFlagBits.COLOR_ATTACHMENT_BIT;
           break;
-        case 'depth-stencil-target':
+        case 'depth-stencil-attachment':
           usageFlags |= VkImageUsageFlagBits.DEPTH_STENCIL_ATTACHMENT_BIT;
           break;
         case 'storage':

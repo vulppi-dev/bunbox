@@ -1,6 +1,6 @@
+import type { ComponentFormat, SampleCount } from '../resources';
 import type { AttachmentConfig, RenderPassConfig } from './RenderPassConfig';
-import type { Format, SampleCount } from './RenderPassTypes';
-import { hasStencilComponent, isDepthFormat } from './RenderPassTypes';
+import { hasStencilComponent, isDepthFormat } from './RenderPassUtils';
 
 /**
  * Agnostic builder for creating RenderPass configurations
@@ -57,7 +57,7 @@ export class RenderPassBuilder {
    * Add a color attachment with sensible defaults
    */
   addColorAttachment(
-    config: Partial<AttachmentConfig> & { format: Format },
+    config: Partial<AttachmentConfig> & { format: ComponentFormat },
   ): this {
     const attachment: AttachmentConfig = {
       samples: 1,
@@ -80,7 +80,7 @@ export class RenderPassBuilder {
    * Add a depth or depth-stencil attachment with sensible defaults
    */
   addDepthAttachment(
-    config: Partial<AttachmentConfig> & { format: Format },
+    config: Partial<AttachmentConfig> & { format: ComponentFormat },
   ): this {
     if (!isDepthFormat(config.format)) {
       throw new Error(`Format '${config.format}' is not a depth format`);

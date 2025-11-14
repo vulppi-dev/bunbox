@@ -1,10 +1,13 @@
-import { EngineContext } from './core/EngineContext';
-import { Window } from './index';
+import { Window, EngineContext, Scene } from './index';
 
 const context = new EngineContext();
 
 const win = new Window('Test Window', context);
 
-setTimeout(() => {
-  win.dispose();
-}, 3000);
+const scene = new Scene();
+
+win.scene = scene;
+
+// setTimeout(() => {
+//   win.dispose();
+// }, 5000);

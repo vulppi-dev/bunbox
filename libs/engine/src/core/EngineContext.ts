@@ -149,7 +149,7 @@ export class EngineContext {
     pack.sync.waitIfImageInFlight(imageIndex);
     pack.sync.tagImageWithFrameFence(imageIndex, frameIndex);
     pack.sync.resetFence(frameIndex);
-    const commandBuffer = pack.commandBuffers[imageIndex]!;
+    const commandBuffer = pack.commandBuffers[frameIndex]!;
 
     scene.render(pack.device, pack.swapchain, commandBuffer, imageIndex, delta);
 

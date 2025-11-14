@@ -1,7 +1,6 @@
-import type { SampleCount } from '../resources';
+import type { ComponentFormat, SampleCount } from '../resources';
 import { RenderPassBuilder } from './RenderPassBuilder';
 import type { RenderPassConfig } from './RenderPassConfig';
-import type { Format } from './RenderPassTypes';
 
 /**
  * Preset render pass configurations for common use cases
@@ -23,7 +22,7 @@ export class RenderPassPresets {
     samples?: SampleCount,
     depthLoadOp: 'clear' | 'load' = 'clear',
     depthStoreOp: 'dont-care' | 'store' = 'dont-care',
-    colorFormat: Format = 'r16g16b16a16-sfloat',
+    colorFormat: ComponentFormat = 'r16g16b16a16-sfloat',
     colorFinal: 'color-attachment' | 'shader-read-only' = 'color-attachment',
   ): RenderPassConfig {
     return new RenderPassBuilder()
@@ -151,7 +150,9 @@ export class RenderPassPresets {
    * Note: Bind input texture as shader resource before rendering
    * For multiple effects, chain multiple render passes together
    */
-  static postProcess(outputFormat: Format = 'swapchain'): RenderPassConfig {
+  static postProcess(
+    outputFormat: ComponentFormat = 'swapchain',
+  ): RenderPassConfig {
     return new RenderPassBuilder()
       .setName('Post-Processing Pass')
       .addColorAttachment({
@@ -191,7 +192,10 @@ export class RenderPassPresets {
    * @param format Color attachment format
    * @param withDepth Whether to include depth attachment
    */
-  static offscreen(format: Format, withDepth = true): RenderPassConfig {
+  static offscreen(
+    format: ComponentFormat,
+    withDepth = true,
+  ): RenderPassConfig {
     const builder = new RenderPassBuilder()
       .setName('Off-screen Rendering')
       .addColorAttachment({
@@ -245,7 +249,9 @@ export class RenderPassPresets {
    * Note: Bind input texture as shader resource
    * Use two passes (horizontal + vertical) for separable blur
    */
-  static blur(format: Format = 'r16g16b16a16-sfloat'): RenderPassConfig {
+  static blur(
+    format: ComponentFormat = 'r16g16b16a16-sfloat',
+  ): RenderPassConfig {
     return new RenderPassBuilder()
       .setName('Blur Pass')
       .addColorAttachment({

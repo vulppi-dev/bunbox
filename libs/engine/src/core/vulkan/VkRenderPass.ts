@@ -23,8 +23,8 @@ import type {
   LoadOp,
   SampleCount,
   StoreOp,
-} from '../../builders/RenderPassTypes';
-import { isDepthFormat } from '../../builders/RenderPassTypes';
+} from '../../builders/RenderPassUtils';
+import { isDepthFormat } from '../../builders/RenderPassUtils';
 import { DynamicLibError } from '../../errors';
 import { VK_DEBUG } from '../../singleton/logger';
 
