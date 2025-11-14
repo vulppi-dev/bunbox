@@ -30,6 +30,7 @@ import { GLFW_DEBUG } from '../singleton/logger';
 import { buildCallback, cstr, pointerCopyBuffer } from '../utils/buffer';
 import type { EngineContext } from './EngineContext';
 import { Color } from '../math';
+import type { Scene } from './Scene';
 
 // Setup struct pointer/string conversions globally
 setupStruct({
@@ -162,7 +163,7 @@ export class Window extends EventEmitter<WindowEventMap> {
   private __isVisible: boolean = true;
   private __state: WindowState = 'windowed';
 
-  private __bgColor: Color = new Color();
+  private __scene: Scene | null = null;
 
   private __i32_aux1: Int32Array = new Int32Array(1);
   private __i32_aux2: Int32Array = new Int32Array(1);
@@ -332,8 +333,8 @@ export class Window extends EventEmitter<WindowEventMap> {
   }
 
   /** Background color of the window. */
-  get bgColor(): Color {
-    return this.__bgColor;
+  get scene(): Scene | null {
+    return this.__scene;
   }
 
   set title(value: string) {
@@ -380,8 +381,8 @@ export class Window extends EventEmitter<WindowEventMap> {
     }
   }
 
-  set bgColor(value: Color) {
-    this.__bgColor = value;
+  set scene(value: Scene | null) {
+    this.__scene = value;
   }
 
   override async dispose(): Promise<void> {
@@ -846,6 +847,6 @@ export class Window extends EventEmitter<WindowEventMap> {
       );
       this.markAsClean();
     }
-    this.__context.renderFrame(this.__windowNative, this.bgColor, delta);
+    this.__context.renderFrame(this.__windowNative, this.scene, delta);
   }
 }

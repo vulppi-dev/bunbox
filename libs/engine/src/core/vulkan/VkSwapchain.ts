@@ -23,7 +23,7 @@ import type { VkDevice } from './VkDevice';
 export class VkSwapchain implements Disposable {
   private __device: VkDevice;
 
-  private __swapchain: Pointer;
+  private __instance: Pointer;
   private __width: number = -1;
   private __height: number = -1;
   private __format: number = -1;
@@ -46,19 +46,19 @@ export class VkSwapchain implements Disposable {
     }
 
     const swapchain = this.__createSwapChain();
-    this.__swapchain = swapchain.swapchain;
+    this.__instance = swapchain.swapchain;
     this.__width = swapchain.width;
     this.__height = swapchain.height;
     this.__format = swapchain.format;
     this.__swapchainImages = swapchain.swapImages;
 
     VK_DEBUG(
-      `Swapchain created: 0x${this.__swapchain.toString(16)}, ${this.__width}x${this.__height}, ${this.__swapchainImages.length} images`,
+      `Swapchain created: 0x${this.__instance.toString(16)}, ${this.__width}x${this.__height}, ${this.__swapchainImages.length} images`,
     );
   }
 
-  get swapchain() {
-    return this.__swapchain;
+  get instance() {
+    return this.__instance;
   }
 
   get width() {
@@ -90,10 +90,10 @@ export class VkSwapchain implements Disposable {
   }
 
   dispose(): void | Promise<void> {
-    VK_DEBUG(`Destroying swapchain: 0x${this.__swapchain.toString(16)}`);
+    VK_DEBUG(`Destroying swapchain: 0x${this.__instance.toString(16)}`);
     VK.vkDestroySwapchainKHR(
       this.__device.logicalDevice,
-      this.__swapchain,
+      this.__instance,
       null,
     );
     VK_DEBUG('Swapchain destroyed');
