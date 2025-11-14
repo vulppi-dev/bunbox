@@ -15,6 +15,7 @@ import { VkDevice } from './vulkan/VkDevice';
 import { VkSwapchain } from './vulkan/VkSwapchain';
 import { VkSync } from './vulkan/VkSync';
 import type { Scene } from './Scene';
+import { AssetsStorage } from './AssetsStorage';
 
 type WindowPack = {
   device: VkDevice;
@@ -28,8 +29,14 @@ export class EngineContext {
   private __windowsPack: Map<bigint, WindowPack> = new Map();
   private __windowsFrameIndices: Map<bigint, number> = new Map();
 
+  private __assetsStore = new AssetsStorage();
+
   // Aux holders
   private __imageIndexHolder = new Uint32Array(1);
+
+  get assetsStore(): AssetsStorage {
+    return this.__assetsStore;
+  }
 
   disposeWindow(window: bigint): void {
     const pack = this.__windowsPack.get(window);
@@ -151,7 +158,14 @@ export class EngineContext {
     pack.sync.resetFence(frameIndex);
     const commandBuffer = pack.commandBuffers[frameIndex]!;
 
-    scene.render(pack.device, pack.swapchain, commandBuffer, imageIndex, delta);
+    scene.render(
+      pack.device,
+      pack.swapchain,
+      commandBuffer,
+      imageIndex,
+      this.__assetsStore,
+      delta,
+    );
 
     const signal = this.__submit(
       pack.sync,
