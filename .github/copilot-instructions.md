@@ -41,3 +41,7 @@ Somente funções/métodos públicos/exportados devem ter comentários de docume
   - `rebuild()`: Reconstruir recursos existentes (chama `release()` internamente se necessário)
   - `release()`: Liberar recursos internos sem destruir a instância
   - `dispose()`: Destruição final completa (da interface `Disposable`)
+
+### Linguagens adicionais
+
+- Para shader universalmente use WGSL, pois temos um compilador para Vulkan baseado no naga.

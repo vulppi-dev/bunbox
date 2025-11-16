@@ -1,6 +1,6 @@
 {
   "name": "@bunbox/naga",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Simple WGSL parser for TypeScript",
   "author": {
     "name": "Renato Rodrigues",
@@ -32,8 +32,8 @@
     "dist"
   ],
   "scripts": {
-    "build": "pwsh -File build.ps1",
-    "build:sh": "sh build.sh",
+    "build": "pwsh -File scripts/build.ps1",
+    "build:sh": "sh scripts/build.sh",
     "build:web": "pwsh -Command \"docker build -t naga-wasm-builder . && docker run --rm -v ${PWD}/rust:/workspace -v ${PWD}/dist:/output naga-wasm-builder build --target web --out-dir /output\"",
     "pub": "npm publish --access=public --tag=latest",
     "format": "prettier --write ."

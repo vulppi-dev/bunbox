@@ -1,18 +1,7 @@
 use naga::valid::{Capabilities, ModuleInfo, ValidationFlags, Validator};
+use naga::Module;
 use naga::{back, front};
-use naga::{Module, ShaderStage};
 use wasm_bindgen::prelude::*;
-
-/// Parse stage strings into Naga's ShaderStage.
-/// Supported aliases: "vertex"/"vs", "fragment"/"fs", "compute"/"cs".
-fn stage_from_str(s: &str) -> Result<ShaderStage, JsValue> {
-    match s.to_ascii_lowercase().as_str() {
-        "vertex" | "vs" => Ok(ShaderStage::Vertex),
-        "fragment" | "fs" => Ok(ShaderStage::Fragment),
-        "compute" | "cs" => Ok(ShaderStage::Compute),
-        other => Err(JsValue::from_str(&format!("invalid shader stage: {other}"))),
-    }
-}
 
 /// WGSL -> Naga IR + validation.
 fn parse_and_validate(wgsl: &str) -> Result<(Module, ModuleInfo), JsValue> {
@@ -42,18 +31,11 @@ pub fn validate_wgsl(wgsl: &str) -> Result<(), JsValue> {
 
 /// WGSL -> SPIR-V (binary words -> LE bytes) for Vulkan.
 #[wasm_bindgen(js_name = wgslToSpirvBin)]
-pub fn wgsl_to_spirv_bin(wgsl: &str, stage: &str, entry: &str) -> Result<Box<[u8]>, JsValue> {
+pub fn wgsl_to_spirv_bin(wgsl: &str) -> Result<Box<[u8]>, JsValue> {
     let (module, info) = parse_and_validate(wgsl)?;
-    let stage = stage_from_str(stage)?;
-
     let spv_opts = back::spv::Options::default();
-    let pipeline = back::spv::PipelineOptions {
-        shader_stage: stage,
-        entry_point: entry.to_string(),
-    };
-
     // naga 26.x: (&module, &info, &Options, Option<&PipelineOptions>)
-    let words: Vec<u32> = back::spv::write_vec(&module, &info, &spv_opts, Some(&pipeline))
+    let words: Vec<u32> = back::spv::write_vec(&module, &info, &spv_opts, None)
         .map_err(|e| JsValue::from_str(&format!("SPIR-V error: {e:?}")))?;
 
     // u32 words -> little-endian bytes
