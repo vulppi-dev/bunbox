@@ -46,6 +46,25 @@ export class VkCommandBuffer implements Disposable {
     VK_DEBUG(`Command buffer allocated: 0x${this.__instance.toString(16)}`);
   }
 
+  get instance() {
+    return this.__instance;
+  }
+
+  get isRecording() {
+    return this.__isRecording;
+  }
+
+  dispose(): void | Promise<void> {
+    VK_DEBUG(`Freeing command buffer: 0x${this.__instance.toString(16)}`);
+    VK.vkFreeCommandBuffers(
+      this.__device,
+      this.__commandPool,
+      1,
+      ptr(new BigUint64Array([BigInt(this.__instance)])),
+    );
+    VK_DEBUG('Command buffer freed');
+  }
+
   /**
    * Reset the command buffer to initial state
    */
@@ -383,23 +402,27 @@ export class VkCommandBuffer implements Disposable {
     );
   }
 
-  get instance() {
-    return this.__instance;
-  }
+  clearImage(image: bigint, layout: number, color: Color): void {
+    if (!this.__isRecording) {
+      throw new DynamicLibError(
+        'Cannot clear: command buffer is not recording',
+        'Vulkan',
+      );
+    }
 
-  get isRecording() {
-    return this.__isRecording;
-  }
+    VK_DEBUG(`Clearing with color: ${color.toString()}`);
 
-  dispose(): void | Promise<void> {
-    VK_DEBUG(`Freeing command buffer: 0x${this.__instance.toString(16)}`);
-    VK.vkFreeCommandBuffers(
-      this.__device,
-      this.__commandPool,
-      1,
-      ptr(new BigUint64Array([BigInt(this.__instance)])),
+    const clearValue = instantiate(vkClearValue);
+    clearValue.color.float32 = color.toArray();
+
+    VK.vkCmdClearColorImage(
+      this.__instance,
+      image,
+      layout,
+      ptr(getInstanceBuffer(clearValue)),
+      0,
+      null,
     );
-    VK_DEBUG('Command buffer freed');
   }
 
   private __allocateCommandBuffer(): Pointer {

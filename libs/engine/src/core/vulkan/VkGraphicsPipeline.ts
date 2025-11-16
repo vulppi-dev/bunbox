@@ -18,6 +18,7 @@ import {
   vkDescriptorSetLayoutCreateInfo,
   VkDescriptorType,
   VkDynamicState,
+  VkFormat,
   VkFrontFace,
   vkGraphicsPipelineCreateInfo,
   VkLogicOp,
@@ -37,6 +38,9 @@ import {
   VkSampleCountFlagBits,
   VkShaderStageFlagBits,
   VkStencilOp,
+  vkVertexInputAttributeDescription,
+  vkVertexInputBindingDescription,
+  VkVertexInputRate,
 } from '@bunbox/vk';
 import { ptr, type Pointer } from 'bun:ffi';
 import type { Material, MaterialPrimitive } from '../../builders';
@@ -53,7 +57,7 @@ import type {
   StencilOperation,
 } from '../../resources';
 import { VK_DEBUG } from '../../singleton/logger';
-import { VkShaderModules } from './VkShaderModules';
+import type { VkShaderModule } from './VkShaderModule';
 
 export class VkGraphicsPipeline implements Disposable {
   private static __getVkTopology(primitive: MaterialPrimitive) {
@@ -96,9 +100,9 @@ export class VkGraphicsPipeline implements Disposable {
 
   private static __getVkFrontFace(frontFace: RasterizerFrontFace) {
     switch (frontFace) {
-      case 'ccw':
+      case 'counter-clockwise':
         return VkFrontFace.COUNTER_CLOCKWISE;
-      case 'cw':
+      case 'clockwise':
       default:
         return VkFrontFace.CLOCKWISE;
     }
@@ -237,7 +241,9 @@ export class VkGraphicsPipeline implements Disposable {
   }
 
   private __device: Pointer;
-  private __module: VkShaderModules;
+  private __material: Material;
+
+  private __stages: BigUint64Array<ArrayBuffer>;
 
   private __pipelineInstance: Pointer | null = null;
   private __pipelineLayout: Pointer | null = null;
@@ -264,9 +270,22 @@ export class VkGraphicsPipeline implements Disposable {
   private __vertexInputInfo = instantiate(vkPipelineVertexInputStateCreateInfo);
   private __pipelineConfigInfo = instantiate(vkGraphicsPipelineCreateInfo);
 
-  constructor(device: Pointer, renderPass: Pointer, material: Material) {
+  private __vertexBindings: InferField<
+    typeof vkVertexInputBindingDescription
+  >[] = [];
+  private __vertexAttributes: InferField<
+    typeof vkVertexInputAttributeDescription
+  >[] = [];
+
+  constructor(
+    device: Pointer,
+    renderPass: Pointer,
+    modules: VkShaderModule[],
+    material: Material,
+  ) {
     this.__device = device;
-    this.__module = new VkShaderModules(device, material);
+    this.__stages = new BigUint64Array(modules.map((m) => BigInt(m.instance)));
+    this.__material = material;
 
     VK_DEBUG('Creating graphics pipeline');
 
@@ -279,6 +298,9 @@ export class VkGraphicsPipeline implements Disposable {
 
     this.__viewportInfo.viewportCount = 1;
     this.__viewportInfo.scissorCount = 1;
+
+    // Configure vertex input based on VkGeometry standard layout
+    this.__configureVertexInput();
 
     // Bind pointers between structs
     this.__bindPointers();
@@ -329,7 +351,96 @@ export class VkGraphicsPipeline implements Disposable {
       ptr(getInstanceBuffer(this.__vertexInputInfo)),
     );
     this.__pipelineConfigInfo.stageCount = 2;
-    this.__pipelineConfigInfo.pStages = BigInt(this.__module.stages);
+    this.__pipelineConfigInfo.pStages = BigInt(ptr(this.__stages));
+  }
+
+  /**
+   * Configure vertex input state based on VkGeometry standard layout
+   *
+   * Standard layout from VkGeometry:
+   * - Binding 0: Vertex positions (vec3 - 3 floats)
+   * - Binding 1: Vertex normals (vec3 - 3 floats)
+   * - Binding 2+: UV coordinates (vec2 - 2 floats per layer)
+   */
+  private __configureVertexInput(): void {
+    VK_DEBUG('Configuring vertex input state for standard geometry layout');
+
+    let location = 0;
+    let binding = 0;
+
+    // Binding 0: Vertex positions (location 0)
+    const vertexBinding = instantiate(vkVertexInputBindingDescription);
+    vertexBinding.binding = binding;
+    vertexBinding.stride = 3 * Float32Array.BYTES_PER_ELEMENT; // vec3
+    vertexBinding.inputRate = VkVertexInputRate.VERTEX;
+    this.__vertexBindings.push(vertexBinding);
+
+    const vertexAttr = instantiate(vkVertexInputAttributeDescription);
+    vertexAttr.location = location++;
+    vertexAttr.binding = binding++;
+    vertexAttr.format = VkFormat.R32G32B32_SFLOAT; // vec3
+    vertexAttr.offset = 0;
+    this.__vertexAttributes.push(vertexAttr);
+
+    // Binding 1: Vertex normals (location 1)
+    const normalBinding = instantiate(vkVertexInputBindingDescription);
+    normalBinding.binding = binding;
+    normalBinding.stride = 3 * Float32Array.BYTES_PER_ELEMENT; // vec3
+    normalBinding.inputRate = VkVertexInputRate.VERTEX;
+    this.__vertexBindings.push(normalBinding);
+
+    const normalAttr = instantiate(vkVertexInputAttributeDescription);
+    normalAttr.location = location++;
+    normalAttr.binding = binding++;
+    normalAttr.format = VkFormat.R32G32B32_SFLOAT; // vec3
+    normalAttr.offset = 0;
+    this.__vertexAttributes.push(normalAttr);
+
+    // Binding 2+: UV coordinates (location 2+)
+    // Note: VkGeometry can have multiple UV layers, but we'll configure
+    // a reasonable default (1 UV layer). Add more if needed.
+    const uvBinding = instantiate(vkVertexInputBindingDescription);
+    uvBinding.binding = binding;
+    uvBinding.stride = 2 * Float32Array.BYTES_PER_ELEMENT; // vec2
+    uvBinding.inputRate = VkVertexInputRate.VERTEX;
+    this.__vertexBindings.push(uvBinding);
+
+    const uvAttr = instantiate(vkVertexInputAttributeDescription);
+    uvAttr.location = location++;
+    uvAttr.binding = binding++;
+    uvAttr.format = VkFormat.R32G32_SFLOAT; // vec2
+    uvAttr.offset = 0;
+    this.__vertexAttributes.push(uvAttr);
+
+    VK_DEBUG(
+      `Vertex input configured: ${this.__vertexBindings.length} bindings, ${this.__vertexAttributes.length} attributes`,
+    );
+
+    // Set binding and attribute arrays in vertex input state
+    const bindingsArray = new BigUint64Array(this.__vertexBindings.length);
+    for (let i = 0; i < this.__vertexBindings.length; i++) {
+      bindingsArray[i] = BigInt(
+        ptr(getInstanceBuffer(this.__vertexBindings[i]!)),
+      );
+    }
+
+    const attributesArray = new BigUint64Array(this.__vertexAttributes.length);
+    for (let i = 0; i < this.__vertexAttributes.length; i++) {
+      attributesArray[i] = BigInt(
+        ptr(getInstanceBuffer(this.__vertexAttributes[i]!)),
+      );
+    }
+
+    this.__vertexInputInfo.vertexBindingDescriptionCount =
+      this.__vertexBindings.length;
+    this.__vertexInputInfo.pVertexBindingDescriptions = BigInt(
+      ptr(bindingsArray),
+    );
+    this.__vertexInputInfo.vertexAttributeDescriptionCount =
+      this.__vertexAttributes.length;
+    this.__vertexInputInfo.pVertexAttributeDescriptions = BigInt(
+      ptr(attributesArray),
+    );
   }
 
   /**
@@ -343,7 +454,7 @@ export class VkGraphicsPipeline implements Disposable {
     let bindingIndex = 0;
 
     // Process constants
-    const constants = this.__module.material.schema.constants;
+    const constants = this.__material.schema.constants;
     if (constants) {
       for (const [key, definition] of Object.entries(constants)) {
         const binding = instantiate(vkDescriptorSetLayoutBinding);
@@ -361,7 +472,7 @@ export class VkGraphicsPipeline implements Disposable {
     }
 
     // Process mutables
-    const mutables = this.__module.material.schema.mutables;
+    const mutables = this.__material.schema.mutables;
     if (mutables) {
       for (const [key, definition] of Object.entries(mutables)) {
         const binding = instantiate(vkDescriptorSetLayoutBinding);
@@ -473,12 +584,12 @@ export class VkGraphicsPipeline implements Disposable {
 
     // Configure topology
     this.__inputAssemblyInfo.topology = VkGraphicsPipeline.__getVkTopology(
-      this.__module.material.primitive,
+      this.__material.primitive,
     );
     this.__inputAssemblyInfo.primitiveRestartEnable = VK_TRUE;
 
     // Configure rasterizer
-    const rasterizer = this.__module.material.rasterizer;
+    const rasterizer = this.__material.rasterizer;
     this.__rasterizationInfo.depthClampEnable = VK_FALSE;
     this.__rasterizationInfo.rasterizerDiscardEnable = VK_FALSE;
     this.__rasterizationInfo.polygonMode =

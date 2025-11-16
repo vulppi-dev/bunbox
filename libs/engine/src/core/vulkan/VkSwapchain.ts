@@ -19,6 +19,7 @@ import { ptr, type Pointer } from 'bun:ffi';
 import { DynamicLibError } from '../../errors';
 import { VK_DEBUG } from '../../singleton/logger';
 import type { VkDevice } from './VkDevice';
+import { VkImageView } from './VkImageView';
 
 export class VkSwapchain implements Disposable {
   private __device: VkDevice;
@@ -30,6 +31,7 @@ export class VkSwapchain implements Disposable {
 
   // Holders
   private __swapchainImages: BigUint64Array;
+  private __imageViews: VkImageView[];
 
   constructor(device: VkDevice, width: number, height: number) {
     this.__device = device;
@@ -51,6 +53,7 @@ export class VkSwapchain implements Disposable {
     this.__height = swapchain.height;
     this.__format = swapchain.format;
     this.__swapchainImages = swapchain.swapImages;
+    this.__imageViews = swapchain.imageViews;
 
     VK_DEBUG(
       `Swapchain created: 0x${this.__instance.toString(16)}, ${this.__width}x${this.__height}, ${this.__swapchainImages.length} images`,
@@ -79,6 +82,10 @@ export class VkSwapchain implements Disposable {
       imgs.push(this.__swapchainImages[i]!);
     }
     return imgs;
+  }
+
+  get imageViews() {
+    return this.__imageViews;
   }
 
   get imageCount() {
@@ -183,12 +190,26 @@ export class VkSwapchain implements Disposable {
       ptr(swapImages),
     );
 
+    const imageViews: VkImageView[] = [];
+
+    for (let i = 0; i < imageCount; i++) {
+      const img = swapImages[i]!;
+      const view = new VkImageView({
+        device: this.__device.logicalDevice,
+        image: img,
+        format: selectedFormat.format,
+        mask: ['color'],
+      });
+      imageViews.push(view);
+    }
+
     return {
       swapchain,
       height: extHeight,
       width: extWidth,
       format: selectedFormat.format,
       swapImages,
+      imageViews,
     };
   }
 }

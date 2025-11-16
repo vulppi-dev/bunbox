@@ -453,6 +453,19 @@ export const vkClearValue = union({
 
 // MARK: Pipeline Structures
 
+export const vkVertexInputBindingDescription = struct({
+  binding: u32(),
+  stride: u32(),
+  inputRate: i32(),
+});
+
+export const vkVertexInputAttributeDescription = struct({
+  location: u32(),
+  binding: u32(),
+  format: i32(),
+  offset: u32(),
+});
+
 export const vkPipelineShaderStageCreateInfo = struct({
   sType: i32(VkStructureType.PIPELINE_SHADER_STAGE_CREATE_INFO),
   pNext: ptrAny(),

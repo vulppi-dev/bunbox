@@ -222,6 +222,44 @@ export const vkDestroyShaderModule = {
   returns: 'void',
 } as const satisfies FFIFunction;
 
+// MARK: Sampler Functions
+
+/**
+ * Create a new sampler object
+ *
+ * C ref: `VkResult vkCreateSampler(
+ *   VkDevice device,
+ *   const VkSamplerCreateInfo* pCreateInfo,
+ *   const VkAllocationCallbacks* pAllocator,
+ *   VkSampler* pSampler)`
+ */
+export const vkCreateSampler = {
+  args: ['ptr', 'ptr', 'ptr', 'ptr'] as [
+    device: 'ptr',
+    pCreateInfo: 'ptr',
+    pAllocator: 'ptr',
+    pSampler: 'ptr',
+  ],
+  returns: 'i32',
+} as const satisfies FFIFunction;
+
+/**
+ * Destroy a sampler object
+ *
+ * C ref: `void vkDestroySampler(
+ *   VkDevice device,
+ *   VkSampler sampler,
+ *   const VkAllocationCallbacks* pAllocator)`
+ */
+export const vkDestroySampler = {
+  args: ['ptr', 'u64', 'ptr'] as [
+    device: 'ptr',
+    sampler: 'u64',
+    pAllocator: 'ptr',
+  ],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
 // MARK: Descriptor Set Layout Functions
 
 /**
@@ -835,6 +873,638 @@ export const vkCmdPipelineBarrier = {
     srcStageMask: 'u32',
     dstStageMask: 'u32',
     dependencyFlags: 'u32',
+    memoryBarrierCount: 'u32',
+    pMemoryBarriers: 'ptr',
+    bufferMemoryBarrierCount: 'u32',
+    pBufferMemoryBarriers: 'ptr',
+    imageMemoryBarrierCount: 'u32',
+    pImageMemoryBarriers: 'ptr',
+  ],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
+/**
+ * Blit an image
+ *
+ * C ref: `void vkCmdBlitImage(
+ *   VkCommandBuffer commandBuffer,
+ *   VkImage srcImage,
+ *   VkImageLayout srcImageLayout,
+ *   VkImage dstImage,
+ *   VkImageLayout dstImageLayout,
+ *   uint32_t regionCount,
+ *   const VkImageBlit* pRegions,
+ *   VkFilter filter)`
+ */
+export const vkCmdBlitImage = {
+  args: ['ptr', 'u64', 'i32', 'u64', 'i32', 'u32', 'ptr', 'i32'] as [
+    commandBuffer: 'ptr',
+    srcImage: 'u64',
+    srcImageLayout: 'i32',
+    dstImage: 'u64',
+    dstImageLayout: 'i32',
+    regionCount: 'u32',
+    pRegions: 'ptr',
+    filter: 'i32',
+  ],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
+/**
+ * Copy data from an image into a buffer
+ *
+ * C ref: `void vkCmdCopyImageToBuffer(
+ *   VkCommandBuffer commandBuffer,
+ *   VkImage srcImage,
+ *   VkImageLayout srcImageLayout,
+ *   VkBuffer dstBuffer,
+ *   uint32_t regionCount,
+ *   const VkBufferImageCopy* pRegions)`
+ */
+export const vkCmdCopyImageToBuffer = {
+  args: ['ptr', 'u64', 'i32', 'u64', 'u32', 'ptr'] as [
+    commandBuffer: 'ptr',
+    srcImage: 'u64',
+    srcImageLayout: 'i32',
+    dstBuffer: 'u64',
+    regionCount: 'u32',
+    pRegions: 'ptr',
+  ],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
+/**
+ * Clear regions of a color image
+ *
+ * C ref: `void vkCmdClearColorImage(
+ *   VkCommandBuffer commandBuffer,
+ *   VkImage image,
+ *   VkImageLayout imageLayout,
+ *   const VkClearColorValue* pColor,
+ *   uint32_t rangeCount,
+ *   const VkImageSubresourceRange* pRanges)`
+ */
+export const vkCmdClearColorImage = {
+  args: ['ptr', 'u64', 'i32', 'ptr', 'u32', 'ptr'] as [
+    commandBuffer: 'ptr',
+    image: 'u64',
+    imageLayout: 'i32',
+    pColor: 'ptr',
+    rangeCount: 'u32',
+    pRanges: 'ptr',
+  ],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
+/**
+ * Clear regions of a combined depth/stencil image
+ *
+ * C ref: `void vkCmdClearDepthStencilImage(
+ *   VkCommandBuffer commandBuffer,
+ *   VkImage image,
+ *   VkImageLayout imageLayout,
+ *   const VkClearDepthStencilValue* pDepthStencil,
+ *   uint32_t rangeCount,
+ *   const VkImageSubresourceRange* pRanges)`
+ */
+export const vkCmdClearDepthStencilImage = {
+  args: ['ptr', 'u64', 'i32', 'ptr', 'u32', 'ptr'] as [
+    commandBuffer: 'ptr',
+    image: 'u64',
+    imageLayout: 'i32',
+    pDepthStencil: 'ptr',
+    rangeCount: 'u32',
+    pRanges: 'ptr',
+  ],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
+/**
+ * Clear regions within bound framebuffer attachments
+ *
+ * C ref: `void vkCmdClearAttachments(
+ *   VkCommandBuffer commandBuffer,
+ *   uint32_t attachmentCount,
+ *   const VkClearAttachment* pAttachments,
+ *   uint32_t rectCount,
+ *   const VkClearRect* pRects)`
+ */
+export const vkCmdClearAttachments = {
+  args: ['ptr', 'u32', 'ptr', 'u32', 'ptr'] as [
+    commandBuffer: 'ptr',
+    attachmentCount: 'u32',
+    pAttachments: 'ptr',
+    rectCount: 'u32',
+    pRects: 'ptr',
+  ],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
+/**
+ * Resolve regions of an image
+ *
+ * C ref: `void vkCmdResolveImage(
+ *   VkCommandBuffer commandBuffer,
+ *   VkImage srcImage,
+ *   VkImageLayout srcImageLayout,
+ *   VkImage dstImage,
+ *   VkImageLayout dstImageLayout,
+ *   uint32_t regionCount,
+ *   const VkImageResolve* pRegions)`
+ */
+export const vkCmdResolveImage = {
+  args: ['ptr', 'u64', 'i32', 'u64', 'i32', 'u32', 'ptr'] as [
+    commandBuffer: 'ptr',
+    srcImage: 'u64',
+    srcImageLayout: 'i32',
+    dstImage: 'u64',
+    dstImageLayout: 'i32',
+    regionCount: 'u32',
+    pRegions: 'ptr',
+  ],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
+/**
+ * Fill a buffer with a fixed value
+ *
+ * C ref: `void vkCmdFillBuffer(
+ *   VkCommandBuffer commandBuffer,
+ *   VkBuffer dstBuffer,
+ *   VkDeviceSize dstOffset,
+ *   VkDeviceSize size,
+ *   uint32_t data)`
+ */
+export const vkCmdFillBuffer = {
+  args: ['ptr', 'u64', 'u64', 'u64', 'u32'] as [
+    commandBuffer: 'ptr',
+    dstBuffer: 'u64',
+    dstOffset: 'u64',
+    size: 'u64',
+    data: 'u32',
+  ],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
+/**
+ * Update a buffer's contents from host memory
+ *
+ * C ref: `void vkCmdUpdateBuffer(
+ *   VkCommandBuffer commandBuffer,
+ *   VkBuffer dstBuffer,
+ *   VkDeviceSize dstOffset,
+ *   VkDeviceSize dataSize,
+ *   const void* pData)`
+ */
+export const vkCmdUpdateBuffer = {
+  args: ['ptr', 'u64', 'u64', 'u64', 'ptr'] as [
+    commandBuffer: 'ptr',
+    dstBuffer: 'u64',
+    dstOffset: 'u64',
+    dataSize: 'u64',
+    pData: 'ptr',
+  ],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
+/**
+ * Set depth bias dynamically
+ *
+ * C ref: `void vkCmdSetDepthBias(
+ *   VkCommandBuffer commandBuffer,
+ *   float depthBiasConstantFactor,
+ *   float depthBiasClamp,
+ *   float depthBiasSlopeFactor)`
+ */
+export const vkCmdSetDepthBias = {
+  args: ['ptr', 'f32', 'f32', 'f32'] as [
+    commandBuffer: 'ptr',
+    depthBiasConstantFactor: 'f32',
+    depthBiasClamp: 'f32',
+    depthBiasSlopeFactor: 'f32',
+  ],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
+/**
+ * Set blend constants dynamically
+ *
+ * C ref: `void vkCmdSetBlendConstants(
+ *   VkCommandBuffer commandBuffer,
+ *   const float blendConstants[4])`
+ */
+export const vkCmdSetBlendConstants = {
+  args: ['ptr', 'ptr'] as [commandBuffer: 'ptr', blendConstants: 'ptr'],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
+/**
+ * Set depth bounds dynamically
+ *
+ * C ref: `void vkCmdSetDepthBounds(
+ *   VkCommandBuffer commandBuffer,
+ *   float minDepthBounds,
+ *   float maxDepthBounds)`
+ */
+export const vkCmdSetDepthBounds = {
+  args: ['ptr', 'f32', 'f32'] as [
+    commandBuffer: 'ptr',
+    minDepthBounds: 'f32',
+    maxDepthBounds: 'f32',
+  ],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
+/**
+ * Set stencil compare mask dynamically
+ *
+ * C ref: `void vkCmdSetStencilCompareMask(
+ *   VkCommandBuffer commandBuffer,
+ *   VkStencilFaceFlags faceMask,
+ *   uint32_t compareMask)`
+ */
+export const vkCmdSetStencilCompareMask = {
+  args: ['ptr', 'u32', 'u32'] as [
+    commandBuffer: 'ptr',
+    faceMask: 'u32',
+    compareMask: 'u32',
+  ],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
+/**
+ * Set stencil write mask dynamically
+ *
+ * C ref: `void vkCmdSetStencilWriteMask(
+ *   VkCommandBuffer commandBuffer,
+ *   VkStencilFaceFlags faceMask,
+ *   uint32_t writeMask)`
+ */
+export const vkCmdSetStencilWriteMask = {
+  args: ['ptr', 'u32', 'u32'] as [
+    commandBuffer: 'ptr',
+    faceMask: 'u32',
+    writeMask: 'u32',
+  ],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
+/**
+ * Set stencil reference dynamically
+ *
+ * C ref: `void vkCmdSetStencilReference(
+ *   VkCommandBuffer commandBuffer,
+ *   VkStencilFaceFlags faceMask,
+ *   uint32_t reference)`
+ */
+export const vkCmdSetStencilReference = {
+  args: ['ptr', 'u32', 'u32'] as [
+    commandBuffer: 'ptr',
+    faceMask: 'u32',
+    reference: 'u32',
+  ],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
+/**
+ * Set line width dynamically
+ *
+ * C ref: `void vkCmdSetLineWidth(
+ *   VkCommandBuffer commandBuffer,
+ *   float lineWidth)`
+ */
+export const vkCmdSetLineWidth = {
+  args: ['ptr', 'f32'] as [commandBuffer: 'ptr', lineWidth: 'f32'],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
+/**
+ * Bind descriptor sets to a command buffer
+ *
+ * C ref: `void vkCmdBindDescriptorSets(
+ *   VkCommandBuffer commandBuffer,
+ *   VkPipelineBindPoint pipelineBindPoint,
+ *   VkPipelineLayout layout,
+ *   uint32_t firstSet,
+ *   uint32_t descriptorSetCount,
+ *   const VkDescriptorSet* pDescriptorSets,
+ *   uint32_t dynamicOffsetCount,
+ *   const uint32_t* pDynamicOffsets)`
+ */
+export const vkCmdBindDescriptorSets = {
+  args: ['ptr', 'i32', 'u64', 'u32', 'u32', 'ptr', 'u32', 'ptr'] as [
+    commandBuffer: 'ptr',
+    pipelineBindPoint: 'i32',
+    layout: 'u64',
+    firstSet: 'u32',
+    descriptorSetCount: 'u32',
+    pDescriptorSets: 'ptr',
+    dynamicOffsetCount: 'u32',
+    pDynamicOffsets: 'ptr',
+  ],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
+/**
+ * Push constant data to command buffer
+ *
+ * C ref: `void vkCmdPushConstants(
+ *   VkCommandBuffer commandBuffer,
+ *   VkPipelineLayout layout,
+ *   VkShaderStageFlags stageFlags,
+ *   uint32_t offset,
+ *   uint32_t size,
+ *   const void* pValues)`
+ */
+export const vkCmdPushConstants = {
+  args: ['ptr', 'u64', 'u32', 'u32', 'u32', 'ptr'] as [
+    commandBuffer: 'ptr',
+    layout: 'u64',
+    stageFlags: 'u32',
+    offset: 'u32',
+    size: 'u32',
+    pValues: 'ptr',
+  ],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
+/**
+ * Move to the next subpass of a render pass
+ *
+ * C ref: `void vkCmdNextSubpass(
+ *   VkCommandBuffer commandBuffer,
+ *   VkSubpassContents contents)`
+ */
+export const vkCmdNextSubpass = {
+  args: ['ptr', 'i32'] as [commandBuffer: 'ptr', contents: 'i32'],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
+/**
+ * Execute a secondary command buffer from a primary command buffer
+ *
+ * C ref: `void vkCmdExecuteCommands(
+ *   VkCommandBuffer commandBuffer,
+ *   uint32_t commandBufferCount,
+ *   const VkCommandBuffer* pCommandBuffers)`
+ */
+export const vkCmdExecuteCommands = {
+  args: ['ptr', 'u32', 'ptr'] as [
+    commandBuffer: 'ptr',
+    commandBufferCount: 'u32',
+    pCommandBuffers: 'ptr',
+  ],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
+/**
+ * Dispatch compute work items
+ *
+ * C ref: `void vkCmdDispatch(
+ *   VkCommandBuffer commandBuffer,
+ *   uint32_t groupCountX,
+ *   uint32_t groupCountY,
+ *   uint32_t groupCountZ)`
+ */
+export const vkCmdDispatch = {
+  args: ['ptr', 'u32', 'u32', 'u32'] as [
+    commandBuffer: 'ptr',
+    groupCountX: 'u32',
+    groupCountY: 'u32',
+    groupCountZ: 'u32',
+  ],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
+/**
+ * Dispatch compute work items using indirect parameters
+ *
+ * C ref: `void vkCmdDispatchIndirect(
+ *   VkCommandBuffer commandBuffer,
+ *   VkBuffer buffer,
+ *   VkDeviceSize offset)`
+ */
+export const vkCmdDispatchIndirect = {
+  args: ['ptr', 'u64', 'u64'] as [
+    commandBuffer: 'ptr',
+    buffer: 'u64',
+    offset: 'u64',
+  ],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
+/**
+ * Perform an indirect draw
+ *
+ * C ref: `void vkCmdDrawIndirect(
+ *   VkCommandBuffer commandBuffer,
+ *   VkBuffer buffer,
+ *   VkDeviceSize offset,
+ *   uint32_t drawCount,
+ *   uint32_t stride)`
+ */
+export const vkCmdDrawIndirect = {
+  args: ['ptr', 'u64', 'u64', 'u32', 'u32'] as [
+    commandBuffer: 'ptr',
+    buffer: 'u64',
+    offset: 'u64',
+    drawCount: 'u32',
+    stride: 'u32',
+  ],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
+/**
+ * Perform an indexed indirect draw
+ *
+ * C ref: `void vkCmdDrawIndexedIndirect(
+ *   VkCommandBuffer commandBuffer,
+ *   VkBuffer buffer,
+ *   VkDeviceSize offset,
+ *   uint32_t drawCount,
+ *   uint32_t stride)`
+ */
+export const vkCmdDrawIndexedIndirect = {
+  args: ['ptr', 'u64', 'u64', 'u32', 'u32'] as [
+    commandBuffer: 'ptr',
+    buffer: 'u64',
+    offset: 'u64',
+    drawCount: 'u32',
+    stride: 'u32',
+  ],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
+/**
+ * Reset a query pool
+ *
+ * C ref: `void vkCmdResetQueryPool(
+ *   VkCommandBuffer commandBuffer,
+ *   VkQueryPool queryPool,
+ *   uint32_t firstQuery,
+ *   uint32_t queryCount)`
+ */
+export const vkCmdResetQueryPool = {
+  args: ['ptr', 'u64', 'u32', 'u32'] as [
+    commandBuffer: 'ptr',
+    queryPool: 'u64',
+    firstQuery: 'u32',
+    queryCount: 'u32',
+  ],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
+/**
+ * Begin a query
+ *
+ * C ref: `void vkCmdBeginQuery(
+ *   VkCommandBuffer commandBuffer,
+ *   VkQueryPool queryPool,
+ *   uint32_t query,
+ *   VkQueryControlFlags flags)`
+ */
+export const vkCmdBeginQuery = {
+  args: ['ptr', 'u64', 'u32', 'u32'] as [
+    commandBuffer: 'ptr',
+    queryPool: 'u64',
+    query: 'u32',
+    flags: 'u32',
+  ],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
+/**
+ * End a query
+ *
+ * C ref: `void vkCmdEndQuery(
+ *   VkCommandBuffer commandBuffer,
+ *   VkQueryPool queryPool,
+ *   uint32_t query)`
+ */
+export const vkCmdEndQuery = {
+  args: ['ptr', 'u64', 'u32'] as [
+    commandBuffer: 'ptr',
+    queryPool: 'u64',
+    query: 'u32',
+  ],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
+/**
+ * Copy query results to a buffer
+ *
+ * C ref: `void vkCmdCopyQueryPoolResults(
+ *   VkCommandBuffer commandBuffer,
+ *   VkQueryPool queryPool,
+ *   uint32_t firstQuery,
+ *   uint32_t queryCount,
+ *   VkBuffer dstBuffer,
+ *   VkDeviceSize dstOffset,
+ *   VkDeviceSize stride,
+ *   VkQueryResultFlags flags)`
+ */
+export const vkCmdCopyQueryPoolResults = {
+  args: ['ptr', 'u64', 'u32', 'u32', 'u64', 'u64', 'u64', 'u32'] as [
+    commandBuffer: 'ptr',
+    queryPool: 'u64',
+    firstQuery: 'u32',
+    queryCount: 'u32',
+    dstBuffer: 'u64',
+    dstOffset: 'u64',
+    stride: 'u64',
+    flags: 'u32',
+  ],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
+/**
+ * Write a timestamp to a query
+ *
+ * C ref: `void vkCmdWriteTimestamp(
+ *   VkCommandBuffer commandBuffer,
+ *   VkPipelineStageFlagBits pipelineStage,
+ *   VkQueryPool queryPool,
+ *   uint32_t query)`
+ */
+export const vkCmdWriteTimestamp = {
+  args: ['ptr', 'u32', 'u64', 'u32'] as [
+    commandBuffer: 'ptr',
+    pipelineStage: 'u32',
+    queryPool: 'u64',
+    query: 'u32',
+  ],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
+/**
+ * Set an event
+ *
+ * C ref: `void vkCmdSetEvent(
+ *   VkCommandBuffer commandBuffer,
+ *   VkEvent event,
+ *   VkPipelineStageFlags stageMask)`
+ */
+export const vkCmdSetEvent = {
+  args: ['ptr', 'u64', 'u32'] as [
+    commandBuffer: 'ptr',
+    event: 'u64',
+    stageMask: 'u32',
+  ],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
+/**
+ * Reset an event
+ *
+ * C ref: `void vkCmdResetEvent(
+ *   VkCommandBuffer commandBuffer,
+ *   VkEvent event,
+ *   VkPipelineStageFlags stageMask)`
+ */
+export const vkCmdResetEvent = {
+  args: ['ptr', 'u64', 'u32'] as [
+    commandBuffer: 'ptr',
+    event: 'u64',
+    stageMask: 'u32',
+  ],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
+/**
+ * Wait for events
+ *
+ * C ref: `void vkCmdWaitEvents(
+ *   VkCommandBuffer commandBuffer,
+ *   uint32_t eventCount,
+ *   const VkEvent* pEvents,
+ *   VkPipelineStageFlags srcStageMask,
+ *   VkPipelineStageFlags dstStageMask,
+ *   uint32_t memoryBarrierCount,
+ *   const VkMemoryBarrier* pMemoryBarriers,
+ *   uint32_t bufferMemoryBarrierCount,
+ *   const VkBufferMemoryBarrier* pBufferMemoryBarriers,
+ *   uint32_t imageMemoryBarrierCount,
+ *   const VkImageMemoryBarrier* pImageMemoryBarriers)`
+ */
+export const vkCmdWaitEvents = {
+  args: [
+    'ptr',
+    'u32',
+    'ptr',
+    'u32',
+    'u32',
+    'u32',
+    'ptr',
+    'u32',
+    'ptr',
+    'u32',
+    'ptr',
+  ] as [
+    commandBuffer: 'ptr',
+    eventCount: 'u32',
+    pEvents: 'ptr',
+    srcStageMask: 'u32',
+    dstStageMask: 'u32',
     memoryBarrierCount: 'u32',
     pMemoryBarriers: 'ptr',
     bufferMemoryBarrierCount: 'u32',

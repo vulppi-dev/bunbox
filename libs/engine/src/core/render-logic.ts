@@ -1,11 +1,10 @@
+import { RenderPassBuilder, type RenderPassConfig } from '../builders';
 import type { SampleCount, TextureFormat } from '../resources';
-import { RenderPassBuilder } from './RenderPassBuilder';
-import type { RenderPassConfig } from './RenderPassConfig';
 
 /**
  * Preset render pass configurations for common use cases
  */
-export class RenderPassPresets {
+export class RenderLogicRenderPasses {
   /**
    * Standard forward rendering pass with color and depth
    * Renders directly to swapchain
@@ -18,32 +17,6 @@ export class RenderPassPresets {
    * @param depthLoadOp Load operation for depth ('clear' or 'load' for depth pre-pass)
    * @param depthStoreOp Store operation for depth ('dont-care' or 'store' for reuse)
    */
-  static forward(
-    samples?: SampleCount,
-    depthLoadOp: 'clear' | 'load' = 'clear',
-    depthStoreOp: 'dont-care' | 'store' = 'dont-care',
-    colorFormat: TextureFormat | 'swapchain' = 'rgba16float',
-    colorFinal: 'color-attachment' | 'shader-read-only' = 'color-attachment',
-  ): RenderPassConfig {
-    return new RenderPassBuilder()
-      .setName('Forward Rendering')
-      .addColorAttachment({
-        format: colorFormat,
-        loadOp: 'clear',
-        storeOp: 'store',
-        finalLayout: colorFinal,
-        clearValue: { color: [0.0, 0.0, 0.0, 1.0] },
-        samples,
-      })
-      .addDepthAttachment({
-        format: 'depth32-float',
-        loadOp: depthLoadOp,
-        storeOp: depthStoreOp,
-        clearValue: { depthStencil: { depth: 1.0, stencil: 0 } },
-        samples,
-      })
-      .build();
-  }
 
   /**
    * Deferred rendering G-Buffer pass

@@ -1,5 +1,5 @@
 import type {
-  ComponentFormat,
+  TextureFormat,
   ImageLayout,
   LoadOp,
   SampleCount,
@@ -15,7 +15,7 @@ export interface AttachmentConfig {
    * Format of the attachment
    * Can be swapchain format token or specific format
    */
-  format: ComponentFormat;
+  format: TextureFormat | 'swapchain';
 
   /**
    * Number of samples for multisampling

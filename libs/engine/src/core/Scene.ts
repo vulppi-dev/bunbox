@@ -5,6 +5,7 @@ import type { VkCommandBuffer } from './vulkan/VkCommandBuffer';
 import { Color, Cube, Rect } from '../math';
 import type { AssetsStorage } from './AssetsStorage';
 import type { Environment } from '../nodes';
+import { VkImageLayout } from '@bunbox/vk';
 
 export class Scene extends Root {
   private _clearColor = new Color();
@@ -71,3 +72,30 @@ export class Scene extends Root {
     commandBuffer.end();
   }
 }
+
+// static forward(
+//     samples?: SampleCount,
+//     depthLoadOp: 'clear' | 'load' = 'clear',
+//     depthStoreOp: 'dont-care' | 'store' = 'dont-care',
+//     colorFormat: TextureFormat | 'swapchain' = 'rgba16float',
+//     colorFinal: 'color-attachment' | 'shader-read-only' = 'color-attachment',
+//   ): RenderPassConfig {
+//     return new RenderPassBuilder()
+//       .setName('Forward Rendering')
+//       .addColorAttachment({
+//         format: colorFormat,
+//         loadOp: 'clear',
+//         storeOp: 'store',
+//         finalLayout: colorFinal,
+//         clearValue: { color: [0.0, 0.0, 0.0, 1.0] },
+//         samples,
+//       })
+//       .addDepthAttachment({
+//         format: 'depth32-float',
+//         loadOp: depthLoadOp,
+//         storeOp: depthStoreOp,
+//         clearValue: { depthStencil: { depth: 1.0, stencil: 0 } },
+//         samples,
+//       })
+//       .build();
+//   }

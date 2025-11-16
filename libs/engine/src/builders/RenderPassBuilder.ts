@@ -1,4 +1,4 @@
-import type { ComponentFormat, SampleCount } from '../resources';
+import type { TextureFormat, SampleCount } from '../resources';
 import type { AttachmentConfig, RenderPassConfig } from './RenderPassConfig';
 import { hasStencilComponent, isDepthFormat } from './RenderPassUtils';
 
@@ -57,7 +57,7 @@ export class RenderPassBuilder {
    * Add a color attachment with sensible defaults
    */
   addColorAttachment(
-    config: Partial<AttachmentConfig> & { format: ComponentFormat },
+    config: Partial<AttachmentConfig> & { format: TextureFormat | 'swapchain' },
   ): this {
     const attachment: AttachmentConfig = {
       samples: 1,
@@ -80,7 +80,7 @@ export class RenderPassBuilder {
    * Add a depth or depth-stencil attachment with sensible defaults
    */
   addDepthAttachment(
-    config: Partial<AttachmentConfig> & { format: ComponentFormat },
+    config: Partial<AttachmentConfig> & { format: TextureFormat },
   ): this {
     if (!isDepthFormat(config.format)) {
       throw new Error(`Format '${config.format}' is not a depth format`);

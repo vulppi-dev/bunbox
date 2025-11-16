@@ -92,7 +92,7 @@ export class VkImageView implements Disposable {
     return this.__instance;
   }
 
-  dispose(): void | Promise<void> {
+  dispose(): void {
     VK_DEBUG(`Destroying image view: 0x${this.__instance.toString(16)}`);
     VK.vkDestroyImageView(this.__device, this.__instance, null);
     VK_DEBUG('Image view destroyed');
