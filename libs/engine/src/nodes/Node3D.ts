@@ -1,7 +1,7 @@
 import type { EventMap } from '@bunbox/utils';
 import { MaskHelper } from '../resources';
 import { Euler, Matrix, type Quaternion, Vector3 } from '../math';
-import { Node } from './Node';
+import { Node } from '@bunbox/tree';
 
 /**
  * Base 3D node with spatial transform and layer mask support.
@@ -36,10 +36,9 @@ import { Node } from './Node';
  * ```
  */
 export class Node3D<
-  P extends Record<string, any> = Record<string, any>,
   M extends Record<string, any> = Record<string, any>,
   T extends EventMap = {},
-> extends Node<P, M, T> {
+> extends Node<M, T> {
   private __matrix: Matrix = new Matrix();
   private __position: Vector3 = new Vector3();
   private __scale: Vector3 = new Vector3(1, 1, 1);

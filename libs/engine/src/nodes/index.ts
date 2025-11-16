@@ -1,5 +1,5 @@
 export * from './AbstractCamera';
-export * from './Environment';
+export * from '../resources/Environment';
 export * from './Mesh';
 export * from './Node3D';
 export * from './OrthographicCamera';

@@ -1,11 +1,10 @@
 import { Root } from '@bunbox/tree';
+import { Color, Cube, Rect } from '../math';
+import { AbstractCamera, Light, Mesh, type Environment } from '../nodes';
+import type { AssetsStorage } from './AssetsStorage';
+import type { VkCommandBuffer } from './vulkan/VkCommandBuffer';
 import type { VkDevice } from './vulkan/VkDevice';
 import type { VkSwapchain } from './vulkan/VkSwapchain';
-import type { VkCommandBuffer } from './vulkan/VkCommandBuffer';
-import { Color, Cube, Rect } from '../math';
-import type { AssetsStorage } from './AssetsStorage';
-import type { Environment } from '../nodes';
-import { VkImageLayout } from '@bunbox/vk';
 
 export class Scene extends Root {
   private _clearColor = new Color();
@@ -35,6 +34,9 @@ export class Scene extends Root {
     assetsStore: AssetsStorage,
     delta: number,
   ): void {
+    this._processNodes(delta);
+    this.__populateRenderList();
+
     commandBuffer.begin();
     const renderArea = new Rect(0, 0, swapchain.width, swapchain.height);
 
@@ -70,6 +72,26 @@ export class Scene extends Root {
     // commandBuffer.endRenderPass();
 
     commandBuffer.end();
+  }
+
+  private __populateRenderList(): void {
+    const cameras: AbstractCamera[] = [];
+    const meshes: Mesh[] = [];
+    const lights: Light[] = [];
+
+    this.traverse((node) => {
+      if (!node.isEnabled || node.isDisposed) {
+        return;
+      }
+
+      if (node instanceof AbstractCamera) {
+        cameras.push(node);
+      } else if (node instanceof Mesh) {
+        meshes.push(node);
+      } else if (node instanceof Light) {
+        lights.push(node);
+      }
+    });
   }
 }
 

@@ -1,7 +1,7 @@
-import { Color } from '../math';
+import { DirtyState } from '@bunbox/utils';
 import type { TexturePointer } from '../managers/TextureManager';
-import { ShadowConfig } from '../resources/ShadowConfig';
-import { Node } from './Node';
+import { Color } from '../math';
+import { ShadowConfig } from './ShadowConfig';
 
 /**
  * Environment node managing scene-wide rendering settings.
@@ -22,7 +22,7 @@ import { Node } from './Node';
  * - Disable shadows entirely on low-end hardware
  * - Skybox rendering has minimal cost with modern GPUs
  *
- * @extends {Node}
+ * @extends {DirtyState}
  *
  * @example
  * ```ts
@@ -52,8 +52,9 @@ import { Node } from './Node';
  * mobileEnv.ambientIntensity = 0.3; // Higher ambient reduces shadow needs
  * mobileEnv.enableFog = false; // Disable fog for performance
  * ```
+ *
  */
-export class Environment extends Node {
+export class Environment extends DirtyState {
   private __ambientColor: Color;
   private __ambientIntensity: number = 0.2;
   private __shadowConfig: ShadowConfig;

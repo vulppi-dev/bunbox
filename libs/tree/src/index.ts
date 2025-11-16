@@ -32,7 +32,6 @@ export const PROCESS_EVENT = Symbol('_process');
  * - Event propagation: child events are re-emitted by ancestors
  *
  * Generics:
- * - `P`: Shape of the reactive `properties` bag. Assignments mark the node as dirty.
  * - `M`: Shape of the `metadata` bag (free-form, not reactive by default).
  * - `T`: Additional event map merged with built-in `NodeEvents`.
  */
@@ -400,15 +399,16 @@ export class Node<
   ): void {
     const includeDisabled = Boolean(options?.includeDisabled);
     const order = options?.order ?? 'pre';
+    const ignoreType = options?.ignoreType;
 
-    if (options?.ignoreType && this instanceof options?.ignoreType) return;
+    if (ignoreType && this instanceof ignoreType) return;
 
     if (!includeDisabled && !this.isEnabled) return;
 
     if (order === 'pre') visitor(this as Node);
 
     for (const child of this.__children) {
-      child.traverse(visitor, { includeDisabled, order });
+      child.traverse(visitor, options);
     }
 
     if (order === 'post') visitor(this as Node);
@@ -488,7 +488,7 @@ export class Node<
   [PROCESS_EVENT](delta: number): void {
     this._process(delta);
     for (const plugin of this.__plugins) {
-      plugin.process(this, delta);
+      if (plugin.enabled) plugin.process(this, delta);
     }
   }
 
@@ -605,6 +605,96 @@ export class Root<
   }
 
   /**
+   * Get the total number of registered nodes.
+   */
+  get nodeCount(): number {
+    return this.__nodeIdMap.size;
+  }
+
+  /**
+   * Find a node by its unique ID.
+   */
+  override getById(id: string): Node | null {
+    return this.__nodeIdMap.get(id) ?? null;
+  }
+
+  /**
+   * Find all nodes with the given name.
+   */
+  override findByName(name: string): Node[] {
+    return [...(this.__nodeNameMap.get(name) ?? [])];
+  }
+
+  /**
+   * Find all nodes with the given tag.
+   * @param tag The tag to search for.
+   * @returns An array of nodes that have the specified tag.
+   */
+  override findByTag(tag: string): Node[] {
+    return [...(this.__nodeTagMap.get(tag) ?? [])];
+  }
+
+  /**
+   * Find all nodes that have ALL of the specified tags (AND operation).
+   * Only nodes that possess every single tag in the list will be returned.
+   *
+   * @example
+   * ```ts
+   * const node1 = new BaseNode();
+   * node1.addTag('enemy');
+   * node1.addTag('flying');
+   *
+   * const node2 = new BaseNode();
+   * node2.addTag('enemy');
+   *
+   * root.findByTags('enemy', 'flying'); // Returns [node1] only
+   * root.findByTags('enemy'); // Returns [node1, node2]
+   * ```
+   *
+   * @param tags Array of tags to match (AND operation - all tags required).
+   * @returns An array of nodes that have all the specified tags.
+   */
+  override findByTags(...tags: string[]): Node[] {
+    if (tags.length === 0) return [];
+    if (tags.length === 1) return this.findByTag(tags[0]!);
+
+    // Start with nodes that have the first tag
+    const firstTagNodes = this.__nodeTagMap.get(tags[0]!);
+    if (!firstTagNodes) return [];
+
+    // Filter nodes that have all other tags
+    const result: Node[] = [];
+    for (const node of firstTagNodes) {
+      if (tags.every((tag) => node.hasTag(tag))) {
+        result.push(node);
+      }
+    }
+
+    return result;
+  }
+
+  /**
+   * Get all registered node IDs.
+   */
+  getAllIds(): string[] {
+    return [...this.__nodeIdMap.keys()];
+  }
+
+  /**
+   * Get all registered node names.
+   */
+  getAllNames(): string[] {
+    return [...this.__nodeNameMap.keys()];
+  }
+
+  /**
+   * Get all registered tags across all nodes.
+   */
+  getAllTags(): string[] {
+    return [...this.__nodeTagMap.keys()];
+  }
+
+  /**
    * Register a node and all its descendants in the maps.
    */
   private __registerNode(node: Node): void {
@@ -715,94 +805,10 @@ export class Root<
     }
   }
 
-  /**
-   * Find a node by its unique ID.
-   */
-  override getById(id: string): Node | null {
-    return this.__nodeIdMap.get(id) ?? null;
-  }
-
-  /**
-   * Find all nodes with the given name.
-   */
-  override findByName(name: string): Node[] {
-    return [...(this.__nodeNameMap.get(name) ?? [])];
-  }
-
-  /**
-   * Find all nodes with the given tag.
-   * @param tag The tag to search for.
-   * @returns An array of nodes that have the specified tag.
-   */
-  override findByTag(tag: string): Node[] {
-    return [...(this.__nodeTagMap.get(tag) ?? [])];
-  }
-
-  /**
-   * Find all nodes that have ALL of the specified tags (AND operation).
-   * Only nodes that possess every single tag in the list will be returned.
-   *
-   * @example
-   * ```ts
-   * const node1 = new BaseNode();
-   * node1.addTag('enemy');
-   * node1.addTag('flying');
-   *
-   * const node2 = new BaseNode();
-   * node2.addTag('enemy');
-   *
-   * root.findByTags('enemy', 'flying'); // Returns [node1] only
-   * root.findByTags('enemy'); // Returns [node1, node2]
-   * ```
-   *
-   * @param tags Array of tags to match (AND operation - all tags required).
-   * @returns An array of nodes that have all the specified tags.
-   */
-  override findByTags(...tags: string[]): Node[] {
-    if (tags.length === 0) return [];
-    if (tags.length === 1) return this.findByTag(tags[0]!);
-
-    // Start with nodes that have the first tag
-    const firstTagNodes = this.__nodeTagMap.get(tags[0]!);
-    if (!firstTagNodes) return [];
-
-    // Filter nodes that have all other tags
-    const result: Node[] = [];
-    for (const node of firstTagNodes) {
-      if (tags.every((tag) => node.hasTag(tag))) {
-        result.push(node);
-      }
-    }
-
-    return result;
-  }
-
-  /**
-   * Get all registered node IDs.
-   */
-  getAllIds(): string[] {
-    return [...this.__nodeIdMap.keys()];
-  }
-
-  /**
-   * Get all registered node names.
-   */
-  getAllNames(): string[] {
-    return [...this.__nodeNameMap.keys()];
-  }
-
-  /**
-   * Get all registered tags across all nodes.
-   */
-  getAllTags(): string[] {
-    return [...this.__nodeTagMap.keys()];
-  }
-
-  /**
-   * Get the total number of registered nodes.
-   */
-  get nodeCount(): number {
-    return this.__nodeIdMap.size;
+  protected _processNodes(delta: number): void {
+    this.traverse((node) => {
+      node[PROCESS_EVENT](delta);
+    });
   }
 }
 
@@ -832,6 +838,16 @@ export class Root<
  * ```
  */
 export abstract class NodePlugin<Target extends Node> {
+  private __enabled: boolean = true;
+
+  set enabled(value: boolean) {
+    this.__enabled = value;
+  }
+
+  get enabled(): boolean {
+    return this.__enabled;
+  }
+
   /**
    * Called every frame to update the plugin's logic.
    *
