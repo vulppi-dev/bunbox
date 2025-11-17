@@ -1,6 +1,6 @@
 {
   "name": "@bunbox/tree",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "description": "Tree data structure implementation for BunBox",
   "author": {
     "name": "Renato Rodrigues",
@@ -44,7 +44,7 @@
     "format": "prettier --write ."
   },
   "dependencies": {
-    "@bunbox/utils": "^0.0.7",
+    "@bunbox/utils": "^0.0.8",
     "ulid": "^3.0.1"
   },
   "devDependencies": {

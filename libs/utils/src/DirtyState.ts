@@ -1,5 +1,5 @@
 export class DirtyState {
-  private __isDirty: boolean = false;
+  private __isDirty: boolean = true;
 
   get isDirty(): boolean {
     return this.__isDirty;
