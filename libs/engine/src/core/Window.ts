@@ -31,6 +31,11 @@ import { buildCallback, cstr, pointerCopyBuffer } from '../utils/buffer';
 import type { EngineContext } from './EngineContext';
 import { Color } from '../math';
 import type { Scene } from './Scene';
+import {
+  CONTEXT_beginFrame,
+  CONTEXT_disposeWindow,
+  CONTEXT_rebuildSwapchain,
+} from './_symbols';
 
 // Setup struct pointer/string conversions globally
 setupStruct({
@@ -388,7 +393,7 @@ export class Window extends EventEmitter<WindowEventMap> {
   override async dispose(): Promise<void> {
     await super.dispose();
 
-    this.__context.disposeWindow(this.__windowNative);
+    this.__context[CONTEXT_disposeWindow](this.__windowNative);
 
     GLFW_DEBUG(`Disposing window: ${this.__title}`);
     Window.__windowsList.delete(this);
@@ -839,7 +844,7 @@ export class Window extends EventEmitter<WindowEventMap> {
     if (this.isDisposed) return;
 
     if (this.isDirty) {
-      this.__context.rebuildSwapchain(
+      this.__context[CONTEXT_rebuildSwapchain](
         this.__windowNative,
         this.__windowDisplay,
         this.__bufferWidth,
@@ -847,6 +852,6 @@ export class Window extends EventEmitter<WindowEventMap> {
       );
       this.markAsClean();
     }
-    this.__context.renderFrame(this.__windowNative, this.scene, delta);
+    this.__context[CONTEXT_beginFrame](this.__windowNative, this.scene, delta);
   }
 }

@@ -11,6 +11,7 @@ type NodeEvents = {
   'remove-child': [child: Node];
   rename: [child: Node, prev: string, next: string];
   'enabled-change': [child: Node];
+  'dirty-change': [child: Node];
   'tag-change': [node: Node, tag: string, action: 'add' | 'remove'];
 };
 
@@ -113,6 +114,36 @@ export class Node<
     return this.__enabled;
   }
 
+  /**
+   * Dispose this node, removing it from the tree and recursively disposing all children.
+   *
+   * Process:
+   * 1. Removes itself from parent (if any)
+   * 2. Traverses children in post-order (reverse) and disposes each one
+   * 3. Calls parent dispose() to emit 'dispose' event and clean up
+   */
+  override async dispose(): Promise<void> {
+    // Step 1: Dispose plugins
+    const plugins = [...this.__plugins];
+    for (const plugin of plugins) {
+      plugin.dispose(this);
+    }
+    // Step 2: Dispose children in post-order (leaf to root)
+    const children = [...this.__children];
+    for (const child of children) {
+      await child.dispose();
+    }
+    // Step 3: Remove from parent tree
+    if (this.__parent) {
+      this.__parent.removeChild(this as Node);
+    }
+
+    this.__children.clear();
+
+    // Step 3: Dispose self (emits 'dispose' event and marks as disposed)
+    await super.dispose();
+  }
+
   /** Enable this node. */
   enable(): this {
     return this.setEnabled(true);
@@ -134,6 +165,30 @@ export class Node<
     this.markAsDirty();
     (this as Node).emit('enabled-change', this as Node);
     return this;
+  }
+
+  /**
+   * Mark this node as dirty, indicating it has changed.
+   * Emits `dirty-change` event.
+   *
+   * @returns This node for chaining.
+   */
+  override markAsDirty(): this {
+    const self = super.markAsDirty();
+    (this as Node).emit('dirty-change', this as Node);
+    return self;
+  }
+
+  /**
+   * Mark this node as clean, indicating it is up-to-date.
+   * Emits `dirty-change` event.
+   *
+   * @returns This node for chaining.
+   */
+  override markAsClean(): this {
+    const self = super.markAsClean();
+    (this as Node).emit('dirty-change', this as Node);
+    return self;
   }
 
   // Tag API
@@ -508,36 +563,6 @@ export class Node<
    */
   protected _process(_delta: number): void {
     // Emit process event for plugins
-  }
-
-  /**
-   * Dispose this node, removing it from the tree and recursively disposing all children.
-   *
-   * Process:
-   * 1. Removes itself from parent (if any)
-   * 2. Traverses children in post-order (reverse) and disposes each one
-   * 3. Calls parent dispose() to emit 'dispose' event and clean up
-   */
-  override async dispose(): Promise<void> {
-    // Step 1: Dispose plugins
-    const plugins = [...this.__plugins];
-    for (const plugin of plugins) {
-      plugin.dispose(this);
-    }
-    // Step 2: Dispose children in post-order (leaf to root)
-    const children = [...this.__children];
-    for (const child of children) {
-      await child.dispose();
-    }
-    // Step 3: Remove from parent tree
-    if (this.__parent) {
-      this.__parent.removeChild(this as Node);
-    }
-
-    this.__children.clear();
-
-    // Step 3: Dispose self (emits 'dispose' event and marks as disposed)
-    await super.dispose();
   }
 }
 
