@@ -1,10 +1,8 @@
 import {
-  getGlfwErrorDescription,
   getNativeWindow,
   GLFW,
   GLFW_GeneralMacro,
   GLFW_WindowMacro,
-  glfwErrorCallback,
   glfwFrameBufferSizeCallback,
   glfwVideoModeStruct,
   glfwWindowCloseCallback,
@@ -15,37 +13,21 @@ import {
   glfwWindowPositionCallback,
   glfwWindowSizeCallback,
 } from '@bunbox/glfw';
-import {
-  getInstanceBuffer,
-  instanceToJSON,
-  instantiate,
-  setupStruct,
-} from '@bunbox/struct';
+import { getInstanceBuffer, instanceToJSON, instantiate } from '@bunbox/struct';
 import { EventEmitter } from '@bunbox/utils';
-import { CString, ptr, type JSCallback, type Pointer } from 'bun:ffi';
+import { ptr, type Pointer } from 'bun:ffi';
 import { ulid } from 'ulid';
 import { WindowError } from '../errors';
 import { WindowEvent } from '../events';
 import { GLFW_DEBUG } from '../singleton/logger';
 import { buildCallback, cstr, pointerCopyBuffer } from '../utils/buffer';
 import type { EngineContext } from './EngineContext';
-import { Color } from '../math';
 import type { Scene } from './Scene';
 import {
-  CONTEXT_beginFrame,
-  CONTEXT_disposeWindow,
-  CONTEXT_rebuildSwapchain,
+  CONTEXT_attachWindowScene,
+  CONTEXT_disposeWindowResources,
+  CONTEXT_rebuildWindowResources,
 } from './_symbols';
-
-// Setup struct pointer/string conversions globally
-setupStruct({
-  pointerToString(ptr) {
-    return new CString(Number(ptr) as Pointer).toString();
-  },
-  stringToPointer(str) {
-    return BigInt(ptr(cstr(str)));
-  },
-});
 
 export type WindowState =
   | 'minimized'
@@ -83,62 +65,6 @@ export type WindowEventMap = {
 };
 
 export class Window extends EventEmitter<WindowEventMap> {
-  private static __isInitialized = false;
-  private static __windowsList: Set<Window> = new Set();
-  private static __windowsMap: Map<string, Window> = new Map();
-  private static __errorCallback: JSCallback | null = null;
-
-  private static __callInitializeGLFW() {
-    if (Window.__isInitialized) return;
-
-    GLFW_DEBUG('Initializing GLFW for first window creation');
-    Window.__errorCallback = buildCallback(
-      glfwErrorCallback,
-      (errorCode, description) => {
-        GLFW_DEBUG(getGlfwErrorDescription(errorCode), description);
-      },
-    );
-    GLFW.glfwSetErrorCallback(Window.__errorCallback.ptr);
-
-    if (GLFW.glfwInit() === 0) {
-      throw new WindowError('initialization failed', 'STATIC');
-    }
-    GLFW_DEBUG('GLFW initialized successfully');
-
-    const glfwVersion = GLFW.glfwGetVersionString();
-    GLFW_DEBUG(`Version: ${glfwVersion}`);
-
-    if (!GLFW.glfwVulkanSupported()) {
-      throw new WindowError('Vulkan is not supported', 'STATIC');
-    }
-    GLFW_DEBUG(`Chose Vulkan as the graphics API`);
-
-    // Start main loop
-    Window.__isInitialized = true;
-
-    let prev = performance.now();
-    (async () => {
-      GLFW_DEBUG('Starting GLFW main loop');
-      while (Window.__isInitialized) {
-        const now = performance.now();
-        const delta = now - prev;
-        prev = now;
-
-        GLFW.glfwPollEvents();
-        for (const win of Window.__windowsList) {
-          win.__appTriggerProcessStack(delta);
-        }
-        await Bun.sleep(4);
-      }
-    })();
-  }
-
-  static getWindowById(id: string): Window | undefined {
-    return Window.__windowsMap.get(id);
-  }
-
-  // MARK: Instance Properties
-
   private __id: string;
   private __window: Pointer;
   private __windowNative: bigint;
@@ -209,8 +135,6 @@ export class Window extends EventEmitter<WindowEventMap> {
     this.__state = state;
     this.__alwaysOnTop = alwaysOnTop;
 
-    Window.__callInitializeGLFW();
-
     if (this.__state === 'fullscreen') {
       this.__updateMainMonitorData(true);
     }
@@ -227,8 +151,6 @@ export class Window extends EventEmitter<WindowEventMap> {
       throw new WindowError('window creation failed', this.__id);
     }
     this.__window = window;
-    Window.__windowsList.add(this);
-    Window.__windowsMap.set(this.__id, this);
 
     this.opacity = this.__opacity;
 
@@ -243,7 +165,13 @@ export class Window extends EventEmitter<WindowEventMap> {
     this.__windowNative = nWindow;
     this.__windowDisplay = display;
 
-    this.markAsDirty();
+    this.__context[CONTEXT_rebuildWindowResources](
+      this.__windowNative,
+      this.__windowDisplay,
+      this.__bufferWidth,
+      this.__bufferHeight,
+    );
+
     GLFW_DEBUG(`First creating window: ${this.__title}`);
   }
 
@@ -388,27 +316,18 @@ export class Window extends EventEmitter<WindowEventMap> {
 
   set scene(value: Scene | null) {
     this.__scene = value;
+    this.__context[CONTEXT_attachWindowScene](this.__windowNative, value);
   }
 
   override async dispose(): Promise<void> {
     await super.dispose();
 
-    this.__context[CONTEXT_disposeWindow](this.__windowNative);
+    this.__context[CONTEXT_disposeWindowResources](this.__windowNative);
 
     GLFW_DEBUG(`Disposing window: ${this.__title}`);
-    Window.__windowsList.delete(this);
-    Window.__windowsMap.delete(this.__id);
 
     this.__disposeCallbacks?.();
     GLFW.glfwDestroyWindow(this.__window);
-
-    if (Window.__windowsList.size === 0) {
-      GLFW_DEBUG('No more windows. Terminating GLFW.');
-      GLFW.glfwSetErrorCallback(0 as Pointer);
-      GLFW.glfwTerminate();
-      Window.__errorCallback?.close();
-      Window.__isInitialized = false;
-    }
   }
 
   setPos(x: number, y: number) {
@@ -565,14 +484,14 @@ export class Window extends EventEmitter<WindowEventMap> {
     if (!this.__window) return;
     this.__isVisible = true;
     GLFW.glfwShowWindow(this.__window);
-    this.__dispatchEvent('window-shown');
+    this.__dispatchWindowEvent('window-shown');
   }
 
   hide() {
     if (!this.__window) return;
     this.__isVisible = false;
     GLFW.glfwHideWindow(this.__window);
-    this.__dispatchEvent('window-hidden');
+    this.__dispatchWindowEvent('window-hidden');
   }
 
   private __updateMainMonitorData(setMonitor: boolean = false) {
@@ -658,7 +577,7 @@ export class Window extends EventEmitter<WindowEventMap> {
           this.__savedY = yPos;
         }
 
-        this.__dispatchEvent('window-move');
+        this.__dispatchWindowEvent('window-move');
       },
     );
     const windowSizeCB = buildCallback(
@@ -674,7 +593,7 @@ export class Window extends EventEmitter<WindowEventMap> {
           this.__savedWidth = width;
           this.__savedHeight = height;
         }
-        this.__dispatchEvent('window-resize');
+        this.__dispatchWindowEvent('window-resize');
       },
     );
     const windowFocusCB = buildCallback(
@@ -682,7 +601,7 @@ export class Window extends EventEmitter<WindowEventMap> {
       (win, focused) => {
         if (this.__window !== win) return;
         this.__isFocused = Boolean(focused);
-        this.__dispatchEvent(focused ? 'window-focus' : 'window-blur');
+        this.__dispatchWindowEvent(focused ? 'window-focus' : 'window-blur');
       },
     );
     const windowIconifyCB = buildCallback(
@@ -695,7 +614,7 @@ export class Window extends EventEmitter<WindowEventMap> {
         }
 
         this.__loadWindowSize();
-        this.__dispatchEvent(
+        this.__dispatchWindowEvent(
           iconified ? 'window-minimized' : 'window-restored',
         );
       },
@@ -708,7 +627,7 @@ export class Window extends EventEmitter<WindowEventMap> {
           this.__state = 'maximized';
         }
         this.__loadWindowSize();
-        this.__dispatchEvent(
+        this.__dispatchWindowEvent(
           maximized ? 'window-maximized' : 'window-restored',
         );
       },
@@ -719,7 +638,7 @@ export class Window extends EventEmitter<WindowEventMap> {
         if (this.__window !== win) return;
         this.__xScale = xScale;
         this.__yScale = yScale;
-        this.__dispatchEvent('window-display-changed');
+        this.__dispatchWindowEvent('window-display-changed');
       },
     );
     const windowFramebufferSizeCB = buildCallback(
@@ -727,7 +646,12 @@ export class Window extends EventEmitter<WindowEventMap> {
       (win, width, height) => {
         if (this.__window !== win) return;
         if (this.__bufferWidth !== width || this.__bufferHeight !== height) {
-          this.markAsDirty();
+          this.__context[CONTEXT_rebuildWindowResources](
+            this.__windowNative,
+            this.__windowDisplay,
+            this.__bufferWidth,
+            this.__bufferHeight,
+          );
         }
         this.__bufferWidth = width;
         this.__bufferHeight = height;
@@ -825,7 +749,7 @@ export class Window extends EventEmitter<WindowEventMap> {
     this.__yScale = this.__f32_aux2[0]!;
   }
 
-  private __dispatchEvent(eventKey: keyof WindowEventMap) {
+  private __dispatchWindowEvent(eventKey: keyof WindowEventMap) {
     console.log('ev', eventKey);
     const event = new WindowEvent({
       currentDisplayId: GLFW.glfwGetWindowMonitor(this.__window) ?? 0,
@@ -838,20 +762,5 @@ export class Window extends EventEmitter<WindowEventMap> {
       type: eventKey,
     });
     (this as Window).emit(eventKey, event);
-  }
-
-  private __appTriggerProcessStack(delta: number) {
-    if (this.isDisposed) return;
-
-    if (this.isDirty) {
-      this.__context[CONTEXT_rebuildSwapchain](
-        this.__windowNative,
-        this.__windowDisplay,
-        this.__bufferWidth,
-        this.__bufferHeight,
-      );
-      this.markAsClean();
-    }
-    this.__context[CONTEXT_beginFrame](this.__windowNative, this.scene, delta);
   }
 }

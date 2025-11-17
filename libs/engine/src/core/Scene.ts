@@ -33,6 +33,7 @@ export class Scene extends Root {
     imageIndex: number,
     assetsStore: AssetsStorage,
     delta: number,
+    time: number,
   ): void {
     this._processNodes(delta);
     this.__populateRenderList();

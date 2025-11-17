@@ -1,5 +1,10 @@
 // MARK: Context
 
-export const CONTEXT_disposeWindow = Symbol('CONTEXT_disposeWindow');
-export const CONTEXT_rebuildSwapchain = Symbol('CONTEXT_rebuildSwapchain');
-export const CONTEXT_beginFrame = Symbol('CONTEXT_beginFrame');
+export const CONTEXT_disposeWindowResources = Symbol(
+  'CONTEXT: disposeWindowResources',
+);
+export const CONTEXT_rebuildWindowResources = Symbol(
+  'CONTEXT: rebuildWindowResources',
+);
+export const CONTEXT_attachWindowScene = Symbol('CONTEXT: attachWindowScene');
+export const CONTEXT_beginFrame = Symbol('CONTEXT: beginFrame');
