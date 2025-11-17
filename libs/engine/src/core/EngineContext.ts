@@ -244,8 +244,11 @@ export class EngineContext implements Disposable {
   dispose(): void | Promise<void> {
     EngineContext.__contexts.delete(this);
 
-    for (const win of this.__windowsPack.keys()) {
-      this[CONTEXT_disposeWindowResources](win);
+    if (this.__windowsPack.size > 0) {
+      throw new EngineError(
+        'Cannot dispose EngineContext while there are windows attached to it',
+        'Context',
+      );
     }
 
     if (EngineContext.__contexts.size === 0) {
