@@ -1,13 +1,13 @@
 /// <reference types="@types/bun" />
 import { describe, expect, test } from 'bun:test';
-import { BaseNode, Root } from '../src/index';
+import { Node, Root, NodePlugin } from '../src/index';
 
 describe('Root', () => {
   test('should register nodes when added to tree', () => {
     const root = new Root('root');
-    const child1 = new BaseNode('child1');
-    const child2 = new BaseNode('child2');
-    const grandChild = new BaseNode('grandchild');
+    const child1 = new Node('child1');
+    const child2 = new Node('child2');
+    const grandChild = new Node('grandchild');
 
     root.addChild(child1);
     root.addChild(child2);
@@ -22,9 +22,9 @@ describe('Root', () => {
 
   test('should find nodes by name', () => {
     const root = new Root('root');
-    const child1 = new BaseNode('player');
-    const child2 = new BaseNode('enemy');
-    const child3 = new BaseNode('player'); // Same name as child1
+    const child1 = new Node('player');
+    const child2 = new Node('enemy');
+    const child3 = new Node('player'); // Same name as child1
 
     root.addChild(child1);
     root.addChild(child2);
@@ -42,8 +42,8 @@ describe('Root', () => {
 
   test('should unregister nodes when removed from tree', () => {
     const root = new Root('root');
-    const child = new BaseNode('child');
-    const grandChild = new BaseNode('grandchild');
+    const child = new Node('child');
+    const grandChild = new Node('grandchild');
 
     root.addChild(child);
     child.addChild(grandChild);
@@ -58,7 +58,7 @@ describe('Root', () => {
 
   test('should update name index when node is renamed', () => {
     const root = new Root('root');
-    const child = new BaseNode('oldName');
+    const child = new Node('oldName');
     root.addChild(child);
 
     let found = root.findByName('oldName');
@@ -78,9 +78,9 @@ describe('Root', () => {
 
   test('should handle re-parenting correctly', () => {
     const root = new Root('root');
-    const parent1 = new BaseNode('parent1');
-    const parent2 = new BaseNode('parent2');
-    const child = new BaseNode('child');
+    const parent1 = new Node('parent1');
+    const parent2 = new Node('parent2');
+    const child = new Node('child');
 
     root.addChild(parent1);
     root.addChild(parent2);
@@ -99,8 +99,8 @@ describe('Root', () => {
   });
 
   test('nodes not attached to Root should not be indexed', () => {
-    const orphan = new BaseNode('orphan');
-    const child = new BaseNode('orphanChild');
+    const orphan = new Node('orphan');
+    const child = new Node('orphanChild');
     orphan.addChild(child);
 
     // These nodes are not part of any Root tree
@@ -108,10 +108,10 @@ describe('Root', () => {
     expect(orphan.findByName('orphanChild').length).toBe(0);
   });
 
-  test('BaseNode can query root for lookups', () => {
+  test('Node can query root for lookups', () => {
     const root = new Root('root');
-    const child = new BaseNode('child');
-    const grandChild = new BaseNode('grandchild');
+    const child = new Node('child');
+    const grandChild = new Node('grandchild');
 
     root.addChild(child);
     child.addChild(grandChild);
@@ -128,7 +128,7 @@ describe('Root', () => {
 
 describe('Tags', () => {
   test('should add and remove tags from nodes', () => {
-    const node = new BaseNode('node');
+    const node = new Node('node');
 
     expect(node.hasTag('player')).toBe(false);
     expect(node.getTags().length).toBe(0);
@@ -155,9 +155,9 @@ describe('Tags', () => {
 
   test('should find nodes by tag in Root', () => {
     const root = new Root('root');
-    const player = new BaseNode('player');
-    const enemy1 = new BaseNode('enemy1');
-    const enemy2 = new BaseNode('enemy2');
+    const player = new Node('player');
+    const enemy1 = new Node('enemy1');
+    const enemy2 = new Node('enemy2');
 
     player.addTag('player');
     player.addTag('alive');
@@ -185,9 +185,9 @@ describe('Tags', () => {
 
   test('should find nodes by multiple tags', () => {
     const root = new Root('root');
-    const node1 = new BaseNode('node1');
-    const node2 = new BaseNode('node2');
-    const node3 = new BaseNode('node3');
+    const node1 = new Node('node1');
+    const node2 = new Node('node2');
+    const node3 = new Node('node3');
 
     node1.addTag('red');
     node1.addTag('fast');
@@ -218,10 +218,10 @@ describe('Tags', () => {
 
   test('findByTags should use AND logic (all tags required)', () => {
     const root = new Root('root');
-    const a = new BaseNode('a');
-    const b = new BaseNode('b');
-    const c = new BaseNode('c');
-    const d = new BaseNode('d');
+    const a = new Node('a');
+    const b = new Node('b');
+    const c = new Node('c');
+    const d = new Node('d');
 
     // a has: tag1, tag2, tag3
     a.addTag('tag1');
@@ -266,7 +266,7 @@ describe('Tags', () => {
 
   test('should update tag cache when tags are added/removed', () => {
     const root = new Root('root');
-    const node = new BaseNode('node');
+    const node = new Node('node');
     root.addChild(node);
 
     // Add tag after node is in tree
@@ -299,7 +299,7 @@ describe('Tags', () => {
 
   test('should handle tags on nodes added with existing tags', () => {
     const root = new Root('root');
-    const node = new BaseNode('node');
+    const node = new Node('node');
 
     // Add tags before adding to tree
     node.addTag('preexisting');
@@ -319,7 +319,7 @@ describe('Tags', () => {
 
   test('should unregister tags when node is removed', () => {
     const root = new Root('root');
-    const node = new BaseNode('node');
+    const node = new Node('node');
 
     node.addTag('temp');
     root.addChild(node);
@@ -333,9 +333,9 @@ describe('Tags', () => {
 
   test('should handle tags on deeply nested nodes', () => {
     const root = new Root('root');
-    const parent = new BaseNode('parent');
-    const child = new BaseNode('child');
-    const grandChild = new BaseNode('grandchild');
+    const parent = new Node('parent');
+    const child = new Node('child');
+    const grandChild = new Node('grandchild');
 
     root.addChild(parent);
     parent.addChild(child);
@@ -350,8 +350,8 @@ describe('Tags', () => {
 
   test('nodes can query tags via root', () => {
     const root = new Root('root');
-    const node1 = new BaseNode('node1');
-    const node2 = new BaseNode('node2');
+    const node1 = new Node('node1');
+    const node2 = new Node('node2');
 
     node1.addTag('special');
     node2.addTag('special');
@@ -368,8 +368,8 @@ describe('Tags', () => {
 
   test('getAllTags should return all unique tags', () => {
     const root = new Root('root');
-    const node1 = new BaseNode('node1');
-    const node2 = new BaseNode('node2');
+    const node1 = new Node('node1');
+    const node2 = new Node('node2');
 
     node1.addTag('tag1');
     node1.addTag('tag2');
@@ -387,10 +387,10 @@ describe('Tags', () => {
   });
 });
 
-describe('BaseNode dispose', () => {
+describe('Node dispose', () => {
   test('should remove itself from parent when disposed', async () => {
     const root = new Root('root');
-    const child = new BaseNode('child');
+    const child = new Node('child');
 
     root.addChild(child);
     expect(root.children.length).toBe(1);
@@ -406,10 +406,10 @@ describe('BaseNode dispose', () => {
   test('should dispose children in post-order (leaf to root)', async () => {
     const disposalOrder: string[] = [];
     const root = new Root('root');
-    const child1 = new BaseNode('child1');
-    const child2 = new BaseNode('child2');
-    const grandChild1 = new BaseNode('grandchild1');
-    const grandChild2 = new BaseNode('grandchild2');
+    const child1 = new Node('child1');
+    const child2 = new Node('child2');
+    const grandChild1 = new Node('grandchild1');
+    const grandChild2 = new Node('grandchild2');
 
     root.addChild(child1);
     root.addChild(child2);
@@ -434,8 +434,8 @@ describe('BaseNode dispose', () => {
 
   test('should unregister all nodes from root when disposed', async () => {
     const root = new Root('root');
-    const child = new BaseNode('child');
-    const grandChild = new BaseNode('grandchild');
+    const child = new Node('child');
+    const grandChild = new Node('grandchild');
 
     root.addChild(child);
     child.addChild(grandChild);
@@ -453,7 +453,7 @@ describe('BaseNode dispose', () => {
 
   test('should emit dispose event', async () => {
     const root = new Root('root');
-    const child = new BaseNode('child');
+    const child = new Node('child');
     let disposeEmitted = false;
 
     root.addChild(child);
@@ -469,11 +469,11 @@ describe('BaseNode dispose', () => {
 
   test('should handle disposal of entire subtree', async () => {
     const root = new Root('root');
-    const parent = new BaseNode('parent');
-    const child1 = new BaseNode('child1');
-    const child2 = new BaseNode('child2');
-    const grandChild1 = new BaseNode('grandchild1');
-    const grandChild2 = new BaseNode('grandchild2');
+    const parent = new Node('parent');
+    const child1 = new Node('child1');
+    const child2 = new Node('child2');
+    const grandChild1 = new Node('grandchild1');
+    const grandChild2 = new Node('grandchild2');
 
     root.addChild(parent);
     parent.addChild(child1);
@@ -495,9 +495,9 @@ describe('BaseNode dispose', () => {
 
   test('should clear children set after disposal', async () => {
     const root = new Root('root');
-    const parent = new BaseNode('parent');
-    const child1 = new BaseNode('child1');
-    const child2 = new BaseNode('child2');
+    const parent = new Node('parent');
+    const child1 = new Node('child1');
+    const child2 = new Node('child2');
 
     root.addChild(parent);
     parent.addChild(child1);
@@ -511,7 +511,7 @@ describe('BaseNode dispose', () => {
   });
 
   test('should not fail when disposing node without parent', async () => {
-    const orphanNode = new BaseNode('orphan');
+    const orphanNode = new Node('orphan');
 
     // Should not throw any error
     await orphanNode.dispose();
@@ -520,7 +520,7 @@ describe('BaseNode dispose', () => {
 
   test('should handle name and tag cleanup on disposal', async () => {
     const root = new Root('root');
-    const child = new BaseNode('namedChild');
+    const child = new Node('namedChild');
     child.addTag('tag1');
     child.addTag('tag2');
 
@@ -535,5 +535,49 @@ describe('BaseNode dispose', () => {
     expect(root.findByName('namedChild').length).toBe(0);
     expect(root.findByTag('tag1').length).toBe(0);
     expect(root.findByTag('tag2').length).toBe(0);
+  });
+
+  test('should prevent operations after node has been disposed', async () => {
+    const root = new Root('root');
+    const node = new Node('node');
+    const child = new Node('child');
+
+    root.addChild(node);
+    node.addChild(child);
+
+    await node.dispose();
+
+    expect(node.isDisposed).toBe(true);
+
+    // Name change should throw
+    expect(() => {
+      // @ts-ignore - deliberately setting after dispose
+      node.name = 'newName';
+    }).toThrow();
+
+    // Add tag should throw
+    expect(() => node.addTag('shouldFail')).toThrow();
+
+    // Remove tag should throw
+    expect(() => node.removeTag('shouldFail')).toThrow();
+
+    // Clear tags should throw
+    expect(() => node.clearTags()).toThrow();
+
+    // Add child should throw
+    expect(() => node.addChild(new Node('newChild'))).toThrow();
+
+    // Remove child should throw
+    expect(() => node.removeChild(child)).toThrow();
+
+    // setEnabled should throw
+    expect(() => node.setEnabled(true)).toThrow();
+
+    // addPlugin should throw
+    class TestPlugin extends NodePlugin<Node> {
+      process() {}
+      dispose() {}
+    }
+    expect(() => node.addPlugin(new TestPlugin())).toThrow();
   });
 });

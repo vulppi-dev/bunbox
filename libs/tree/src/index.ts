@@ -53,6 +53,17 @@ export class Node<
   private __bindMap: Map<string, () => void> = new Map();
 
   /**
+   * Ensure node is not disposed before performing operations.
+   * Throw a meaningful error if the node is already disposed.
+   */
+  private __ensureNotDisposed(op?: string) {
+    if (this.isDisposed) {
+      const operation = op ? ` ${op}` : '';
+      throw new Error(`Cannot perform${operation} on a disposed node`);
+    }
+  }
+
+  /**
    * Create a new node.
    * @param name Optional initial name. When provided, the node is indexed by this name.
    */
@@ -97,6 +108,7 @@ export class Node<
    * Change the node name. Updates the name index and emits `rename`.
    */
   set name(value: string) {
+    this.__ensureNotDisposed('set name');
     if (this.__name === value) return;
 
     const oldName = this.__name;
@@ -146,11 +158,13 @@ export class Node<
 
   /** Enable this node. */
   enable(): this {
+    this.__ensureNotDisposed('enable');
     return this.setEnabled(true);
   }
 
   /** Disable this node. */
   disable(): this {
+    this.__ensureNotDisposed('disable');
     return this.setEnabled(false);
   }
 
@@ -160,6 +174,7 @@ export class Node<
    * Note: By design, the `enabled-change` event payload includes only the node itself.
    */
   setEnabled(value: boolean): this {
+    this.__ensureNotDisposed('setEnabled');
     if (this.__enabled === value) return this;
     this.__enabled = value;
     this.markAsDirty();
@@ -174,6 +189,7 @@ export class Node<
    * @returns This node for chaining.
    */
   override markAsDirty(): this {
+    this.__ensureNotDisposed('markAsDirty');
     const self = super.markAsDirty();
     (this as Node).emit('dirty-change', this as Node);
     return self;
@@ -186,6 +202,7 @@ export class Node<
    * @returns This node for chaining.
    */
   override markAsClean(): this {
+    this.__ensureNotDisposed('markAsClean');
     const self = super.markAsClean();
     (this as Node).emit('dirty-change', this as Node);
     return self;
@@ -199,6 +216,7 @@ export class Node<
    * @returns `true` if the tag was added, `false` if it already existed.
    */
   addTag(tag: string): boolean {
+    this.__ensureNotDisposed('addTag');
     if (!tag || this.__tags.has(tag)) return false;
 
     this.__tags.add(tag);
@@ -214,6 +232,7 @@ export class Node<
    * @returns `true` if the tag was removed, `false` if it didn't exist.
    */
   removeTag(tag: string): boolean {
+    this.__ensureNotDisposed('removeTag');
     if (!this.__tags.has(tag)) return false;
 
     this.__tags.delete(tag);
@@ -245,6 +264,7 @@ export class Node<
    * @returns The number of tags that were removed.
    */
   clearTags(): number {
+    this.__ensureNotDisposed('clearTags');
     const count = this.__tags.size;
     const tags = [...this.__tags];
 
@@ -272,6 +292,7 @@ export class Node<
    * @returns `true` when the child is attached or already present.
    */
   addChild(child: Node) {
+    this.__ensureNotDisposed('addChild');
     if (child === this) {
       throw new Error('Cannot add a node as a child of itself');
     }
@@ -280,6 +301,9 @@ export class Node<
     }
     if (child.__isAncestorOf(this as Node)) {
       throw new Error('Cannot add an ancestor as a child (cycle detected)');
+    }
+    if (child.isDisposed) {
+      throw new Error('Cannot add a disposed node as a child');
     }
 
     if (child.__parent) {
@@ -332,6 +356,7 @@ export class Node<
    * @returns `false` if the child was not attached, otherwise `true`.
    */
   removeChild(child: Node) {
+    this.__ensureNotDisposed('removeChild');
     if (!this.__children.has(child)) {
       return false;
     }
@@ -456,6 +481,7 @@ export class Node<
     const order = options?.order ?? 'pre';
     const ignoreType = options?.ignoreType;
 
+    this.__ensureNotDisposed('traverse');
     if (ignoreType && this instanceof ignoreType) return;
 
     if (!includeDisabled && !this.isEnabled) return;
@@ -480,6 +506,7 @@ export class Node<
    * @throws {EngineError} If plugin is already added
    */
   addPlugin(plugin: NodePlugin<this>): this {
+    this.__ensureNotDisposed('addPlugin');
     const index = this.__plugins.indexOf(plugin);
     if (!(plugin instanceof NodePlugin)) {
       throw new TypeError('Plugin must be an instance of NodePlugin');
@@ -500,6 +527,7 @@ export class Node<
    * @returns This node for chaining
    */
   removePlugin(plugin: NodePlugin<this>): this {
+    this.__ensureNotDisposed('removePlugin');
     const index = this.__plugins.indexOf(plugin);
     if (index === -1) {
       return this;
@@ -524,6 +552,7 @@ export class Node<
    * @returns This node for chaining
    */
   setPlugins(plugins: NodePlugin<this>[]): this {
+    this.__ensureNotDisposed('setPlugins');
     this.__plugins = [];
     for (const plugin of plugins) {
       this.addPlugin(plugin);
@@ -539,11 +568,12 @@ export class Node<
    *
    * @internal
    * @param delta - Time elapsed since last frame in milliseconds
+   * @param time - Time since start in milliseconds
    */
-  [PROCESS_EVENT](delta: number): void {
-    this._process(delta);
+  [PROCESS_EVENT](delta: number, time: number): void {
+    this._process(delta, time);
     for (const plugin of this.__plugins) {
-      if (plugin.enabled) plugin.process(this, delta);
+      if (plugin.enabled) plugin.process(this, delta, time);
     }
   }
 
@@ -553,6 +583,7 @@ export class Node<
    * Called every frame before plugins are processed.
    *
    * @param _delta - Time elapsed since last frame in milliseconds
+   * @param _time - Time since start in milliseconds
    *
    * @example
    * ```ts
@@ -561,7 +592,7 @@ export class Node<
    * }
    * ```
    */
-  protected _process(_delta: number): void {
+  protected _process(_delta: number, _time: number): void {
     // Emit process event for plugins
   }
 }
@@ -665,11 +696,11 @@ export class Root<
    *
    * @example
    * ```ts
-   * const node1 = new BaseNode();
+   * const node1 = new Node();
    * node1.addTag('enemy');
    * node1.addTag('flying');
    *
-   * const node2 = new BaseNode();
+   * const node2 = new Node();
    * node2.addTag('enemy');
    *
    * root.findByTags('enemy', 'flying'); // Returns [node1] only
@@ -830,9 +861,15 @@ export class Root<
     }
   }
 
-  protected _processNodes(delta: number): void {
+  /**
+   * Recursively process all nodes in the tree.
+   *
+   * @param delta
+   * @param time
+   */
+  protected _processNodes(delta: number, time: number): void {
     this.traverse((node) => {
-      node[PROCESS_EVENT](delta);
+      node[PROCESS_EVENT](delta, time);
     });
   }
 }
@@ -878,8 +915,9 @@ export abstract class NodePlugin<Target extends Node> {
    *
    * @param target - The node this plugin is attached to
    * @param delta - Time elapsed since last frame in milliseconds
+   * @param time - Time since start in milliseconds
    */
-  abstract process(target: Target, delta: number): void;
+  abstract process(target: Target, delta: number, time: number): void;
 
   /**
    * Called when the plugin is removed or the node is disposed.

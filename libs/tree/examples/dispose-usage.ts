@@ -1,4 +1,4 @@
-import { BaseNode, Root } from '../src/index';
+import { Node, Root } from '../src/index';
 
 /**
  * Example demonstrating the dispose functionality of the tree system.
@@ -13,11 +13,11 @@ import { BaseNode, Root } from '../src/index';
 async function main() {
   // Create a tree structure
   const root = new Root('GameWorld');
-  const level = new BaseNode('Level1');
-  const player = new BaseNode('Player');
-  const enemy1 = new BaseNode('Enemy1');
-  const enemy2 = new BaseNode('Enemy2');
-  const weapon = new BaseNode('Weapon');
+  const level = new Node('Level1');
+  const player = new Node('Player');
+  const enemy1 = new Node('Enemy1');
+  const enemy2 = new Node('Enemy2');
+  const weapon = new Node('Weapon');
 
   // Build the hierarchy
   root.addChild(level);

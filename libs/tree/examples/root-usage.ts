@@ -1,13 +1,13 @@
-import { BaseNode, Root } from '../src/index';
+import { Node, Root } from '../src/index';
 
 // Create a Root node that will manage all indices
 const scene = new Root('MainScene');
 
 // Create nodes
-const camera = new BaseNode('camera');
-const player = new BaseNode('player');
-const enemy1 = new BaseNode('enemy');
-const enemy2 = new BaseNode('enemy');
+const camera = new Node('camera');
+const player = new Node('player');
+const enemy1 = new Node('enemy');
+const enemy2 = new Node('enemy');
 
 // Build the tree
 scene.addChild(camera);

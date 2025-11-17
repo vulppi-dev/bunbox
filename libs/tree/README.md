@@ -30,15 +30,15 @@ Requirements:
 ## Quick Start
 
 ```typescript
-import { BaseNode, Root } from '@bunbox/tree';
+import { Node, Root } from '@bunbox/tree';
 
 // Create a Root to manage the tree indices
 const scene = new Root('MainScene');
 
 // Create nodes
-const camera = new BaseNode('camera');
-const player = new BaseNode('player');
-const enemy = new BaseNode('enemy');
+const camera = new Node('camera');
+const player = new Node('player');
+const enemy = new Node('enemy');
 
 // Build the tree
 scene.addChild(camera);
@@ -57,7 +57,7 @@ console.log(enemies.length); // 1
 
 ## API Reference
 
-### `BaseNode<P, M, T>`
+### `Node<P, M, T>`
 
 Base class for all tree nodes.
 
@@ -69,27 +69,27 @@ Base class for all tree nodes.
 
 **Properties:**
 
-| Property     | Type                  | Description                 |
-| ------------ | --------------------- | --------------------------- |
-| `id`         | `string`              | Unique identifier (ULID)    |
-| `name`       | `string`              | Node name (indexed by Root) |
-| `parent`     | `BaseNode \| null`    | Parent node                 |
-| `children`   | `readonly BaseNode[]` | Read-only array of children |
-| `properties` | `P`                   | Reactive properties bag     |
-| `metadata`   | `Partial<M>`          | Non-reactive metadata       |
-| `isEnabled`  | `boolean`             | Whether node is enabled     |
+| Property     | Type              | Description                 |
+| ------------ | ----------------- | --------------------------- |
+| `id`         | `string`          | Unique identifier (ULID)    |
+| `name`       | `string`          | Node name (indexed by Root) |
+| `parent`     | `Node \| null`    | Parent node                 |
+| `children`   | `readonly Node[]` | Read-only array of children |
+| `properties` | `P`               | Reactive properties bag     |
+| `metadata`   | `Partial<M>`      | Non-reactive metadata       |
+| `isEnabled`  | `boolean`         | Whether node is enabled     |
 
 **Methods:**
 
 ```typescript
 // Structural
-addChild(child: BaseNode): boolean
-removeChild(child: BaseNode): boolean
+addChild(child: Node): boolean
+removeChild(child: Node): boolean
 
 // Lookup (delegates to Root if in tree)
-getById(id: string): BaseNode | null
-findByName(name: string): BaseNode[]
-getRoot(): BaseNode | Root
+getById(id: string): Node | null
+findByName(name: string): Node[]
+getRoot(): Node | Root
 
 // State
 enable(): this
@@ -98,7 +98,7 @@ setEnabled(enabled: boolean): this
 
 // Traversal
 traverse(
-  visitor: (node: BaseNode) => void,
+  visitor: (node: Node) => void,
   options?: {
     includeDisabled?: boolean;
     order?: 'pre' | 'post';
@@ -112,14 +112,14 @@ protected _ready(): void
 
 **Events:**
 
-- `add-child: [child: BaseNode]` - Emitted when a child is added
-- `remove-child: [child: BaseNode]` - Emitted when a child is removed
-- `rename: [node: BaseNode, oldName: string, newName: string]` - Emitted when a node is renamed
-- `enabled-change: [node: BaseNode]` - Emitted when enabled state changes
+- `add-child: [child: Node]` - Emitted when a child is added
+- `remove-child: [child: Node]` - Emitted when a child is removed
+- `rename: [node: Node, oldName: string, newName: string]` - Emitted when a node is renamed
+- `enabled-change: [node: Node]` - Emitted when enabled state changes
 
 ### `Root<P, M, T>`
 
-Extends `BaseNode` and manages global indices for all nodes in the tree.
+Extends `Node` and manages global indices for all nodes in the tree.
 
 **Additional Properties:**
 
@@ -131,13 +131,13 @@ Extends `BaseNode` and manages global indices for all nodes in the tree.
 
 ```typescript
 // Index management (public for internal use)
-_registerNode(node: BaseNode): void
-_unregisterNode(node: BaseNode): void
-_updateNodeName(node: BaseNode, oldName: string, newName: string): void
+_registerNode(node: Node): void
+_unregisterNode(node: Node): void
+_updateNodeName(node: Node, oldName: string, newName: string): void
 
 // Query methods
-getById(id: string): BaseNode | null  // Overrides BaseNode
-findByName(name: string): BaseNode[]  // Overrides BaseNode
+getById(id: string): Node | null  // Overrides Node
+findByName(name: string): Node[]  // Overrides Node
 getAllIds(): string[]
 getAllNames(): string[]
 ```
@@ -147,11 +147,11 @@ getAllNames(): string[]
 ### Basic Tree Structure
 
 ```typescript
-import { BaseNode, Root } from '@bunbox/tree';
+import { Node, Root } from '@bunbox/tree';
 
 const root = new Root('app');
-const node1 = new BaseNode('node1');
-const node2 = new BaseNode('node2');
+const node1 = new Node('node1');
+const node2 = new Node('node2');
 
 root.addChild(node1);
 root.addChild(node2);
@@ -168,7 +168,7 @@ interface PlayerProps {
   position: { x: number; y: number };
 }
 
-const player = new BaseNode<PlayerProps>('player');
+const player = new Node<PlayerProps>('player');
 
 // Setting properties marks the node as dirty
 player.properties.health = 100;
@@ -183,10 +183,10 @@ console.log(player.isDirty); // false
 
 ```typescript
 const scene = new Root('scene');
-const camera = new BaseNode('camera');
-const player = new BaseNode('player');
-const enemy1 = new BaseNode('enemy');
-const enemy2 = new BaseNode('enemy');
+const camera = new Node('camera');
+const player = new Node('player');
+const enemy1 = new Node('enemy');
+const enemy2 = new Node('enemy');
 
 scene.addChild(camera);
 scene.addChild(player);
@@ -208,9 +208,9 @@ console.log(scene.nodeCount); // 5
 
 ```typescript
 const root = new Root('root');
-const child1 = new BaseNode('child1');
-const child2 = new BaseNode('child2');
-const grandChild = new BaseNode('grandchild');
+const child1 = new Node('child1');
+const child2 = new Node('child2');
+const grandChild = new Node('grandchild');
 
 root.addChild(child1);
 root.addChild(child2);
@@ -236,8 +236,8 @@ root.traverse(
 
 ```typescript
 const root = new Root('root');
-const enabled = new BaseNode('enabled');
-const disabled = new BaseNode('disabled');
+const enabled = new Node('enabled');
+const disabled = new Node('disabled');
 
 root.addChild(enabled);
 root.addChild(disabled);
@@ -263,7 +263,7 @@ root.traverse(
 
 ```typescript
 const root = new Root('root');
-const child = new BaseNode('child');
+const child = new Node('child');
 
 // Listen to add-child events
 root.on('add-child', (addedChild) => {
@@ -289,9 +289,9 @@ child.name = 'newName';
 
 ```typescript
 const root = new Root('root');
-const parent1 = new BaseNode('parent1');
-const parent2 = new BaseNode('parent2');
-const child = new BaseNode('child');
+const parent1 = new Node('parent1');
+const parent2 = new Node('parent2');
+const child = new Node('child');
 
 root.addChild(parent1);
 root.addChild(parent2);

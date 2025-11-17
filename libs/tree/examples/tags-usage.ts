@@ -1,15 +1,15 @@
-import { BaseNode, Root } from '../src/index';
+import { Node, Root } from '../src/index';
 
 // Create a scene with Root
 const scene = new Root('GameScene');
 
 // Create game entities
-const player = new BaseNode('player');
-const enemy1 = new BaseNode('goblin');
-const enemy2 = new BaseNode('orc');
-const enemy3 = new BaseNode('dragon');
-const npc1 = new BaseNode('merchant');
-const npc2 = new BaseNode('guard');
+const player = new Node('player');
+const enemy1 = new Node('goblin');
+const enemy2 = new Node('orc');
+const enemy3 = new Node('dragon');
+const npc1 = new Node('merchant');
+const npc2 = new Node('guard');
 
 // Add tags to entities
 player.addTag('player');
