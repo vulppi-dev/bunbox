@@ -1,12 +1,15 @@
 import type { Disposable } from '@bunbox/utils';
-import type { ComponentProps, ComponentType } from './Component';
 import { ulid } from 'ulid';
-import type { Window } from './Window';
 import { EngineError } from '../errors';
+import type { AssetsStorage } from './AssetsStorage';
+import {
+  isComponentType,
+  type ComponentProps,
+  type ComponentType,
+} from './Component';
+import type { VkCommandBuffer } from './vulkan/VkCommandBuffer';
 import type { VkDevice } from './vulkan/VkDevice';
 import type { VkSwapchain } from './vulkan/VkSwapchain';
-import type { VkCommandBuffer } from './vulkan/VkCommandBuffer';
-import type { AssetsStorage } from './AssetsStorage';
 
 export type Entity = string & { __entityBrand: never };
 
@@ -96,9 +99,16 @@ export class World implements Disposable {
     return this.__disposed;
   }
 
+  createEntity(): Entity {
+    return ulid() as Entity;
+  }
+
   getStore<T extends ComponentProps>(
     component: ComponentType<T>,
   ): Map<Entity, T> {
+    if (isComponentType(component) === false) {
+      throw new EngineError('Invalid component type', 'World');
+    }
     let store = this.__stores.get(component.id);
     if (!store) {
       store = new Map<Entity, T>();
@@ -110,13 +120,13 @@ export class World implements Disposable {
   addComponent<T extends ComponentProps>(
     entity: Entity,
     component: ComponentType<T>,
-    props: T,
+    props?: Partial<T>,
   ): void {
     if (this.__lockLoop) {
       throw new EngineError('Cannot add component during frame loop', 'World');
     }
     const store = this.getStore(component);
-    store.set(entity, props);
+    store.set(entity, Object.assign(component.props(), props));
   }
 
   removeComponent<T extends ComponentProps>(

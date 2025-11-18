@@ -9,13 +9,10 @@ import {
 import type { Disposable } from '@bunbox/utils';
 import {
   getResultMessage,
-  makeVersion,
   VK,
   VK_TRUE,
-  vkApplicationInfo,
   vkDeviceCreateInfo,
   vkDeviceQueueCreateInfo,
-  vkInstanceCreateInfo,
   vkLayerProperties,
   vkMetalSurfaceCreateInfoEXT,
   vkPhysicalDeviceFeatures,
@@ -30,72 +27,10 @@ import {
   vkWin32SurfaceCreateInfoKHR,
   vkXlibSurfaceCreateInfoKHR,
 } from '@bunbox/vk';
-import { cc, ptr, type Pointer } from 'bun:ffi';
-import { mkdtempSync, writeFileSync } from 'fs';
-import { tmpdir } from 'os';
-import { join } from 'path';
+import { ptr, type Pointer } from 'bun:ffi';
 import { DynamicLibError } from '../../errors';
-import {
-  decreaseCounter,
-  getCounter,
-  increaseCounter,
-} from '../../global/counter';
 import { VK_DEBUG } from '../../singleton/logger';
 import { cstr, undoCstr } from '../../utils/buffer';
-import { getEnv } from '../../utils/env';
-
-const tempCC = join(
-  mkdtempSync(join(tmpdir(), 'bunbox-vk-instance-extensions-')),
-  'instanceExtensions.c',
-);
-writeFileSync(
-  tempCC,
-  /* C */ `
-int instanceExtensions(const char * const **extensions) {
-  static const char * const list[] = {
-    "VK_KHR_surface",
-    "VK_KHR_win32_surface",
-    "VK_EXT_swapchain_colorspace",
-    "VK_EXT_debug_utils"
-  };
-
-  *extensions = list;
-  return (int)(sizeof list / sizeof list[0]);
-}
-
-int instanceExtensionsDarwin(const char * const **extensions) {
-   static const char * const list[] = {
-    "VK_KHR_surface",
-    "VK_KHR_win32_surface",
-    "VK_EXT_swapchain_colorspace",
-    "VK_EXT_debug_utils"
-    "VK_KHR_portability_enumeration",
-    "VK_KHR_portability_subset"
-  };
-
-  *extensions = list;
-  return (int)(sizeof list / sizeof list[0]);
-}
-`,
-);
-
-const { symbols: CC, close: closeCC } = cc({
-  source: tempCC,
-  symbols: {
-    instanceExtensions: {
-      args: ['ptr'],
-      returns: 'i32',
-    },
-    instanceExtensionsDarwin: {
-      args: ['ptr'],
-      returns: 'i32',
-    },
-  },
-});
-
-process.on('beforeExit', () => {
-  closeCC();
-});
 
 const VALIDATION_DEVICE_EXTENSIONS = [
   'VK_KHR_swapchain',
@@ -115,54 +50,7 @@ type PhysicalDeviceProps = {
 };
 
 export class VkDevice implements Disposable {
-  private static __instance: Pointer | null = null;
-
-  private static __createInstance() {
-    if (VkDevice.__instance) return;
-
-    const extensionsPtr = new BigUint64Array(1);
-    const extensionCount =
-      process.platform === 'darwin'
-        ? CC.instanceExtensionsDarwin(ptr(extensionsPtr))
-        : CC.instanceExtensions(ptr(extensionsPtr));
-
-    const appInfo = instantiate(vkApplicationInfo);
-    appInfo.pApplicationName = getEnv('APP_NAME', 'Bunbox App');
-    appInfo.applicationVersion = Number(getEnv('APP_VERSION', '1'));
-    appInfo.pEngineName = 'Bunbox Engine';
-    appInfo.engineVersion = 1;
-    appInfo.apiVersion = makeVersion(1, 4, 0);
-
-    const createInfo = instantiate(vkInstanceCreateInfo);
-    createInfo.pApplicationInfo = BigInt(ptr(getInstanceBuffer(appInfo)));
-    createInfo.enabledExtensionCount = extensionCount;
-    createInfo.ppEnabledExtensionNames = extensionsPtr[0]!;
-    createInfo.enabledLayerCount = 0;
-    createInfo.ppEnabledLayerNames = 0n;
-
-    const pointerHolder = new BigUint64Array(1);
-    const result = VK.vkCreateInstance(
-      ptr(getInstanceBuffer(createInfo)),
-      null,
-      ptr(pointerHolder),
-    );
-
-    if (result !== VkResult.SUCCESS) {
-      throw new DynamicLibError(getResultMessage(result), 'Vulkan');
-    }
-    VkDevice.__instance = Number(pointerHolder[0]!) as Pointer;
-  }
-
-  private static __destroyInstance() {
-    if (!VkDevice.__instance) return;
-
-    VK.vkDestroyInstance(VkDevice.__instance, null);
-    VK_DEBUG('Destroyed Vulkan instance');
-    VkDevice.__instance = null;
-  }
-
-  // MARK: Instance Properties
-
+  private __vkInstance: Pointer;
   private __nativeWindow: bigint;
   private __display: bigint;
   private __surface: bigint = 0n;
@@ -173,16 +61,14 @@ export class VkDevice implements Disposable {
   private __physicalDevice: Pointer | null = null;
   private __physicalDeviceProperties: PhysicalDeviceProps | null = null;
 
-  constructor(nativeWindow: bigint, display: bigint) {
+  constructor(vkInstance: Pointer, nativeWindow: bigint, display: bigint) {
+    this.__vkInstance = vkInstance;
     this.__nativeWindow = nativeWindow;
     this.__display = display;
 
-    VkDevice.__createInstance();
     this.__createSurface();
     this.__pickPhysicalDevice();
     this.__createLogicalDevice();
-
-    increaseCounter('VkDevice');
   }
 
   get physicalDevice() {
@@ -206,21 +92,15 @@ export class VkDevice implements Disposable {
   }
 
   dispose() {
-    decreaseCounter('VkDevice');
     if (this.__logicalDevice) {
       VK.vkDestroyDevice(this.__logicalDevice, null);
       VK_DEBUG('Logical device destroyed');
       this.__logicalDevice = null;
     }
     if (this.__surface) {
-      VK.vkDestroySurfaceKHR(VkDevice.__instance!, this.__surface, null);
+      VK.vkDestroySurfaceKHR(this.__vkInstance, this.__surface, null);
       this.__surface = 0n;
       VK_DEBUG(`Destroyed VkSurfaceKHR for VkDevice`);
-    }
-
-    if (!getCounter('VkDevice')) {
-      VK_DEBUG(`No more VkDevice instances, cleaning up Vulkan instance`);
-      VkDevice.__destroyInstance();
     }
   }
 
@@ -301,7 +181,7 @@ export class VkDevice implements Disposable {
   }
 
   private __createSurface() {
-    if (!VkDevice.__instance) return;
+    if (!this.__vkInstance) return;
 
     const surfacePtr = new BigUint64Array(1);
     let result: number;
@@ -312,7 +192,7 @@ export class VkDevice implements Disposable {
       createInfo.hwnd = this.__nativeWindow;
 
       result = VK.vkCreateWin32SurfaceKHR(
-        VkDevice.__instance,
+        this.__vkInstance,
         ptr(getInstanceBuffer(createInfo)),
         null,
         ptr(surfacePtr),
@@ -324,7 +204,7 @@ export class VkDevice implements Disposable {
         createInfo.surface = this.__nativeWindow;
 
         result = VK.vkCreateWaylandSurfaceKHR(
-          VkDevice.__instance,
+          this.__vkInstance,
           ptr(getInstanceBuffer(createInfo)),
           null,
           ptr(surfacePtr),
@@ -335,7 +215,7 @@ export class VkDevice implements Disposable {
         createInfo.window = this.__nativeWindow;
 
         result = VK.vkCreateXlibSurfaceKHR(
-          VkDevice.__instance,
+          this.__vkInstance,
           ptr(getInstanceBuffer(createInfo)),
           null,
           ptr(surfacePtr),
@@ -346,7 +226,7 @@ export class VkDevice implements Disposable {
       createInfo.pLayer = this.__nativeWindow;
 
       result = VK.vkCreateMetalSurfaceEXT(
-        VkDevice.__instance,
+        this.__vkInstance,
         ptr(getInstanceBuffer(createInfo)),
         null,
         ptr(surfacePtr),
@@ -365,10 +245,10 @@ export class VkDevice implements Disposable {
   }
 
   private __pickPhysicalDevice() {
-    if (!VkDevice.__instance) return;
+    if (!this.__vkInstance) return;
 
     const count = new Uint32Array(1);
-    VK.vkEnumeratePhysicalDevices(VkDevice.__instance, ptr(count), null);
+    VK.vkEnumeratePhysicalDevices(this.__vkInstance, ptr(count), null);
 
     if (!count[0]) {
       throw new DynamicLibError(
@@ -379,7 +259,7 @@ export class VkDevice implements Disposable {
     VK_DEBUG(`Device count: ${count[0]!}`);
     const devices = new BigUint64Array(count[0]!);
     const result = VK.vkEnumeratePhysicalDevices(
-      VkDevice.__instance,
+      this.__vkInstance,
       ptr(count),
       ptr(devices),
     );

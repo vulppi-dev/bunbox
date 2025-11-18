@@ -11,7 +11,7 @@ import type {
   MaterialSchema,
   ConstantProperties,
   MutableProperties,
-  ShaderSources,
+  string,
   ShaderEntries,
 } from './MaterialSchema';
 import { validateSchema } from './MaterialSchema';
@@ -27,7 +27,7 @@ export class Material<
   TSchema extends MaterialSchema = MaterialSchema,
 > extends DirtyState {
   private __label: string;
-  private __shader: ShaderSources;
+  private __shader: string;
   private __entries: ShaderEntries;
   private __primitive: MaterialPrimitive;
   private __rasterizer: Rasterizer;
@@ -106,7 +106,7 @@ export class Material<
     return this.__label;
   }
 
-  get shader(): ShaderSources {
+  get shader(): string {
     return this.__shader;
   }
 

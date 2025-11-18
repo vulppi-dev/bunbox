@@ -15,11 +15,6 @@ import type { Rasterizer } from '../resources/Rasterizer';
 export type ShaderStage = 'vertex' | 'fragment';
 
 /**
- * Shader sources - can be a single string or per-stage definitions
- */
-export type ShaderSources = string | { [x in ShaderStage]: string };
-
-/**
  * Shader entry points - defines entry function names per stage
  */
 export type ShaderEntries = { [x in ShaderStage]: string };
@@ -56,7 +51,7 @@ export type MaterialDescriptor<
   /** Optional label for debugging */
   label?: string;
   /** Shader source code (WGSL, GLSL, etc.) - can be a single string or per-stage */
-  shader: ShaderSources;
+  shader: string;
   /** Shader entry point function names per stage */
   entries: ShaderEntries;
   /** Primitive topology */

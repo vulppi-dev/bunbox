@@ -7,12 +7,12 @@ export type ComponentProps = { [x: string | symbol]: any };
 export type ComponentType<T extends ComponentProps> = {
   id: string;
   name: string;
-  props: T;
+  props: () => T;
 };
 
 export function defineComponent<T extends ComponentProps>(
   name: string,
-  initialProps: T,
+  initialProps: () => T,
 ): ComponentType<T> {
   const comp = {
     id: ulid(),
