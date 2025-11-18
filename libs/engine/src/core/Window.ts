@@ -22,12 +22,12 @@ import { WindowEvent } from '../events';
 import { GLFW_DEBUG } from '../singleton/logger';
 import { buildCallback, cstr, pointerCopyBuffer } from '../utils/buffer';
 import type { EngineContext } from './EngineContext';
-import type { Scene } from './Scene';
 import {
-  CONTEXT_attachWindowScene,
+  CONTEXT_attachWindowWorld,
   CONTEXT_disposeWindowResources,
   CONTEXT_rebuildWindowResources,
 } from './_symbols';
+import type { World } from './World';
 
 export type WindowState =
   | 'minimized'
@@ -72,6 +72,7 @@ export class Window extends EventEmitter<WindowEventMap> {
   private __monitorPtr: Pointer | null = null;
 
   private __context: EngineContext;
+  private __world: World | null = null;
 
   private __title: string;
   private __x: number = 0;
@@ -93,8 +94,6 @@ export class Window extends EventEmitter<WindowEventMap> {
   private __isFocused: boolean = false;
   private __isVisible: boolean = true;
   private __state: WindowState = 'windowed';
-
-  private __scene: Scene | null = null;
 
   private __i32_aux1: Int32Array = new Int32Array(1);
   private __i32_aux2: Int32Array = new Int32Array(1);
@@ -265,11 +264,6 @@ export class Window extends EventEmitter<WindowEventMap> {
     return this.__state;
   }
 
-  /** Background color of the window. */
-  get scene(): Scene | null {
-    return this.__scene;
-  }
-
   set title(value: string) {
     this.__title = value;
     if (this.__window)
@@ -314,11 +308,6 @@ export class Window extends EventEmitter<WindowEventMap> {
     }
   }
 
-  set scene(value: Scene | null) {
-    this.__scene = value;
-    this.__context[CONTEXT_attachWindowScene](this.__windowNative, value);
-  }
-
   override async dispose(): Promise<void> {
     await super.dispose();
 
@@ -328,6 +317,17 @@ export class Window extends EventEmitter<WindowEventMap> {
 
     this.__disposeCallbacks?.();
     GLFW.glfwDestroyWindow(this.__window);
+  }
+
+  setWorld(world: World) {
+    if (world.isDisposed)
+      throw new WindowError('Cannot set disposed world to window', this.__id);
+    this.__world = world;
+    this.__context[CONTEXT_attachWindowWorld](this.__windowNative, world);
+  }
+
+  getWorld(): World | null {
+    return this.__world;
   }
 
   setPos(x: number, y: number) {

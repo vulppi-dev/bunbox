@@ -23,8 +23,7 @@ import { getEnv } from '../utils/env';
 import { AssetsStorage } from './AssetsStorage';
 import type { Scene } from './Scene';
 import {
-  CONTEXT_attachWindowScene,
-  CONTEXT_beginFrame,
+  CONTEXT_attachWindowWorld,
   CONTEXT_disposeWindowResources,
   CONTEXT_rebuildWindowResources,
 } from './_symbols';
@@ -33,6 +32,7 @@ import { VkCommandPool } from './vulkan/VkCommandPool';
 import { VkDevice } from './vulkan/VkDevice';
 import { VkSwapchain } from './vulkan/VkSwapchain';
 import { VkSync } from './vulkan/VkSync';
+import { FRAME_LOOP, type World } from './World';
 
 // Setup struct pointer/string conversions globally
 setupStruct({
@@ -226,7 +226,7 @@ export class EngineContext implements Disposable {
   }
 
   private __windowsPack: Map<bigint, WindowPack> = new Map();
-  private __windowsScenes: Map<bigint, Scene> = new Map();
+  private __windowsWorlds: Map<bigint, World> = new Map();
   private __windowsFrameIndices: Map<bigint, number> = new Map();
 
   private __assetsStore = new AssetsStorage();
@@ -258,11 +258,11 @@ export class EngineContext implements Disposable {
     }
   }
 
-  [CONTEXT_attachWindowScene](window: bigint, scene: Scene | null): void {
-    // TODO: transition scene system in future
+  [CONTEXT_attachWindowWorld](window: bigint, world: World | null): void {
+    // TODO: transition world system in future
 
-    if (scene) this.__windowsScenes.set(window, scene);
-    else this.__windowsScenes.delete(window);
+    if (world) this.__windowsWorlds.set(window, world);
+    else this.__windowsWorlds.delete(window);
   }
 
   [CONTEXT_rebuildWindowResources](
@@ -346,15 +346,14 @@ export class EngineContext implements Disposable {
   }
 
   private __triggerProcessStack(delta: number, time: number) {
-    for (const [window, scene] of this.__windowsScenes.entries()) {
+    for (const [window, world] of this.__windowsWorlds.entries()) {
       const pack = this.__windowsPack.get(window);
       if (
         !pack ||
         !pack.device ||
         !pack.swapchain ||
         !pack.sync ||
-        !pack.commandBuffers ||
-        !scene
+        !pack.commandBuffers
       ) {
         continue;
       }
@@ -385,14 +384,17 @@ export class EngineContext implements Disposable {
       pack.sync.resetFence(frameIndex);
       const commandBuffer = pack.commandBuffers[frameIndex]!;
 
-      scene.render(
-        pack.device,
-        pack.swapchain,
-        commandBuffer,
-        imageIndex,
-        this.__assetsStore,
-        delta,
+      world?.[FRAME_LOOP](
+        window,
+        {
+          device: pack.device,
+          swapchain: pack.swapchain,
+          commandBuffer,
+          imageIndex,
+          assetsStore: this.__assetsStore,
+        },
         time,
+        delta,
       );
 
       const signal = this.__submit(

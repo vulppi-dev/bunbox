@@ -32,7 +32,6 @@ export abstract class Light extends Node3D {
   private __color: Color = new Color(1, 1, 1, 1);
   private __intensity: number = 1.0;
   private __castShadows: boolean = false;
-  private __enabled: boolean = true;
 
   /**
    * Get the light type identifier.
@@ -82,17 +81,6 @@ export abstract class Light extends Node3D {
   }
 
   /**
-   * Whether this light is active.
-   *
-   * Disabled lights don't contribute to scene lighting.
-   *
-   * Default: true
-   */
-  get enabled(): boolean {
-    return this.__enabled;
-  }
-
-  /**
    * Set light color.
    *
    * @param value - New color (RGB)
@@ -120,16 +108,6 @@ export abstract class Light extends Node3D {
    */
   set castShadows(value: boolean) {
     this.__castShadows = value;
-    this.markAsDirty();
-  }
-
-  /**
-   * Enable or disable this light.
-   *
-   * @param value - True to enable
-   */
-  set enabled(value: boolean) {
-    this.__enabled = value;
     this.markAsDirty();
   }
 

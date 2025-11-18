@@ -202,4 +202,15 @@ export class Node3D<
       this.__rotationQ?.markAsClean();
     }
   }
+
+  override get isDirty(): boolean {
+    return super.isDirty || this.__matrix.isDirty || this.__layer.isDirty;
+  }
+
+  override markAsClean(): this {
+    super.markAsClean();
+    this.__matrix.markAsClean();
+    this.__layer.markAsClean();
+    return this;
+  }
 }

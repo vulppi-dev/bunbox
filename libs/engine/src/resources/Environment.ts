@@ -193,34 +193,42 @@ export class Environment extends DirtyState {
 
   set ambientIntensity(value: number) {
     this.__ambientIntensity = Math.max(0, value);
+    this.markAsDirty();
   }
 
   set shadowConfig(value: ShadowConfig) {
     this.__shadowConfig = value;
+    this.markAsDirty();
   }
 
   set skybox(value: TexturePointer | null) {
     this.__skybox = value;
+    this.markAsDirty();
   }
 
   set enableFog(value: boolean) {
     this.__enableFog = value;
+    this.markAsDirty();
   }
 
   set fogStart(value: number) {
     this.__fogStart = Math.max(0, value);
+    this.markAsDirty();
   }
 
   set fogEnd(value: number) {
     this.__fogEnd = Math.max(this.__fogStart, value);
+    this.markAsDirty();
   }
 
   set fogDensity(value: number) {
     this.__fogDensity = Math.max(0, value);
+    this.markAsDirty();
   }
 
   set exposure(value: number) {
     this.__exposure = Math.max(0.001, value);
+    this.markAsDirty();
   }
 
   /**
