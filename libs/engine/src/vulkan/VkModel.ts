@@ -1,5 +1,5 @@
 import type { Disposable } from '@bunbox/utils';
-import { VK_DEBUG } from '../../singleton/logger';
+import { VK_DEBUG } from '../singleton/logger';
 import type { VkCommandBuffer } from './VkCommandBuffer';
 import type { VkGeometry } from './VkGeometry';
 

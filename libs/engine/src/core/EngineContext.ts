@@ -20,19 +20,20 @@ import { EngineError, RenderError } from '../errors';
 import { GLFW_DEBUG, VK_DEBUG } from '../singleton/logger';
 import { buildCallback, cstr } from '../utils/buffer';
 import { getEnv } from '../utils/env';
+import {
+  VkCommandBuffer,
+  VkCommandPool,
+  VkDevice,
+  VkSwapchain,
+  VkSync,
+} from '../vulkan';
 import { AssetsStorage } from './AssetsStorage';
-import type { Scene } from './Scene';
+import { FRAME_LOOP, type World } from './World';
 import {
   CONTEXT_attachWindowWorld,
   CONTEXT_disposeWindowResources,
   CONTEXT_rebuildWindowResources,
 } from './_symbols';
-import { VkCommandBuffer } from './vulkan/VkCommandBuffer';
-import { VkCommandPool } from './vulkan/VkCommandPool';
-import { VkDevice } from './vulkan/VkDevice';
-import { VkSwapchain } from './vulkan/VkSwapchain';
-import { VkSync } from './vulkan/VkSync';
-import { FRAME_LOOP, type World } from './World';
 
 // Setup struct pointer/string conversions globally
 setupStruct({
@@ -229,7 +230,7 @@ export class EngineContext implements Disposable {
   private __windowsWorlds: Map<bigint, World> = new Map();
   private __windowsFrameIndices: Map<bigint, number> = new Map();
 
-  private __assetsStore = new AssetsStorage();
+  private __assetsStorage = new AssetsStorage();
 
   // Aux holders
   private __imageIndexHolder = new Uint32Array(1);
@@ -274,7 +275,7 @@ export class EngineContext implements Disposable {
     let pack = this.__windowsPack.get(window);
     if (!pack) {
       pack = {
-        device: new VkDevice(window, display),
+        device: new VkDevice(EngineContext.__vulkanInstance!, window, display),
       };
       this.__windowsPack.set(window, pack);
       this.__windowsFrameIndices.set(window, 0);
@@ -391,8 +392,8 @@ export class EngineContext implements Disposable {
           swapchain: pack.swapchain,
           commandBuffer,
           imageIndex,
-          assetsStore: this.__assetsStore,
         },
+        this.__assetsStorage,
         time,
         delta,
       );

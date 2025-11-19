@@ -17,12 +17,12 @@ import {
   VkCommandBufferUsageFlagBits,
 } from '@bunbox/vk';
 import { ptr, type Pointer } from 'bun:ffi';
-import { DynamicLibError } from '../../errors';
-import { Color } from '../../math/Color';
-import { Rect } from '../../math/Rect';
-import { VK_DEBUG } from '../../singleton/logger';
+import { DynamicLibError } from '../errors';
+import { Color } from '../math/Color';
+import { Rect } from '../math/Rect';
+import { VK_DEBUG } from '../singleton/logger';
 import type { VkBuffer } from './VkBuffer';
-import type { Cube } from '../../math';
+import type { Cube } from '../math';
 
 /**
  * Wrapper for Vulkan VkCommandBuffer

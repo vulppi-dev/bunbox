@@ -1,7 +1,7 @@
 import type { Disposable } from '@bunbox/utils';
 import type { Pointer } from 'bun:ffi';
-import type { Geometry } from '../../resources/Geometry';
-import { VK_DEBUG } from '../../singleton/logger';
+import type { Geometry } from '../resources/Geometry';
+import { VK_DEBUG } from '../singleton/logger';
 import { VkBuffer } from './VkBuffer';
 
 /**

@@ -31,6 +31,16 @@ export abstract class Calculable<N extends number = 1>
     return clone;
   }
 
+  equals(other: this): boolean {
+    const a = this.toArray() as Array<number>;
+    const b = other.toArray() as Array<number>;
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i += 1) {
+      if (a[i] !== b[i]) return false;
+    }
+    return true;
+  }
+
   override valueOf() {
     return this.length();
   }

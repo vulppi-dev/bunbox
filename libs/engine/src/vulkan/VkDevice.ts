@@ -28,9 +28,9 @@ import {
   vkXlibSurfaceCreateInfoKHR,
 } from '@bunbox/vk';
 import { ptr, type Pointer } from 'bun:ffi';
-import { DynamicLibError } from '../../errors';
-import { VK_DEBUG } from '../../singleton/logger';
-import { cstr, undoCstr } from '../../utils/buffer';
+import { DynamicLibError } from '../errors';
+import { VK_DEBUG } from '../singleton/logger';
+import { cstr, undoCstr } from '../utils/buffer';
 
 const VALIDATION_DEVICE_EXTENSIONS = [
   'VK_KHR_swapchain',

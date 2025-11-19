@@ -11,8 +11,8 @@ import {
   VK_WHOLE_SIZE,
 } from '@bunbox/vk';
 import { ptr, type Pointer } from 'bun:ffi';
-import { DynamicLibError } from '../../errors';
-import { VK_DEBUG } from '../../singleton/logger';
+import { DynamicLibError } from '../errors';
+import { VK_DEBUG } from '../singleton/logger';
 
 /**
  * Manages Vulkan synchronization primitives for rendering.

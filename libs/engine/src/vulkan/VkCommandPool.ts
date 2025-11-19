@@ -8,8 +8,8 @@ import {
   VkResult,
 } from '@bunbox/vk';
 import { ptr, type Pointer } from 'bun:ffi';
-import { DynamicLibError } from '../../errors';
-import { VK_DEBUG } from '../../singleton/logger';
+import { DynamicLibError } from '../errors';
+import { VK_DEBUG } from '../singleton/logger';
 
 export class VkCommandPool implements Disposable {
   private __vkLogicalDevice: Pointer;

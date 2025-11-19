@@ -12,16 +12,16 @@ import {
   VkResult,
 } from '@bunbox/vk';
 import { ptr, type Pointer } from 'bun:ffi';
-import { DynamicLibError } from '../../errors';
+import { DynamicLibError } from '../errors';
 import type {
   AddressMode,
   BorderColor,
   CompareFunction,
   FilterMode,
   MipmapFilter,
-} from '../../resources';
-import { Sampler } from '../../resources';
-import { VK_DEBUG } from '../../singleton/logger';
+} from '../resources';
+import { Sampler } from '../resources';
+import { VK_DEBUG } from '../singleton/logger';
 
 /**
  * Wrapper for Vulkan VkSampler

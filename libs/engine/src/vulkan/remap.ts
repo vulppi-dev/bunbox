@@ -11,7 +11,7 @@ import type {
   SampleCount,
   StoreOp,
   TextureFormat,
-} from '../../resources';
+} from '../resources';
 
 /**
  * Convert TextureFormat to VkFormat

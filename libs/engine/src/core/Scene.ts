@@ -9,9 +9,9 @@ import {
 } from '../nodes';
 import { MaskHelper, type Geometry } from '../resources';
 import type { AssetsStorage } from './AssetsStorage';
-import type { VkCommandBuffer } from './vulkan/VkCommandBuffer';
-import type { VkDevice } from './vulkan/VkDevice';
-import type { VkSwapchain } from './vulkan/VkSwapchain';
+import type { VkCommandBuffer } from '../vulkan/VkCommandBuffer';
+import type { VkDevice } from '../vulkan/VkDevice';
+import type { VkSwapchain } from '../vulkan/VkSwapchain';
 
 type Frame = {
   projectionMatrix: Matrix;

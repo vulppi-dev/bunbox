@@ -1,15 +1,13 @@
 import type { Disposable } from '@bunbox/utils';
 import { ulid } from 'ulid';
 import { EngineError } from '../errors';
+import type { VkCommandBuffer, VkDevice, VkSwapchain } from '../vulkan';
 import type { AssetsStorage } from './AssetsStorage';
 import {
   isComponentType,
   type ComponentProps,
   type ComponentType,
 } from './Component';
-import type { VkCommandBuffer } from './vulkan/VkCommandBuffer';
-import type { VkDevice } from './vulkan/VkDevice';
-import type { VkSwapchain } from './vulkan/VkSwapchain';
 
 export type Entity = string & { __entityBrand: never };
 
@@ -18,6 +16,7 @@ export type SystemContext = {
   window: bigint;
   commands: Commands;
   renderContext: RenderContext;
+  assetsStorage: AssetsStorage;
   time: number;
   delta: number;
 };
@@ -35,7 +34,6 @@ type RenderContext = {
   swapchain: VkSwapchain;
   commandBuffer: VkCommandBuffer;
   imageIndex: number;
-  assetsStore: AssetsStorage;
 };
 
 type QueryComponents = readonly ComponentType<any>[];
@@ -48,10 +46,36 @@ type QueryResult<C extends QueryComponents> = [
 ];
 
 export const FRAME_LOOP = Symbol('frameLoop');
+export const SYSTEM_TYPE = Symbol('systemType');
+
+export function defineSystem(
+  name: string,
+  priority: number = 0,
+  run: SystemFn,
+): RegisteredSystem {
+  const sys = {
+    name,
+    priority,
+    run,
+  };
+
+  Object.defineProperty(sys, SYSTEM_TYPE, {
+    value: true,
+    writable: false,
+    enumerable: false,
+    configurable: false,
+  });
+
+  return sys;
+}
+
+function isRegisteredSystem(obj: any): obj is RegisteredSystem {
+  return Boolean(obj && obj[SYSTEM_TYPE] === true);
+}
 
 export function forEachQuery<C extends QueryComponents>(
   world: World,
-  components: C,
+  components: Readonly<C>,
   callback: (...args: QueryResult<C>) => void,
 ): void {
   if (components.length === 0) {
@@ -143,6 +167,14 @@ export class World implements Disposable {
     store.delete(entity);
   }
 
+  getComponentValue<T extends ComponentProps>(
+    entity: Entity,
+    component: ComponentType<T>,
+  ): T | undefined {
+    const store = this.getStore(component);
+    return store.get(entity);
+  }
+
   clearStores(): void {
     if (this.__lockLoop) {
       throw new EngineError('Cannot clear world during frame loop', 'World');
@@ -162,8 +194,11 @@ export class World implements Disposable {
     this.clearSystems();
   }
 
-  registerSystem(name: string, priority: number, run: SystemFn): void {
-    this.__systems.push({ name, priority, run });
+  registerSystem<S extends RegisteredSystem>(system: S): void {
+    if (!isRegisteredSystem(system)) {
+      throw new EngineError('Invalid system type', 'World');
+    }
+    this.__systems.push(system);
     this.__systems.sort((a, b) => a.priority - b.priority);
   }
 
@@ -177,6 +212,7 @@ export class World implements Disposable {
   [FRAME_LOOP](
     window: bigint,
     renderContext: RenderContext,
+    assetsStorage: AssetsStorage,
     time: number,
     delta: number,
   ): void {
@@ -190,6 +226,7 @@ export class World implements Disposable {
       window,
       commands,
       renderContext,
+      assetsStorage,
       time,
       delta,
     } as SystemContext;

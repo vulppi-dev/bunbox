@@ -1,8 +1,8 @@
 import { type Disposable } from '@bunbox/utils';
 import { ptr, type Pointer } from 'bun:ffi';
 import { getInstanceBuffer, instantiate } from '@bunbox/struct';
-import { DynamicLibError } from '../../errors';
-import { VK_DEBUG } from '../../singleton/logger';
+import { DynamicLibError } from '../errors';
+import { VK_DEBUG } from '../singleton/logger';
 import type { VkImageView } from './VkImageView';
 import {
   getResultMessage,

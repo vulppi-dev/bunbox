@@ -12,10 +12,10 @@ import {
   vkSubpassDescription,
 } from '@bunbox/vk';
 import { ptr, type Pointer } from 'bun:ffi';
-import type { RenderPassConfig } from '../../builders/RenderPassConfig';
-import { isDepthFormat } from '../../builders/RenderPassUtils';
-import { DynamicLibError } from '../../errors';
-import { VK_DEBUG } from '../../singleton/logger';
+import type { RenderPassConfig } from '../builders/RenderPassConfig';
+import { isDepthFormat } from '../builders/RenderPassUtils';
+import { DynamicLibError } from '../errors';
+import { VK_DEBUG } from '../singleton/logger';
 import {
   mapImageLayoutToVk,
   mapLoadOpToVk,

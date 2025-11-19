@@ -16,8 +16,8 @@ import {
 } from '@bunbox/vk';
 import { clamp } from '@vulppi/toolbelt/math';
 import { ptr, type Pointer } from 'bun:ffi';
-import { DynamicLibError } from '../../errors';
-import { VK_DEBUG } from '../../singleton/logger';
+import { DynamicLibError } from '../errors';
+import { VK_DEBUG } from '../singleton/logger';
 import type { VkDevice } from './VkDevice';
 import { VkImageView } from './VkImageView';
 

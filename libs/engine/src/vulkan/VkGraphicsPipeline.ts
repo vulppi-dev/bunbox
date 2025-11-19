@@ -43,9 +43,9 @@ import {
   VkVertexInputRate,
 } from '@bunbox/vk';
 import { ptr, type Pointer } from 'bun:ffi';
-import type { Material, MaterialPrimitive } from '../../builders';
-import { PropertyType } from '../../builders/MaterialPropertyTypes';
-import { DynamicLibError } from '../../errors';
+import type { Material, MaterialPrimitive } from '../builders';
+import { PropertyType } from '../builders/MaterialPropertyTypes';
+import { DynamicLibError } from '../errors';
 import type {
   BlendFactor,
   BlendOperation,
@@ -55,8 +55,8 @@ import type {
   RasterizerFrontFace,
   SampleCount,
   StencilOperation,
-} from '../../resources';
-import { VK_DEBUG } from '../../singleton/logger';
+} from '../resources';
+import { VK_DEBUG } from '../singleton/logger';
 import type { VkShaderModule } from './VkShaderModule';
 
 export class VkGraphicsPipeline implements Disposable {

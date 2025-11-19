@@ -6,4 +6,10 @@ export {
   type ComponentProps,
   type ComponentType,
 } from './Component';
-export { forEachQuery, World, type Entity, type SystemContext } from './World';
+export {
+  forEachQuery,
+  World,
+  defineSystem,
+  type Entity,
+  type SystemContext,
+} from './World';
