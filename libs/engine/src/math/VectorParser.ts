@@ -1,4 +1,4 @@
-import { Matrix } from './Matrix';
+import { Matrix4 } from './Matrix4';
 import { Euler, type EulerOrder } from './Euler';
 import { Quaternion } from './Quaternion';
 import { Vector2 } from './Vector2';
@@ -94,7 +94,7 @@ export class VectorParser {
 
   /** Convert Quaternion to Euler with the given rotation order (default 'zyx'). */
   static quaternionToEuler(q: Quaternion, order: EulerOrder = 'zyx'): Euler {
-    const m = new Matrix().rotate(q);
+    const m = new Matrix4().rotate(q);
     const e = new Euler(0, 0, 0, order);
     m.decomposeRotation(e);
     return e;

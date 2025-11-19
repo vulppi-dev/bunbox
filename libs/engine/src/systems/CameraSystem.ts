@@ -6,7 +6,7 @@ import {
   TransformComponent,
 } from '../core/BuiltInComponents';
 import { EngineError } from '../errors';
-import { Cube, Matrix } from '../math';
+import { Cube, Matrix4 } from '../math';
 import { TRANSFORM_CACHE_KEY, type TransformCache } from './TransformSystem';
 
 export const CAMERA_VIEW_KEY = Symbol('cameraViewCache');
@@ -21,8 +21,8 @@ type PerspectiveCameraCache = {
   lastFar: number;
 };
 
-export const CamerasSystem = defineSystem(
-  'CamerasSystem',
+export const CameraSystem = defineSystem(
+  'CameraSystem',
   200,
   ({ world, assetsStorage }) => {
     const updateViewMatrix = (entity: Entity): void => {
@@ -33,17 +33,17 @@ export const CamerasSystem = defineSystem(
 
       if (!transformCache) {
         throw new EngineError(
-          `TransformCache not found for entity ${entity} in CamerasSystem`,
-          'CamerasSystem',
+          `TransformCache not found for entity ${entity} in CameraSystem`,
+          'CameraSystem',
         );
       }
 
       // Update view matrix
       let dirtyView = false;
-      let cachedView = assetsStorage.get<Matrix>(CAMERA_VIEW_KEY, entity);
+      let cachedView = assetsStorage.get<Matrix4>(CAMERA_VIEW_KEY, entity);
 
       if (!cachedView) {
-        cachedView = new Matrix();
+        cachedView = new Matrix4();
         assetsStorage.set(CAMERA_VIEW_KEY, entity, cachedView);
         dirtyView = true;
       }
@@ -65,7 +65,7 @@ export const CamerasSystem = defineSystem(
 
         // Update projection matrix
         let dirtyProjection = false;
-        let cachedProjection = assetsStorage.get<Matrix>(
+        let cachedProjection = assetsStorage.get<Matrix4>(
           CAMERA_PROJECTION_KEY,
           entity,
         );
@@ -75,7 +75,7 @@ export const CamerasSystem = defineSystem(
         );
 
         if (!cachedProjection) {
-          cachedProjection = new Matrix();
+          cachedProjection = new Matrix4();
           assetsStorage.set(CAMERA_PROJECTION_KEY, entity, cachedProjection);
           dirtyProjection = true;
         }
@@ -97,13 +97,13 @@ export const CamerasSystem = defineSystem(
         if (aspect === 0) {
           throw new EngineError(
             `Camera entity ${entity} has invalid aspect ratio of 0`,
-            'CamerasSystem',
+            'CameraSystem',
           );
         }
         if (far <= near) {
           throw new EngineError(
             `Camera entity ${entity} has invalid near and far planes: near (${near}) must be less than far (${far})`,
-            'CamerasSystem',
+            'CameraSystem',
           );
         }
 
@@ -146,7 +146,7 @@ export const CamerasSystem = defineSystem(
 
         // Update projection matrix
         let dirtyProjection = false;
-        let cachedProjection = assetsStorage.get<Matrix>(
+        let cachedProjection = assetsStorage.get<Matrix4>(
           CAMERA_PROJECTION_KEY,
           entity,
         );
@@ -156,7 +156,7 @@ export const CamerasSystem = defineSystem(
         );
 
         if (!cachedProjection) {
-          cachedProjection = new Matrix();
+          cachedProjection = new Matrix4();
           assetsStorage.set(CAMERA_PROJECTION_KEY, entity, cachedProjection);
           dirtyProjection = true;
         }
@@ -197,19 +197,19 @@ export const CamerasSystem = defineSystem(
           if (left === right) {
             throw new EngineError(
               `Camera entity ${entity} has invalid orthographic size: left (${left}) must be different than right (${right})`,
-              'CamerasSystem',
+              'CameraSystem',
             );
           }
           if (top === bottom) {
             throw new EngineError(
               `Camera entity ${entity} has invalid orthographic size: top (${top}) must be different than bottom (${bottom})`,
-              'CamerasSystem',
+              'CameraSystem',
             );
           }
           if (far <= near) {
             throw new EngineError(
               `Camera entity ${entity} has invalid near and far planes: near (${near}) must be less than far (${far})`,
-              'CamerasSystem',
+              'CameraSystem',
             );
           }
 

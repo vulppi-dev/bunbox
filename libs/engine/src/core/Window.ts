@@ -24,7 +24,9 @@ import { buildCallback, cstr, pointerCopyBuffer } from '../utils/buffer';
 import type { EngineContext } from './EngineContext';
 import {
   CONTEXT_attachWindowWorld,
+  CONTEXT_dispose,
   CONTEXT_disposeWindowResources,
+  CONTEXT_prepare,
   CONTEXT_rebuildWindowResources,
 } from './_symbols';
 import type { World } from './World';
@@ -49,6 +51,8 @@ export type WindowProperties = {
 };
 
 export type WindowEventMap = {
+  'before-dispose': [];
+  'after-dispose': [];
   'window-shown': [event: WindowEvent];
   'window-hidden': [event: WindowEvent];
   'window-move': [event: WindowEvent];
@@ -106,6 +110,7 @@ export class Window extends EventEmitter<WindowEventMap> {
     super();
     this.__id = ulid();
     this.__context = context;
+    this.__context[CONTEXT_prepare]();
 
     const {
       width = 800,
@@ -317,6 +322,8 @@ export class Window extends EventEmitter<WindowEventMap> {
 
     this.__disposeCallbacks?.();
     GLFW.glfwDestroyWindow(this.__window);
+
+    this.__context[CONTEXT_dispose]();
   }
 
   setWorld(world: World) {

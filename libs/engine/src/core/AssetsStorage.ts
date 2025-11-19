@@ -1,8 +1,7 @@
-import type { Disposable } from '@bunbox/utils';
 import { EngineError } from '../errors';
 import type { Entity } from './World';
 
-export class AssetsStorage implements Disposable {
+export class AssetsStorage {
   private __disposed = false;
 
   private __cache: Map<string | symbol, Map<Entity, any>> = new Map();
@@ -36,9 +35,7 @@ export class AssetsStorage implements Disposable {
     this.__cache.clear();
   }
 
-  dispose(): void | Promise<void> {
-    if (this.__disposed) return;
-    this.__disposed = true;
+  clear(): void {
     this.clearCache();
   }
 }

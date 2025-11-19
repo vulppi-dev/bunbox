@@ -1,6 +1,5 @@
 import { getGlfwErrorDescription, GLFW, glfwErrorCallback } from '@bunbox/glfw';
 import { getInstanceBuffer, instantiate, setupStruct } from '@bunbox/struct';
-import type { Disposable } from '@bunbox/utils';
 import {
   getResultMessage,
   makeVersion,
@@ -31,7 +30,9 @@ import { AssetsStorage } from './AssetsStorage';
 import { FRAME_LOOP, type World } from './World';
 import {
   CONTEXT_attachWindowWorld,
+  CONTEXT_dispose,
   CONTEXT_disposeWindowResources,
+  CONTEXT_prepare,
   CONTEXT_rebuildWindowResources,
 } from './_symbols';
 
@@ -69,7 +70,7 @@ int instanceExtensionsDarwin(const char * const **extensions) {
     "VK_KHR_surface",
     "VK_KHR_win32_surface",
     "VK_EXT_swapchain_colorspace",
-    "VK_EXT_debug_utils"
+    "VK_EXT_debug_utils",
     "VK_KHR_portability_enumeration",
     "VK_KHR_portability_subset"
   };
@@ -106,7 +107,7 @@ type WindowPack = {
   sync?: VkSync;
 };
 
-export class EngineContext implements Disposable {
+export class EngineContext {
   // GLFW handlers
   private static __glfwInitialized = false;
   private static __errorCallback: JSCallback | null = null;
@@ -131,6 +132,8 @@ export class EngineContext implements Disposable {
     GLFW.glfwSetErrorCallback(EngineContext.__errorCallback.ptr);
 
     if (GLFW.glfwInit() === 0) {
+      EngineContext.__errorCallback.close();
+      EngineContext.__errorCallback = null;
       throw new EngineError('initialization failed', 'Context');
     }
     GLFW_DEBUG('GLFW initialized successfully');
@@ -142,12 +145,14 @@ export class EngineContext implements Disposable {
       throw new EngineError('Vulkan is not supported', 'Context');
     }
     GLFW_DEBUG(`Chose Vulkan as the graphics API`);
+    this.__glfwInitialized = true;
   }
 
   private static __disposeGLFW() {
     GLFW.glfwSetErrorCallback(0 as Pointer);
     GLFW.glfwTerminate();
     EngineContext.__errorCallback?.close();
+    EngineContext.__errorCallback = null;
     EngineContext.__glfwInitialized = false;
   }
 
@@ -186,6 +191,7 @@ export class EngineContext implements Disposable {
     }
     EngineContext.__vulkanInstance = Number(pointerHolder[0]!) as Pointer;
     VK_DEBUG('Vulkan instance created successfully');
+    EngineContext.__vulkanInitialized = true;
   }
 
   private static __disposeVulkan() {
@@ -194,6 +200,7 @@ export class EngineContext implements Disposable {
     VK.vkDestroyInstance(EngineContext.__vulkanInstance, null);
     VK_DEBUG('Destroyed Vulkan instance');
     EngineContext.__vulkanInstance = null;
+    EngineContext.__vulkanInitialized = false;
   }
 
   private static __initializeMainLoop() {
@@ -206,7 +213,7 @@ export class EngineContext implements Disposable {
     let prev = performance.now();
 
     const loop = () => {
-      while (!EngineContext.__loopInitialized) return;
+      if (!EngineContext.__loopInitialized) return;
       const time = performance.now();
       const delta = time - prev;
       prev = time;
@@ -226,6 +233,7 @@ export class EngineContext implements Disposable {
     GLFW_DEBUG('Main loop stopped');
   }
 
+  private __windows = new Set<bigint>();
   private __windowsPack: Map<bigint, WindowPack> = new Map();
   private __windowsWorlds: Map<bigint, World> = new Map();
   private __windowsFrameIndices: Map<bigint, number> = new Map();
@@ -235,23 +243,24 @@ export class EngineContext implements Disposable {
   // Aux holders
   private __imageIndexHolder = new Uint32Array(1);
 
-  constructor() {
-    EngineContext.__initializeGLFW();
-    EngineContext.__initializeVulkan();
-    EngineContext.__initializeMainLoop();
+  [CONTEXT_prepare]() {
+    if (!EngineContext.__glfwInitialized) {
+      EngineContext.__initializeGLFW();
+    }
+    if (!EngineContext.__vulkanInitialized) {
+      EngineContext.__initializeVulkan();
+    }
+    if (!EngineContext.__loopInitialized) {
+      EngineContext.__initializeMainLoop();
+    }
     EngineContext.__contexts.add(this);
   }
 
-  dispose(): void | Promise<void> {
-    EngineContext.__contexts.delete(this);
-
-    if (this.__windowsPack.size > 0) {
-      throw new EngineError(
-        'Cannot dispose EngineContext while there are windows attached to it',
-        'Context',
-      );
+  [CONTEXT_dispose]() {
+    if (this.__windows.size === 0) {
+      this.__assetsStorage.clear();
+      EngineContext.__contexts.delete(this);
     }
-
     if (EngineContext.__contexts.size === 0) {
       EngineContext.__disposeMainLoop();
       EngineContext.__disposeVulkan();
@@ -272,6 +281,8 @@ export class EngineContext implements Disposable {
     width: number,
     height: number,
   ): void {
+    this.__windows.add(window);
+
     let pack = this.__windowsPack.get(window);
     if (!pack) {
       pack = {
@@ -344,6 +355,7 @@ export class EngineContext implements Disposable {
     }
     this.__windowsFrameIndices.delete(window);
     this.__windowsPack.delete(window);
+    this.__windows.delete(window);
   }
 
   private __triggerProcessStack(delta: number, time: number) {

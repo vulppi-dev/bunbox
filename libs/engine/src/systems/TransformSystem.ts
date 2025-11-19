@@ -2,13 +2,13 @@ import { defineSystem, forEachQuery } from '../core';
 import { ParentComponent, TransformComponent } from '../core/BuiltInComponents';
 import type { Entity } from '../core/World';
 import { EngineError } from '../errors';
-import { Matrix } from '../math';
+import { Matrix4 } from '../math';
 
 export const TRANSFORM_CACHE_KEY = Symbol('transformCache');
 
 export type TransformCache = {
-  localMatrix: Matrix;
-  worldMatrix: Matrix;
+  localMatrix: Matrix4;
+  worldMatrix: Matrix4;
 };
 
 export const TransformsSystem = defineSystem(
@@ -46,8 +46,8 @@ export const TransformsSystem = defineSystem(
 
       if (!cache) {
         cache = {
-          localMatrix: new Matrix(),
-          worldMatrix: new Matrix(),
+          localMatrix: new Matrix4(),
+          worldMatrix: new Matrix4(),
         };
         assetsStorage.set(TRANSFORM_CACHE_KEY, entity, cache);
       }

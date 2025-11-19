@@ -1,40 +1,21 @@
 import type { Disposable } from '@bunbox/utils';
 import { ulid } from 'ulid';
 import { EngineError } from '../errors';
-import type { VkCommandBuffer, VkDevice, VkSwapchain } from '../vulkan';
 import type { AssetsStorage } from './AssetsStorage';
 import {
   isComponentType,
   type ComponentProps,
   type ComponentType,
 } from './Component';
+import {
+  Commands,
+  isRegisteredSystem,
+  type RegisteredSystem,
+  type RenderContext,
+  type SystemContext,
+} from './System';
 
 export type Entity = string & { __entityBrand: never };
-
-export type SystemContext = {
-  world: World;
-  window: bigint;
-  commands: Commands;
-  renderContext: RenderContext;
-  assetsStorage: AssetsStorage;
-  time: number;
-  delta: number;
-};
-
-type SystemFn = (systemContext: SystemContext) => void | Promise<void>;
-
-type RegisteredSystem = {
-  readonly name: string;
-  readonly priority: number;
-  readonly run: SystemFn;
-};
-
-type RenderContext = {
-  device: VkDevice;
-  swapchain: VkSwapchain;
-  commandBuffer: VkCommandBuffer;
-  imageIndex: number;
-};
 
 type QueryComponents = readonly ComponentType<any>[];
 
@@ -46,32 +27,6 @@ type QueryResult<C extends QueryComponents> = [
 ];
 
 export const FRAME_LOOP = Symbol('frameLoop');
-export const SYSTEM_TYPE = Symbol('systemType');
-
-export function defineSystem(
-  name: string,
-  priority: number = 0,
-  run: SystemFn,
-): RegisteredSystem {
-  const sys = {
-    name,
-    priority,
-    run,
-  };
-
-  Object.defineProperty(sys, SYSTEM_TYPE, {
-    value: true,
-    writable: false,
-    enumerable: false,
-    configurable: false,
-  });
-
-  return sys;
-}
-
-function isRegisteredSystem(obj: any): obj is RegisteredSystem {
-  return Boolean(obj && obj[SYSTEM_TYPE] === true);
-}
 
 export function forEachQuery<C extends QueryComponents>(
   world: World,
@@ -237,41 +192,5 @@ export class World implements Disposable {
     }
     this.__lockLoop = false;
     commands.flush();
-  }
-}
-
-class Commands {
-  private __queue: (() => void)[] = [];
-
-  enqueue(command: () => void): void {
-    this.__queue.push(command);
-  }
-
-  flush(): void {
-    for (const command of this.__queue) {
-      command();
-    }
-    this.__queue = [];
-  }
-
-  addComponent<T extends ComponentProps>(
-    world: World,
-    entity: Entity,
-    component: ComponentType<T>,
-    props: T,
-  ): void {
-    this.enqueue(() => {
-      world.addComponent(entity, component, props);
-    });
-  }
-
-  removeComponent<T extends ComponentProps>(
-    world: World,
-    entity: Entity,
-    component: ComponentType<T>,
-  ): void {
-    this.enqueue(() => {
-      world.removeComponent(entity, component);
-    });
   }
 }

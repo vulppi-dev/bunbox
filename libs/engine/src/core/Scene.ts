@@ -1,5 +1,5 @@
 import { Node, Root } from '@bunbox/tree';
-import { Color, Cube, Frustum, Matrix, Rect } from '../math';
+import { Color, Cube, Frustum, Matrix4, Rect } from '../math';
 import {
   AbstractCamera,
   Light,
@@ -14,20 +14,20 @@ import type { VkDevice } from '../vulkan/VkDevice';
 import type { VkSwapchain } from '../vulkan/VkSwapchain';
 
 type Frame = {
-  projectionMatrix: Matrix;
-  viewMatrix: Matrix;
-  viewProjectionMatrix: Matrix;
+  projectionMatrix: Matrix4;
+  viewMatrix: Matrix4;
+  viewProjectionMatrix: Matrix4;
   frustum: Frustum;
   layer: MaskHelper;
 };
 
 type ModelFrame = {
-  position: Matrix;
+  position: Matrix4;
   geometry: Geometry;
 };
 
 type LightFrame = {
-  position: Matrix;
+  position: Matrix4;
   geometry: Geometry;
 };
 
@@ -162,9 +162,9 @@ export class Scene extends Root {
     }
 
     let frame = this.__frames.get(id) ?? {
-      projectionMatrix: new Matrix(),
-      viewMatrix: new Matrix(),
-      viewProjectionMatrix: new Matrix(),
+      projectionMatrix: new Matrix4(),
+      viewMatrix: new Matrix4(),
+      viewProjectionMatrix: new Matrix4(),
       frustum: new Frustum(),
       layer: new MaskHelper(),
     };

@@ -10,7 +10,7 @@ import { DirtyState } from '@bunbox/utils';
 /**
  * Represents a 4x4 matrix.
  */
-export class Matrix extends DirtyState {
+export class Matrix4 extends DirtyState {
   private __m = new Float32Array([
     1, 0, 0, 0, // col 0
     0, 1, 0, 0, // col 1
