@@ -194,6 +194,29 @@ export abstract class TextureBase extends DirtyState {
     return sha(JSON.stringify(key), 'hex');
   }
 
+  /**
+   * Compute content hash excluding label for resource deduplication.
+   *
+   * This allows deduplication of textures that are identical in content
+   * but have different labels.
+   *
+   * @returns Hex string representing texture configuration (excluding label)
+   */
+  get contentHash(): string {
+    const key = {
+      label: '',
+      width: this.__width,
+      height: this.__height,
+      mipLevels: this.__mipLevels,
+      sampleCount: this.__sampleCount,
+      format: this.__format,
+      usage: this.__usage,
+      kind: this._kind(),
+      ext: this._extraHashKey(),
+    };
+    return sha(JSON.stringify(key), 'hex');
+  }
+
   get layerCount(): number {
     return 1;
   }
