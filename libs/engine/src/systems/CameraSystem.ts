@@ -51,6 +51,8 @@ export const CameraSystem = defineSystem(
       if (dirtyView || transformCache.worldMatrix.isDirty) {
         cachedView!.copy(transformCache.worldMatrix).invert();
       }
+      transformCache.worldMatrix.markAsClean();
+      transformCache.localMatrix.markAsClean();
     };
 
     forEachQuery(

@@ -7,7 +7,7 @@ Garantir que a implementação está correta observe as documentações nos site
 - Vulkan => https://www.khronos.org/registry/vulkan/specs/1.3-extensions/html/vkspec.html
 - Vulkan => https://docs.vulkan.org/spec/latest/index.html
 
-> Obs: Considere a versão 1.1 como base para Vulkan, a menos que uma feature específica de uma versão mais recente seja requisitada. 
+> Obs: Considere a versão 1.1 como base para Vulkan, a menos que uma feature específica de uma versão mais recente seja requisitada.
 
 ## Linguagem e padrões
 
@@ -28,7 +28,7 @@ Somente funções/métodos públicos/exportados devem ter comentários de docume
 ### Classes
 
 - Variáveis e métodos do tipo `protected` devem ser iniciadas com '\_';
-- Variáveis e métodos do tipo `private` devem ser iniciadas com '#';
+- Variáveis e métodos do tipo `private` devem ser iniciadas com '\_\_';
 - Métodos estáticos devem ser criados antes do construtor;
 
 ### Gerenciamento de Recursos

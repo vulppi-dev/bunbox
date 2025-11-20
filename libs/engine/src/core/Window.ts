@@ -757,7 +757,6 @@ export class Window extends EventEmitter<WindowEventMap> {
   }
 
   private __dispatchWindowEvent(eventKey: keyof WindowEventMap) {
-    console.log('ev', eventKey);
     const event = new WindowEvent({
       currentDisplayId: GLFW.glfwGetWindowMonitor(this.__window) ?? 0,
       windowId: this.__window ?? 0,
