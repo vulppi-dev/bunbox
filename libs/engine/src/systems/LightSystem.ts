@@ -16,28 +16,31 @@ export const POINT_LIGHT_KEY = Symbol('pointLightCache');
 export const SPOT_LIGHT_KEY = Symbol('spotLightCache');
 
 type DirectionalLightCache = {
-  direction: Vector3;
   color: Color;
   intensity: number;
   layer: MaskHelper;
+
+  direction: Vector3;
 };
 
 type PointLightCache = {
-  position: Vector3;
-  range: number;
   color: Color;
   intensity: number;
   layer: MaskHelper;
+
+  position: Vector3;
+  range: number;
 };
 
 type SpotLightCache = {
-  position: Vector3;
-  direction: Vector3;
-  range: number;
-  angle: number; // radians
   color: Color;
   intensity: number;
   layer: MaskHelper;
+
+  position: Vector3;
+  direction: Vector3;
+  range: number;
+  angle: number;
 };
 
 export const LightSystem = defineSystem(

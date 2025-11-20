@@ -1,10 +1,23 @@
 import { EngineError } from '../errors';
+import { ShaderStorage } from './ShaderStorage';
+import { TextureStorage } from './TextureStorage';
 import type { Entity } from './World';
 
 export class AssetsStorage {
   private __disposed = false;
 
   private __cache: Map<string | symbol, Map<Entity, any>> = new Map();
+
+  private __shaders = new ShaderStorage();
+  private __textures = new TextureStorage();
+
+  get shaders(): ShaderStorage {
+    return this.__shaders;
+  }
+
+  get textures(): TextureStorage {
+    return this.__textures;
+  }
 
   get<T>(type: string | symbol, id: Entity): T | undefined {
     this.__ensureNotDisposed('getCache');

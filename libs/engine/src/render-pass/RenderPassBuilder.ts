@@ -1,6 +1,9 @@
 import type { TextureFormat, SampleCount } from '../resources';
 import type { AttachmentConfig, RenderPassConfig } from './RenderPassConfig';
-import { hasStencilComponent, isDepthFormat } from './RenderPassUtils';
+import {
+  hasStencilComponent,
+  isDepthFormat,
+} from '../builders/RenderPassUtils';
 
 /**
  * Agnostic builder for creating RenderPass configurations

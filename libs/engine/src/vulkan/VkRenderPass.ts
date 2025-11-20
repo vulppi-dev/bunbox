@@ -12,8 +12,8 @@ import {
   vkSubpassDescription,
 } from '@bunbox/vk';
 import { ptr, type Pointer } from 'bun:ffi';
-import type { RenderPassConfig } from '../builders/RenderPassConfig';
-import { isDepthFormat } from '../builders/RenderPassUtils';
+import type { RenderPassConfig } from '../render-pass/RenderPassConfig';
+import { isDepthFormat } from '../render-pass/RenderPassUtils';
 import { DynamicLibError } from '../errors';
 import { VK_DEBUG } from '../singleton/logger';
 import {

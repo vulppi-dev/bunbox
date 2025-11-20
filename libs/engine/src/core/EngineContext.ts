@@ -243,6 +243,14 @@ export class EngineContext {
   // Aux holders
   private __imageIndexHolder = new Uint32Array(1);
 
+  get shaders() {
+    return this.__assetsStorage.shaders;
+  }
+
+  get textures() {
+    return this.__assetsStorage.textures;
+  }
+
   [CONTEXT_prepare]() {
     if (!EngineContext.__glfwInitialized) {
       EngineContext.__initializeGLFW();

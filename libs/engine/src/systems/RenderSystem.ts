@@ -1,12 +1,12 @@
-import { defineSystem, forEachQuery } from '../core';
-import { CameraComponent } from '../core/BuiltInComponents';
+import { defineSystem, forEachQuery, type Entity } from '../core';
+import { CameraComponent, LightComponent } from '../core/BuiltInComponents';
 import { EngineError } from '../errors';
 import type { Matrix4 } from '../math';
 import type { MaskHelper } from '../resources';
 import { CAMERA_PROJECTION_KEY, CAMERA_VIEW_KEY } from './CameraSystem';
 
 export type FrameCamera = {
-  id: string;
+  id: Entity;
   view: Matrix4;
   projection: Matrix4;
   layer: MaskHelper;
@@ -16,10 +16,13 @@ export const RenderSystem = defineSystem(
   'RenderSystem',
   900,
   ({ world, assetsStorage }) => {
+    const touchedCameras = new Set<Entity>();
     const frameCameras: FrameCamera[] = [];
 
     forEachQuery(world, [CameraComponent], (entity, camera) => {
       const view = assetsStorage.get<Matrix4>(CAMERA_VIEW_KEY, entity);
+      touchedCameras.add(entity);
+
       const projection = assetsStorage.get<Matrix4>(
         CAMERA_PROJECTION_KEY,
         entity,
@@ -46,9 +49,9 @@ export const RenderSystem = defineSystem(
       projection.markAsClean();
     });
 
-    if (!frameCameras.length) {
-      return;
-    }
+    forEachQuery(world, [LightComponent], (entity, light) => {
+      // process lights for rendering here
+    });
   },
 );
 

@@ -44,7 +44,7 @@ import {
 } from '@bunbox/vk';
 import { ptr, type Pointer } from 'bun:ffi';
 import type { Material, MaterialPrimitive } from '../builders';
-import { PropertyType } from '../builders/MaterialPropertyTypes';
+import { PropertyType } from '../material/MaterialPropertyTypes';
 import { DynamicLibError } from '../errors';
 import type {
   BlendFactor,
