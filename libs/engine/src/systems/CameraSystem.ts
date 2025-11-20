@@ -23,7 +23,7 @@ type PerspectiveCameraCache = {
 
 export const CameraSystem = defineSystem(
   'CameraSystem',
-  200,
+  110,
   ({ world, assetsStorage }) => {
     const updateViewMatrix = (entity: Entity): void => {
       const transformCache = assetsStorage.get<TransformCache>(

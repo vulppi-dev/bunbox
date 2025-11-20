@@ -1,4 +1,3 @@
-import type { VkCommandBuffer, VkDevice, VkSwapchain } from '../vulkan';
 import type { AssetsStorage } from './AssetsStorage';
 import type { ComponentProps, ComponentType } from './Component';
 import type { Entity, World } from './World';
@@ -7,7 +6,6 @@ export type SystemContext = {
   world: World;
   window: bigint;
   commands: Commands;
-  renderContext: RenderContext;
   assetsStorage: AssetsStorage;
   time: number;
   delta: number;
@@ -19,13 +17,6 @@ export type RegisteredSystem = {
   readonly name: string;
   readonly priority: number;
   readonly run: SystemFn;
-};
-
-export type RenderContext = {
-  device: VkDevice;
-  swapchain: VkSwapchain;
-  commandBuffer: VkCommandBuffer;
-  imageIndex: number;
 };
 
 export const SYSTEM_TYPE = Symbol('systemType');

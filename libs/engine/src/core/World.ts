@@ -11,7 +11,6 @@ import {
   Commands,
   isRegisteredSystem,
   type RegisteredSystem,
-  type RenderContext,
   type SystemContext,
 } from './System';
 
@@ -166,7 +165,6 @@ export class World implements Disposable {
 
   [FRAME_LOOP](
     window: bigint,
-    renderContext: RenderContext,
     assetsStorage: AssetsStorage,
     time: number,
     delta: number,
@@ -180,7 +178,6 @@ export class World implements Disposable {
       world: this,
       window,
       commands,
-      renderContext,
       assetsStorage,
       time,
       delta,

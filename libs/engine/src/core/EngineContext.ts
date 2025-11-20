@@ -397,17 +397,14 @@ export class EngineContext {
       pack.sync.resetFence(frameIndex);
       const commandBuffer = pack.commandBuffers[frameIndex]!;
 
-      world?.[FRAME_LOOP](
-        window,
-        {
-          device: pack.device,
-          swapchain: pack.swapchain,
-          commandBuffer,
-          imageIndex,
-        },
+      world?.[FRAME_LOOP](window, this.__assetsStorage, time, delta);
+
+      this.__render(
+        pack.device,
+        commandBuffer,
+        pack.swapchain,
+        imageIndex,
         this.__assetsStorage,
-        time,
-        delta,
       );
 
       const signal = this.__submit(
@@ -506,5 +503,15 @@ export class EngineContext {
     if (presentResult !== VkResult.SUCCESS) {
       throw new RenderError(getResultMessage(presentResult), 'Vulkan');
     }
+  }
+
+  private __render(
+    device: VkDevice,
+    commandBuffer: VkCommandBuffer,
+    swapchain: VkSwapchain,
+    imageIndex: number,
+    assetsStorage: AssetsStorage,
+  ): void {
+    // TODO: implement actual rendering process
   }
 }
