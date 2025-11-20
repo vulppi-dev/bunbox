@@ -14,7 +14,7 @@ export type FrameCamera = {
 
 export const RenderSystem = defineSystem(
   'RenderSystem',
-  300,
+  900,
   ({ world, assetsStorage }) => {
     const frameCameras: FrameCamera[] = [];
 

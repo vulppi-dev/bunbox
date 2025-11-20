@@ -1,4 +1,3 @@
-import { Material } from '../builders';
 import { Color, Quaternion, Rect, Vector3 } from '../math';
 import { Geometry, MaskHelper } from '../resources';
 import { defineComponent } from './Component';
@@ -15,7 +14,7 @@ export const TransformComponent = defineComponent('Transform', () => ({
 
 export const MeshComponent = defineComponent('Mesh', () => ({
   geometry: null as Geometry | null,
-  material: null as Material | null,
+  material: null as any | null,
   layer: new MaskHelper(),
 }));
 
@@ -52,3 +51,19 @@ export const OrthographicCameraComponent = defineComponent(
     size: new Rect(),
   }),
 );
+
+export const DirectionalLightComponent = defineComponent(
+  'DirectionalLight',
+  () => ({
+    // no extra properties for now
+  }),
+);
+
+export const PointLightComponent = defineComponent('PointLight', () => ({
+  range: 10,
+}));
+
+export const SpotLightComponent = defineComponent('SpotLight', () => ({
+  range: 10,
+  angle: Math.PI / 4,
+}));

@@ -413,6 +413,19 @@ export class Matrix4 extends DirtyState {
   }
 
   /**
+   * Decomposes the direction component of this matrix into a vector representation.
+   * @param out The vector object to store the direction values.
+   * @returns This matrix after decomposing the direction.
+   */
+  decomposeDirection(out: Vector3): this {
+    const m = this.__m;
+
+    out.set(-m[8]!, -m[9]!, -m[10]!);
+    out.normalize();
+    return this;
+  }
+
+  /**
    * Creates a view matrix from the given eye, target, and up vectors.
    * @param eye The position of the camera.
    * @param target The point the camera is looking at.
