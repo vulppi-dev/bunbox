@@ -13,10 +13,6 @@
       "path": "./libs/utils"
     },
     {
-      "name": "tree",
-      "path": "./libs/tree"
-    },
-    {
       "name": "naga",
       "path": "./libs/naga"
     },
