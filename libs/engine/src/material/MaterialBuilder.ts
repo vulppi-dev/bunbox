@@ -5,20 +5,18 @@
 
 import { DirtyState } from '@bunbox/utils';
 import { sha } from 'bun';
+import type { ShaderHolder } from '../core';
+import { Rasterizer } from '../resources/Rasterizer';
+import type { PropertyDefinition } from './MaterialPropertyTypes';
+import { validateProperty } from './MaterialPropertyTypes';
 import type {
+  ConstantProperties,
   MaterialDescriptor,
   MaterialPrimitive,
   MaterialSchema,
-  ConstantProperties,
   MutableProperties,
-  string,
-  ShaderEntries,
 } from './MaterialSchema';
 import { validateSchema } from './MaterialSchema';
-import type { PropertyDefinition } from './MaterialPropertyTypes';
-import { validateProperty } from './MaterialPropertyTypes';
-import { Rasterizer } from '../resources/Rasterizer';
-import { triangleShaderSource } from '../shaders';
 
 /**
  * Type-safe material with constant and mutable properties
@@ -27,8 +25,7 @@ export class Material<
   TSchema extends MaterialSchema = MaterialSchema,
 > extends DirtyState {
   private __label: string;
-  private __shader: string;
-  private __entries: ShaderEntries;
+  private __shader: ShaderHolder;
   private __primitive: MaterialPrimitive;
   private __rasterizer: Rasterizer;
   private __schema: TSchema;
@@ -44,7 +41,6 @@ export class Material<
 
     this.__label = descriptor.label ?? '';
     this.__shader = descriptor.shader;
-    this.__entries = descriptor.entries;
     this.__primitive = descriptor.primitive ?? 'triangles';
     this.__rasterizer = descriptor.rasterizer ?? new Rasterizer();
     this.__schema = descriptor.schema;
@@ -92,7 +88,6 @@ export class Material<
     this.__hash = sha(
       JSON.stringify({
         shader: this.__shader,
-        entries: this.__entries,
         primitive: this.__primitive,
         rasterizer: this.__rasterizer.hash,
         constants: this.__constants,
@@ -106,12 +101,8 @@ export class Material<
     return this.__label;
   }
 
-  get shader(): string {
+  get shader(): ShaderHolder {
     return this.__shader;
-  }
-
-  get entries(): ShaderEntries {
-    return this.__entries;
   }
 
   get primitive(): MaterialPrimitive {
@@ -240,7 +231,6 @@ export class Material<
     const cloned = new Material<TSchema>({
       label: this.__label,
       shader: this.__shader,
-      entries: this.__entries,
       primitive: this.__primitive,
       rasterizer: this.__rasterizer.clone(),
       schema: this.__schema,
@@ -275,26 +265,4 @@ export class Material<
     this.__updateHash();
     return this.markAsDirty();
   }
-}
-
-/**
- * Helper function to create a type-safe material
- */
-export function createMaterial<TSchema extends MaterialSchema>(
-  descriptor: MaterialDescriptor<TSchema>,
-): Material<TSchema> {
-  return new Material(descriptor);
-}
-
-/**
- * Simple material creation helper with default schema
- */
-export function createSimpleMaterial() {
-  return new Material({
-    label: 'SimpleMaterial',
-    shader: triangleShaderSource,
-    entries: { vertex: 'vertex_main', fragment: 'fragment_main' },
-    schema: {},
-    primitive: 'triangles',
-  });
 }

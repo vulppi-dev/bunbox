@@ -3,8 +3,8 @@
  * Supports modern graphics APIs (Vulkan, WebGPU, Direct3D 12, Metal).
  */
 
+import type { TextureHolder } from '../core';
 import type { Sampler } from '../resources/Sampler';
-import type { TexturePointer } from '../managers';
 
 /**
  * Scalar value types (float, int, uint, bool)
@@ -44,8 +44,8 @@ export type SamplerValue = Sampler;
 /**
  * Combined texture pointer + sampler binding
  */
-export type TexturePointerSamplerBinding = {
-  readonly texture: TexturePointer;
+export type TextureHolderSamplerBinding = {
+  readonly texture: TextureHolder;
   readonly sampler: SamplerValue;
 };
 
@@ -57,9 +57,9 @@ export type PropertyValue =
   | VectorValue
   | MatrixValue
   | ColorValue
-  | TexturePointer
+  | TextureHolder
   | SamplerValue
-  | TexturePointerSamplerBinding;
+  | TextureHolderSamplerBinding;
 
 /**
  * Property type discriminators for runtime type checking
@@ -92,9 +92,9 @@ export interface PropertyTypeMap {
   [PropertyType.Mat4]: Mat4;
   [PropertyType.Color3]: Color3;
   [PropertyType.Color4]: Color4;
-  [PropertyType.Texture]: TexturePointer;
+  [PropertyType.Texture]: TextureHolder;
   [PropertyType.Sampler]: SamplerValue;
-  [PropertyType.TextureSampler]: TexturePointerSamplerBinding;
+  [PropertyType.TextureSampler]: TextureHolderSamplerBinding;
 }
 
 /**
@@ -192,7 +192,7 @@ export const property = {
   }),
 
   texture: (
-    defaultValue?: TexturePointer,
+    defaultValue?: TextureHolder,
     label?: string,
   ): PropertyDefinition<PropertyType.Texture> => ({
     type: PropertyType.Texture,
@@ -210,7 +210,7 @@ export const property = {
   }),
 
   textureSampler: (
-    defaultValue?: TexturePointerSamplerBinding,
+    defaultValue?: TextureHolderSamplerBinding,
     label?: string,
   ): PropertyDefinition<PropertyType.TextureSampler> => ({
     type: PropertyType.TextureSampler,
@@ -244,7 +244,7 @@ export const isColor3 = (value: unknown): value is Color3 => isVec3(value);
 
 export const isColor4 = (value: unknown): value is Color4 => isVec4(value);
 
-export const isTexture = (value: unknown): value is TexturePointer =>
+export const isTexture = (value: unknown): value is TextureHolder =>
   typeof value === 'symbol' &&
   value.description?.startsWith('texture:') === true;
 
@@ -253,13 +253,13 @@ export const isSampler = (value: unknown): value is SamplerValue =>
 
 export const isTextureSampler = (
   value: unknown,
-): value is TexturePointerSamplerBinding =>
+): value is TextureHolderSamplerBinding =>
   value !== null &&
   typeof value === 'object' &&
   'texture' in value &&
   'sampler' in value &&
-  isTexture((value as TexturePointerSamplerBinding).texture) &&
-  isSampler((value as TexturePointerSamplerBinding).sampler);
+  isTexture((value as TextureHolderSamplerBinding).texture) &&
+  isSampler((value as TextureHolderSamplerBinding).sampler);
 
 /**
  * Validate property value against its type definition
