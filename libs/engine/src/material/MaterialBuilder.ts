@@ -7,30 +7,35 @@ import { DirtyState } from '@bunbox/utils';
 import { sha } from 'bun';
 import type { ShaderHolder } from '../core';
 import { Rasterizer } from '../resources/Rasterizer';
-import type { PropertyDefinition } from './MaterialPropertyTypes';
+import type {
+  PropertyDefinition,
+  PropertyTypeMap,
+} from './MaterialPropertyTypes';
 import { validateProperty } from './MaterialPropertyTypes';
 import type {
-  ConstantProperties,
   MaterialDescriptor,
-  MaterialPrimitive,
   MaterialSchema,
-  MutableProperties,
+  OverrideProperties,
+  PrimitiveTopology,
+  PushConstantProperties,
+  UniformProperties,
 } from './MaterialSchema';
 import { validateSchema } from './MaterialSchema';
 
 /**
- * Type-safe material with constant and mutable properties
+ * Type-safe material with overrides, uniforms, and push constants.
  */
 export class Material<
   TSchema extends MaterialSchema = MaterialSchema,
 > extends DirtyState {
   private __label: string;
   private __shader: ShaderHolder;
-  private __primitive: MaterialPrimitive;
-  private __rasterizer: Rasterizer;
+  private __topology: PrimitiveTopology;
+  private __rasterizationState: Rasterizer;
   private __schema: TSchema;
-  private __constants: Record<string, unknown>;
-  private __mutables: Record<string, unknown>;
+  private __overrides: Record<string, unknown>;
+  private __uniforms: Record<string, unknown>;
+  private __pushConstants: Record<string, unknown>;
   private __hash: string = '';
 
   constructor(descriptor: MaterialDescriptor<TSchema>) {
@@ -41,24 +46,38 @@ export class Material<
 
     this.__label = descriptor.label ?? '';
     this.__shader = descriptor.shader;
-    this.__primitive = descriptor.primitive ?? 'triangles';
-    this.__rasterizer = descriptor.rasterizer ?? new Rasterizer();
+    this.__topology = descriptor.topology ?? 'triangle-list';
+    this.__rasterizationState =
+      descriptor.rasterizationState ?? new Rasterizer();
     this.__schema = descriptor.schema;
 
-    // Initialize constants with defaults
-    this.__constants = this.__initializeProperties(
-      this.__schema.constants ?? {},
-      descriptor.constants as Record<string, unknown> | undefined,
+    // Initialize overrides with defaults
+    this.__overrides = this.__initializeProperties(
+      this.__schema.overrides ?? {},
+      descriptor.overrides as Record<string, unknown> | undefined,
     );
 
-    // Initialize mutables with defaults
-    this.__mutables = this.__initializeProperties(
-      this.__schema.mutables ?? {},
-      descriptor.mutables as Record<string, unknown> | undefined,
+    // Initialize uniforms with defaults
+    this.__uniforms = this.__initializeProperties(
+      this.__schema.uniforms ?? {},
+      descriptor.uniforms as Record<string, unknown> | undefined,
+    );
+
+    // Initialize push constants with defaults
+    this.__pushConstants = this.__initializeProperties(
+      this.__schema.pushConstants ?? {},
+      descriptor.pushConstants as Record<string, unknown> | undefined,
     );
 
     this.__updateHash();
     this.markAsDirty();
+  }
+
+  /**
+   * Start building a new material.
+   */
+  static builder(shader: ShaderHolder): MaterialBuilder {
+    return new MaterialBuilder(shader);
   }
 
   private __initializeProperties(
@@ -88,9 +107,9 @@ export class Material<
     this.__hash = sha(
       JSON.stringify({
         shader: this.__shader,
-        primitive: this.__primitive,
-        rasterizer: this.__rasterizer.hash,
-        constants: this.__constants,
+        topology: this.__topology,
+        rasterizer: this.__rasterizationState.hash,
+        overrides: this.__overrides,
       }),
       'hex',
     );
@@ -105,12 +124,12 @@ export class Material<
     return this.__shader;
   }
 
-  get primitive(): MaterialPrimitive {
-    return this.__primitive;
+  get topology(): PrimitiveTopology {
+    return this.__topology;
   }
 
-  get rasterizer(): Rasterizer {
-    return this.__rasterizer;
+  get rasterizationState(): Rasterizer {
+    return this.__rasterizationState;
   }
 
   get hash(): string {
@@ -122,19 +141,28 @@ export class Material<
   }
 
   /**
-   * Get constant properties (read-only)
+   * Get override properties (read-only)
    */
-  get constants(): Readonly<ConstantProperties<TSchema>> {
+  get overrides(): Readonly<OverrideProperties<TSchema>> {
     return Object.freeze({
-      ...this.__constants,
-    }) as ConstantProperties<TSchema>;
+      ...this.__overrides,
+    }) as OverrideProperties<TSchema>;
   }
 
   /**
-   * Get mutable properties (read-only snapshot)
+   * Get uniform properties (read-only snapshot)
    */
-  get mutables(): Readonly<MutableProperties<TSchema>> {
-    return Object.freeze({ ...this.__mutables }) as MutableProperties<TSchema>;
+  get uniforms(): Readonly<UniformProperties<TSchema>> {
+    return Object.freeze({ ...this.__uniforms }) as UniformProperties<TSchema>;
+  }
+
+  /**
+   * Get push constant properties (read-only snapshot)
+   */
+  get pushConstants(): Readonly<PushConstantProperties<TSchema>> {
+    return Object.freeze({
+      ...this.__pushConstants,
+    }) as PushConstantProperties<TSchema>;
   }
 
   // Setters
@@ -144,41 +172,41 @@ export class Material<
     this.markAsDirty();
   }
 
-  set primitive(value: MaterialPrimitive) {
-    if (this.__primitive === value) return;
-    this.__primitive = value;
+  set topology(value: PrimitiveTopology) {
+    if (this.__topology === value) return;
+    this.__topology = value;
     this.__updateHash();
     this.markAsDirty();
   }
 
   /**
-   * Get a constant property value (type-safe)
+   * Get an override property value (type-safe)
    */
-  getConstant<K extends keyof ConstantProperties<TSchema>>(
+  getOverride<K extends keyof OverrideProperties<TSchema>>(
     key: K,
-  ): ConstantProperties<TSchema>[K] {
-    return this.__constants[key as string] as ConstantProperties<TSchema>[K];
+  ): OverrideProperties<TSchema>[K] {
+    return this.__overrides[key as string] as OverrideProperties<TSchema>[K];
   }
 
   /**
-   * Get a mutable property value (type-safe)
+   * Get a uniform property value (type-safe)
    */
-  getMutable<K extends keyof MutableProperties<TSchema>>(
+  getUniform<K extends keyof UniformProperties<TSchema>>(
     key: K,
-  ): MutableProperties<TSchema>[K] {
-    return this.__mutables[key as string] as MutableProperties<TSchema>[K];
+  ): UniformProperties<TSchema>[K] {
+    return this.__uniforms[key as string] as UniformProperties<TSchema>[K];
   }
 
   /**
-   * Set a mutable property value (type-safe)
+   * Set a uniform property value (type-safe)
    */
-  setMutable<K extends keyof MutableProperties<TSchema>>(
+  setUniform<K extends keyof UniformProperties<TSchema>>(
     key: K,
-    value: MutableProperties<TSchema>[K],
+    value: UniformProperties<TSchema>[K],
   ): this {
-    const definitions = this.__schema.mutables;
+    const definitions = this.__schema.uniforms;
     if (!definitions || !(key in definitions)) {
-      throw new Error(`Property '${String(key)}' is not a mutable property`);
+      throw new Error(`Property '${String(key)}' is not a uniform property`);
     }
 
     const def = definitions[key as string]!;
@@ -188,23 +216,23 @@ export class Material<
       );
     }
 
-    if (this.__mutables[key as string] === value) return this;
+    if (this.__uniforms[key as string] === value) return this;
 
-    this.__mutables[key as string] = value;
+    this.__uniforms[key as string] = value;
     return this.markAsDirty();
   }
 
   /**
-   * Set multiple mutable properties at once
+   * Set multiple uniform properties at once
    */
-  setMutables(values: Partial<MutableProperties<TSchema>>): this {
+  setUniforms(values: Partial<UniformProperties<TSchema>>): this {
     let changed = false;
 
     for (const [key, value] of Object.entries(values)) {
       if (value !== undefined) {
-        const definitions = this.__schema.mutables;
+        const definitions = this.__schema.uniforms;
         if (!definitions || !(key in definitions)) {
-          throw new Error(`Property '${key}' is not a mutable property`);
+          throw new Error(`Property '${key}' is not a uniform property`);
         }
 
         const def = definitions[key]!;
@@ -214,8 +242,8 @@ export class Material<
           );
         }
 
-        if (this.__mutables[key] !== value) {
-          this.__mutables[key] = value;
+        if (this.__uniforms[key] !== value) {
+          this.__uniforms[key] = value;
           changed = true;
         }
       }
@@ -225,17 +253,56 @@ export class Material<
   }
 
   /**
+   * Get a push constant property value (type-safe)
+   */
+  getPushConstant<K extends keyof PushConstantProperties<TSchema>>(
+    key: K,
+  ): PushConstantProperties<TSchema>[K] {
+    return this.__pushConstants[
+      key as string
+    ] as PushConstantProperties<TSchema>[K];
+  }
+
+  /**
+   * Set a push constant property value (type-safe)
+   */
+  setPushConstant<K extends keyof PushConstantProperties<TSchema>>(
+    key: K,
+    value: PushConstantProperties<TSchema>[K],
+  ): this {
+    const definitions = this.__schema.pushConstants;
+    if (!definitions || !(key in definitions)) {
+      throw new Error(
+        `Property '${String(key)}' is not a push constant property`,
+      );
+    }
+
+    const def = definitions[key as string]!;
+    if (!validateProperty(def, value)) {
+      throw new Error(
+        `Invalid value for property '${String(key)}': expected type '${def.type}'`,
+      );
+    }
+
+    if (this.__pushConstants[key as string] === value) return this;
+
+    this.__pushConstants[key as string] = value;
+    return this.markAsDirty();
+  }
+
+  /**
    * Create a deep clone of this material
    */
   clone(): Material<TSchema> {
     const cloned = new Material<TSchema>({
       label: this.__label,
       shader: this.__shader,
-      primitive: this.__primitive,
-      rasterizer: this.__rasterizer.clone(),
+      topology: this.__topology,
+      rasterizationState: this.__rasterizationState.clone(),
       schema: this.__schema,
-      constants: { ...this.__constants },
-      mutables: { ...this.__mutables },
+      overrides: { ...this.__overrides },
+      uniforms: { ...this.__uniforms },
+      pushConstants: { ...this.__pushConstants },
     } as unknown as MaterialDescriptor<TSchema>);
     cloned.markAsDirty();
     return cloned;
@@ -247,7 +314,9 @@ export class Material<
   equals(other: Material<TSchema>): boolean {
     return (
       this.__hash === other.__hash &&
-      JSON.stringify(this.__mutables) === JSON.stringify(other.__mutables)
+      JSON.stringify(this.__uniforms) === JSON.stringify(other.__uniforms) &&
+      JSON.stringify(this.__pushConstants) ===
+        JSON.stringify(other.__pushConstants)
     );
   }
 
@@ -258,11 +327,124 @@ export class Material<
     if (this.equals(other)) return this;
 
     this.__label = other.__label;
-    this.__primitive = other.__primitive;
-    this.__rasterizer.copy(other.__rasterizer);
-    this.__mutables = { ...other.__mutables };
+    this.__topology = other.__topology;
+    this.__rasterizationState.copy(other.__rasterizationState);
+    this.__uniforms = { ...other.__uniforms };
+    this.__pushConstants = { ...other.__pushConstants };
 
     this.__updateHash();
     return this.markAsDirty();
+  }
+}
+
+/**
+ * Fluent builder for constructing Materials.
+ */
+export class MaterialBuilder<
+  TOverrides extends Record<string, PropertyDefinition> = {},
+  TUniforms extends Record<string, PropertyDefinition> = {},
+  TPushConstants extends Record<string, PropertyDefinition> = {},
+> {
+  private __label?: string;
+  private __shader: ShaderHolder;
+  private __topology: PrimitiveTopology = 'triangle-list';
+  private __rasterizationState = new Rasterizer();
+
+  private __overrides: Record<string, PropertyDefinition> = {};
+  private __uniforms: Record<string, PropertyDefinition> = {};
+  private __pushConstants: Record<string, PropertyDefinition> = {};
+
+  private __overrideValues: Record<string, unknown> = {};
+  private __uniformValues: Record<string, unknown> = {};
+  private __pushConstantValues: Record<string, unknown> = {};
+
+  constructor(shader: ShaderHolder) {
+    this.__shader = shader;
+  }
+
+  setLabel(label: string): this {
+    this.__label = label;
+    return this;
+  }
+
+  setTopology(topology: PrimitiveTopology): this {
+    this.__topology = topology;
+    return this;
+  }
+
+  setRasterizationState(state: Rasterizer): this {
+    this.__rasterizationState = state;
+    return this;
+  }
+
+  /**
+   * Add a pipeline overridable constant.
+   */
+  addOverride<K extends string, T extends PropertyDefinition>(
+    key: K,
+    definition: T,
+    value?: PropertyTypeMap[T['type']],
+  ): MaterialBuilder<TOverrides & Record<K, T>, TUniforms, TPushConstants> {
+    this.__overrides[key] = definition;
+    if (value !== undefined) {
+      this.__overrideValues[key] = value;
+    }
+    return this as any;
+  }
+
+  /**
+   * Add a uniform property.
+   */
+  addUniform<K extends string, T extends PropertyDefinition>(
+    key: K,
+    definition: T,
+    value?: PropertyTypeMap[T['type']],
+  ): MaterialBuilder<TOverrides, TUniforms & Record<K, T>, TPushConstants> {
+    this.__uniforms[key] = definition;
+    if (value !== undefined) {
+      this.__uniformValues[key] = value;
+    }
+    return this as any;
+  }
+
+  /**
+   * Add a push constant property.
+   */
+  addPushConstant<K extends string, T extends PropertyDefinition>(
+    key: K,
+    definition: T,
+    value?: PropertyTypeMap[T['type']],
+  ): MaterialBuilder<TOverrides, TUniforms, TPushConstants & Record<K, T>> {
+    this.__pushConstants[key] = definition;
+    if (value !== undefined) {
+      this.__pushConstantValues[key] = value;
+    }
+    return this as any;
+  }
+
+  /**
+   * Build the Material instance.
+   */
+  build(): Material<{
+    overrides: TOverrides;
+    uniforms: TUniforms;
+    pushConstants: TPushConstants;
+  }> {
+    const schema = {
+      overrides: this.__overrides,
+      uniforms: this.__uniforms,
+      pushConstants: this.__pushConstants,
+    } as any;
+
+    return new Material({
+      label: this.__label,
+      shader: this.__shader,
+      topology: this.__topology,
+      rasterizationState: this.__rasterizationState,
+      schema,
+      overrides: this.__overrideValues,
+      uniforms: this.__uniformValues,
+      pushConstants: this.__pushConstantValues,
+    });
   }
 }

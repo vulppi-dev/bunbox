@@ -11,18 +11,37 @@ import type { Rasterizer } from '../resources/Rasterizer';
 import type { ShaderHolder } from '../core';
 
 /**
- * Material primitive topology types (string-based for API agnosticism)
+ * Material primitive topology types.
+ * Maps to `primitive` state in pipeline descriptor.
  */
-export type MaterialPrimitive = 'triangles' | 'lines' | 'points';
+export type PrimitiveTopology =
+  | 'point-list'
+  | 'line-list'
+  | 'line-strip'
+  | 'triangle-list'
+  | 'triangle-strip';
 
 /**
- * Schema defining both constant and mutable properties
+ * Schema defining material properties.
  */
 export type MaterialSchema = {
-  /** Properties that cannot change after material creation */
-  readonly constants?: Record<string, PropertyDefinition>;
-  /** Properties that can be modified during runtime */
-  readonly mutables?: Record<string, PropertyDefinition>;
+  /**
+   * Pipeline overridable constants.
+   * These are constant values specialized at pipeline creation time.
+   */
+  readonly overrides?: Record<string, PropertyDefinition>;
+
+  /**
+   * Uniform buffer properties.
+   * These can be updated efficiently during runtime.
+   */
+  readonly uniforms?: Record<string, PropertyDefinition>;
+
+  /**
+   * Push constants.
+   * Small amount of data (usually 128 bytes max) that can be updated very frequently (per draw call).
+   */
+  readonly pushConstants?: Record<string, PropertyDefinition>;
 };
 
 /**
@@ -41,63 +60,88 @@ export type MaterialDescriptor<
 > = {
   /** Optional label for debugging */
   label?: string;
-  /** Shader source code (WGSL, GLSL, etc.) - can be a single string or per-stage */
+  /** Shader source code */
   shader: ShaderHolder;
   /** Primitive topology */
-  primitive?: MaterialPrimitive;
-  /** Rasterizer state (depth, stencil, blend, etc.) */
-  rasterizer?: Rasterizer;
+  topology?: PrimitiveTopology;
+  /** Rasterizer state */
+  rasterizationState?: Rasterizer;
   /** Material property schema */
   schema: TSchema;
-} & (TSchema['constants'] extends Record<string, PropertyDefinition>
+} & (TSchema['overrides'] extends Record<string, PropertyDefinition>
   ? {
-      /** Constant property values (required if schema defines constants) */
-      constants: Partial<SchemaPropertyValues<TSchema['constants']>>;
+      /** Override values (required if schema defines overrides) */
+      overrides: Partial<SchemaPropertyValues<TSchema['overrides']>>;
     }
   : {
-      constants?: never;
+      overrides?: never;
     }) &
-  (TSchema['mutables'] extends Record<string, PropertyDefinition>
+  (TSchema['uniforms'] extends Record<string, PropertyDefinition>
     ? {
-        /** Initial mutable property values (optional, uses defaults) */
-        mutables?: Partial<SchemaPropertyValues<TSchema['mutables']>>;
+        /** Initial uniform values (optional, uses defaults) */
+        uniforms?: Partial<SchemaPropertyValues<TSchema['uniforms']>>;
       }
     : {
-        mutables?: never;
+        uniforms?: never;
+      }) &
+  (TSchema['pushConstants'] extends Record<string, PropertyDefinition>
+    ? {
+        /** Initial push constant values (optional, uses defaults) */
+        pushConstants?: Partial<SchemaPropertyValues<TSchema['pushConstants']>>;
+      }
+    : {
+        pushConstants?: never;
       });
 
 /**
- * Type-safe property accessor for constants
+ * Type-safe property accessor for overrides
  */
-export type ConstantProperties<TSchema extends MaterialSchema> =
-  TSchema['constants'] extends Record<string, PropertyDefinition>
-    ? Readonly<SchemaPropertyValues<TSchema['constants']>>
+export type OverrideProperties<TSchema extends MaterialSchema> =
+  TSchema['overrides'] extends Record<string, PropertyDefinition>
+    ? Readonly<SchemaPropertyValues<TSchema['overrides']>>
     : Record<string, never>;
 
 /**
- * Type-safe property accessor for mutables
+ * Type-safe property accessor for uniforms
  */
-export type MutableProperties<TSchema extends MaterialSchema> =
-  TSchema['mutables'] extends Record<string, PropertyDefinition>
-    ? SchemaPropertyValues<TSchema['mutables']>
+export type UniformProperties<TSchema extends MaterialSchema> =
+  TSchema['uniforms'] extends Record<string, PropertyDefinition>
+    ? SchemaPropertyValues<TSchema['uniforms']>
+    : Record<string, never>;
+
+/**
+ * Type-safe property accessor for push constants
+ */
+export type PushConstantProperties<TSchema extends MaterialSchema> =
+  TSchema['pushConstants'] extends Record<string, PropertyDefinition>
+    ? SchemaPropertyValues<TSchema['pushConstants']>
     : Record<string, never>;
 
 /**
  * Helper to define material schema with type inference
  */
 export function defineSchema<
-  TConstants extends Record<string, PropertyDefinition> = Record<
+  TOverrides extends Record<string, PropertyDefinition> = Record<
     string,
     PropertyDefinition
   >,
-  TMutables extends Record<string, PropertyDefinition> = Record<
+  TUniforms extends Record<string, PropertyDefinition> = Record<
+    string,
+    PropertyDefinition
+  >,
+  TPushConstants extends Record<string, PropertyDefinition> = Record<
     string,
     PropertyDefinition
   >,
 >(schema: {
-  constants?: TConstants;
-  mutables?: TMutables;
-}): MaterialSchema & { constants?: TConstants; mutables?: TMutables } {
+  overrides?: TOverrides;
+  uniforms?: TUniforms;
+  pushConstants?: TPushConstants;
+}): MaterialSchema & {
+  overrides?: TOverrides;
+  uniforms?: TUniforms;
+  pushConstants?: TPushConstants;
+} {
   return schema;
 }
 
@@ -106,8 +150,9 @@ export function defineSchema<
  */
 export function validateSchema(schema: MaterialSchema): boolean {
   const allKeys = [
-    ...Object.keys(schema.constants ?? {}),
-    ...Object.keys(schema.mutables ?? {}),
+    ...Object.keys(schema.overrides ?? {}),
+    ...Object.keys(schema.uniforms ?? {}),
+    ...Object.keys(schema.pushConstants ?? {}),
   ];
   const uniqueKeys = new Set(allKeys);
 

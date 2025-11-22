@@ -3,98 +3,150 @@
  * Supports modern graphics APIs (Vulkan, WebGPU, Direct3D 12, Metal).
  */
 
-import type { TextureHolder } from '../core';
-import type { Sampler } from '../resources/Sampler';
+import { Matrix3, Matrix4, Vector2, Vector3, Vector4, Color } from '../math';
+import { Sampler, Texture3D, TextureBase, TextureCube } from '../resources';
 
 /**
- * Scalar value types (float, int, uint, bool)
+ * 32-bit floating-point scalar.
+ * Maps to `f32` in WGSL.
  */
-export type ScalarValue = number | boolean;
+export type F32 = number;
 
 /**
- * Vector types with component count
+ * 32-bit signed integer scalar.
+ * Maps to `i32` in WGSL.
  */
-export type Vec2 = readonly [number, number];
-export type Vec3 = readonly [number, number, number];
-export type Vec4 = readonly [number, number, number, number];
-
-export type VectorValue = Vec2 | Vec3 | Vec4;
+export type I32 = number;
 
 /**
- * Matrix types (column-major layout)
+ * 32-bit unsigned integer scalar.
+ * Maps to `u32` in WGSL.
  */
-export type Mat2 = readonly [Vec2, Vec2];
-export type Mat3 = readonly [Vec3, Vec3, Vec3];
-export type Mat4 = readonly [Vec4, Vec4, Vec4, Vec4];
-
-export type MatrixValue = Mat2 | Mat3 | Mat4;
+export type U32 = number;
 
 /**
- * Color types (RGB, RGBA)
+ * Boolean scalar.
+ * Maps to `bool` in WGSL.
  */
-export type Color3 = readonly [number, number, number];
-export type Color4 = readonly [number, number, number, number];
-export type ColorValue = Color3 | Color4;
+export type Bool = boolean;
 
 /**
- * Sampler type
+ * 2-component vector of 32-bit floats.
+ * Maps to `vec2f` (or `vec2<f32>`) in WGSL.
+ */
+export type Vec2f = Vector2;
+
+/**
+ * 3-component vector of 32-bit floats.
+ * Maps to `vec3f` (or `vec3<f32>`) in WGSL.
+ */
+export type Vec3f = Vector3;
+
+/**
+ * 4-component vector of 32-bit floats.
+ * Maps to `vec4f` (or `vec4<f32>`) in WGSL.
+ */
+export type Vec4f = Vector4;
+
+/**
+ * 3x3 matrix of 32-bit floats.
+ * Maps to `mat3x3f` (or `mat3x3<f32>`) in WGSL.
+ */
+export type Mat3x3f = Matrix3;
+
+/**
+ * 4x4 matrix of 32-bit floats.
+ * Maps to `mat4x4f` (or `mat4x4<f32>`) in WGSL.
+ */
+export type Mat4x4f = Matrix4;
+
+/**
+ * RGBA color (4 components).
+ * Maps to `vec4f` in WGSL but semantically distinct for color pickers/spaces.
+ */
+export type ColorValue = Color;
+
+/**
+ * 2D Texture.
+ * Maps to `texture_2d<f32>` in WGSL.
+ */
+export type Texture2DValue = TextureBase;
+
+/**
+ * 3D Texture.
+ * Maps to `texture_3d<f32>` in WGSL.
+ */
+export type Texture3DValue = Texture3D;
+
+/**
+ * Cube Texture.
+ * Maps to `texture_cube<f32>` in WGSL.
+ */
+export type TextureCubeValue = TextureCube;
+
+/**
+ * Sampler state.
+ * Maps to `sampler` or `sampler_comparison` in WGSL.
  */
 export type SamplerValue = Sampler;
-
-/**
- * Combined texture pointer + sampler binding
- */
-export type TextureHolderSamplerBinding = {
-  readonly texture: TextureHolder;
-  readonly sampler: SamplerValue;
-};
 
 /**
  * All possible property value types
  */
 export type PropertyValue =
-  | ScalarValue
-  | VectorValue
-  | MatrixValue
+  | F32
+  | I32
+  | U32
+  | Bool
+  | Vec2f
+  | Vec3f
+  | Vec4f
+  | Mat3x3f
+  | Mat4x4f
   | ColorValue
-  | TextureHolder
-  | SamplerValue
-  | TextureHolderSamplerBinding;
+  | Texture2DValue
+  | Texture3DValue
+  | TextureCubeValue
+  | SamplerValue;
 
 /**
  * Property type discriminators for runtime type checking
  */
 export enum PropertyType {
-  Scalar = 'scalar',
-  Vec2 = 'vec2',
-  Vec3 = 'vec3',
-  Vec4 = 'vec4',
-  Mat2 = 'mat2',
-  Mat3 = 'mat3',
-  Mat4 = 'mat4',
-  Color3 = 'color3',
-  Color4 = 'color4',
-  Texture = 'texture-ptr',
+  F32 = 'f32',
+  I32 = 'i32',
+  U32 = 'u32',
+  Bool = 'bool',
+  Vec2f = 'vec2f',
+  Vec3f = 'vec3f',
+  Vec4f = 'vec4f',
+  Mat3x3f = 'mat3x3f',
+  Mat4x4f = 'mat4x4f',
+  Color = 'color',
+  Texture2D = 'texture_2d',
+  Texture3D = 'texture_3d',
+  TextureCube = 'texture_cube',
   Sampler = 'sampler',
-  TextureSampler = 'texture-ptr-sampler',
 }
 
 /**
  * Property type mapping for type inference
  */
 export interface PropertyTypeMap {
-  [PropertyType.Scalar]: ScalarValue;
-  [PropertyType.Vec2]: Vec2;
-  [PropertyType.Vec3]: Vec3;
-  [PropertyType.Vec4]: Vec4;
-  [PropertyType.Mat2]: Mat2;
-  [PropertyType.Mat3]: Mat3;
-  [PropertyType.Mat4]: Mat4;
-  [PropertyType.Color3]: Color3;
-  [PropertyType.Color4]: Color4;
-  [PropertyType.Texture]: TextureHolder;
+  [PropertyType.F32]: F32;
+  [PropertyType.I32]: I32;
+  [PropertyType.U32]: U32;
+  [PropertyType.Bool]: Bool;
+  [PropertyType.Vec2f]: Vec2f;
+  [PropertyType.Vec3f]: Vec3f;
+  [PropertyType.Vec4f]: Vec4f;
+  [PropertyType.Mat3x3f]: Mat3x3f;
+  [PropertyType.Mat4x4f]: Mat4x4f;
+  [PropertyType.Color]: ColorValue;
+  [PropertyType.Texture2D]: Texture2DValue;
+  [PropertyType.Texture3D]: Texture3DValue;
+  [PropertyType.TextureCube]: TextureCubeValue;
   [PropertyType.Sampler]: SamplerValue;
-  [PropertyType.TextureSampler]: TextureHolderSamplerBinding;
 }
 
 /**
@@ -110,96 +162,193 @@ export type PropertyDefinition<T extends PropertyType = PropertyType> = {
  * Helper to create property definitions with type inference
  */
 export const property = {
-  scalar: (
-    defaultValue?: ScalarValue,
+  /**
+   * Defines a 32-bit floating-point scalar property.
+   * @param defaultValue Default value (number)
+   * @param label Optional label for UI
+   */
+  f32: (
+    defaultValue?: F32,
     label?: string,
-  ): PropertyDefinition<PropertyType.Scalar> => ({
-    type: PropertyType.Scalar,
+  ): PropertyDefinition<PropertyType.F32> => ({
+    type: PropertyType.F32,
     defaultValue,
     label,
   }),
 
-  vec2: (
-    defaultValue?: Vec2,
+  /**
+   * Defines a 32-bit signed integer scalar property.
+   * @param defaultValue Default value (integer number)
+   * @param label Optional label for UI
+   */
+  i32: (
+    defaultValue?: I32,
     label?: string,
-  ): PropertyDefinition<PropertyType.Vec2> => ({
-    type: PropertyType.Vec2,
+  ): PropertyDefinition<PropertyType.I32> => ({
+    type: PropertyType.I32,
     defaultValue,
     label,
   }),
 
-  vec3: (
-    defaultValue?: Vec3,
+  /**
+   * Defines a 32-bit unsigned integer scalar property.
+   * @param defaultValue Default value (positive integer number)
+   * @param label Optional label for UI
+   */
+  u32: (
+    defaultValue?: U32,
     label?: string,
-  ): PropertyDefinition<PropertyType.Vec3> => ({
-    type: PropertyType.Vec3,
+  ): PropertyDefinition<PropertyType.U32> => ({
+    type: PropertyType.U32,
     defaultValue,
     label,
   }),
 
-  vec4: (
-    defaultValue?: Vec4,
+  /**
+   * Defines a boolean property.
+   * @param defaultValue Default value (boolean)
+   * @param label Optional label for UI
+   */
+  bool: (
+    defaultValue?: Bool,
     label?: string,
-  ): PropertyDefinition<PropertyType.Vec4> => ({
-    type: PropertyType.Vec4,
+  ): PropertyDefinition<PropertyType.Bool> => ({
+    type: PropertyType.Bool,
     defaultValue,
     label,
   }),
 
-  mat2: (
-    defaultValue?: Mat2,
+  /**
+   * Defines a 2-component float vector property.
+   * @param defaultValue Default value (Vector2)
+   * @param label Optional label for UI
+   */
+  vec2f: (
+    defaultValue?: Vec2f,
     label?: string,
-  ): PropertyDefinition<PropertyType.Mat2> => ({
-    type: PropertyType.Mat2,
+  ): PropertyDefinition<PropertyType.Vec2f> => ({
+    type: PropertyType.Vec2f,
     defaultValue,
     label,
   }),
 
-  mat3: (
-    defaultValue?: Mat3,
+  /**
+   * Defines a 3-component float vector property.
+   * @param defaultValue Default value (Vector3)
+   * @param label Optional label for UI
+   */
+  vec3f: (
+    defaultValue?: Vec3f,
     label?: string,
-  ): PropertyDefinition<PropertyType.Mat3> => ({
-    type: PropertyType.Mat3,
+  ): PropertyDefinition<PropertyType.Vec3f> => ({
+    type: PropertyType.Vec3f,
     defaultValue,
     label,
   }),
 
-  mat4: (
-    defaultValue?: Mat4,
+  /**
+   * Defines a 4-component float vector property.
+   * @param defaultValue Default value (Vector4)
+   * @param label Optional label for UI
+   */
+  vec4f: (
+    defaultValue?: Vec4f,
     label?: string,
-  ): PropertyDefinition<PropertyType.Mat4> => ({
-    type: PropertyType.Mat4,
+  ): PropertyDefinition<PropertyType.Vec4f> => ({
+    type: PropertyType.Vec4f,
     defaultValue,
     label,
   }),
 
-  color3: (
-    defaultValue?: Color3,
+  /**
+   * Defines a 3x3 float matrix property.
+   * @param defaultValue Default value (Matrix3)
+   * @param label Optional label for UI
+   */
+  mat3x3f: (
+    defaultValue?: Mat3x3f,
     label?: string,
-  ): PropertyDefinition<PropertyType.Color3> => ({
-    type: PropertyType.Color3,
+  ): PropertyDefinition<PropertyType.Mat3x3f> => ({
+    type: PropertyType.Mat3x3f,
     defaultValue,
     label,
   }),
 
-  color4: (
-    defaultValue?: Color4,
+  /**
+   * Defines a 4x4 float matrix property.
+   * @param defaultValue Default value (Matrix4)
+   * @param label Optional label for UI
+   */
+  mat4x4f: (
+    defaultValue?: Mat4x4f,
     label?: string,
-  ): PropertyDefinition<PropertyType.Color4> => ({
-    type: PropertyType.Color4,
+  ): PropertyDefinition<PropertyType.Mat4x4f> => ({
+    type: PropertyType.Mat4x4f,
     defaultValue,
     label,
   }),
 
-  texture: (
-    defaultValue?: TextureHolder,
+  /**
+   * Defines a color property (RGBA).
+   * @param defaultValue Default value (Color)
+   * @param label Optional label for UI
+   */
+  color: (
+    defaultValue?: ColorValue,
     label?: string,
-  ): PropertyDefinition<PropertyType.Texture> => ({
-    type: PropertyType.Texture,
+  ): PropertyDefinition<PropertyType.Color> => ({
+    type: PropertyType.Color,
     defaultValue,
     label,
   }),
 
+  /**
+   * Defines a 2D texture property.
+   * @param defaultValue Default value (TextureBase)
+   * @param label Optional label for UI
+   */
+  texture2d: (
+    defaultValue?: Texture2DValue,
+    label?: string,
+  ): PropertyDefinition<PropertyType.Texture2D> => ({
+    type: PropertyType.Texture2D,
+    defaultValue,
+    label,
+  }),
+
+  /**
+   * Defines a 3D texture property.
+   * @param defaultValue Default value (Texture3D)
+   * @param label Optional label for UI
+   */
+  texture3d: (
+    defaultValue?: Texture3DValue,
+    label?: string,
+  ): PropertyDefinition<PropertyType.Texture3D> => ({
+    type: PropertyType.Texture3D,
+    defaultValue,
+    label,
+  }),
+
+  /**
+   * Defines a cube texture property.
+   * @param defaultValue Default value (TextureCube)
+   * @param label Optional label for UI
+   */
+  textureCube: (
+    defaultValue?: TextureCubeValue,
+    label?: string,
+  ): PropertyDefinition<PropertyType.TextureCube> => ({
+    type: PropertyType.TextureCube,
+    defaultValue,
+    label,
+  }),
+
+  /**
+   * Defines a sampler property.
+   * @param defaultValue Default value (Sampler)
+   * @param label Optional label for UI
+   */
   sampler: (
     defaultValue?: SamplerValue,
     label?: string,
@@ -208,58 +357,52 @@ export const property = {
     defaultValue,
     label,
   }),
-
-  textureSampler: (
-    defaultValue?: TextureHolderSamplerBinding,
-    label?: string,
-  ): PropertyDefinition<PropertyType.TextureSampler> => ({
-    type: PropertyType.TextureSampler,
-    defaultValue,
-    label,
-  }),
 };
 
 /**
  * Runtime type validators
  */
-export const isScalar = (value: unknown): value is ScalarValue =>
-  typeof value === 'number' || typeof value === 'boolean';
+export const isF32 = (value: unknown): value is F32 =>
+  typeof value === 'number';
 
-export const isVec2 = (value: unknown): value is Vec2 =>
-  Array.isArray(value) &&
-  value.length === 2 &&
-  value.every((v) => typeof v === 'number');
+export const isI32 = (value: unknown): value is I32 =>
+  typeof value === 'number' && Number.isInteger(value);
 
-export const isVec3 = (value: unknown): value is Vec3 =>
-  Array.isArray(value) &&
-  value.length === 3 &&
-  value.every((v) => typeof v === 'number');
+export const isU32 = (value: unknown): value is U32 =>
+  typeof value === 'number' && Number.isInteger(value) && value >= 0;
 
-export const isVec4 = (value: unknown): value is Vec4 =>
-  Array.isArray(value) &&
-  value.length === 4 &&
-  value.every((v) => typeof v === 'number');
+export const isBool = (value: unknown): value is Bool =>
+  typeof value === 'boolean';
 
-export const isColor3 = (value: unknown): value is Color3 => isVec3(value);
+export const isVec2f = (value: unknown): value is Vec2f =>
+  value instanceof Vector2;
 
-export const isColor4 = (value: unknown): value is Color4 => isVec4(value);
+export const isVec3f = (value: unknown): value is Vec3f =>
+  value instanceof Vector3;
 
-export const isTexture = (value: unknown): value is TextureHolder =>
-  typeof value === 'symbol' &&
-  value.description?.startsWith('texture:') === true;
+export const isVec4f = (value: unknown): value is Vec4f =>
+  value instanceof Vector4;
+
+export const isMat3x3f = (value: unknown): value is Mat3x3f =>
+  value instanceof Matrix3;
+
+export const isMat4x4f = (value: unknown): value is Mat4x4f =>
+  value instanceof Matrix4;
+
+export const isColor = (value: unknown): value is ColorValue =>
+  value instanceof Color;
+
+export const isTexture2D = (value: unknown): value is Texture2DValue =>
+  value instanceof TextureBase && (value as any)._kind() === '2d';
+
+export const isTexture3D = (value: unknown): value is Texture3DValue =>
+  value instanceof Texture3D;
+
+export const isTextureCube = (value: unknown): value is TextureCubeValue =>
+  value instanceof TextureCube;
 
 export const isSampler = (value: unknown): value is SamplerValue =>
-  value instanceof Object && 'minFilter' in value && 'magFilter' in value;
-
-export const isTextureSampler = (
-  value: unknown,
-): value is TextureHolderSamplerBinding =>
-  value !== null &&
-  typeof value === 'object' &&
-  'texture' in value &&
-  'sampler' in value &&
-  isTexture((value as TextureHolderSamplerBinding).texture) &&
-  isSampler((value as TextureHolderSamplerBinding).sampler);
+  value instanceof Sampler;
 
 /**
  * Validate property value against its type definition
@@ -269,24 +412,34 @@ export function validateProperty<T extends PropertyType>(
   value: unknown,
 ): value is PropertyTypeMap[T] {
   switch (definition.type) {
-    case PropertyType.Scalar:
-      return isScalar(value);
-    case PropertyType.Vec2:
-      return isVec2(value);
-    case PropertyType.Vec3:
-      return isVec3(value);
-    case PropertyType.Vec4:
-      return isVec4(value);
-    case PropertyType.Color3:
-      return isColor3(value);
-    case PropertyType.Color4:
-      return isColor4(value);
-    case PropertyType.Texture:
-      return isTexture(value);
+    case PropertyType.F32:
+      return isF32(value);
+    case PropertyType.I32:
+      return isI32(value);
+    case PropertyType.U32:
+      return isU32(value);
+    case PropertyType.Bool:
+      return isBool(value);
+    case PropertyType.Vec2f:
+      return isVec2f(value);
+    case PropertyType.Vec3f:
+      return isVec3f(value);
+    case PropertyType.Vec4f:
+      return isVec4f(value);
+    case PropertyType.Mat3x3f:
+      return isMat3x3f(value);
+    case PropertyType.Mat4x4f:
+      return isMat4x4f(value);
+    case PropertyType.Color:
+      return isColor(value);
+    case PropertyType.Texture2D:
+      return isTexture2D(value);
+    case PropertyType.Texture3D:
+      return isTexture3D(value);
+    case PropertyType.TextureCube:
+      return isTextureCube(value);
     case PropertyType.Sampler:
       return isSampler(value);
-    case PropertyType.TextureSampler:
-      return isTextureSampler(value);
     default:
       return false;
   }
