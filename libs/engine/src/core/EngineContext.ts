@@ -35,6 +35,7 @@ import {
   CONTEXT_prepare,
   CONTEXT_rebuildWindowResources,
 } from './_symbols';
+import { RenderLogic } from './RenderLogic';
 
 // Setup struct pointer/string conversions globally
 setupStruct({
@@ -235,10 +236,11 @@ export class EngineContext {
 
   private __windows = new Set<bigint>();
   private __windowsPack: Map<bigint, WindowPack> = new Map();
-  private __windowsWorlds: Map<bigint, World> = new Map();
+  private __windowsWorlds: Map<bigint, World | undefined> = new Map();
   private __windowsFrameIndices: Map<bigint, number> = new Map();
 
   private __assetsStorage = new AssetsStorage();
+  private __renderLogic = new RenderLogic();
 
   // Aux holders
   private __imageIndexHolder = new Uint32Array(1);
@@ -266,6 +268,7 @@ export class EngineContext {
 
   [CONTEXT_dispose]() {
     if (this.__windows.size === 0) {
+      this.__renderLogic.clear();
       this.__assetsStorage.clear();
       EngineContext.__contexts.delete(this);
     }
@@ -300,7 +303,6 @@ export class EngineContext {
       this.__windowsFrameIndices.set(window, 0);
     }
 
-    // clear old swapchain if exists
     if (pack.swapchain) {
       pack.swapchain.dispose();
       pack.swapchain = undefined;
@@ -353,7 +355,7 @@ export class EngineContext {
     if (pack) {
       pack.sync?.waitDeviceIdle();
 
-      // TODO: dispose other resources associated with swapchain
+      this.__renderLogic.releaseSwapchainResources(window);
 
       pack.swapchain?.dispose();
       pack.sync?.dispose();
@@ -407,12 +409,13 @@ export class EngineContext {
 
       world?.[FRAME_LOOP](window, this.__assetsStorage, time, delta);
 
-      this.__render(
+      this.__renderLogic.render(
         pack.device,
         commandBuffer,
         pack.swapchain,
         imageIndex,
         this.__assetsStorage,
+        world,
       );
 
       const signal = this.__submit(
@@ -511,15 +514,5 @@ export class EngineContext {
     if (presentResult !== VkResult.SUCCESS) {
       throw new RenderError(getResultMessage(presentResult), 'Vulkan');
     }
-  }
-
-  private __render(
-    device: VkDevice,
-    commandBuffer: VkCommandBuffer,
-    swapchain: VkSwapchain,
-    imageIndex: number,
-    assetsStorage: AssetsStorage,
-  ): void {
-    // TODO: implement actual rendering process
   }
 }

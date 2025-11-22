@@ -4,6 +4,7 @@ import {
   GLFW_GeneralMacro,
   GLFW_WindowMacro,
   glfwFrameBufferSizeCallback,
+  glfwImageStruct,
   glfwVideoModeStruct,
   glfwWindowCloseCallback,
   glfwWindowContentScaleCallback,
@@ -30,6 +31,7 @@ import {
   CONTEXT_rebuildWindowResources,
 } from './_symbols';
 import type { World } from './World';
+import { decodeImage, detectImageFormat } from '../decoders';
 
 export type WindowState =
   | 'minimized'
@@ -499,6 +501,47 @@ export class Window extends EventEmitter<WindowEventMap> {
     this.__isVisible = false;
     GLFW.glfwHideWindow(this.__window);
     this.__dispatchWindowEvent('window-hidden');
+  }
+
+  setIcons(icons: Uint8Array[]) {
+    if (!icons.length) {
+      throw new WindowError('No icons provided for window icon', this.__id);
+    }
+
+    Promise.all(
+      icons.map(async (img) => {
+        const format = detectImageFormat(img.buffer as ArrayBuffer);
+        if (!format) {
+          throw new WindowError(
+            'Unsupported image format for window icon',
+            this.__id,
+          );
+        }
+        const decoded = await decodeImage(img.buffer as ArrayBuffer, format);
+
+        if (!decoded) {
+          throw new WindowError(
+            'Failed to decode image for window icon',
+            this.__id,
+          );
+        }
+
+        const imageStr = instantiate(glfwImageStruct);
+        imageStr.height = decoded.height;
+        imageStr.width = decoded.width;
+        imageStr.pixels = BigInt(ptr(decoded.data));
+        return getInstanceBuffer(imageStr);
+      }),
+    ).then((buffers) => {
+      const size = buffers[0]!.byteLength;
+      const array = new Uint8Array(size * buffers.length);
+      buffers.forEach((bfr, index) => {
+        array.set(new Uint8Array(bfr), index * size);
+      });
+
+      const ptrs = ptr(array);
+      GLFW.glfwSetWindowIcon(this.__window, buffers.length, ptrs);
+    });
   }
 
   private __updateMainMonitorData(setMonitor: boolean = false) {

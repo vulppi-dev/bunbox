@@ -13,6 +13,7 @@ import {
   type RegisteredSystem,
   type SystemContext,
 } from './System';
+import type { Environment } from '../resources/Environment';
 
 export type Entity = string & { __entityBrand: never };
 
@@ -69,12 +70,22 @@ export class World implements Disposable {
 
   private __lockLoop = false;
 
+  private __environment: Environment | null = null;
+
+  get environment(): Environment | null {
+    return this.__environment;
+  }
+
   get id(): string {
     return this.__id;
   }
 
   get isDisposed(): boolean {
     return this.__disposed;
+  }
+
+  set environment(env: Environment | null) {
+    this.__environment = env;
   }
 
   createEntity(): Entity {

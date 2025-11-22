@@ -1,9 +1,9 @@
-import { i32, struct, string, array, u32, f32 } from '@bunbox/struct';
+import { array, f32, i32, pointer, struct, u32, u8 } from '@bunbox/struct';
 
 export const glfwImageStruct = struct({
   width: i32(),
   height: i32(),
-  pixels: string(),
+  pixels: pointer(array(u8())),
 });
 
 export const glfwVideoModeStruct = struct({
