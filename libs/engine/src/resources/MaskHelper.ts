@@ -1,5 +1,4 @@
 import { DirtyState } from '@bunbox/utils';
-import { sha } from 'bun';
 
 /**
  * 32-bit bitmask utility for layer management and visibility control.
@@ -71,17 +70,6 @@ export class MaskHelper extends DirtyState {
       throw new Error('Mask value must be a finite integer.');
     if (mask < 0 || mask > 0xffffffff)
       throw new Error('Mask value must be between 0 and 4294967295.');
-  }
-
-  /**
-   * Compute stable content hash for mask value.
-   *
-   * Used for resource deduplication and caching.
-   *
-   * @returns Hex string representing the mask state
-   */
-  get hash(): string {
-    return sha(JSON.stringify({ m: this.__value >>> 0 }), 'hex');
   }
 
   // Bit queries

@@ -1,5 +1,4 @@
 import { DirtyState } from '@bunbox/utils';
-import { sha } from 'bun';
 import type {
   FilterMode,
   MipmapFilter,
@@ -330,25 +329,6 @@ export class Sampler extends DirtyState {
   }
   get borderColor() {
     return this.__borderColor;
-  }
-
-  /** Stable string key to deduplicate/cachelize samplers. */
-  get hash(): string {
-    const key = {
-      min: this.__minFilter,
-      mag: this.__magFilter,
-      mip: this.__mipmapFilter,
-      wrapU: this.__addressModeU,
-      wrapV: this.__addressModeV,
-      wrapW: this.__addressModeW,
-      lodMin: this.__lodMinClamp,
-      lodMax: this.__lodMaxClamp,
-      cmp: this.__compare ?? 'none',
-      aniso: this.__maxAnisotropy,
-      norm: this.__normalizedCoordinates ? 1 : 0,
-      border: this.__borderColor,
-    };
-    return sha(JSON.stringify(key), 'hex');
   }
 
   set label(v: string) {

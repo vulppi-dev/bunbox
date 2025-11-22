@@ -1,5 +1,4 @@
 import { DirtyState } from '@bunbox/utils';
-import { sha } from 'bun';
 
 /**
  * Shadow quality preset affecting resolution and filtering.
@@ -234,25 +233,6 @@ export class ShadowConfig extends DirtyState {
           fadeDistance: this.__cascades.fadeDistance,
         }
       : null;
-  }
-
-  /**
-   * Compute content hash for caching and deduplication.
-   */
-  get hash(): string {
-    return sha(
-      JSON.stringify({
-        enabled: this.__enabled,
-        resolution: this.__resolution,
-        filterMode: this.__filterMode,
-        bias: this.__bias,
-        normalBias: this.__normalBias,
-        maxDistance: this.__maxDistance,
-        fadeDistance: this.__fadeDistance,
-        cascades: this.__cascades,
-      }),
-      'hex',
-    );
   }
 
   set enabled(value: boolean) {

@@ -1,7 +1,7 @@
 import { DirtyState } from '@bunbox/utils';
-import type { TexturePointer } from '../managers/TextureManager';
 import { Color } from '../math';
 import { ShadowConfig } from './ShadowConfig';
+import type { TextureCube } from './TextureCube';
 
 /**
  * Environment node managing scene-wide rendering settings.
@@ -58,7 +58,7 @@ export class Environment extends DirtyState {
   private __ambientColor: Color;
   private __ambientIntensity: number = 0.2;
   private __shadowConfig: ShadowConfig;
-  private __skybox: TexturePointer | null = null;
+  private __skybox: TextureCube | null = null;
   private __enableFog: boolean = false;
   private __fogColor: Color;
   private __fogStart: number = 10;
@@ -123,7 +123,7 @@ export class Environment extends DirtyState {
    * env.skybox = skyboxPointer;
    * ```
    */
-  get skybox(): TexturePointer | null {
+  get skybox(): TextureCube | null {
     return this.__skybox;
   }
 
@@ -201,7 +201,7 @@ export class Environment extends DirtyState {
     this.markAsDirty();
   }
 
-  set skybox(value: TexturePointer | null) {
+  set skybox(value: TextureCube | null) {
     this.__skybox = value;
     this.markAsDirty();
   }

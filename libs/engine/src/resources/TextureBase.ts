@@ -1,7 +1,6 @@
 import { DirtyState } from '@bunbox/utils';
-import { sha } from 'bun';
 import { ulid } from 'ulid';
-import type { TextureFormat, SampleCount, TextureUsage } from './types/aliases';
+import type { SampleCount, TextureFormat, TextureUsage } from './types/aliases';
 
 /**
  * Descriptor for creating texture instances.
@@ -171,52 +170,6 @@ export abstract class TextureBase extends DirtyState {
     return this.__format.startsWith('depth');
   }
 
-  /**
-   * Compute content hash for resource deduplication.
-   *
-   * Two textures with identical properties will produce the same hash.
-   * Includes all texture parameters and subclass-specific extensions.
-   *
-   * @returns Hex string representing texture configuration
-   */
-  get hash(): string {
-    const key = {
-      label: this.__label,
-      width: this.__width,
-      height: this.__height,
-      mipLevels: this.__mipLevels,
-      sampleCount: this.__sampleCount,
-      format: this.__format,
-      usage: this.__usage,
-      kind: this._kind(),
-      ext: this._extraHashKey(),
-    };
-    return sha(JSON.stringify(key), 'hex');
-  }
-
-  /**
-   * Compute content hash excluding label for resource deduplication.
-   *
-   * This allows deduplication of textures that are identical in content
-   * but have different labels.
-   *
-   * @returns Hex string representing texture configuration (excluding label)
-   */
-  get contentHash(): string {
-    const key = {
-      label: '',
-      width: this.__width,
-      height: this.__height,
-      mipLevels: this.__mipLevels,
-      sampleCount: this.__sampleCount,
-      format: this.__format,
-      usage: this.__usage,
-      kind: this._kind(),
-      ext: this._extraHashKey(),
-    };
-    return sha(JSON.stringify(key), 'hex');
-  }
-
   get layerCount(): number {
     return 1;
   }
@@ -310,9 +263,5 @@ export abstract class TextureBase extends DirtyState {
     return this.__usage.includes(flag);
   }
 
-  // Protected hooks: non-abstract before abstract to satisfy ordering
-  protected _extraHashKey(): string | undefined {
-    return undefined;
-  }
   protected abstract _kind(): '2d' | 'cube' | '3d';
 }

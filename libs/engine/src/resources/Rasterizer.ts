@@ -1,5 +1,4 @@
 import { DirtyState } from '@bunbox/utils';
-import { sha } from 'bun';
 import { MaskHelper } from './MaskHelper';
 import type {
   RasterizerFillMode,
@@ -56,7 +55,6 @@ export type BlendState = {
 };
 
 export class Rasterizer extends DirtyState {
-  private __hash = '';
   private __fillMode: RasterizerFillMode = 'fill';
   private __cull: RasterizerCullMode = 'none';
   private __frontFace: RasterizerFrontFace = 'clockwise';
@@ -119,8 +117,6 @@ export class Rasterizer extends DirtyState {
     if (options.depthStencil) this.updateDepthStencil(options.depthStencil);
     if (options.multisample) this.updateMultisample(options.multisample);
     if (options.blend) this.updateBlend(options.blend);
-    // Ensure hash is initialized even if no options provided
-    if (!this.__hash) this.__updateHash();
     // Match Material behavior (new instances start dirty)
     this.markAsDirty();
   }
@@ -135,10 +131,6 @@ export class Rasterizer extends DirtyState {
 
   get frontFace(): RasterizerFrontFace {
     return this.__frontFace;
-  }
-
-  get hash(): string {
-    return this.__hash;
   }
 
   // Depth/Stencil
@@ -189,21 +181,18 @@ export class Rasterizer extends DirtyState {
   set fillMode(v: RasterizerFillMode) {
     if (this.__fillMode === v) return;
     this.__fillMode = v;
-    this.__updateHash();
     this.markAsDirty();
   }
 
   set cull(v: RasterizerCullMode) {
     if (this.__cull === v) return;
     this.__cull = v;
-    this.__updateHash();
     this.markAsDirty();
   }
 
   set frontFace(v: RasterizerFrontFace) {
     if (this.__frontFace === v) return;
     this.__frontFace = v;
-    this.__updateHash();
     this.markAsDirty();
   }
 
@@ -224,7 +213,6 @@ export class Rasterizer extends DirtyState {
         return m;
       })(),
     };
-    this.__updateHash();
     this.markAsDirty();
   }
 
@@ -243,7 +231,6 @@ export class Rasterizer extends DirtyState {
         return m;
       })(),
     };
-    this.__updateHash();
     this.markAsDirty();
   }
 
@@ -259,7 +246,6 @@ export class Rasterizer extends DirtyState {
         return m;
       })(),
     };
-    this.__updateHash();
     this.markAsDirty();
   }
 
@@ -329,40 +315,6 @@ export class Rasterizer extends DirtyState {
     });
     r.markAsDirty();
     return r;
-  }
-
-  private __updateHash() {
-    this.__hash = sha(
-      JSON.stringify({
-        fillMode: this.__fillMode,
-        cull: this.__cull,
-        frontFace: this.__frontFace,
-        depthStencil: {
-          format: this.__depthStencil.format,
-          depthWriteEnabled: this.__depthStencil.depthWriteEnabled,
-          depthCompare: this.__depthStencil.depthCompare,
-          stencilFront: this.__depthStencil.stencilFront,
-          stencilBack: this.__depthStencil.stencilBack,
-          stencilReadMask: this.__depthStencil.stencilReadMask.get(),
-          stencilWriteMask: this.__depthStencil.stencilWriteMask.get(),
-          depthBias: this.__depthStencil.depthBias,
-          depthBiasSlopeScale: this.__depthStencil.depthBiasSlopeScale,
-          depthBiasClamp: this.__depthStencil.depthBiasClamp,
-        },
-        multisample: {
-          count: this.__multisample.count,
-          mask: this.__multisample.mask.get(),
-          alphaToCoverageEnabled: this.__multisample.alphaToCoverageEnabled,
-        },
-        blend: {
-          enabled: this.__blend.enabled,
-          color: this.__blend.color,
-          alpha: this.__blend.alpha,
-          writeMask: this.__blend.writeMask.get(),
-        },
-      }),
-      'hex',
-    );
   }
 
   private __deepEqualDepthStencil(

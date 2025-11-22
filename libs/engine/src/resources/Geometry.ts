@@ -1,5 +1,4 @@
 import { DirtyState } from '@bunbox/utils';
-import { sha } from 'bun';
 import { Vector3 } from '../math';
 
 /**
@@ -94,42 +93,6 @@ export class Geometry extends DirtyState {
       () => new Float32Array(vertexLength * 2),
     );
     this.__indices = new Uint32Array(indexLength);
-  }
-
-  /**
-   * Compute a stable content hash combining positions, normals, UVs and indices.
-   *
-   * This hash can be used for geometry deduplication and caching. Two geometries
-   * with identical vertex data will produce the same hash.
-   *
-   * @returns A hex string representing the geometry content hash
-   */
-  get hash(): string {
-    // Mix numeric contents quickly then stabilize with sha hex
-    const mixArray = (h: number, arr: ArrayLike<number>): number => {
-      let x = h >>> 0;
-      const n = (arr as { length: number }).length;
-      for (let i = 0; i < n; i++) {
-        let v = (arr as { [k: number]: number })[i]!;
-        v = Math.imul((v * 2654435761) | 0, 1597334677) >>> 0;
-        x ^= v;
-        x = Math.imul(x, 2246822519) >>> 0;
-      }
-      return x >>> 0;
-    };
-
-    let h = 0x811c9dc5; // FNV-like seed
-    h = mixArray(h, this.__vertex);
-    h = mixArray(h, this.__normal);
-    for (const uv of this.__uvs) h = mixArray(h, uv);
-    h = mixArray(h, this.__indices);
-
-    const meta = {
-      vc: this.__vertexCount,
-      ic: this.__indexCount,
-      u: this.__uvs.length,
-    };
-    return sha(JSON.stringify({ h, meta }), 'hex');
   }
 
   /**

@@ -1,113 +1,129 @@
-import { ulid } from 'ulid';
+import { type Pointer } from 'bun:ffi';
 import { EngineError } from '../errors';
 import type { TextureBase } from '../resources';
+import { VkBuffer, VkCommandPool, VkDevice, VkImage } from '../vulkan';
 
-export type TextureHolder = string & { __textureHolderBrand: never };
-
-const TEXTURE_HOLDER_TYPE = Symbol('TextureHolder');
-
-function isTextureHolder(value: any): value is TextureHolder {
-  return typeof value === 'string';
-}
-
-function createTextureHolder(): TextureHolder {
-  const holder = ulid();
-  Object.defineProperty(holder, TEXTURE_HOLDER_TYPE, {
-    value: true,
-    enumerable: false,
-    writable: false,
-    configurable: false,
-  });
-  return holder as TextureHolder;
+interface TextureResource {
+  buffer?: Uint8Array;
+  stagingBuffer?: VkBuffer;
+  vkImage?: VkImage;
 }
 
 export class TextureStorage {
-  private __textures: Map<TextureHolder, TextureBase> = new Map();
-  private __hashIndex: Map<string, TextureHolder> = new Map();
-  private __keys: Map<string, TextureHolder> = new Map();
+  private __textures: Map<TextureBase, TextureResource> = new Map();
 
-  register(texture: TextureBase, key?: string): TextureHolder {
-    const contentHash = texture.contentHash;
-
-    // Check key collision
-    if (key) {
-      const existingHolder = this.__keys.get(key);
-      if (existingHolder) {
-        const existingTexture = this.__textures.get(existingHolder);
-        if (existingTexture && existingTexture.contentHash === contentHash) {
-          return existingHolder;
-        }
-        throw new EngineError(
-          `Key already used by a different texture: ${key}`,
-          'TextureStorage',
-        );
-      }
-    }
-
-    // Check content deduplication
-    const existingHolder = this.__hashIndex.get(contentHash);
-    if (existingHolder) {
-      if (key) {
-        this.__keys.set(key, existingHolder);
-      }
-      return existingHolder;
-    }
-
-    const holder = createTextureHolder();
-    this.__textures.set(holder, texture);
-    this.__hashIndex.set(contentHash, holder);
-    if (key) {
-      this.__keys.set(key, holder);
-    }
-    return holder;
+  register(texture: TextureBase): void {
+    this.__ensureResource(texture);
   }
 
-  getTexture(holder: TextureHolder): TextureBase | undefined {
-    if (!isTextureHolder(holder)) {
-      throw new EngineError(`Invalid TextureHolder provided`, 'TextureStorage');
+  setBuffer(texture: TextureBase, buffer: Uint8Array): void {
+    const resource = this.__ensureResource(texture);
+    resource.buffer = buffer;
+
+    // Drop stale staging buffer to avoid uploading outdated data.
+    if (resource.stagingBuffer) {
+      resource.stagingBuffer.dispose();
+      resource.stagingBuffer = undefined;
     }
-    return this.__textures.get(holder);
   }
 
-  getHolderByKey(key: string): TextureHolder | undefined {
-    return this.__keys.get(key);
+  getBuffer(texture: TextureBase): Uint8Array | undefined {
+    return this.__textures.get(texture)?.buffer;
   }
 
-  getHolderByContentHash(hash: string): TextureHolder | undefined {
-    return this.__hashIndex.get(hash);
+  getVkImage(texture: TextureBase): VkImage | undefined {
+    return this.__textures.get(texture)?.vkImage;
   }
 
-  unregister(holder: TextureHolder): boolean {
-    if (!isTextureHolder(holder)) {
-      throw new EngineError(`Invalid TextureHolder provided`, 'TextureStorage');
-    }
-    const texture = this.__textures.get(holder);
-    if (!texture) return false;
+  uploadToGpu(
+    texture: TextureBase,
+    device: VkDevice,
+    commandPool: VkCommandPool,
+    queue: Pointer,
+  ): void {
+    const resource = this.__ensureResource(texture);
 
-    this.__textures.delete(holder);
-
-    const hash = texture.contentHash;
-    const existingHashHolder = this.__hashIndex.get(hash);
-    if (existingHashHolder === holder) {
-      this.__hashIndex.delete(hash);
-    }
-
-    for (const [k, h] of this.__keys.entries()) {
-      if (h === holder) {
-        this.__keys.delete(k);
-      }
+    if (!resource.buffer) {
+      throw new EngineError(
+        'Cannot upload texture without a CPU buffer',
+        'TextureStorage',
+      );
     }
 
-    return true;
+    resource.stagingBuffer?.dispose();
+    resource.stagingBuffer = new VkBuffer(
+      device.logicalDevice,
+      device.physicalDevice,
+      resource.buffer.byteLength,
+      'staging',
+      resource.buffer,
+    );
+
+    if (!resource.vkImage) {
+      resource.vkImage = new VkImage(
+        device.logicalDevice,
+        device.physicalDevice,
+        texture,
+      );
+    }
+
+    // TODO: submit commands using commandPool/queue to copy staging buffer to the image.
+    void commandPool;
+    void queue;
+  }
+
+  downloadFromGpu(
+    texture: TextureBase,
+    device: VkDevice,
+    commandPool: VkCommandPool,
+    queue: Pointer,
+  ): void {
+    const resource = this.__textures.get(texture);
+
+    if (!resource?.vkImage) {
+      throw new EngineError(
+        'Cannot download texture without a GPU image',
+        'TextureStorage',
+      );
+    }
+
+    // Placeholder for future read-back implementation.
+    void device;
+    void commandPool;
+    void queue;
+    throw new EngineError(
+      'Download from GPU is not implemented yet',
+      'TextureStorage',
+    );
+  }
+
+  destroy(texture: TextureBase): void {
+    const resource = this.__textures.get(texture);
+    if (!resource) return;
+
+    resource.vkImage?.dispose();
+    resource.stagingBuffer?.dispose();
+    this.__textures.delete(texture);
   }
 
   clear(): void {
+    for (const resource of this.__textures.values()) {
+      resource.vkImage?.dispose();
+      resource.stagingBuffer?.dispose();
+    }
     this.__textures.clear();
-    this.__hashIndex.clear();
-    this.__keys.clear();
   }
 
   size(): number {
     return this.__textures.size;
+  }
+
+  private __ensureResource(texture: TextureBase): TextureResource {
+    let resource = this.__textures.get(texture);
+    if (!resource) {
+      resource = {};
+      this.__textures.set(texture, resource);
+    }
+    return resource;
   }
 }
