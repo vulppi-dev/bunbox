@@ -35,6 +35,30 @@ export class AssetsStorage {
     typeCache.set(id, asset);
   }
 
+  remove(type: string | symbol, id: Entity): void {
+    this.__ensureNotDisposed('removeCache');
+    let typeCache = this.__cache.get(type);
+    if (!typeCache) {
+      typeCache = new Map<Entity, any>();
+      this.__cache.set(type, typeCache);
+    }
+    typeCache.delete(id);
+  }
+
+  getTypeCache<T>(type: string | symbol): Map<Entity, T> | undefined {
+    this.__ensureNotDisposed('getTypeCache');
+    return this.__cache.get(type) as Map<Entity, T> | undefined;
+  }
+
+  getTypeEntities(type: string | symbol): Entity[] {
+    this.__ensureNotDisposed('getTypeEntities');
+    const typeCache = this.__cache.get(type);
+    if (!typeCache) {
+      return [];
+    }
+    return Array.from(typeCache.keys());
+  }
+
   private __ensureNotDisposed(methodName: string): void {
     if (this.__disposed) {
       throw new EngineError(

@@ -2,6 +2,8 @@ import type { VkCommandBuffer, VkDevice, VkSwapchain } from '../vulkan';
 import type { AssetsStorage } from './AssetsStorage';
 import type { World } from './World';
 
+export type FrameData = {};
+
 export class RenderLogic {
   render(
     device: VkDevice,

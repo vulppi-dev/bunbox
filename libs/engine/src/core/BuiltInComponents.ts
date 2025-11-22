@@ -1,3 +1,4 @@
+import type { Material } from '../material/MaterialBuilder';
 import { Color, Quaternion, Rect, Vector3 } from '../math';
 import { Geometry, MaskHelper } from '../resources';
 import { defineComponent } from './Component';
@@ -14,7 +15,7 @@ export const TransformComponent = defineComponent('Transform', () => ({
 
 export const MeshComponent = defineComponent('Mesh', () => ({
   geometry: null as Geometry | null,
-  material: null as any | null,
+  material: null as Material | null,
   layer: new MaskHelper(),
 }));
 

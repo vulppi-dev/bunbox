@@ -25,6 +25,11 @@ export const CameraSystem = defineSystem(
   'CameraSystem',
   110,
   ({ world, assetsStorage }) => {
+    const existsViews = assetsStorage.getTypeEntities(CAMERA_VIEW_KEY);
+    const existsProjections = assetsStorage.getTypeEntities(
+      CAMERA_PROJECTION_KEY,
+    );
+
     const updateViewMatrix = (entity: Entity): void => {
       const transformCache = assetsStorage.get<TransformCache>(
         TRANSFORM_CACHE_KEY,
