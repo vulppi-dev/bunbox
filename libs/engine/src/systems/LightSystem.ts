@@ -1,4 +1,4 @@
-import { defineSystem, forEachQuery } from '../core';
+import { defineSystem, forEachQuery, type Entity } from '../core';
 import {
   DirectionalLightComponent,
   LightComponent,
@@ -7,7 +7,7 @@ import {
   TransformComponent,
 } from '../core/BuiltInComponents';
 import { EngineError } from '../errors';
-import { Vector3, Color, Matrix4 } from '../math';
+import { Vector3, Color } from '../math';
 import { MaskHelper } from '../resources';
 import { TRANSFORM_CACHE_KEY, type TransformCache } from './TransformSystem';
 
@@ -47,10 +47,20 @@ export const LightSystem = defineSystem(
   'LightSystem',
   120,
   ({ world, assetsStorage }) => {
+    const cachedDirectionalEntities = assetsStorage.getTypeEntities(
+      DIRECTIONAL_LIGHT_KEY,
+    );
+    const cachedPointEntities =
+      assetsStorage.getTypeEntities(POINT_LIGHT_KEY);
+    const cachedSpotEntities = assetsStorage.getTypeEntities(SPOT_LIGHT_KEY);
+
+    const activeLightEntities = new Set<Entity>();
+
     forEachQuery(
       world,
       [LightComponent, DirectionalLightComponent, TransformComponent],
       (entity, light) => {
+        activeLightEntities.add(entity);
         const transformCache = assetsStorage.get<TransformCache>(
           TRANSFORM_CACHE_KEY,
           entity,
@@ -102,6 +112,7 @@ export const LightSystem = defineSystem(
       world,
       [LightComponent, PointLightComponent, TransformComponent],
       (entity, light, point) => {
+        activeLightEntities.add(entity);
         const transformCache = assetsStorage.get<TransformCache>(
           TRANSFORM_CACHE_KEY,
           entity,
@@ -151,6 +162,7 @@ export const LightSystem = defineSystem(
       world,
       [LightComponent, SpotLightComponent, TransformComponent],
       (entity, light, spot) => {
+        activeLightEntities.add(entity);
         const transformCache = assetsStorage.get<TransformCache>(
           TRANSFORM_CACHE_KEY,
           entity,
@@ -200,5 +212,21 @@ export const LightSystem = defineSystem(
         transformCache.localMatrix.markAsClean();
       },
     );
+
+    const cachedEntities = new Set<Entity>([
+      ...cachedDirectionalEntities,
+      ...cachedPointEntities,
+      ...cachedSpotEntities,
+    ]);
+
+    for (const entity of cachedEntities) {
+      if (activeLightEntities.has(entity)) {
+        continue;
+      }
+
+      assetsStorage.remove(DIRECTIONAL_LIGHT_KEY, entity);
+      assetsStorage.remove(POINT_LIGHT_KEY, entity);
+      assetsStorage.remove(SPOT_LIGHT_KEY, entity);
+    }
   },
 );

@@ -25,10 +25,18 @@ export const CameraSystem = defineSystem(
   'CameraSystem',
   110,
   ({ world, assetsStorage }) => {
-    const existsViews = assetsStorage.getTypeEntities(CAMERA_VIEW_KEY);
-    const existsProjections = assetsStorage.getTypeEntities(
+    const cachedViewEntities = assetsStorage.getTypeEntities(CAMERA_VIEW_KEY);
+    const cachedProjectionEntities = assetsStorage.getTypeEntities(
       CAMERA_PROJECTION_KEY,
     );
+    const cachedPerspectiveEntities = assetsStorage.getTypeEntities(
+      CAMERA_PERSPECTIVE_KEY,
+    );
+    const cachedOrthographicEntities = assetsStorage.getTypeEntities(
+      CAMERA_ORTHOGRAPHIC_KEY,
+    );
+
+    const activeCameraEntities = new Set<Entity>();
 
     const updateViewMatrix = (entity: Entity): void => {
       const transformCache = assetsStorage.get<TransformCache>(
@@ -68,6 +76,7 @@ export const CameraSystem = defineSystem(
         TransformComponent,
       ],
       (entity, camera, perspectiveCamera) => {
+        activeCameraEntities.add(entity);
         updateViewMatrix(entity);
 
         // Update projection matrix
@@ -149,6 +158,7 @@ export const CameraSystem = defineSystem(
         CameraComponent, OrthographicCameraComponent, TransformComponent,
       ],
       (entity, camera, orthographicCamera) => {
+        activeCameraEntities.add(entity);
         updateViewMatrix(entity);
 
         // Update projection matrix
@@ -238,5 +248,23 @@ export const CameraSystem = defineSystem(
         }
       },
     );
+
+    const cachedEntities = new Set<Entity>([
+      ...cachedViewEntities,
+      ...cachedProjectionEntities,
+      ...cachedPerspectiveEntities,
+      ...cachedOrthographicEntities,
+    ]);
+
+    for (const entity of cachedEntities) {
+      if (activeCameraEntities.has(entity)) {
+        continue;
+      }
+
+      assetsStorage.remove(CAMERA_VIEW_KEY, entity);
+      assetsStorage.remove(CAMERA_PROJECTION_KEY, entity);
+      assetsStorage.remove(CAMERA_PERSPECTIVE_KEY, entity);
+      assetsStorage.remove(CAMERA_ORTHOGRAPHIC_KEY, entity);
+    }
   },
 );
