@@ -2,6 +2,7 @@ import { lstatSync, readFileSync } from 'fs';
 import { sha } from 'bun';
 import { ulid } from 'ulid';
 import { EngineError } from '../errors';
+import { WgslReflect } from 'wgsl_reflect';
 
 export type ShaderHolder = string & { __shaderHolderBrand: never };
 
@@ -119,6 +120,12 @@ export class ShaderStorage {
 
   getHolderByKey(key: string): ShaderHolder | undefined {
     return this.__keys.get(key);
+  }
+
+  getReflectionData(holder: ShaderHolder): WgslReflect | undefined {
+    const pack = this.getShaderPack(holder);
+    if (!pack) return undefined;
+    return new WgslReflect(pack.src);
   }
 
   unregister(holder: ShaderHolder): boolean {
