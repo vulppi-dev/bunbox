@@ -49,6 +49,15 @@ export class VkModel implements Disposable {
       binding++;
     }
 
+    // Bind custom attribute buffers (bindings after UVs)
+    for (const [name, buffer] of this.__geometry.customAttributeBuffers) {
+      buffers.push(buffer);
+      VK_DEBUG(
+        `Binding custom attribute "${name}" buffer at binding ${binding}`,
+      );
+      binding++;
+    }
+
     // Bind all vertex attribute buffers at once
     if (buffers.length > 0) {
       commandBuffer.bindVertexBuffers(0, buffers);

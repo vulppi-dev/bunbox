@@ -1,6 +1,60 @@
 import { DirtyState } from '@bunbox/utils';
 import { Vector3 } from '../math';
 
+export type VertexAttributeType =
+  | 'float32'
+  | 'uint8'
+  | 'uint16'
+  | 'uint32'
+  | 'int8'
+  | 'int16'
+  | 'int32';
+
+export type VertexAttributeArray =
+  | Float32Array
+  | Uint8Array
+  | Uint16Array
+  | Uint32Array
+  | Int8Array
+  | Int16Array
+  | Int32Array;
+
+export type GeometryCustomAttribute = {
+  readonly name: string;
+  readonly components: number;
+  readonly type: VertexAttributeType;
+  readonly normalized: boolean;
+  readonly data: VertexAttributeArray;
+};
+
+type AttributeConstructor =
+  | Float32ArrayConstructor
+  | Uint8ArrayConstructor
+  | Uint16ArrayConstructor
+  | Uint32ArrayConstructor
+  | Int8ArrayConstructor
+  | Int16ArrayConstructor
+  | Int32ArrayConstructor;
+
+const ATTRIBUTE_TYPE_CTORS: Record<VertexAttributeType, AttributeConstructor> =
+  {
+    float32: Float32Array,
+    uint8: Uint8Array,
+    uint16: Uint16Array,
+    uint32: Uint32Array,
+    int8: Int8Array,
+    int16: Int16Array,
+    int32: Int32Array,
+  };
+
+type CustomAttribute = {
+  name: string;
+  components: number;
+  type: VertexAttributeType;
+  normalized: boolean;
+  data: VertexAttributeArray;
+};
+
 /**
  * Geometry stores vertex attributes and indices using typed arrays.
  *
@@ -11,6 +65,7 @@ import { Vector3 } from '../math';
  * - `positions`: Float32Array with 3 components per vertex (x, y, z)
  * - `normals`: Float32Array with 3 components per vertex (x, y, z)
  * - `uvs`: Array of Float32Array layers with 2 components per vertex (u, v)
+ * - `customAttributes`: Map of named attributes with configurable component count and numeric type (e.g. tangents, skin weights)
  * - `indices`: Uint32Array defining triangle face connectivity
  *
  * **Performance Considerations:**
@@ -62,6 +117,13 @@ import { Vector3 } from '../math';
  * geometry.markAsDirty(); // Don't forget!
  * ```
  *
+ * @example
+ * ```ts
+ * // Add a custom tangent attribute (xyzw)
+ * geometry.addCustomAttribute('tangent', 4);
+ * geometry.setCustomAttribute('tangent', 0, [1, 0, 0, 1]);
+ * ```
+ *
  * @extends {DirtyState}
  */
 export class Geometry extends DirtyState {
@@ -69,6 +131,7 @@ export class Geometry extends DirtyState {
   private __normal: Float32Array;
   private __uvs: Float32Array[];
   private __indices: Uint32Array;
+  private __customAttributes: Map<string, CustomAttribute>;
 
   private __vertexCount: number;
   private __indexCount: number;
@@ -93,6 +156,7 @@ export class Geometry extends DirtyState {
       () => new Float32Array(vertexLength * 2),
     );
     this.__indices = new Uint32Array(indexLength);
+    this.__customAttributes = new Map();
   }
 
   /**
@@ -141,6 +205,35 @@ export class Geometry extends DirtyState {
    */
   get uvs(): readonly Float32Array[] {
     return Object.freeze([...this.__uvs]);
+  }
+
+  /**
+   * Registered custom vertex attributes.
+   *
+   * Returned metadata is read-only. To mutate the attribute data directly (e.g.
+   * for performance-critical updates), call {@link getCustomAttributeData} with
+   * the attribute name and remember to {@link markAsDirty} afterwards.
+   */
+  get customAttributes(): readonly GeometryCustomAttribute[] {
+    return this.__customAttributes.size === 0
+      ? []
+      : Array.from(this.__customAttributes.values(), (attr) => ({
+          name: attr.name,
+          components: attr.components,
+          type: attr.type,
+          normalized: attr.normalized,
+          data: attr.data,
+        }));
+  }
+
+  hasCustomAttribute(name: string): boolean {
+    return this.__customAttributes.has(name);
+  }
+
+  getCustomAttributeData(name: string): VertexAttributeArray {
+    const attr = this.__customAttributes.get(name);
+    if (!attr) throw new Error(`Custom attribute not found: ${name}`);
+    return attr.data;
   }
 
   /**
@@ -308,6 +401,113 @@ export class Geometry extends DirtyState {
     const arr = this.__uvs[layer]!;
     const o = i * 2;
     return [arr[o]!, arr[o + 1]!];
+  }
+
+  // ---------- Custom attributes ----------
+
+  /**
+   * Define a new custom vertex attribute (e.g. tangents, skin weights).
+   *
+   * @param name - Unique attribute identifier
+   * @param components - Number of components per vertex (e.g. 3 for xyz, 4 for xyzw)
+   * @param options - Attribute metadata (type, normalization and optional initial data)
+   * @returns this for chaining
+   */
+  addCustomAttribute(
+    name: string,
+    components: number,
+    options?: {
+      type?: VertexAttributeType;
+      normalized?: boolean;
+      initialData?: ArrayLike<number>;
+    },
+  ): this {
+    const key = this.__sanitizeAttributeName(name);
+    if (!Number.isInteger(components) || components <= 0)
+      throw new Error('components must be a positive integer.');
+    if (this.__customAttributes.has(key))
+      throw new Error(`Custom attribute already exists: ${key}`);
+
+    const type = options?.type ?? 'float32';
+    const normalized = options?.normalized ?? false;
+    const data = this.__createAttributeArray(
+      type,
+      this.__vertexCount * components,
+    );
+
+    if (options?.initialData) {
+      const initial = options.initialData;
+      if (initial.length % components !== 0)
+        throw new Error(
+          `Initial data length for "${key}" must be a multiple of ${components}.`,
+        );
+      const vertexCount = initial.length / components;
+      if (vertexCount > this.__vertexCount)
+        throw new Error(
+          `Initial data for "${key}" exceeds vertexCount (${this.__vertexCount}).`,
+        );
+      data.set(initial, 0);
+    }
+
+    this.__customAttributes.set(key, {
+      name: key,
+      components,
+      type,
+      normalized,
+      data,
+    });
+    return this.markAsDirty();
+  }
+
+  removeCustomAttribute(name: string): this {
+    const key = this.__sanitizeAttributeName(name);
+    if (!this.__customAttributes.has(key)) return this;
+    this.__customAttributes.delete(key);
+    return this.markAsDirty();
+  }
+
+  setCustomAttribute(
+    name: string,
+    vertexIndex: number,
+    values: ArrayLike<number>,
+  ): this {
+    this.__assertVertexIndex(vertexIndex);
+    const attr = this.__requireCustomAttribute(name);
+    if (values.length !== attr.components)
+      throw new Error(
+        `Expected ${attr.components} components for "${attr.name}", got ${values.length}.`,
+      );
+
+    const offset = vertexIndex * attr.components;
+    let changed = false;
+    for (let i = 0; i < attr.components; i++) {
+      const v = values[i]!;
+      if (attr.data[offset + i] !== v) {
+        attr.data[offset + i] = v;
+        changed = true;
+      }
+    }
+    return changed ? this.markAsDirty() : this;
+  }
+
+  writeCustomAttribute(
+    name: string,
+    data: ArrayLike<number>,
+    offsetVertex = 0,
+  ): this {
+    if (offsetVertex < 0 || !Number.isInteger(offsetVertex))
+      throw new Error('offsetVertex must be a non-negative integer.');
+    const attr = this.__requireCustomAttribute(name);
+    if (data.length % attr.components !== 0)
+      throw new Error(
+        `Custom attribute data length for "${attr.name}" must be a multiple of ${attr.components}.`,
+      );
+    const count = data.length / attr.components;
+    if (offsetVertex + count > this.__vertexCount)
+      throw new Error('Custom attribute write exceeds vertexCount.');
+
+    attr.data.set(data, offsetVertex * attr.components);
+    return this.markAsDirty();
   }
 
   // ---------- Bulk writers ----------
@@ -503,6 +703,20 @@ export class Geometry extends DirtyState {
         changed = true;
       }
     }
+    // custom attributes
+    for (const attr of this.__customAttributes.values()) {
+      let needsFill = false;
+      for (const x of attr.data) {
+        if (x !== 0) {
+          needsFill = true;
+          break;
+        }
+      }
+      if (needsFill) {
+        attr.data.fill(0);
+        changed = true;
+      }
+    }
     // indices
     needFill = false;
     for (const x of this.__indices) {
@@ -582,6 +796,7 @@ export class Geometry extends DirtyState {
     this.__normal.set(g.__normal);
     for (let i = 0; i < this.__uvs.length; i++) this.__uvs[i]!.set(g.__uvs[i]!);
     this.__indices.set(g.__indices);
+    this.__copyCustomAttributesFrom(g);
     return this.markAsDirty();
   }
 
@@ -602,6 +817,14 @@ export class Geometry extends DirtyState {
     g.__normal.set(this.__normal);
     for (let i = 0; i < this.__uvs.length; i++) g.__uvs[i]!.set(this.__uvs[i]!);
     g.__indices.set(this.__indices);
+    for (const attr of this.__customAttributes.values()) {
+      const data = this.__createAttributeArray(
+        attr.type,
+        this.__vertexCount * attr.components,
+      );
+      data.set(attr.data);
+      g.__customAttributes.set(attr.name, { ...attr, data });
+    }
     g.markAsDirty();
     return g as this;
   }
@@ -665,9 +888,84 @@ export class Geometry extends DirtyState {
       changed = true;
     }
 
+    if (newV !== this.__vertexCount && this.__customAttributes.size > 0) {
+      if (this.__resizeCustomAttributes(newV)) {
+        changed = true;
+      }
+    }
+
     this.__vertexCount = newV;
     this.__indexCount = newI;
 
     return changed ? this.markAsDirty() : this;
+  }
+
+  private __sanitizeAttributeName(name: string): string {
+    const trimmed = name.trim();
+    if (!trimmed) throw new Error('Custom attribute name cannot be empty.');
+    return trimmed;
+  }
+
+  private __requireCustomAttribute(name: string): CustomAttribute {
+    const key = this.__sanitizeAttributeName(name);
+    const attr = this.__customAttributes.get(key);
+    if (!attr) throw new Error(`Custom attribute not found: ${key}`);
+    return attr;
+  }
+
+  private __createAttributeArray(
+    type: VertexAttributeType,
+    length: number,
+  ): VertexAttributeArray {
+    const ctor = ATTRIBUTE_TYPE_CTORS[type];
+    if (!ctor) throw new Error(`Unsupported attribute type: ${type}`);
+    return new ctor(length);
+  }
+
+  private __resizeCustomAttributes(vertexCount: number): boolean {
+    let changed = false;
+    for (const [name, attr] of this.__customAttributes) {
+      const length = vertexCount * attr.components;
+      if (attr.data.length === length) continue;
+      const data = this.__createAttributeArray(attr.type, length);
+      data.set(attr.data.subarray(0, Math.min(attr.data.length, data.length)));
+      this.__customAttributes.set(name, { ...attr, data });
+      changed = true;
+    }
+    return changed;
+  }
+
+  private __copyCustomAttributesFrom(source: Geometry): void {
+    const seen = new Set<string>();
+    for (const attr of source.__customAttributes.values()) {
+      const expectedLength = this.__vertexCount * attr.components;
+      const current = this.__customAttributes.get(attr.name);
+      let data: VertexAttributeArray;
+      if (
+        !current ||
+        current.components !== attr.components ||
+        current.type !== attr.type ||
+        current.data.length !== expectedLength
+      ) {
+        data = this.__createAttributeArray(attr.type, expectedLength);
+      } else {
+        data = current.data;
+      }
+      data.set(attr.data);
+      this.__customAttributes.set(attr.name, {
+        name: attr.name,
+        components: attr.components,
+        type: attr.type,
+        normalized: attr.normalized,
+        data,
+      });
+      seen.add(attr.name);
+    }
+
+    for (const name of this.__customAttributes.keys()) {
+      if (!seen.has(name)) {
+        this.__customAttributes.delete(name);
+      }
+    }
   }
 }

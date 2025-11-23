@@ -17,6 +17,7 @@ export class VkGeometry implements Disposable {
   private __normalBuffer: VkBuffer | null = null;
   private __indexBuffer: VkBuffer | null = null;
   private __uvBuffers: VkBuffer[] = [];
+  private __customAttributeBuffers: Map<string, VkBuffer> = new Map();
 
   private __isDirty: boolean = true;
 
@@ -48,6 +49,10 @@ export class VkGeometry implements Disposable {
     return this.__uvBuffers;
   }
 
+  get customAttributeBuffers(): ReadonlyMap<string, VkBuffer> {
+    return this.__customAttributeBuffers;
+  }
+
   get geometry(): Geometry {
     return this.__geometry;
   }
@@ -64,6 +69,11 @@ export class VkGeometry implements Disposable {
    * Update GPU buffers if geometry data has changed
    */
   update(): void {
+    if (this.__needsRebuild()) {
+      this.rebuild();
+      return;
+    }
+
     if (!this.__geometry.isDirty && !this.__isDirty) {
       return;
     }
@@ -92,6 +102,14 @@ export class VkGeometry implements Disposable {
       const uvData = uvs[i];
       if (uvBuffer && uvData) {
         uvBuffer.upload(uvData);
+      }
+    }
+
+    // Upload custom attributes
+    for (const attr of this.__geometry.customAttributes) {
+      const buffer = this.__customAttributeBuffers.get(attr.name);
+      if (buffer) {
+        buffer.upload(attr.data);
       }
     }
 
@@ -173,6 +191,21 @@ export class VkGeometry implements Disposable {
         VK_DEBUG(`Created UV buffer ${i}: ${uvSize} bytes`);
       }
     }
+
+    // Create buffers for custom attributes
+    for (const attr of this.__geometry.customAttributes) {
+      if (attr.data.byteLength === 0) continue;
+      const buffer = new VkBuffer(
+        this.__device,
+        this.__physicalDevice,
+        attr.data.byteLength,
+        'vertex',
+      );
+      this.__customAttributeBuffers.set(attr.name, buffer);
+      VK_DEBUG(
+        `Created custom attribute buffer "${attr.name}": ${attr.data.byteLength} bytes`,
+      );
+    }
   }
 
   private __releaseBuffers(): void {
@@ -187,5 +220,63 @@ export class VkGeometry implements Disposable {
 
     this.__uvBuffers.forEach((buffer) => buffer.dispose());
     this.__uvBuffers = [];
+
+    this.__customAttributeBuffers.forEach((buffer) => buffer.dispose());
+    this.__customAttributeBuffers.clear();
+  }
+
+  private __needsRebuild(): boolean {
+    const vertexCount = this.__geometry.vertexCount;
+    const indexCount = this.__geometry.indexCount;
+    const uvLayerCount = this.__geometry.uvLayerCount;
+
+    const expectedVertexSize =
+      vertexCount * 3 * Float32Array.BYTES_PER_ELEMENT;
+    if (vertexCount === 0) {
+      if (this.__vertexBuffer || this.__normalBuffer) return true;
+    } else {
+      if (
+        !this.__vertexBuffer ||
+        this.__vertexBuffer.size !== BigInt(expectedVertexSize)
+      )
+        return true;
+      if (
+        !this.__normalBuffer ||
+        this.__normalBuffer.size !== BigInt(expectedVertexSize)
+      )
+        return true;
+    }
+
+    const expectedIndexSize = indexCount * Uint32Array.BYTES_PER_ELEMENT;
+    if (indexCount === 0) {
+      if (this.__indexBuffer) return true;
+    } else if (
+      !this.__indexBuffer ||
+      this.__indexBuffer.size !== BigInt(expectedIndexSize)
+    ) {
+      return true;
+    }
+
+    if (vertexCount === 0) {
+      if (this.__uvBuffers.length !== 0) return true;
+    } else {
+      const expectedUVSize = vertexCount * 2 * Float32Array.BYTES_PER_ELEMENT;
+      if (uvLayerCount !== this.__uvBuffers.length) return true;
+      for (const buffer of this.__uvBuffers) {
+        if (buffer.size !== BigInt(expectedUVSize)) return true;
+      }
+    }
+
+    const customAttributes = this.__geometry.customAttributes.filter(
+      (attr) => attr.data.byteLength > 0,
+    );
+    if (customAttributes.length !== this.__customAttributeBuffers.size)
+      return true;
+    for (const attr of customAttributes) {
+      const buffer = this.__customAttributeBuffers.get(attr.name);
+      if (!buffer || buffer.size !== BigInt(attr.data.byteLength)) return true;
+    }
+
+    return false;
   }
 }
