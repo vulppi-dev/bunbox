@@ -15,7 +15,7 @@ export interface AttachmentConfig {
    * Format of the attachment
    * Can be swapchain format token or specific format
    */
-  format: TextureFormat | 'swapchain';
+  format: TextureFormat;
 
   /**
    * Number of samples for multisampling

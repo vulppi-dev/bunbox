@@ -34,18 +34,12 @@ export class VkRenderPass implements Disposable {
   private __device: Pointer;
   private __renderPass: Pointer | null = null;
   private __config: RenderPassConfig;
-  private __swapchainFormat: number;
 
   private __pointerHolder: BigUint64Array;
 
-  constructor(
-    device: Pointer,
-    config: RenderPassConfig,
-    swapchainFormat: number,
-  ) {
+  constructor(device: Pointer, config: RenderPassConfig) {
     this.__device = device;
     this.__config = config;
-    this.__swapchainFormat = swapchainFormat;
 
     this.__pointerHolder = new BigUint64Array(1);
     this.__createRenderPass();
@@ -99,10 +93,7 @@ export class VkRenderPass implements Disposable {
 
       const attachmentDesc = instantiate(vkAttachmentDescription);
       attachmentDesc.flags = 0;
-      attachmentDesc.format =
-        attachment.format === 'swapchain'
-          ? this.__swapchainFormat
-          : mapTextureFormatToVk(attachment.format);
+      attachmentDesc.format = mapTextureFormatToVk(attachment.format);
       attachmentDesc.samples = mapSampleCountToVk(attachment.samples ?? 1);
       attachmentDesc.loadOp = mapLoadOpToVk(attachment.loadOp ?? 'dont-care');
       attachmentDesc.storeOp = mapStoreOpToVk(
