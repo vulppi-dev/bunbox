@@ -15,7 +15,7 @@ export const DIRECTIONAL_LIGHT_KEY = Symbol('directionalLightCache');
 export const POINT_LIGHT_KEY = Symbol('pointLightCache');
 export const SPOT_LIGHT_KEY = Symbol('spotLightCache');
 
-type DirectionalLightCache = {
+export type DirectionalLightCache = {
   color: Color;
   intensity: number;
   layer: MaskHelper;
@@ -23,7 +23,7 @@ type DirectionalLightCache = {
   direction: Vector3;
 };
 
-type PointLightCache = {
+export type PointLightCache = {
   color: Color;
   intensity: number;
   layer: MaskHelper;
@@ -32,7 +32,7 @@ type PointLightCache = {
   range: number;
 };
 
-type SpotLightCache = {
+export type SpotLightCache = {
   color: Color;
   intensity: number;
   layer: MaskHelper;
