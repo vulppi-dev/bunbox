@@ -410,6 +410,7 @@ export class EngineContext {
       world?.[FRAME_LOOP](window, this.__assetsStorage, time, delta);
 
       this.__renderLogic.render(
+        window,
         pack.device,
         commandBuffer,
         pack.swapchain,

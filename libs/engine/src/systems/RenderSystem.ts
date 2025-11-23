@@ -16,6 +16,7 @@ import {
   type SpotLightCache,
 } from './LightSystem';
 import { MESH_CACHE_KEY, type MeshCache } from './MeshSystem';
+import { ulid } from 'ulid';
 
 export type FrameCamera = {
   id: Entity;
@@ -84,7 +85,7 @@ export type FrameRenderArtifacts = {
 };
 
 export const FRAME_RENDER_KEY = Symbol('frameRenderArtifacts');
-const FRAME_RENDER_ID = 'frame' as Entity;
+export const FRAME_RENDER_ID = ulid() as Entity;
 
 export const RenderSystem = defineSystem(
   'RenderSystem',

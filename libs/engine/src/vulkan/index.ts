@@ -8,7 +8,7 @@ export * from './VkGraphicsPipeline';
 export * from './VkImage';
 export * from './VkImageView';
 export * from './VkModel';
-export * from './VkRenderPass';
+export * from '../../.old/VkRenderPass';
 export * from './VkSampler';
 export * from './VkShaderModule';
 export * from './VkSwapchain';
