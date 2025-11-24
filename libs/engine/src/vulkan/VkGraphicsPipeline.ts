@@ -92,10 +92,7 @@ export class VkGraphicsPipeline implements Disposable {
   prepare(device: Pointer, renderPass: Pointer, subpass: number): void {
     if (this.__pipeline) return;
     if (!this.reflection.pipelineLayout) {
-      throw new RenderError(
-        'PipelineLayout not prepared before VkGraphicsPipeline.prepare',
-        'Vulkan',
-      );
+      this.reflection.prepare(device);
     }
 
     this.__device = device;
@@ -428,23 +425,25 @@ function buildSpecializationInfo(
 
   const entrySize = sizeOf(vkSpecializationMapEntry);
   const entriesBuffer = new Uint8Array(entrySize * valid.length);
-  const dataBuffer = new Uint8Array(valid.length * 4);
+  const mapped = valid.map((spec) => {
+    const mapping = mapOverrideType(spec.type);
+    return { spec, ...mapping };
+  });
+  const totalSize = mapped.reduce((acc, item) => acc + item.size, 0);
+  const dataBuffer = new Uint8Array(totalSize);
+  const dataView = new DataView(dataBuffer.buffer);
 
-  for (let i = 0; i < valid.length; i++) {
-    const spec = valid[i]!;
+  let currentOffset = 0;
+  for (let i = 0; i < mapped.length; i++) {
+    const { spec, size, writer } = mapped[i]!;
     const entry = instantiate(vkSpecializationMapEntry);
     entry.constantID = spec.id;
-    entry.offset = i * 4;
-    entry.size = BigInt(4);
+    entry.offset = currentOffset;
+    entry.size = BigInt(size);
     entriesBuffer.set(new Uint8Array(getInstanceBuffer(entry)), i * entrySize);
 
-    let value = spec.value as number;
-    if (typeof spec.value === 'boolean') {
-      value = spec.value ? 1 : 0;
-    } else if (typeof spec.value !== 'number') {
-      value = 0;
-    }
-    new DataView(dataBuffer.buffer).setFloat32(i * 4, value, true);
+    writer(dataView, currentOffset, spec.value);
+    currentOffset += size;
   }
 
   const info = instantiate(vkSpecializationInfo);
@@ -462,4 +461,49 @@ function buildSpecializationInfo(
       infoBuffer,
     },
   };
+}
+
+function mapOverrideType(
+  type: string | null,
+): { size: number; writer: (view: DataView, offset: number, value: unknown) => void } {
+  const normalized = (type ?? '').toLowerCase();
+  switch (normalized) {
+    case 'bool':
+      return {
+        size: 4,
+        writer: (view, offset, value) =>
+          view.setUint32(offset, value === true ? 1 : 0, true),
+      };
+    case 'u32':
+    case 'uint':
+    case 'unsigned':
+      return {
+        size: 4,
+        writer: (view, offset, value) =>
+          view.setUint32(
+            offset,
+            typeof value === 'number' ? value >>> 0 : 0,
+            true,
+          ),
+      };
+    case 'i32':
+    case 'int':
+      return {
+        size: 4,
+        writer: (view, offset, value) =>
+          view.setInt32(offset, typeof value === 'number' ? value | 0 : 0, true),
+      };
+    case 'f32':
+    case 'float':
+    default:
+      return {
+        size: 4,
+        writer: (view, offset, value) =>
+          view.setFloat32(
+            offset,
+            typeof value === 'number' ? value : Number(value) || 0,
+            true,
+          ),
+      };
+  }
 }
