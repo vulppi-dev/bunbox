@@ -92,7 +92,7 @@ export class PipelineReflectionLayout implements Disposable {
           const binding = instantiate(vkDescriptorSetLayoutBinding);
           binding.binding = info.binding;
           binding.descriptorType = info.descriptorType;
-          binding.descriptorCount = 1;
+          binding.descriptorCount = info.descriptorCount;
           binding.stageFlags = info.stageFlags;
           binding.pImmutableSamplers = 0n;
           bindingsBuffer.set(

@@ -28,6 +28,7 @@ export type DescriptorBindingInfo = {
   descriptorType: number;
   stageFlags: number;
   name: string;
+  descriptorCount: number;
 };
 
 export type DescriptorSetInfo = {
@@ -169,8 +170,13 @@ function collectResources(
   for (const res of fn.resources) {
     const key = `${res.group}:${res.binding}`;
     const existing = bindings.get(key);
+    const descriptorCount = Math.max(1, res.count || 1);
     if (existing) {
       existing.stageFlags |= stageMask;
+      existing.descriptorCount = Math.max(
+        existing.descriptorCount,
+        descriptorCount,
+      );
       continue;
     }
     bindings.set(key, {
@@ -179,6 +185,7 @@ function collectResources(
       descriptorType: mapResourceToDescriptor(res),
       stageFlags: stageMask,
       name: res.name,
+      descriptorCount,
     });
   }
 }

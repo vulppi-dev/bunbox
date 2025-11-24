@@ -54,6 +54,7 @@ export type UniformBinding = {
   set: number;
   binding: number;
   descriptorType: number;
+  descriptorCount: number;
 };
 
 export type StorageBinding = {
@@ -61,6 +62,7 @@ export type StorageBinding = {
   set: number;
   binding: number;
   descriptorType: number;
+  descriptorCount: number;
 };
 
 export type RasterStateMeta = {
@@ -229,6 +231,7 @@ function mapUniforms(
         set: bindingInfo.set,
         binding: bindingInfo.binding,
         descriptorType: bindingInfo.descriptorType,
+        descriptorCount: bindingInfo.descriptorCount,
       });
     }
   }
@@ -251,6 +254,7 @@ function mapStorages(
         set: bindingInfo.set,
         binding: bindingInfo.binding,
         descriptorType: bindingInfo.descriptorType,
+        descriptorCount: bindingInfo.descriptorCount,
       });
     }
   }

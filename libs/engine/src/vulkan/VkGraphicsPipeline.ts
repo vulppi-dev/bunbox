@@ -92,7 +92,7 @@ export class VkGraphicsPipeline implements Disposable {
   private __descriptorPool: Pointer | null = null;
   private __descriptorSets: BigUint64Array | null = null;
   private __uniformBuffers: Map<string, VkBuffer> = new Map();
-  private __storageBuffers: Map<string, VkBuffer> = new Map();
+  private __storageBuffers: Map<string, VkBuffer[]> = new Map();
 
   constructor(
     reflection: PipelineReflectionLayout,
@@ -360,8 +360,10 @@ export class VkGraphicsPipeline implements Disposable {
       buffer.dispose();
     }
     this.__uniformBuffers.clear();
-    for (const buffer of this.__storageBuffers.values()) {
-      buffer.dispose();
+    for (const bufferList of this.__storageBuffers.values()) {
+      for (const buffer of bufferList) {
+        buffer.dispose();
+      }
     }
     this.__storageBuffers.clear();
 
@@ -477,15 +479,15 @@ export class VkGraphicsPipeline implements Disposable {
    * Read back a storage buffer bound by name.
    * Caller must ensure GPU writes are complete before invoking (fence/sync).
    */
-  readStorage(name: string): Uint8Array {
-    const buffer = this.__storageBuffers.get(name);
-    if (!buffer) {
+  readStorage(name: string, index = 0): Uint8Array {
+    const buffers = this.__storageBuffers.get(name);
+    if (!buffers || buffers.length === 0 || index < 0 || index >= buffers.length) {
       throw new RenderError(
         `Storage buffer "${name}" has not been created or bound`,
         'Vulkan',
       );
     }
-    return buffer.read();
+    return buffers[index]!.read();
   }
 
   private __ensureDescriptorSets(): void {
@@ -510,7 +512,10 @@ export class VkGraphicsPipeline implements Disposable {
     for (const set of this.reflection.descriptorSets) {
       for (const binding of set.bindings) {
         const current = typeCounts.get(binding.descriptorType) ?? 0;
-        typeCounts.set(binding.descriptorType, current + 1);
+        typeCounts.set(
+          binding.descriptorType,
+          current + (binding.descriptorCount || 1),
+        );
       }
     }
 
@@ -611,6 +616,12 @@ export class VkGraphicsPipeline implements Disposable {
           'Vulkan',
         );
       }
+      if (binding.descriptorCount > 1) {
+        throw new RenderError(
+          `Uniform buffer arrays are not supported for "${binding.name}"`,
+          'Vulkan',
+        );
+      }
 
       const def = uniformDefs[binding.name];
       if (!def) {
@@ -647,7 +658,7 @@ export class VkGraphicsPipeline implements Disposable {
       write.dstSet = this.__getDescriptorSetHandle(binding.set);
       write.dstBinding = binding.binding;
       write.dstArrayElement = 0;
-      write.descriptorCount = 1;
+      write.descriptorCount = binding.descriptorCount;
       write.descriptorType = binding.descriptorType;
       write.pImageInfo = 0n;
       write.pBufferInfo = BigInt(ptr(bufferInfoRaw));
@@ -721,46 +732,82 @@ export class VkGraphicsPipeline implements Disposable {
         binding.name,
       );
 
-      if (encoded.byteLength === 0) {
+      const encodedArray = Array.isArray(encoded) ? encoded : [encoded];
+      if (encodedArray.length > 1 && encodedArray.length !== binding.descriptorCount) {
+        throw new RenderError(
+          `Storage array "${binding.name}" expects ${binding.descriptorCount} elements but got ${encodedArray.length}`,
+          'Vulkan',
+        );
+      }
+
+      if (encodedArray.some((e) => e.byteLength === 0)) {
         throw new RenderError(
           `Storage "${binding.name}" must have a size greater than zero`,
           'Vulkan',
         );
       }
 
-      let buffer = this.__storageBuffers.get(binding.name);
-      if (!buffer || buffer.size < BigInt(encoded.byteLength)) {
-        buffer?.dispose();
-        buffer = new VkBuffer(
-          this.__device,
-          this.__physicalDevice,
-          encoded.byteLength,
-          'storage',
-          encoded,
-        );
-        this.__storageBuffers.set(binding.name, buffer);
-      } else {
-        buffer.upload(encoded);
+      const existing = this.__storageBuffers.get(binding.name) ?? [];
+      const needed = binding.descriptorCount;
+      const buffers: VkBuffer[] = [];
+
+      for (let i = 0; i < needed; i++) {
+        const data = encodedArray[i] ?? encodedArray[0]!;
+        let buffer = existing[i];
+        if (!buffer || buffer.size < BigInt(data.byteLength)) {
+          buffer?.dispose();
+          buffer = new VkBuffer(
+            this.__device,
+            this.__physicalDevice,
+            data.byteLength,
+            'storage',
+            data,
+          );
+        } else {
+          buffer.upload(data);
+        }
+        buffers.push(buffer);
+      }
+      if (existing.length > needed) {
+        for (let i = needed; i < existing.length; i++) {
+          existing[i]?.dispose();
+        }
+      }
+      this.__storageBuffers.set(binding.name, buffers);
+
+      const bufferInfos: Uint8Array[] = [];
+      for (let i = 0; i < needed; i++) {
+        const data = encodedArray[i] ?? encodedArray[0]!;
+        const info = instantiate(vkDescriptorBufferInfo);
+        info.buffer = BigInt(buffers[i]!.instance);
+        info.offset = 0n;
+        info.range = BigInt(data.byteLength);
+        const raw = getInstanceBuffer(info);
+        bufferInfos.push(new Uint8Array(raw));
+        keepAlive.push(raw);
       }
 
-      const bufferInfo = instantiate(vkDescriptorBufferInfo);
-      bufferInfo.buffer = BigInt(buffer.instance);
-      bufferInfo.offset = 0n;
-      bufferInfo.range = BigInt(encoded.byteLength);
-      const bufferInfoRaw = getInstanceBuffer(bufferInfo);
+      const bufferInfoBlock = new Uint8Array(
+        sizeOf(vkDescriptorBufferInfo) * needed,
+      );
+      for (let i = 0; i < bufferInfos.length; i++) {
+        bufferInfoBlock.set(
+          bufferInfos[i]!,
+          i * sizeOf(vkDescriptorBufferInfo),
+        );
+      }
 
       const write = instantiate(vkWriteDescriptorSet);
       write.dstSet = this.__getDescriptorSetHandle(binding.set);
       write.dstBinding = binding.binding;
       write.dstArrayElement = 0;
-      write.descriptorCount = 1;
+      write.descriptorCount = needed;
       write.descriptorType = binding.descriptorType;
       write.pImageInfo = 0n;
-      write.pBufferInfo = BigInt(ptr(bufferInfoRaw));
+      write.pBufferInfo = BigInt(ptr(bufferInfoBlock));
       write.pTexelBufferView = 0n;
 
       writes.push(new Uint8Array(getInstanceBuffer(write)));
-      keepAlive.push(bufferInfoRaw);
     }
 
     if (writes.length === 0) return;
@@ -863,32 +910,34 @@ export class VkGraphicsPipeline implements Disposable {
     def: StorageDefinition,
     value: unknown,
     name: string,
-  ): ArrayBufferView {
+  ): ArrayBufferView | ArrayBufferView[] {
     const hasValue = value !== undefined;
     if (hasValue) {
-      if (!isStorageValue(value)) {
-        throw new RenderError(
-          `Invalid storage value for "${name}", expected ArrayBuffer or ArrayBufferView`,
-          'Vulkan',
-        );
-      }
-      const view =
-        value instanceof ArrayBuffer
-          ? new Uint8Array(value)
-          : (value as ArrayBufferView);
-      const minSize = def.size ?? 0;
-      if (minSize > 0 && view.byteLength < minSize) {
-        const padded = new Uint8Array(minSize);
-        padded.set(
-          new Uint8Array(
-            view.buffer,
-            view.byteOffset,
-            Math.min(view.byteLength, minSize),
-          ),
-        );
-        return padded;
-      }
-      return view;
+      const values = Array.isArray(value) ? value : [value];
+      const views = values.map((v) => {
+        if (!isStorageValue(v)) {
+          throw new RenderError(
+            `Invalid storage value for "${name}", expected ArrayBuffer or ArrayBufferView`,
+            'Vulkan',
+          );
+        }
+        const view =
+          v instanceof ArrayBuffer ? new Uint8Array(v) : (v as ArrayBufferView);
+        const minSize = def.size ?? 0;
+        if (minSize > 0 && view.byteLength < minSize) {
+          const padded = new Uint8Array(minSize);
+          padded.set(
+            new Uint8Array(
+              view.buffer,
+              view.byteOffset,
+              Math.min(view.byteLength, minSize),
+            ),
+          );
+          return padded;
+        }
+        return view;
+      });
+      return views.length === 1 ? views[0]! : views;
     }
 
     if (def.size === undefined || def.size <= 0) {

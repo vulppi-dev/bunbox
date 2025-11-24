@@ -21,7 +21,7 @@ import type {
 } from './MaterialSchema';
 import { validateSchema } from './MaterialSchema';
 import type { SchemaStorageValues, StorageDefinition } from './MaterialSchema';
-import { isStorageValue } from './StorageTypes';
+import { isStorageValueOrArray } from './StorageTypes';
 
 /**
  * Type-safe material with overrides and uniforms.
@@ -36,7 +36,7 @@ export class Material<
   private __schema: TSchema;
   private __overrides: Record<string, unknown>;
   private __uniforms: Record<string, unknown>;
-  private __storages: Record<string, unknown>;
+  private __storages: Partial<StorageProperties<TSchema>>;
 
   constructor(descriptor: MaterialDescriptor<TSchema>) {
     super();
@@ -64,8 +64,8 @@ export class Material<
     );
 
     this.__storages = this.__initializeStorages(
-      this.__schema.storages ?? {},
-      descriptor.storages as Record<string, unknown> | undefined,
+      (this.__schema.storages ?? {}) as Record<string, StorageDefinition>,
+      descriptor.storages as Partial<StorageProperties<TSchema>> | undefined,
     );
 
     this.markAsDirty();
@@ -103,16 +103,16 @@ export class Material<
 
   private __initializeStorages(
     definitions: Record<string, StorageDefinition>,
-    values?: Record<string, unknown>,
-  ): Record<string, unknown> {
+    values?: Partial<StorageProperties<TSchema>>,
+  ): Partial<StorageProperties<TSchema>> {
     const result: Record<string, unknown> = {};
 
     for (const [key, def] of Object.entries(definitions)) {
       const providedValue = values?.[key] ?? def.defaultValue;
       if (providedValue !== undefined) {
-        if (!isStorageValue(providedValue)) {
+        if (!isStorageValueOrArray(providedValue)) {
           throw new Error(
-            `Invalid value for storage '${key}': expected ArrayBuffer or ArrayBufferView`,
+            `Invalid value for storage '${key}': expected ArrayBuffer, ArrayBufferView or array of them`,
           );
         }
         result[key] = providedValue;
@@ -121,7 +121,7 @@ export class Material<
       }
     }
 
-    return result;
+    return result as Partial<StorageProperties<TSchema>>;
   }
 
   // Public getters
@@ -205,7 +205,8 @@ export class Material<
   getStorage<K extends keyof StorageProperties<TSchema>>(
     key: K,
   ): StorageProperties<TSchema>[K] {
-    return this.__storages[key as string] as StorageProperties<TSchema>[K];
+    const storages = this.__storages as Record<string, unknown>;
+    return storages[key as string] as StorageProperties<TSchema>[K];
   }
 
   /**
@@ -246,15 +247,17 @@ export class Material<
     }
 
     const def = definitions[key as string]!;
-    if (!isStorageValue(value)) {
+    if (!isStorageValueOrArray(value)) {
       throw new Error(
-        `Invalid value for storage '${String(key)}': expected ArrayBuffer or ArrayBufferView`,
+        `Invalid value for storage '${String(key)}': expected ArrayBuffer, ArrayBufferView or array of them`,
       );
     }
 
-    if (this.__storages[key as string] === value) return this;
+    const storages = this.__storages as Record<string, unknown>;
+    if (storages[key as string] === value) return this;
 
-    this.__storages[key as string] = value;
+    storages[key as string] = value;
+    this.__storages = storages as Partial<StorageProperties<TSchema>>;
     return this.markAsDirty();
   }
 
@@ -427,7 +430,9 @@ export class MaterialBuilder<
       schema,
       overrides: this.__overrideValues,
       uniforms: this.__uniformValues,
-      storages: this.__storageValues,
+      storages: this.__storageValues as Partial<
+        SchemaStorageValues<TStorages>
+      >,
     });
   }
 }

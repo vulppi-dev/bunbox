@@ -9,8 +9,8 @@ import type {
 } from './MaterialPropertyTypes';
 import type { Rasterizer } from '../resources/Rasterizer';
 import type { ShaderHolder } from '../core';
-import type { StorageBufferValue } from './StorageTypes';
-import { isStorageValue } from './StorageTypes';
+import type { StorageBufferValueOrArray } from './StorageTypes';
+import { isStorageValueOrArray } from './StorageTypes';
 
 /**
  * Material primitive topology types.
@@ -56,14 +56,14 @@ export type SchemaPropertyValues<T extends Record<string, PropertyDefinition>> =
 
 export type StorageDefinition = {
   readonly size?: number;
-  readonly defaultValue?: StorageBufferValue;
+  readonly defaultValue?: StorageBufferValueOrArray;
   readonly label?: string;
 };
 
 export type SchemaStorageValues<
   T extends Record<string, StorageDefinition> = Record<string, StorageDefinition>,
 > = {
-  [K in keyof T]: StorageBufferValue;
+  [K in keyof T]: StorageBufferValueOrArray;
 };
 
 /**
@@ -208,9 +208,9 @@ export function mergeWithDefaults<T extends Record<string, PropertyDefinition>>(
 export function getStorageDefaults<
   T extends Record<string, StorageDefinition>,
 >(definitions: T): Partial<SchemaStorageValues<T>> {
-  const defaults: Record<string, StorageBufferValue> = {};
+  const defaults: Record<string, StorageBufferValueOrArray> = {};
   for (const [key, def] of Object.entries(definitions)) {
-    if (def.defaultValue && isStorageValue(def.defaultValue)) {
+    if (def.defaultValue && isStorageValueOrArray(def.defaultValue)) {
       defaults[key] = def.defaultValue;
     }
   }
