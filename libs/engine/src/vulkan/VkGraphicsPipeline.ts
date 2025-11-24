@@ -1,37 +1,71 @@
-import { getInstanceBuffer, instantiate, sizeOf } from '@bunbox/struct';
+import {
+  getInstanceBuffer,
+  instantiate,
+  ptrAny,
+  sizeOf,
+  struct,
+  u32,
+  u64,
+} from '@bunbox/struct';
 import type { Disposable } from '@bunbox/utils';
 import {
   getResultMessage,
   VK,
-  vkGraphicsPipelineCreateInfo,
-  VkResult,
-  VkShaderStageFlagBits,
-  VkVertexInputRate,
-  VkDynamicState,
   VkColorComponentFlagBits,
-  vkPipelineShaderStageCreateInfo,
-  vkPipelineVertexInputStateCreateInfo,
-  vkVertexInputBindingDescription,
-  vkVertexInputAttributeDescription,
-  vkPipelineInputAssemblyStateCreateInfo,
-  vkPipelineViewportStateCreateInfo,
-  vkPipelineRasterizationStateCreateInfo,
-  vkPipelineMultisampleStateCreateInfo,
-  vkPipelineDepthStencilStateCreateInfo,
+  VkDynamicState,
+  vkGraphicsPipelineCreateInfo,
+  VkIndexType,
   vkPipelineColorBlendAttachmentState,
   vkPipelineColorBlendStateCreateInfo,
+  vkPipelineDepthStencilStateCreateInfo,
   vkPipelineDynamicStateCreateInfo,
-  VkIndexType,
+  vkPipelineInputAssemblyStateCreateInfo,
+  vkPipelineMultisampleStateCreateInfo,
+  vkPipelineRasterizationStateCreateInfo,
+  vkPipelineShaderStageCreateInfo,
+  vkPipelineVertexInputStateCreateInfo,
+  vkPipelineViewportStateCreateInfo,
+  VkResult,
+  VkShaderStageFlagBits,
+  vkVertexInputAttributeDescription,
+  vkVertexInputBindingDescription,
+  VkVertexInputRate,
 } from '@bunbox/vk';
 import { ptr, type Pointer } from 'bun:ffi';
-import { cstr } from '../utils/buffer';
 import { RenderError } from '../errors';
-import { VK_DEBUG } from '../singleton/logger';
-import type { PipelineMaterialLayout } from '../pipeline/PipelineMaterialLayout';
+import type {
+  PipelineMaterialLayout,
+  SpecializationConstant,
+} from '../pipeline/PipelineMaterialLayout';
 import type { PipelineReflectionLayout } from '../pipeline/PipelineReflectionLayout';
-import { VkShaderModule } from './VkShaderModule';
+import { VK_DEBUG } from '../singleton/logger';
 import type { VkCommandBuffer } from './VkCommandBuffer';
 import type { VkGeometry } from './VkGeometry';
+import { VkShaderModule } from './VkShaderModule';
+
+type SpecializationKeepAlive = {
+  entriesBuffer: Uint8Array;
+  dataBuffer: Uint8Array;
+  infoBuffer: Uint8Array;
+};
+
+type SpecializationInfoPtr = {
+  ptr: bigint;
+  keepAlive: SpecializationKeepAlive | null;
+};
+
+const vkSpecializationMapEntry = struct({
+  constantID: u32(),
+  offset: u32(),
+  size: u64(),
+});
+
+const vkSpecializationInfo = struct({
+  mapEntryCount: u32(),
+  pMapEntries: ptrAny(),
+  dataSize: u64(),
+  pData: ptrAny(),
+});
 
 export class VkGraphicsPipeline implements Disposable {
   readonly reflection: PipelineReflectionLayout;
@@ -72,6 +106,13 @@ export class VkGraphicsPipeline implements Disposable {
     const shaderModule = new VkShaderModule(device, this.reflection.source);
     this.__shaderModules = [shaderModule];
 
+    const specialization = buildSpecializationInfo(
+      this.materialLayout.specializationConstants,
+    );
+    // Keep references alive until pipeline creation completes.
+    const specializationKeepAlive = specialization.keepAlive;
+    void specializationKeepAlive;
+
     // --- Shader stages
     const stageSize = sizeOf(vkPipelineShaderStageCreateInfo);
     const stageBuffer = new Uint8Array(
@@ -83,7 +124,7 @@ export class VkGraphicsPipeline implements Disposable {
       info.stage = mapStage(stage.stage);
       info.module = BigInt(shaderModule.instance);
       info.pName = stage.entryPoint;
-      info.pSpecializationInfo = 0n; // TODO: specialization constants
+      info.pSpecializationInfo = specialization.ptr;
       stageBuffer.set(new Uint8Array(getInstanceBuffer(info)), i * stageSize);
     }
 
@@ -375,4 +416,50 @@ function mapStage(stage: 'vertex' | 'fragment' | 'compute'): number {
     default:
       return VkShaderStageFlagBits.VERTEX_BIT;
   }
+}
+
+function buildSpecializationInfo(
+  constants: SpecializationConstant[],
+): SpecializationInfoPtr {
+  const valid = constants.filter((c) => c.value !== undefined);
+  if (valid.length === 0) {
+    return { ptr: 0n, keepAlive: null };
+  }
+
+  const entrySize = sizeOf(vkSpecializationMapEntry);
+  const entriesBuffer = new Uint8Array(entrySize * valid.length);
+  const dataBuffer = new Uint8Array(valid.length * 4);
+
+  for (let i = 0; i < valid.length; i++) {
+    const spec = valid[i]!;
+    const entry = instantiate(vkSpecializationMapEntry);
+    entry.constantID = spec.id;
+    entry.offset = i * 4;
+    entry.size = BigInt(4);
+    entriesBuffer.set(new Uint8Array(getInstanceBuffer(entry)), i * entrySize);
+
+    let value = spec.value as number;
+    if (typeof spec.value === 'boolean') {
+      value = spec.value ? 1 : 0;
+    } else if (typeof spec.value !== 'number') {
+      value = 0;
+    }
+    new DataView(dataBuffer.buffer).setFloat32(i * 4, value, true);
+  }
+
+  const info = instantiate(vkSpecializationInfo);
+  info.mapEntryCount = valid.length;
+  info.pMapEntries = BigInt(ptr(entriesBuffer));
+  info.dataSize = BigInt(dataBuffer.byteLength);
+  info.pData = BigInt(ptr(dataBuffer));
+
+  const infoBuffer = new Uint8Array(getInstanceBuffer(info));
+  return {
+    ptr: BigInt(ptr(infoBuffer)),
+    keepAlive: {
+      entriesBuffer,
+      dataBuffer,
+      infoBuffer,
+    },
+  };
 }
