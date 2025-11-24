@@ -25,6 +25,7 @@ export class PipelineReflectionLayout implements Disposable {
   readonly shader: ShaderHolder;
   readonly vertexEntryPoint: string;
   readonly fragmentEntryPoint?: string;
+  readonly source: string;
 
   readonly vertexInputs: VertexAttributeInfo[];
   readonly descriptorSets: DescriptorSetInfo[];
@@ -52,6 +53,8 @@ export class PipelineReflectionLayout implements Disposable {
         'PipelineReflection',
       );
     }
+
+    this.source = pack.src;
 
     const reflection: ShaderReflectionData = reflectShaderLayout(pack.src, {
       vertexEntryPoint: options.vertexEntryPoint ?? pack.vEntry,

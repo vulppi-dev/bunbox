@@ -106,8 +106,15 @@ export class VkGeometry implements Disposable {
     this.__geometry.markAsClean();
   }
 
-  getAttributeBuffer(name: string):
-    | { buffer: Pointer; byteStride: number; byteOffset: number }
+  getAttributeBuffer(
+    name: string,
+  ):
+    | {
+        buffer: Pointer;
+        byteStride: number;
+        byteOffset: number;
+        vkBuffer: VkBuffer;
+      }
     | null {
     const attr = this.__attributeBuffers.get(name);
     if (!attr) return null;
@@ -115,17 +122,24 @@ export class VkGeometry implements Disposable {
       buffer: attr.buffer.instance,
       byteStride: attr.byteStride,
       byteOffset: attr.byteOffset,
+      vkBuffer: attr.buffer,
     };
   }
 
   getIndexBuffer():
-    | { buffer: Pointer; indexType: number; byteOffset: number }
+    | {
+        buffer: Pointer;
+        indexType: number;
+        byteOffset: number;
+        vkBuffer: VkBuffer;
+      }
     | null {
     if (!this.__indexBuffer) return null;
     return {
       buffer: this.__indexBuffer.buffer.instance,
       indexType: this.__indexBuffer.indexType,
       byteOffset: this.__indexBuffer.byteOffset,
+      vkBuffer: this.__indexBuffer.buffer,
     };
   }
 
