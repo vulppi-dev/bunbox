@@ -1,12 +1,15 @@
 import { clamp } from '@vulppi/toolbelt/math';
 import type { Pointer } from 'bun:ffi';
+import type { Entity, World } from '../core/World';
 import { TextureImage } from '../resources';
-import type { CameraRenderGroup, FrameRenderArtifacts } from '../systems/RenderSystem';
+import type { AssetsStorage } from '../storages/AssetsStorage';
+import type {
+  CameraRenderGroup,
+  FrameRenderArtifacts,
+} from '../systems/RenderSystem';
 import { FRAME_RENDER_ID, FRAME_RENDER_KEY } from '../systems/RenderSystem';
 import type { VkCommandBuffer, VkDevice, VkSwapchain } from '../vulkan';
 import { VkRenderPass } from '../vulkan';
-import type { AssetsStorage } from './AssetsStorage';
-import type { Entity, World } from './World';
 
 type CameraTarget = {
   texture: TextureImage;

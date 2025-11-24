@@ -16,7 +16,9 @@ import { mkdtempSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
 import { join } from 'path';
 import { EngineError, RenderError } from '../errors';
+import { RenderLogic } from '../render-logic/RenderLogic';
 import { GLFW_DEBUG, VK_DEBUG } from '../singleton/logger';
+import { AssetsStorage } from '../storages/AssetsStorage';
 import { buildCallback, cstr } from '../utils/buffer';
 import { getEnv } from '../utils/env';
 import {
@@ -26,7 +28,6 @@ import {
   VkSwapchain,
   VkSync,
 } from '../vulkan';
-import { AssetsStorage } from './AssetsStorage';
 import { FRAME_LOOP, type World } from './World';
 import {
   CONTEXT_attachWindowWorld,
@@ -35,7 +36,6 @@ import {
   CONTEXT_prepare,
   CONTEXT_rebuildWindowResources,
 } from './_symbols';
-import { RenderLogic } from './RenderLogic';
 
 // Setup struct pointer/string conversions globally
 setupStruct({

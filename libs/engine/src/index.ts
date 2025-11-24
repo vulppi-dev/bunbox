@@ -1,5 +1,6 @@
 export * from './builders';
 export * from './math';
+export * from './pipeline';
 export * from './utils/hash';
 
 export {

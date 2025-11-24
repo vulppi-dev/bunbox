@@ -1,4 +1,4 @@
-import type { AssetsStorage } from './AssetsStorage';
+import type { AssetsStorage } from '../storages/AssetsStorage';
 import type { ComponentProps, ComponentType } from './Component';
 import type { Entity, World } from './World';
 

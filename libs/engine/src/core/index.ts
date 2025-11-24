@@ -4,5 +4,6 @@ export * from './System';
 export * from './Window';
 export * from './World';
 
-export type * from './ShaderStorage';
-export type * from './TextureStorage';
+export { ShaderStorage } from '../storages/ShaderStorage';
+export type * from '../storages/ShaderStorage';
+export type * from '../storages/TextureStorage';

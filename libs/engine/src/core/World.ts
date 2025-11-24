@@ -1,7 +1,7 @@
 import type { Disposable } from '@bunbox/utils';
 import { ulid } from 'ulid';
 import { EngineError } from '../errors';
-import type { AssetsStorage } from './AssetsStorage';
+import type { AssetsStorage } from '../storages/AssetsStorage';
 import {
   isComponentType,
   type ComponentProps,

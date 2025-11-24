@@ -1,7 +1,8 @@
 import { EngineError } from '../errors';
 import { ShaderStorage } from './ShaderStorage';
 import { TextureStorage } from './TextureStorage';
-import type { Entity } from './World';
+import { PipelineStorage } from './PipelineStorage';
+import type { Entity } from '../core/World';
 
 export class AssetsStorage {
   private __disposed = false;
@@ -10,6 +11,7 @@ export class AssetsStorage {
 
   private __shaders = new ShaderStorage();
   private __textures = new TextureStorage();
+  private __pipelines = new PipelineStorage(this.__shaders);
 
   get shaders(): ShaderStorage {
     return this.__shaders;
@@ -17,6 +19,10 @@ export class AssetsStorage {
 
   get textures(): TextureStorage {
     return this.__textures;
+  }
+
+  get pipelines(): PipelineStorage {
+    return this.__pipelines;
   }
 
   get<T>(type: string | symbol, id: Entity): T | undefined {
