@@ -15,6 +15,7 @@ import {
   VkDynamicState,
   vkGraphicsPipelineCreateInfo,
   VkIndexType,
+  VkPipelineBindPoint,
   vkPipelineColorBlendAttachmentState,
   vkPipelineColorBlendStateCreateInfo,
   vkPipelineDepthStencilStateCreateInfo,
@@ -25,24 +26,31 @@ import {
   vkPipelineShaderStageCreateInfo,
   vkPipelineVertexInputStateCreateInfo,
   vkPipelineViewportStateCreateInfo,
+  vkDescriptorPoolCreateInfo,
+  vkDescriptorPoolSize,
+  vkDescriptorSetAllocateInfo,
+  vkDescriptorBufferInfo,
+  vkWriteDescriptorSet,
+  VkDescriptorType,
   VkResult,
   VkShaderStageFlagBits,
-  VkPipelineBindPoint,
   vkVertexInputAttributeDescription,
   vkVertexInputBindingDescription,
   VkVertexInputRate,
 } from '@bunbox/vk';
 import { ptr, type Pointer } from 'bun:ffi';
 import { RenderError } from '../errors';
-import type { Material } from '../material/MaterialBuilder';
 import type {
   PipelineMaterialLayout,
   SpecializationConstant,
 } from '../pipeline/PipelineMaterialLayout';
 import type { PipelineReflectionLayout } from '../pipeline/PipelineReflectionLayout';
+import { PropertyType } from '../material/MaterialPropertyTypes';
 import { VK_DEBUG } from '../singleton/logger';
+import { Color, Matrix3, Matrix4, Vector2, Vector3, Vector4 } from '../math';
 import type { VkCommandBuffer } from './VkCommandBuffer';
 import type { VkGeometry } from './VkGeometry';
+import { VkBuffer } from './VkBuffer';
 import { VkShaderModule } from './VkShaderModule';
 
 type SpecializationKeepAlive = {
@@ -74,10 +82,14 @@ export class VkGraphicsPipeline implements Disposable {
   readonly materialLayout: PipelineMaterialLayout;
 
   private __device: Pointer | null = null;
+  private __physicalDevice: Pointer | null = null;
   private __pipeline: Pointer | null = null;
   private __renderPass: Pointer | null = null;
   private __subpass: number = 0;
   private __shaderModules: VkShaderModule[] = [];
+  private __descriptorPool: Pointer | null = null;
+  private __descriptorSets: BigUint64Array | null = null;
+  private __uniformBuffers: Map<string, VkBuffer> = new Map();
 
   constructor(
     reflection: PipelineReflectionLayout,
@@ -91,13 +103,19 @@ export class VkGraphicsPipeline implements Disposable {
     return this.__pipeline;
   }
 
-  prepare(device: Pointer, renderPass: Pointer, subpass: number): void {
+  prepare(
+    device: Pointer,
+    renderPass: Pointer,
+    subpass: number,
+    physicalDevice?: Pointer,
+  ): void {
     if (this.__pipeline) return;
     if (!this.reflection.pipelineLayout) {
       this.reflection.prepare(device);
     }
 
     this.__device = device;
+    this.__physicalDevice = physicalDevice ?? this.__physicalDevice;
     this.__renderPass = renderPass;
     this.__subpass = subpass;
 
@@ -324,12 +342,28 @@ export class VkGraphicsPipeline implements Disposable {
     );
   }
 
-  rebuild(device: Pointer, renderPass: Pointer, subpass: number): void {
+  rebuild(
+    device: Pointer,
+    renderPass: Pointer,
+    subpass: number,
+    physicalDevice?: Pointer,
+  ): void {
     this.release();
-    this.prepare(device, renderPass, subpass);
+    this.prepare(device, renderPass, subpass, physicalDevice);
   }
 
   release(): void {
+    for (const buffer of this.__uniformBuffers.values()) {
+      buffer.dispose();
+    }
+    this.__uniformBuffers.clear();
+
+    if (this.__descriptorPool && this.__device) {
+      VK.vkDestroyDescriptorPool(this.__device, this.__descriptorPool, null);
+    }
+    this.__descriptorPool = null;
+    this.__descriptorSets = null;
+
     if (this.__pipeline && this.__device) {
       VK.vkDestroyPipeline(this.__device, this.__pipeline, null);
       VK_DEBUG(
@@ -342,6 +376,7 @@ export class VkGraphicsPipeline implements Disposable {
     }
     this.__shaderModules = [];
     this.__device = null;
+    this.__physicalDevice = null;
     this.__renderPass = null;
   }
 
@@ -362,20 +397,32 @@ export class VkGraphicsPipeline implements Disposable {
         'Vulkan',
       );
     }
+    if (!this.reflection.pipelineLayout) {
+      throw new RenderError(
+        'Pipeline reflection missing pipeline layout',
+        'Vulkan',
+      );
+    }
+    if (!this.__device) {
+      throw new RenderError('Device not available for pipeline', 'Vulkan');
+    }
+
+    this.__ensureDescriptorSets();
+    this.__updateUniformDescriptors();
 
     cmd.bindPipeline(this.__pipeline);
-    VK.vkCmdBindDescriptorSets(
-      cmd.instance,
-      VkPipelineBindPoint.GRAPHICS,
-      this.reflection.pipelineLayout!,
-      0,
-      this.reflection.descriptorSets.length,
-      ptr(this.reflection.descriptorSetLayouts),
-      0,
-      null,
-      // dynamicOffsets.length,
-      // dynamicOffsets.length > 0 ? ptr(dynamicOffsets) : 0 as Pointer,
-    );
+    if (this.__descriptorSets && this.__descriptorSets.length > 0) {
+      VK.vkCmdBindDescriptorSets(
+        cmd.instance,
+        VkPipelineBindPoint.GRAPHICS,
+        this.reflection.pipelineLayout,
+        0,
+        this.__descriptorSets.length,
+        ptr(this.__descriptorSets),
+        0,
+        null,
+      );
+    }
   }
 
   writeGeometryData(cmd: VkCommandBuffer, vkGeometry: VkGeometry): void {
@@ -415,6 +462,271 @@ export class VkGraphicsPipeline implements Disposable {
         BigInt(indexInfo.byteOffset),
         indexType,
       );
+    }
+  }
+
+  private __ensureDescriptorSets(): void {
+    if (this.__descriptorSets) return;
+    if (!this.__device) {
+      throw new RenderError('Device not available for descriptors', 'Vulkan');
+    }
+    if (!this.reflection.descriptorSetLayouts) {
+      throw new RenderError(
+        'Descriptor set layouts not prepared before allocation',
+        'Vulkan',
+      );
+    }
+
+    const layouts = this.reflection.descriptorSetLayouts;
+    if (layouts.length === 0) {
+      this.__descriptorSets = new BigUint64Array(0);
+      return;
+    }
+
+    const typeCounts = new Map<number, number>();
+    for (const set of this.reflection.descriptorSets) {
+      for (const binding of set.bindings) {
+        const current = typeCounts.get(binding.descriptorType) ?? 0;
+        typeCounts.set(binding.descriptorType, current + 1);
+      }
+    }
+
+    const poolEntryCount = Math.max(typeCounts.size, 1);
+    const poolEntrySize = sizeOf(vkDescriptorPoolSize);
+    const poolBuffer = new Uint8Array(poolEntryCount * poolEntrySize);
+    const entries =
+      typeCounts.size > 0
+        ? Array.from(typeCounts.entries())
+        : [[VkDescriptorType.UNIFORM_BUFFER, 1]];
+
+    for (let i = 0; i < entries.length; i++) {
+      const [type, count] = entries[i]!;
+      const poolSize = instantiate(vkDescriptorPoolSize);
+      poolSize.type = type!;
+      poolSize.descriptorCount = count!;
+      poolBuffer.set(
+        new Uint8Array(getInstanceBuffer(poolSize)),
+        i * poolEntrySize,
+      );
+    }
+
+    const poolInfo = instantiate(vkDescriptorPoolCreateInfo);
+    poolInfo.flags = 0;
+    poolInfo.maxSets = layouts.length;
+    poolInfo.poolSizeCount = entries.length;
+    poolInfo.pPoolSizes = BigInt(ptr(poolBuffer));
+
+    const poolHolder = new BigUint64Array(1);
+    const poolResult = VK.vkCreateDescriptorPool(
+      this.__device,
+      ptr(getInstanceBuffer(poolInfo)),
+      null,
+      ptr(poolHolder),
+    );
+    if (poolResult !== VkResult.SUCCESS) {
+      throw new RenderError(getResultMessage(poolResult), 'Vulkan');
+    }
+
+    this.__descriptorPool = Number(poolHolder[0]) as Pointer;
+
+    const layoutArray = new BigUint64Array(
+      layouts.map((layout) => BigInt(layout)),
+    );
+    const allocInfo = instantiate(vkDescriptorSetAllocateInfo);
+    allocInfo.descriptorPool = BigInt(this.__descriptorPool);
+    allocInfo.descriptorSetCount = layoutArray.length;
+    allocInfo.pSetLayouts = BigInt(ptr(layoutArray));
+
+    const descriptorSets = new BigUint64Array(layoutArray.length);
+    const allocResult = VK.vkAllocateDescriptorSets(
+      this.__device,
+      ptr(getInstanceBuffer(allocInfo)),
+      ptr(descriptorSets),
+    );
+
+    if (allocResult !== VkResult.SUCCESS) {
+      VK.vkDestroyDescriptorPool(this.__device, this.__descriptorPool, null);
+      this.__descriptorPool = null;
+      throw new RenderError(getResultMessage(allocResult), 'Vulkan');
+    }
+
+    this.__descriptorSets = descriptorSets;
+  }
+
+  private __updateUniformDescriptors(): void {
+    if (
+      !this.__descriptorSets ||
+      this.__descriptorSets.length === 0 ||
+      this.materialLayout.uniformBindings.length === 0
+    ) {
+      return;
+    }
+
+    if (!this.__device || !this.__physicalDevice) {
+      throw new RenderError(
+        'Physical device is required to upload uniform buffers',
+        'Vulkan',
+      );
+    }
+
+    const uniforms = this.materialLayout.material.uniforms as Record<
+      string,
+      unknown
+    >;
+    const uniformDefs =
+      this.materialLayout.material.schema.uniforms ??
+      ({} as Record<string, { type: PropertyType }>);
+
+    const writeSize = sizeOf(vkWriteDescriptorSet);
+    const writes: Uint8Array[] = [];
+    const keepAlive: Array<ArrayBuffer | ArrayBufferView> = [];
+
+    for (const binding of this.materialLayout.uniformBindings) {
+      if (binding.descriptorType !== VkDescriptorType.UNIFORM_BUFFER) {
+        throw new RenderError(
+          `Descriptor type ${binding.descriptorType} not supported for uniform "${binding.name}"`,
+          'Vulkan',
+        );
+      }
+
+      const def = uniformDefs[binding.name];
+      if (!def) {
+        throw new RenderError(
+          `Uniform "${binding.name}" not found in schema`,
+          'Vulkan',
+        );
+      }
+
+      const encoded = this.__encodeUniformValue(def, uniforms[binding.name]);
+
+      let buffer = this.__uniformBuffers.get(binding.name);
+      if (!buffer || buffer.size < BigInt(encoded.byteLength)) {
+        buffer?.dispose();
+        buffer = new VkBuffer(
+          this.__device,
+          this.__physicalDevice,
+          encoded.byteLength,
+          'uniform',
+          encoded,
+        );
+        this.__uniformBuffers.set(binding.name, buffer);
+      } else {
+        buffer.upload(encoded);
+      }
+
+      const bufferInfo = instantiate(vkDescriptorBufferInfo);
+      bufferInfo.buffer = BigInt(buffer.instance);
+      bufferInfo.offset = 0n;
+      bufferInfo.range = BigInt(encoded.byteLength);
+      const bufferInfoRaw = getInstanceBuffer(bufferInfo);
+
+      const write = instantiate(vkWriteDescriptorSet);
+      write.dstSet = this.__getDescriptorSetHandle(binding.set);
+      write.dstBinding = binding.binding;
+      write.dstArrayElement = 0;
+      write.descriptorCount = 1;
+      write.descriptorType = binding.descriptorType;
+      write.pImageInfo = 0n;
+      write.pBufferInfo = BigInt(ptr(bufferInfoRaw));
+      write.pTexelBufferView = 0n;
+
+      writes.push(new Uint8Array(getInstanceBuffer(write)));
+      keepAlive.push(bufferInfoRaw);
+    }
+
+    if (writes.length === 0) return;
+
+    const writeBuffer = new Uint8Array(writeSize * writes.length);
+    for (let i = 0; i < writes.length; i++) {
+      writeBuffer.set(writes[i]!, i * writeSize);
+    }
+
+    VK.vkUpdateDescriptorSets(
+      this.__device,
+      writes.length,
+      ptr(writeBuffer),
+      0,
+      null,
+    );
+  }
+
+  private __getDescriptorSetHandle(setIndex: number): bigint {
+    if (!this.__descriptorSets) {
+      throw new RenderError('Descriptor sets not allocated', 'Vulkan');
+    }
+    const idx = this.reflection.descriptorSets.findIndex(
+      (s) => s.setIndex === setIndex,
+    );
+    if (idx < 0 || idx >= this.__descriptorSets.length) {
+      throw new RenderError(
+        `Descriptor set index ${setIndex} out of range`,
+        'Vulkan',
+      );
+    }
+    return this.__descriptorSets[idx]!;
+  }
+
+  private __encodeUniformValue(
+    def: { type: PropertyType },
+    value: unknown,
+  ): ArrayBufferView {
+    switch (def.type) {
+      case PropertyType.F32:
+        return new Float32Array([Number(value) || 0]);
+      case PropertyType.I32:
+        return new Int32Array([Number(value) | 0]);
+      case PropertyType.U32:
+        return new Uint32Array([Number(value) >>> 0]);
+      case PropertyType.Bool:
+        return new Uint32Array([value === true ? 1 : 0]);
+      case PropertyType.Vec2f: {
+        const vec = value as Vector2 | undefined;
+        const arr = vec ? vec.toArray() : [0, 0];
+        return new Float32Array(arr);
+      }
+      case PropertyType.Vec3f: {
+        const vec = value as Vector3 | undefined;
+        const arr = vec ? vec.toArray() : [0, 0, 0];
+        return new Float32Array([arr[0] ?? 0, arr[1] ?? 0, arr[2] ?? 0, 0]);
+      }
+      case PropertyType.Vec4f: {
+        const vec = value as Vector4 | undefined;
+        const arr = vec ? vec.toArray() : [0, 0, 0, 0];
+        return new Float32Array(arr);
+      }
+      case PropertyType.Mat3x3f: {
+        const mat = value as Matrix3 | undefined;
+        const arr = mat ? mat.toArray() : new Array(9).fill(0);
+        return new Float32Array([
+          arr[0] ?? 0,
+          arr[1] ?? 0,
+          arr[2] ?? 0,
+          0,
+          arr[3] ?? 0,
+          arr[4] ?? 0,
+          arr[5] ?? 0,
+          0,
+          arr[6] ?? 0,
+          arr[7] ?? 0,
+          arr[8] ?? 0,
+          0,
+        ]);
+      }
+      case PropertyType.Mat4x4f: {
+        const mat = value as Matrix4 | undefined;
+        const arr = mat ? mat.toArray() : new Array(16).fill(0);
+        return new Float32Array(arr);
+      }
+      case PropertyType.Color: {
+        const color = value as Color | undefined;
+        const arr = color ? color.toArray() : [0, 0, 0, 1];
+        return new Float32Array(arr);
+      }
+      default:
+        throw new RenderError(
+          `Uniform type ${String(def.type)} is not supported yet`,
+          'Vulkan',
+        );
     }
   }
 }

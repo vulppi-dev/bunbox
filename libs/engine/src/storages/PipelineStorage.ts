@@ -26,6 +26,7 @@ export class PipelineStorage {
 
   getGraphicsPipeline(
     device: Pointer,
+    physicalDevice: Pointer,
     renderPass: Pointer,
     subpass: number,
     material: Material,
@@ -58,7 +59,7 @@ export class PipelineStorage {
       reflection.prepare(device);
       layout.prepare();
       pipeline = new VkGraphicsPipeline(reflection, layout);
-      pipeline.prepare(device, renderPass, subpass);
+      pipeline.prepare(device, renderPass, subpass, physicalDevice);
       this.__pipelines.set(key, pipeline);
     }
 

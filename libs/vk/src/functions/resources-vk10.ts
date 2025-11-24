@@ -260,7 +260,7 @@ export const vkDestroySampler = {
   returns: 'void',
 } as const satisfies FFIFunction;
 
-// MARK: Descriptor Set Layout Functions
+// MARK: Descriptor Set Layout & Pool Functions
 
 /**
  * Create a new descriptor set layout object
@@ -294,6 +294,99 @@ export const vkDestroyDescriptorSetLayout = {
     device: 'ptr',
     descriptorSetLayout: 'u64',
     pAllocator: 'ptr',
+  ],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
+/**
+ * Create a descriptor pool
+ *
+ * C ref: `VkResult vkCreateDescriptorPool(
+ *   VkDevice device,
+ *   const VkDescriptorPoolCreateInfo* pCreateInfo,
+ *   const VkAllocationCallbacks* pAllocator,
+ *   VkDescriptorPool* pDescriptorPool)`
+ */
+export const vkCreateDescriptorPool = {
+  args: ['ptr', 'ptr', 'ptr', 'ptr'] as [
+    device: 'ptr',
+    pCreateInfo: 'ptr',
+    pAllocator: 'ptr',
+    pDescriptorPool: 'ptr',
+  ],
+  returns: 'i32',
+} as const satisfies FFIFunction;
+
+/**
+ * Destroy a descriptor pool and free all associated descriptor sets
+ *
+ * C ref: `void vkDestroyDescriptorPool(
+ *   VkDevice device,
+ *   VkDescriptorPool descriptorPool,
+ *   const VkAllocationCallbacks* pAllocator)`
+ */
+export const vkDestroyDescriptorPool = {
+  args: ['ptr', 'u64', 'ptr'] as [
+    device: 'ptr',
+    descriptorPool: 'u64',
+    pAllocator: 'ptr',
+  ],
+  returns: 'void',
+} as const satisfies FFIFunction;
+
+/**
+ * Allocate descriptor sets from a pool
+ *
+ * C ref: `VkResult vkAllocateDescriptorSets(
+ *   VkDevice device,
+ *   const VkDescriptorSetAllocateInfo* pAllocateInfo,
+ *   VkDescriptorSet* pDescriptorSets)`
+ */
+export const vkAllocateDescriptorSets = {
+  args: ['ptr', 'ptr', 'ptr'] as [
+    device: 'ptr',
+    pAllocateInfo: 'ptr',
+    pDescriptorSets: 'ptr',
+  ],
+  returns: 'i32',
+} as const satisfies FFIFunction;
+
+/**
+ * Free descriptor sets back to a pool
+ *
+ * C ref: `VkResult vkFreeDescriptorSets(
+ *   VkDevice device,
+ *   VkDescriptorPool descriptorPool,
+ *   uint32_t descriptorSetCount,
+ *   const VkDescriptorSet* pDescriptorSets)`
+ */
+export const vkFreeDescriptorSets = {
+  args: ['ptr', 'u64', 'u32', 'ptr'] as [
+    device: 'ptr',
+    descriptorPool: 'u64',
+    descriptorSetCount: 'u32',
+    pDescriptorSets: 'ptr',
+  ],
+  returns: 'i32',
+} as const satisfies FFIFunction;
+
+/**
+ * Update descriptor sets with buffer/image info
+ *
+ * C ref: `void vkUpdateDescriptorSets(
+ *   VkDevice device,
+ *   uint32_t descriptorWriteCount,
+ *   const VkWriteDescriptorSet* pDescriptorWrites,
+ *   uint32_t descriptorCopyCount,
+ *   const VkCopyDescriptorSet* pDescriptorCopies)`
+ */
+export const vkUpdateDescriptorSets = {
+  args: ['ptr', 'u32', 'ptr', 'u32', 'ptr'] as [
+    device: 'ptr',
+    descriptorWriteCount: 'u32',
+    pDescriptorWrites: 'ptr',
+    descriptorCopyCount: 'u32',
+    pDescriptorCopies: 'ptr',
   ],
   returns: 'void',
 } as const satisfies FFIFunction;
