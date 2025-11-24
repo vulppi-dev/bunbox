@@ -294,7 +294,9 @@ function mapFrontFace(face: Rasterizer['frontFace']): number {
     : VkFrontFace.CLOCKWISE;
 }
 
-function mapCompare(compare: Rasterizer['depthStencil']['depthCompare']): number {
+function mapCompare(
+  compare: Rasterizer['depthStencil']['depthCompare'],
+): number {
   switch (compare) {
     case 'never':
       return VkCompareOp.NEVER;
@@ -316,7 +318,9 @@ function mapCompare(compare: Rasterizer['depthStencil']['depthCompare']): number
   }
 }
 
-function mapStencil(face: Rasterizer['depthStencil']['stencilFront']): StencilStateMeta {
+function mapStencil(
+  face: Rasterizer['depthStencil']['stencilFront'],
+): StencilStateMeta {
   return {
     compare: mapCompare(face.compare),
     failOp: mapStencilOp(face.failOp),
@@ -325,7 +329,9 @@ function mapStencil(face: Rasterizer['depthStencil']['stencilFront']): StencilSt
   };
 }
 
-function mapStencilOp(op: Rasterizer['depthStencil']['stencilFront']['failOp']): number {
+function mapStencilOp(
+  op: Rasterizer['depthStencil']['stencilFront']['failOp'],
+): number {
   switch (op) {
     case 'keep':
       return VkStencilOp.KEEP;
@@ -348,7 +354,9 @@ function mapStencilOp(op: Rasterizer['depthStencil']['stencilFront']['failOp']):
   }
 }
 
-function mapBlendComponent(component: Rasterizer['blend']['color']): BlendComponentMeta {
+function mapBlendComponent(
+  component: Rasterizer['blend']['color'],
+): BlendComponentMeta {
   return {
     srcFactor: mapBlendFactor(component.srcFactor),
     dstFactor: mapBlendFactor(component.dstFactor),
@@ -356,7 +364,9 @@ function mapBlendComponent(component: Rasterizer['blend']['color']): BlendCompon
   };
 }
 
-function mapBlendFactor(factor: Rasterizer['blend']['color']['srcFactor']): number {
+function mapBlendFactor(
+  factor: Rasterizer['blend']['color']['srcFactor'],
+): number {
   switch (factor) {
     case 'zero':
       return VkBlendFactor.ZERO;
@@ -389,7 +399,9 @@ function mapBlendFactor(factor: Rasterizer['blend']['color']['srcFactor']): numb
   }
 }
 
-function mapBlendOp(operation: Rasterizer['blend']['color']['operation']): number {
+function mapBlendOp(
+  operation: Rasterizer['blend']['color']['operation'],
+): number {
   switch (operation) {
     case 'add':
       return VkBlendOp.ADD;

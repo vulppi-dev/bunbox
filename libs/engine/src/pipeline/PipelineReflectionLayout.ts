@@ -32,7 +32,7 @@ export class PipelineReflectionLayout implements Disposable {
   readonly stages: ShaderStageInfo[];
   readonly overrides: ShaderOverrideInfo[];
 
-  private __descriptorSetLayouts: Pointer[] = [];
+  private __descriptorSetLayouts: BigUint64Array | null = null;
   private __pipelineLayout: Pointer | null = null;
   private __device: Pointer | null = null;
 
@@ -72,7 +72,7 @@ export class PipelineReflectionLayout implements Disposable {
     return this.__pipelineLayout;
   }
 
-  get descriptorSetLayouts(): readonly Pointer[] {
+  get descriptorSetLayouts(): BigUint64Array | null {
     return this.__descriptorSetLayouts;
   }
 
@@ -80,46 +80,48 @@ export class PipelineReflectionLayout implements Disposable {
     if (this.__pipelineLayout) return;
     this.__device = device;
 
-    this.__descriptorSetLayouts = this.descriptorSets.map((setInfo) => {
-      const bindingSize = sizeOf(vkDescriptorSetLayoutBinding);
-      const bindingsBuffer = new Uint8Array(
-        bindingSize * setInfo.bindings.length,
-      );
-
-      for (let i = 0; i < setInfo.bindings.length; i++) {
-        const info = setInfo.bindings[i]!;
-        const binding = instantiate(vkDescriptorSetLayoutBinding);
-        binding.binding = info.binding;
-        binding.descriptorType = info.descriptorType;
-        binding.descriptorCount = 1;
-        binding.stageFlags = info.stageFlags;
-        binding.pImmutableSamplers = 0n;
-        bindingsBuffer.set(
-          new Uint8Array(getInstanceBuffer(binding)),
-          i * bindingSize,
+    this.__descriptorSetLayouts = new BigUint64Array(
+      this.descriptorSets.map((setInfo) => {
+        const bindingSize = sizeOf(vkDescriptorSetLayoutBinding);
+        const bindingsBuffer = new Uint8Array(
+          bindingSize * setInfo.bindings.length,
         );
-      }
 
-      const createInfo = instantiate(vkDescriptorSetLayoutCreateInfo);
-      createInfo.flags = 0;
-      createInfo.bindingCount = setInfo.bindings.length;
-      createInfo.pBindings =
-        setInfo.bindings.length > 0 ? BigInt(ptr(bindingsBuffer)) : 0n;
+        for (let i = 0; i < setInfo.bindings.length; i++) {
+          const info = setInfo.bindings[i]!;
+          const binding = instantiate(vkDescriptorSetLayoutBinding);
+          binding.binding = info.binding;
+          binding.descriptorType = info.descriptorType;
+          binding.descriptorCount = 1;
+          binding.stageFlags = info.stageFlags;
+          binding.pImmutableSamplers = 0n;
+          bindingsBuffer.set(
+            new Uint8Array(getInstanceBuffer(binding)),
+            i * bindingSize,
+          );
+        }
 
-      const layoutHolder = new BigUint64Array(1);
-      const result = VK.vkCreateDescriptorSetLayout(
-        device,
-        ptr(getInstanceBuffer(createInfo)),
-        null,
-        ptr(layoutHolder),
-      );
+        const createInfo = instantiate(vkDescriptorSetLayoutCreateInfo);
+        createInfo.flags = 0;
+        createInfo.bindingCount = setInfo.bindings.length;
+        createInfo.pBindings =
+          setInfo.bindings.length > 0 ? BigInt(ptr(bindingsBuffer)) : 0n;
 
-      if (result !== VkResult.SUCCESS) {
-        throw new RenderError(getResultMessage(result), 'Vulkan');
-      }
+        const layoutHolder = new BigUint64Array(1);
+        const result = VK.vkCreateDescriptorSetLayout(
+          device,
+          ptr(getInstanceBuffer(createInfo)),
+          null,
+          ptr(layoutHolder),
+        );
 
-      return Number(layoutHolder[0]) as Pointer;
-    });
+        if (result !== VkResult.SUCCESS) {
+          throw new RenderError(getResultMessage(result), 'Vulkan');
+        }
+
+        return layoutHolder[0]!;
+      }),
+    );
 
     const pipelineLayoutInfo = instantiate(vkPipelineLayoutCreateInfo);
     pipelineLayoutInfo.flags = 0;
@@ -166,10 +168,12 @@ export class PipelineReflectionLayout implements Disposable {
       this.__pipelineLayout = null;
     }
 
-    for (const layout of this.__descriptorSetLayouts) {
-      VK.vkDestroyDescriptorSetLayout(this.__device, layout, null);
+    if (this.__descriptorSetLayouts) {
+      for (const layout of this.__descriptorSetLayouts) {
+        VK.vkDestroyDescriptorSetLayout(this.__device, layout, null);
+      }
+      this.__descriptorSetLayouts = null;
     }
-    this.__descriptorSetLayouts = [];
   }
 
   dispose(): void {

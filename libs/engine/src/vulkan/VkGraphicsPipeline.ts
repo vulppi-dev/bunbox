@@ -27,12 +27,14 @@ import {
   vkPipelineViewportStateCreateInfo,
   VkResult,
   VkShaderStageFlagBits,
+  VkPipelineBindPoint,
   vkVertexInputAttributeDescription,
   vkVertexInputBindingDescription,
   VkVertexInputRate,
 } from '@bunbox/vk';
 import { ptr, type Pointer } from 'bun:ffi';
 import { RenderError } from '../errors';
+import type { Material } from '../material/MaterialBuilder';
 import type {
   PipelineMaterialLayout,
   SpecializationConstant,
@@ -347,19 +349,33 @@ export class VkGraphicsPipeline implements Disposable {
     this.release();
   }
 
-  writeMaterialData(
-    cmd: VkCommandBuffer,
-    _material: unknown,
-    _materialGpuContext?: unknown,
-  ): void {
+  writeMaterialData(cmd: VkCommandBuffer): void {
     if (!this.__pipeline) {
       throw new RenderError(
         'Pipeline not created before writeMaterialData',
         'Vulkan',
       );
     }
+    if (!this.reflection.descriptorSetLayouts) {
+      throw new RenderError(
+        'Pipeline reflection missing descriptor set layouts',
+        'Vulkan',
+      );
+    }
+
     cmd.bindPipeline(this.__pipeline);
-    // TODO: descriptor set binding when material GPU context is available.
+    VK.vkCmdBindDescriptorSets(
+      cmd.instance,
+      VkPipelineBindPoint.GRAPHICS,
+      this.reflection.pipelineLayout!,
+      0,
+      this.reflection.descriptorSets.length,
+      ptr(this.reflection.descriptorSetLayouts),
+      0,
+      null,
+      // dynamicOffsets.length,
+      // dynamicOffsets.length > 0 ? ptr(dynamicOffsets) : 0 as Pointer,
+    );
   }
 
   writeGeometryData(cmd: VkCommandBuffer, vkGeometry: VkGeometry): void {
@@ -463,9 +479,10 @@ function buildSpecializationInfo(
   };
 }
 
-function mapOverrideType(
-  type: string | null,
-): { size: number; writer: (view: DataView, offset: number, value: unknown) => void } {
+function mapOverrideType(type: string | null): {
+  size: number;
+  writer: (view: DataView, offset: number, value: unknown) => void;
+} {
   const normalized = (type ?? '').toLowerCase();
   switch (normalized) {
     case 'bool':
@@ -491,7 +508,11 @@ function mapOverrideType(
       return {
         size: 4,
         writer: (view, offset, value) =>
-          view.setInt32(offset, typeof value === 'number' ? value | 0 : 0, true),
+          view.setInt32(
+            offset,
+            typeof value === 'number' ? value | 0 : 0,
+            true,
+          ),
       };
     case 'f32':
     case 'float':
