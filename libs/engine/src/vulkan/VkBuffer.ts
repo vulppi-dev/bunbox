@@ -16,7 +16,7 @@ import { ptr, type Pointer } from 'bun:ffi';
 import { RenderError } from '../errors';
 import { VK_DEBUG } from '../singleton/logger';
 
-export type BufferUsage = 'vertex' | 'index' | 'uniform' | 'staging';
+export type BufferUsage = 'vertex' | 'index' | 'uniform' | 'staging' | 'storage';
 
 /**
  * Wrapper for Vulkan VkBuffer
@@ -232,6 +232,8 @@ export class VkBuffer implements Disposable {
         return VkBufferUsageFlagBits.UNIFORM_BUFFER_BIT;
       case 'staging':
         return VkBufferUsageFlagBits.TRANSFER_SRC_BIT;
+      case 'storage':
+        return VkBufferUsageFlagBits.STORAGE_BUFFER_BIT;
       default:
         return VkBufferUsageFlagBits.VERTEX_BUFFER_BIT;
     }

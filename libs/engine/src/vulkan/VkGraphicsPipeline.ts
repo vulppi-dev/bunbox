@@ -46,6 +46,8 @@ import type {
 } from '../pipeline/PipelineMaterialLayout';
 import type { PipelineReflectionLayout } from '../pipeline/PipelineReflectionLayout';
 import { PropertyType } from '../material/MaterialPropertyTypes';
+import type { StorageDefinition } from '../material/MaterialSchema';
+import { isStorageValue } from '../material/StorageTypes';
 import { VK_DEBUG } from '../singleton/logger';
 import { Color, Matrix3, Matrix4, Vector2, Vector3, Vector4 } from '../math';
 import type { VkCommandBuffer } from './VkCommandBuffer';
@@ -90,6 +92,7 @@ export class VkGraphicsPipeline implements Disposable {
   private __descriptorPool: Pointer | null = null;
   private __descriptorSets: BigUint64Array | null = null;
   private __uniformBuffers: Map<string, VkBuffer> = new Map();
+  private __storageBuffers: Map<string, VkBuffer> = new Map();
 
   constructor(
     reflection: PipelineReflectionLayout,
@@ -357,6 +360,10 @@ export class VkGraphicsPipeline implements Disposable {
       buffer.dispose();
     }
     this.__uniformBuffers.clear();
+    for (const buffer of this.__storageBuffers.values()) {
+      buffer.dispose();
+    }
+    this.__storageBuffers.clear();
 
     if (this.__descriptorPool && this.__device) {
       VK.vkDestroyDescriptorPool(this.__device, this.__descriptorPool, null);
@@ -409,6 +416,7 @@ export class VkGraphicsPipeline implements Disposable {
 
     this.__ensureDescriptorSets();
     this.__updateUniformDescriptors();
+    this.__updateStorageDescriptors();
 
     cmd.bindPipeline(this.__pipeline);
     if (this.__descriptorSets && this.__descriptorSets.length > 0) {
@@ -650,6 +658,112 @@ export class VkGraphicsPipeline implements Disposable {
     );
   }
 
+  private __updateStorageDescriptors(): void {
+    if (
+      !this.__descriptorSets ||
+      this.__descriptorSets.length === 0 ||
+      this.materialLayout.storageBindings.length === 0
+    ) {
+      return;
+    }
+
+    if (!this.__device || !this.__physicalDevice) {
+      throw new RenderError(
+        'Physical device is required to upload storage buffers',
+        'Vulkan',
+      );
+    }
+
+    const storages = this.materialLayout.material.storages as Record<
+      string,
+      unknown
+    >;
+    const storageDefs = this.materialLayout.material.schema.storages ?? {};
+
+    const writeSize = sizeOf(vkWriteDescriptorSet);
+    const writes: Uint8Array[] = [];
+    const keepAlive: Array<ArrayBuffer | ArrayBufferView> = [];
+
+    for (const binding of this.materialLayout.storageBindings) {
+      if (binding.descriptorType !== VkDescriptorType.STORAGE_BUFFER) {
+        throw new RenderError(
+          `Descriptor type ${binding.descriptorType} not supported for storage "${binding.name}"`,
+          'Vulkan',
+        );
+      }
+
+      const def = storageDefs[binding.name] as StorageDefinition | undefined;
+      if (!def) {
+        throw new RenderError(
+          `Storage "${binding.name}" not found in schema`,
+          'Vulkan',
+        );
+      }
+
+      const encoded = this.__encodeStorageValue(
+        def,
+        storages[binding.name],
+        binding.name,
+      );
+
+      if (encoded.byteLength === 0) {
+        throw new RenderError(
+          `Storage "${binding.name}" must have a size greater than zero`,
+          'Vulkan',
+        );
+      }
+
+      let buffer = this.__storageBuffers.get(binding.name);
+      if (!buffer || buffer.size < BigInt(encoded.byteLength)) {
+        buffer?.dispose();
+        buffer = new VkBuffer(
+          this.__device,
+          this.__physicalDevice,
+          encoded.byteLength,
+          'storage',
+          encoded,
+        );
+        this.__storageBuffers.set(binding.name, buffer);
+      } else {
+        buffer.upload(encoded);
+      }
+
+      const bufferInfo = instantiate(vkDescriptorBufferInfo);
+      bufferInfo.buffer = BigInt(buffer.instance);
+      bufferInfo.offset = 0n;
+      bufferInfo.range = BigInt(encoded.byteLength);
+      const bufferInfoRaw = getInstanceBuffer(bufferInfo);
+
+      const write = instantiate(vkWriteDescriptorSet);
+      write.dstSet = this.__getDescriptorSetHandle(binding.set);
+      write.dstBinding = binding.binding;
+      write.dstArrayElement = 0;
+      write.descriptorCount = 1;
+      write.descriptorType = binding.descriptorType;
+      write.pImageInfo = 0n;
+      write.pBufferInfo = BigInt(ptr(bufferInfoRaw));
+      write.pTexelBufferView = 0n;
+
+      writes.push(new Uint8Array(getInstanceBuffer(write)));
+      keepAlive.push(bufferInfoRaw);
+    }
+
+    if (writes.length === 0) return;
+
+    const writeBuffer = new Uint8Array(writeSize * writes.length);
+    for (let i = 0; i < writes.length; i++) {
+      writeBuffer.set(writes[i]!, i * writeSize);
+    }
+
+    VK.vkUpdateDescriptorSets(
+      this.__device,
+      writes.length,
+      ptr(writeBuffer),
+      0,
+      null,
+    );
+  }
+
   private __getDescriptorSetHandle(setIndex: number): bigint {
     if (!this.__descriptorSets) {
       throw new RenderError('Descriptor sets not allocated', 'Vulkan');
@@ -728,6 +842,48 @@ export class VkGraphicsPipeline implements Disposable {
           'Vulkan',
         );
     }
+  }
+
+  private __encodeStorageValue(
+    def: StorageDefinition,
+    value: unknown,
+    name: string,
+  ): ArrayBufferView {
+    const hasValue = value !== undefined;
+    if (hasValue) {
+      if (!isStorageValue(value)) {
+        throw new RenderError(
+          `Invalid storage value for "${name}", expected ArrayBuffer or ArrayBufferView`,
+          'Vulkan',
+        );
+      }
+      const view =
+        value instanceof ArrayBuffer
+          ? new Uint8Array(value)
+          : (value as ArrayBufferView);
+      const minSize = def.size ?? 0;
+      if (minSize > 0 && view.byteLength < minSize) {
+        const padded = new Uint8Array(minSize);
+        padded.set(
+          new Uint8Array(
+            view.buffer,
+            view.byteOffset,
+            Math.min(view.byteLength, minSize),
+          ),
+        );
+        return padded;
+      }
+      return view;
+    }
+
+    if (def.size === undefined || def.size <= 0) {
+      throw new RenderError(
+        `Storage "${name}" requires either a value or an explicit size`,
+        'Vulkan',
+      );
+    }
+
+    return new Uint8Array(def.size);
   }
 }
 

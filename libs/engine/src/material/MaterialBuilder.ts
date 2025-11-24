@@ -16,9 +16,12 @@ import type {
   MaterialSchema,
   OverrideProperties,
   PrimitiveTopology,
+  StorageProperties,
   UniformProperties,
 } from './MaterialSchema';
 import { validateSchema } from './MaterialSchema';
+import type { SchemaStorageValues, StorageDefinition } from './MaterialSchema';
+import { isStorageValue } from './StorageTypes';
 
 /**
  * Type-safe material with overrides and uniforms.
@@ -33,6 +36,7 @@ export class Material<
   private __schema: TSchema;
   private __overrides: Record<string, unknown>;
   private __uniforms: Record<string, unknown>;
+  private __storages: Record<string, unknown>;
 
   constructor(descriptor: MaterialDescriptor<TSchema>) {
     super();
@@ -57,6 +61,11 @@ export class Material<
     this.__uniforms = this.__initializeProperties(
       this.__schema.uniforms ?? {},
       descriptor.uniforms as Record<string, unknown> | undefined,
+    );
+
+    this.__storages = this.__initializeStorages(
+      this.__schema.storages ?? {},
+      descriptor.storages as Record<string, unknown> | undefined,
     );
 
     this.markAsDirty();
@@ -86,6 +95,29 @@ export class Material<
           );
         }
         result[key] = valueToUse;
+      }
+    }
+
+    return result;
+  }
+
+  private __initializeStorages(
+    definitions: Record<string, StorageDefinition>,
+    values?: Record<string, unknown>,
+  ): Record<string, unknown> {
+    const result: Record<string, unknown> = {};
+
+    for (const [key, def] of Object.entries(definitions)) {
+      const providedValue = values?.[key] ?? def.defaultValue;
+      if (providedValue !== undefined) {
+        if (!isStorageValue(providedValue)) {
+          throw new Error(
+            `Invalid value for storage '${key}': expected ArrayBuffer or ArrayBufferView`,
+          );
+        }
+        result[key] = providedValue;
+      } else if (def.size !== undefined) {
+        result[key] = new Uint8Array(def.size).buffer;
       }
     }
 
@@ -129,6 +161,13 @@ export class Material<
     return Object.freeze({ ...this.__uniforms }) as UniformProperties<TSchema>;
   }
 
+  /**
+   * Get storage buffer properties (read-only snapshot)
+   */
+  get storages(): Readonly<StorageProperties<TSchema>> {
+    return Object.freeze({ ...this.__storages }) as StorageProperties<TSchema>;
+  }
+
   // Setters
   set label(value: string) {
     if (this.__label === value) return;
@@ -161,6 +200,15 @@ export class Material<
   }
 
   /**
+   * Get a storage property value (type-safe)
+   */
+  getStorage<K extends keyof StorageProperties<TSchema>>(
+    key: K,
+  ): StorageProperties<TSchema>[K] {
+    return this.__storages[key as string] as StorageProperties<TSchema>[K];
+  }
+
+  /**
    * Set a uniform property value (type-safe)
    */
   setUniform<K extends keyof UniformProperties<TSchema>>(
@@ -182,6 +230,31 @@ export class Material<
     if (this.__uniforms[key as string] === value) return this;
 
     this.__uniforms[key as string] = value;
+    return this.markAsDirty();
+  }
+
+  /**
+   * Set a storage buffer value (type-safe)
+   */
+  setStorage<K extends keyof StorageProperties<TSchema>>(
+    key: K,
+    value: StorageProperties<TSchema>[K],
+  ): this {
+    const definitions = this.__schema.storages;
+    if (!definitions || !(key in definitions)) {
+      throw new Error(`Property '${String(key)}' is not a storage property`);
+    }
+
+    const def = definitions[key as string]!;
+    if (!isStorageValue(value)) {
+      throw new Error(
+        `Invalid value for storage '${String(key)}': expected ArrayBuffer or ArrayBufferView`,
+      );
+    }
+
+    if (this.__storages[key as string] === value) return this;
+
+    this.__storages[key as string] = value;
     return this.markAsDirty();
   }
 
@@ -227,6 +300,7 @@ export class Material<
       schema: this.__schema,
       overrides: { ...this.__overrides },
       uniforms: { ...this.__uniforms },
+      storages: { ...this.__storages },
     } as unknown as MaterialDescriptor<TSchema>);
     cloned.markAsDirty();
     return cloned;
@@ -240,6 +314,7 @@ export class Material<
     this.__topology = other.__topology;
     this.__rasterizationState.copy(other.__rasterizationState);
     this.__uniforms = { ...other.__uniforms };
+    this.__storages = { ...other.__storages };
 
     return this.markAsDirty();
   }
@@ -251,6 +326,7 @@ export class Material<
 export class MaterialBuilder<
   TOverrides extends Record<string, PropertyDefinition> = {},
   TUniforms extends Record<string, PropertyDefinition> = {},
+  TStorages extends Record<string, StorageDefinition> = {},
 > {
   private __label?: string;
   private __shader: ShaderHolder;
@@ -259,9 +335,11 @@ export class MaterialBuilder<
 
   private __overrides: Record<string, PropertyDefinition> = {};
   private __uniforms: Record<string, PropertyDefinition> = {};
+  private __storages: Record<string, StorageDefinition> = {};
 
   private __overrideValues: Record<string, unknown> = {};
   private __uniformValues: Record<string, unknown> = {};
+  private __storageValues: Record<string, unknown> = {};
 
   constructor(shader: ShaderHolder) {
     this.__shader = shader;
@@ -289,7 +367,7 @@ export class MaterialBuilder<
     key: K,
     definition: T,
     value?: PropertyTypeMap[T['type']],
-  ): MaterialBuilder<TOverrides & Record<K, T>, TUniforms> {
+  ): MaterialBuilder<TOverrides & Record<K, T>, TUniforms, TStorages> {
     this.__overrides[key] = definition;
     if (value !== undefined) {
       this.__overrideValues[key] = value;
@@ -304,10 +382,25 @@ export class MaterialBuilder<
     key: K,
     definition: T,
     value?: PropertyTypeMap[T['type']],
-  ): MaterialBuilder<TOverrides, TUniforms & Record<K, T>> {
+  ): MaterialBuilder<TOverrides, TUniforms & Record<K, T>, TStorages> {
     this.__uniforms[key] = definition;
     if (value !== undefined) {
       this.__uniformValues[key] = value;
+    }
+    return this as any;
+  }
+
+  /**
+   * Add a storage buffer property.
+   */
+  addStorage<K extends string, T extends StorageDefinition>(
+    key: K,
+    definition: T,
+    value?: SchemaStorageValues<Record<K, T>>[K],
+  ): MaterialBuilder<TOverrides, TUniforms, TStorages & Record<K, T>> {
+    this.__storages[key] = definition;
+    if (value !== undefined) {
+      this.__storageValues[key] = value;
     }
     return this as any;
   }
@@ -318,10 +411,12 @@ export class MaterialBuilder<
   build(): Material<{
     overrides: TOverrides;
     uniforms: TUniforms;
+    storages: TStorages;
   }> {
     const schema = {
       overrides: this.__overrides,
       uniforms: this.__uniforms,
+      storages: this.__storages,
     } as any;
 
     return new Material({
@@ -332,6 +427,7 @@ export class MaterialBuilder<
       schema,
       overrides: this.__overrideValues,
       uniforms: this.__uniformValues,
+      storages: this.__storageValues,
     });
   }
 }

@@ -9,6 +9,8 @@ import type {
 } from './MaterialPropertyTypes';
 import type { Rasterizer } from '../resources/Rasterizer';
 import type { ShaderHolder } from '../core';
+import type { StorageBufferValue } from './StorageTypes';
+import { isStorageValue } from './StorageTypes';
 
 /**
  * Material primitive topology types.
@@ -36,6 +38,12 @@ export type MaterialSchema = {
    * These can be updated efficiently during runtime.
    */
   readonly uniforms?: Record<string, PropertyDefinition>;
+
+  /**
+   * Storage buffer properties.
+   * Backed by writable GPU buffers for large/structured data.
+   */
+  readonly storages?: Record<string, StorageDefinition>;
 };
 
 /**
@@ -45,6 +53,18 @@ export type SchemaPropertyValues<T extends Record<string, PropertyDefinition>> =
   {
     [K in keyof T]: PropertyTypeMap[T[K]['type']];
   };
+
+export type StorageDefinition = {
+  readonly size?: number;
+  readonly defaultValue?: StorageBufferValue;
+  readonly label?: string;
+};
+
+export type SchemaStorageValues<
+  T extends Record<string, StorageDefinition> = Record<string, StorageDefinition>,
+> = {
+  [K in keyof T]: StorageBufferValue;
+};
 
 /**
  * Material descriptor for creating materials with full type inference
@@ -77,6 +97,14 @@ export type MaterialDescriptor<
       }
     : {
         uniforms?: never;
+      }) &
+  (TSchema['storages'] extends Record<string, StorageDefinition>
+    ? {
+        /** Initial storage values (optional, uses defaults/size) */
+        storages?: Partial<SchemaStorageValues<TSchema['storages']>>;
+      }
+    : {
+        storages?: never;
       });
 
 /**
@@ -96,6 +124,14 @@ export type UniformProperties<TSchema extends MaterialSchema> =
     : Record<string, never>;
 
 /**
+ * Type-safe property accessor for storages
+ */
+export type StorageProperties<TSchema extends MaterialSchema> =
+  TSchema['storages'] extends Record<string, StorageDefinition>
+    ? SchemaStorageValues<TSchema['storages']>
+    : Record<string, never>;
+
+/**
  * Helper to define material schema with type inference
  */
 export function defineSchema<
@@ -107,12 +143,18 @@ export function defineSchema<
     string,
     PropertyDefinition
   >,
+  TStorages extends Record<string, StorageDefinition> = Record<
+    string,
+    StorageDefinition
+  >,
 >(schema: {
   overrides?: TOverrides;
   uniforms?: TUniforms;
+  storages?: TStorages;
 }): MaterialSchema & {
   overrides?: TOverrides;
   uniforms?: TUniforms;
+  storages?: TStorages;
 } {
   return schema;
 }
@@ -124,6 +166,7 @@ export function validateSchema(schema: MaterialSchema): boolean {
   const allKeys = [
     ...Object.keys(schema.overrides ?? {}),
     ...Object.keys(schema.uniforms ?? {}),
+    ...Object.keys(schema.storages ?? {}),
   ];
   const uniqueKeys = new Set(allKeys);
 
@@ -160,4 +203,16 @@ export function mergeWithDefaults<T extends Record<string, PropertyDefinition>>(
 ): SchemaPropertyValues<T> {
   const defaults = getSchemaDefaults(definitions);
   return { ...defaults, ...values } as SchemaPropertyValues<T>;
+}
+
+export function getStorageDefaults<
+  T extends Record<string, StorageDefinition>,
+>(definitions: T): Partial<SchemaStorageValues<T>> {
+  const defaults: Record<string, StorageBufferValue> = {};
+  for (const [key, def] of Object.entries(definitions)) {
+    if (def.defaultValue && isStorageValue(def.defaultValue)) {
+      defaults[key] = def.defaultValue;
+    }
+  }
+  return defaults as Partial<SchemaStorageValues<T>>;
 }

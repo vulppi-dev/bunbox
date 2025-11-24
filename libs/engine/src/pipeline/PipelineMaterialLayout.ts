@@ -56,6 +56,13 @@ export type UniformBinding = {
   descriptorType: number;
 };
 
+export type StorageBinding = {
+  name: string;
+  set: number;
+  binding: number;
+  descriptorType: number;
+};
+
 export type RasterStateMeta = {
   polygonMode: number;
   cullMode: number;
@@ -97,6 +104,7 @@ export class PipelineMaterialLayout implements Disposable {
   readonly vertexInput: VertexInputState;
   readonly specializationConstants: SpecializationConstant[];
   readonly uniformBindings: UniformBinding[];
+  readonly storageBindings: StorageBinding[];
   readonly rasterState: RasterStateMeta;
 
   constructor(
@@ -117,11 +125,16 @@ export class PipelineMaterialLayout implements Disposable {
       reflection.descriptorSets,
       material.schema,
     );
+    this.storageBindings = mapStorages(
+      reflection.descriptorSets,
+      material.schema,
+    );
     this.rasterState = mapRasterizer(material.rasterizationState);
   }
 
   prepare(): void {
     validateUniforms(this.uniformBindings, this.material.schema);
+    validateStorages(this.storageBindings, this.material.schema);
   }
 
   release(): void {}
@@ -185,6 +198,22 @@ function validateUniforms(
   }
 }
 
+function validateStorages(
+  bindings: StorageBinding[],
+  schema: MaterialSchema,
+): void {
+  const storages = Object.keys(schema.storages ?? {});
+  for (const storageName of storages) {
+    const hasBinding = bindings.some((b) => b.name === storageName);
+    if (!hasBinding) {
+      throw new EngineError(
+        `Storage "${storageName}" not found in shader layout`,
+        'PipelineMaterialLayout',
+      );
+    }
+  }
+}
+
 function mapUniforms(
   descriptorSets: DescriptorSetInfo[],
   schema: MaterialSchema,
@@ -197,6 +226,28 @@ function mapUniforms(
     if (bindingInfo) {
       bindings.push({
         name: uniformName,
+        set: bindingInfo.set,
+        binding: bindingInfo.binding,
+        descriptorType: bindingInfo.descriptorType,
+      });
+    }
+  }
+
+  return bindings;
+}
+
+function mapStorages(
+  descriptorSets: DescriptorSetInfo[],
+  schema: MaterialSchema,
+): StorageBinding[] {
+  const storages = schema.storages ?? {};
+  const bindings: StorageBinding[] = [];
+
+  for (const storageName of Object.keys(storages)) {
+    const bindingInfo = findBinding(descriptorSets, storageName);
+    if (bindingInfo) {
+      bindings.push({
+        name: storageName,
         set: bindingInfo.set,
         binding: bindingInfo.binding,
         descriptorType: bindingInfo.descriptorType,
