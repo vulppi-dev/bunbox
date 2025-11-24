@@ -1,90 +1,1097 @@
-import {
-  getInstanceBuffer,
-  instantiate,
-  type InferField,
-} from '@bunbox/struct';
+import { getInstanceBuffer, instantiate, sizeOf } from '@bunbox/struct';
 import type { Disposable } from '@bunbox/utils';
 import {
-  getResultMessage,
   VK,
-  VK_FALSE,
-  VK_TRUE,
-  VkBlendFactor,
-  VkBlendOp,
-  VkColorComponentFlagBits,
-  VkCompareOp,
-  VkCullModeFlagBits,
   vkDescriptorSetLayoutBinding,
   vkDescriptorSetLayoutCreateInfo,
   VkDescriptorType,
-  VkDynamicState,
-  VkFormat,
-  VkFrontFace,
-  vkGraphicsPipelineCreateInfo,
-  VkLogicOp,
   vkPipelineColorBlendAttachmentState,
   vkPipelineColorBlendStateCreateInfo,
-  vkPipelineDepthStencilStateCreateInfo,
-  vkPipelineDynamicStateCreateInfo,
-  vkPipelineInputAssemblyStateCreateInfo,
   vkPipelineLayoutCreateInfo,
+  vkPipelineDepthStencilStateCreateInfo,
   vkPipelineMultisampleStateCreateInfo,
   vkPipelineRasterizationStateCreateInfo,
+  vkPipelineShaderStageCreateInfo,
   vkPipelineVertexInputStateCreateInfo,
   vkPipelineViewportStateCreateInfo,
-  VkPolygonMode,
-  VkPrimitiveTopology,
-  VkResult,
-  VkSampleCountFlagBits,
-  VkShaderStageFlagBits,
-  VkStencilOp,
+  vkRect2D,
   vkVertexInputAttributeDescription,
   vkVertexInputBindingDescription,
+  vkPipelineInputAssemblyStateCreateInfo,
+  vkPipelineDynamicStateCreateInfo,
+  vkGraphicsPipelineCreateInfo,
+  vkViewport,
+  VkResult,
+  VkBlendOp,
+  VkBlendFactor,
+  VkColorComponentFlagBits,
+  VkCompareOp,
+  VkCullModeFlagBits,
+  VkFrontFace,
+  VkLogicOp,
+  VkPolygonMode,
+  VkShaderStageFlagBits,
   VkVertexInputRate,
+  VkPrimitiveTopology,
+  VkDynamicState,
+  VkSampleCountFlagBits,
+  VkStencilOp,
+  VkFormat,
+  getResultMessage,
 } from '@bunbox/vk';
 import { ptr, type Pointer } from 'bun:ffi';
-import type { Material, MaterialPrimitive } from '../builders';
-import { PropertyType } from '../material/MaterialPropertyTypes';
-import { DynamicLibError } from '../errors';
+import type { Material } from '../material/MaterialBuilder';
+import type { ShaderHolder } from '../core';
+import type { ShaderStorage } from '../core/ShaderStorage';
 import type {
-  BlendFactor,
-  BlendOperation,
-  CompareFunction,
-  RasterizerCullMode,
-  RasterizerFillMode,
-  RasterizerFrontFace,
-  SampleCount,
-  StencilOperation,
-} from '../resources';
-import { VK_DEBUG } from '../singleton/logger';
-import type { VkShaderModule } from './VkShaderModule';
+  Geometry,
+  GeometryCustomAttribute,
+  VertexAttributeType,
+} from '../resources/Geometry';
+import { EngineError } from '../errors';
+import { WgslReflect, type VariableInfo, ResourceType } from 'wgsl_reflect';
+import { VkShaderModule } from './VkShaderModule';
+import type { Rasterizer } from '../resources/Rasterizer';
+import type { PrimitiveTopology } from '../material/MaterialSchema';
+import type {
+  DepthStencilState,
+  MultisampleState,
+  BlendState,
+} from '../resources/Rasterizer';
+import { mapSampleCountToVk } from './remap';
 
+type ReflectedBindingResource =
+  | 'uniform'
+  | 'storage'
+  | 'texture'
+  | 'sampler'
+  | 'storage-texture';
+
+export type ReflectedBinding = {
+  name: string;
+  group: number;
+  binding: number;
+  resource: ReflectedBindingResource;
+  size: number;
+  align: number;
+  arrayLength?: number | null;
+};
+
+export type ReflectedAttribute = {
+  name: string;
+  location: number | null;
+  type: string;
+};
+
+type AttributeScalar = 'f32' | 'i32' | 'u32';
+type ParsedAttributeType = { scalar: AttributeScalar; components: number };
+
+type PositionBinding = {
+  kind: 'position';
+  binding: number;
+  location: number;
+  components: number;
+  scalar: AttributeScalar;
+  bytesPerComponent: number;
+};
+
+type NormalBinding = {
+  kind: 'normal';
+  binding: number;
+  location: number;
+  components: number;
+  scalar: AttributeScalar;
+  bytesPerComponent: number;
+};
+
+type UvBinding = {
+  kind: 'uv';
+  uvIndex: number;
+  binding: number;
+  location: number;
+  components: number;
+  scalar: AttributeScalar;
+  bytesPerComponent: number;
+};
+
+type CustomBinding = {
+  kind: 'custom';
+  name: string;
+  binding: number;
+  location: number;
+  components: number;
+  scalar: AttributeScalar;
+  bytesPerComponent: number;
+};
+
+export type VertexBindingLayout =
+  | PositionBinding
+  | NormalBinding
+  | UvBinding
+  | CustomBinding;
+
+type PendingVertexBinding =
+  | Omit<PositionBinding, 'binding'>
+  | Omit<NormalBinding, 'binding'>
+  | Omit<UvBinding, 'binding'>
+  | Omit<CustomBinding, 'binding'>;
+
+export type PipelineReflection = {
+  vertexEntry: string;
+  fragmentEntry?: string;
+  attributes: ReflectedAttribute[];
+  bindings: ReflectedBinding[];
+  overrides: string[];
+};
+
+/**
+ * Bridges Material/ShaderStorage with Vulkan pipeline creation.
+ * Uses wgsl_reflect to derive bindings/attributes and validates material compatibility.
+ */
 export class VkGraphicsPipeline implements Disposable {
-  private static __getVkTopology(primitive: MaterialPrimitive) {
-    switch (primitive) {
-      case 'points':
+  private __device: Pointer;
+  private __reflection: PipelineReflection;
+  private __shaderModule: VkShaderModule;
+  private __layout: Pointer | null = null;
+  private __descriptorSetLayouts: Pointer[] = [];
+  private __pipeline: Pointer | null = null;
+  private __vertexBindings: VertexBindingLayout[] = [];
+
+  constructor(
+    device: Pointer,
+    renderPass: Pointer,
+    material: Material,
+    shaders: ShaderStorage,
+    geometry: Geometry,
+  ) {
+    this.__device = device;
+
+    const pack = this.__getGraphicsPack(material.shader, shaders);
+    this.__reflection = this.__reflectPipeline(
+      pack.reflect,
+      pack.vEntry,
+      pack.fEntry,
+    );
+    this.__validateMaterial(material, this.__reflection);
+
+    this.__shaderModule = new VkShaderModule(device, pack.src);
+
+    this.__descriptorSetLayouts = this.__createDescriptorSetLayouts();
+    this.__layout = this.__createPipelineLayout();
+    this.__pipeline = this.__createPipeline(
+      renderPass,
+      material,
+      geometry,
+      pack.vEntry,
+      pack.fEntry,
+    );
+  }
+
+  get reflection(): PipelineReflection {
+    return this.__reflection;
+  }
+
+  get layout(): Pointer {
+    if (!this.__layout) {
+      throw new EngineError(
+        'Pipeline layout was not created',
+        'VkGraphicsPipeline',
+      );
+    }
+    return this.__layout;
+  }
+
+  get shaderModule(): VkShaderModule {
+    return this.__shaderModule;
+  }
+
+  get vertexBindings(): readonly VertexBindingLayout[] {
+    return this.__vertexBindings;
+  }
+
+  dispose(): void {
+    if (this.__pipeline) {
+      VK.vkDestroyPipeline(this.__device, this.__pipeline, null);
+      this.__pipeline = null;
+    }
+
+    this.__shaderModule.dispose();
+
+    if (this.__descriptorSetLayouts.length > 0) {
+      for (const layout of this.__descriptorSetLayouts) {
+        if (layout) {
+          VK.vkDestroyDescriptorSetLayout(this.__device, layout, null);
+        }
+      }
+      this.__descriptorSetLayouts = [];
+    }
+
+    if (this.__layout) {
+      VK.vkDestroyPipelineLayout(this.__device, this.__layout, null);
+      this.__layout = null;
+    }
+  }
+
+  private __getGraphicsPack(holder: ShaderHolder, shaders: ShaderStorage) {
+    const pack = shaders.getShaderPack(holder);
+    if (!pack) {
+      throw new EngineError(
+        'Shader holder not found in ShaderStorage',
+        'VkGraphicsPipeline',
+      );
+    }
+    if (pack.type !== 'graphics') {
+      throw new EngineError(
+        'Shader holder is not a graphics shader',
+        'VkGraphicsPipeline',
+      );
+    }
+    return pack;
+  }
+
+  private __reflectPipeline(
+    reflect: WgslReflect,
+    vertexEntry: string,
+    fragmentEntry?: string,
+  ): PipelineReflection {
+    const vertexInfo = reflect.getFunctionInfo(vertexEntry);
+    if (!vertexInfo || vertexInfo.stage !== 'vertex') {
+      throw new EngineError(
+        `Vertex entry '${vertexEntry}' not found or not a vertex stage`,
+        'VkGraphicsPipeline',
+      );
+    }
+
+    if (fragmentEntry) {
+      const fragInfo = reflect.getFunctionInfo(fragmentEntry);
+      if (!fragInfo || fragInfo.stage !== 'fragment') {
+        throw new EngineError(
+          `Fragment entry '${fragmentEntry}' not found or not a fragment stage`,
+          'VkGraphicsPipeline',
+        );
+      }
+    }
+
+    const attributes =
+      vertexInfo.inputs?.map((input) => ({
+        name: input.name,
+        location:
+          input.locationType === 'location' && typeof input.location === 'number'
+            ? input.location
+            : null,
+        type: input.type?.getTypeName() ?? 'unknown',
+      })) ?? [];
+
+    const bindings = this.__mapBindings(reflect.getBindGroups());
+    const overrides = reflect.overrides.map((o) => o.name);
+
+    return {
+      vertexEntry,
+      fragmentEntry,
+      attributes,
+      bindings,
+      overrides,
+    };
+  }
+
+  private __mapBindings(groups: Array<VariableInfo[]>): ReflectedBinding[] {
+    const bindings: ReflectedBinding[] = [];
+
+    for (const group of groups) {
+      for (const variable of group) {
+        bindings.push({
+          name: variable.name,
+          group: variable.group,
+          binding: variable.binding,
+          resource: this.__mapResource(variable.resourceType),
+          size: variable.size,
+          align: variable.align,
+          arrayLength: variable.isArray ? variable.count ?? 1 : 1,
+        });
+      }
+    }
+
+    return bindings;
+  }
+
+  private __mapResource(type: ResourceType): ReflectedBindingResource {
+    switch (type) {
+      case ResourceType.Uniform:
+        return 'uniform';
+      case ResourceType.Storage:
+        return 'storage';
+      case ResourceType.Texture:
+        return 'texture';
+      case ResourceType.Sampler:
+        return 'sampler';
+      case ResourceType.StorageTexture:
+        return 'storage-texture';
+      default:
+        return 'uniform';
+    }
+  }
+
+  private __validateMaterial(
+    material: Material,
+    reflection: PipelineReflection,
+  ): void {
+    const schemaOverrides = Object.keys(material.schema.overrides ?? {});
+    const shaderOverrides = new Set(reflection.overrides);
+
+    this.__checkCompatibility(schemaOverrides, shaderOverrides, 'override');
+
+    const missingOverrideValues = reflection.overrides.filter(
+      (name) => (material.overrides as Record<string, unknown>)[name] === undefined,
+    );
+    if (missingOverrideValues.length > 0) {
+      throw new EngineError(
+        `Material incompativel com shader (faltando valor para override(s): ${missingOverrideValues.join(', ')})`,
+        'VkGraphicsPipeline',
+      );
+    }
+
+    const shaderUniforms = new Set(
+      reflection.bindings
+        .filter((b) => b.resource === 'uniform')
+        .map((b) => b.name),
+    );
+    const schemaUniforms = Object.keys(material.schema.uniforms ?? {});
+    this.__checkCompatibility(schemaUniforms, shaderUniforms, 'uniform');
+  }
+
+  private __checkCompatibility(
+    materialKeys: string[],
+    shaderKeys: Set<string>,
+    label: string,
+  ): void {
+    const missing: string[] = [];
+    const extras: string[] = [];
+
+    for (const key of materialKeys) {
+      if (!shaderKeys.has(key)) {
+        extras.push(key);
+      }
+    }
+
+    for (const key of shaderKeys) {
+      if (!materialKeys.includes(key)) {
+        missing.push(key);
+      }
+    }
+
+    if (missing.length || extras.length) {
+      const parts: string[] = [];
+      if (missing.length) {
+        parts.push(`faltando ${label}(s): ${missing.join(', ')}`);
+      }
+      if (extras.length) {
+        parts.push(`extras nao usados pelo shader: ${extras.join(', ')}`);
+      }
+      throw new EngineError(
+        `Material incompativel com shader (${parts.join(' | ')})`,
+        'VkGraphicsPipeline',
+      );
+    }
+  }
+  private __createDescriptorSetLayouts(): Pointer[] {
+    if (this.__reflection.bindings.length === 0) return [];
+
+    const stageFlags =
+      VkShaderStageFlagBits.VERTEX_BIT |
+      (this.__reflection.fragmentEntry ? VkShaderStageFlagBits.FRAGMENT_BIT : 0);
+
+    const groups = new Map<number, ReflectedBinding[]>();
+    for (const binding of this.__reflection.bindings) {
+      if (!groups.has(binding.group)) {
+        groups.set(binding.group, []);
+      }
+      groups.get(binding.group)!.push(binding);
+    }
+
+    const maxGroup = Math.max(...groups.keys());
+    const layouts: Pointer[] = [];
+    const bindingSize = sizeOf(vkDescriptorSetLayoutBinding);
+
+    for (let group = 0; group <= maxGroup; group++) {
+      const groupBindings = groups.get(group) ?? [];
+      groupBindings.sort((a, b) => a.binding - b.binding);
+
+      let bindingsBuffer: Uint8Array | null = null;
+      if (groupBindings.length > 0) {
+        bindingsBuffer = new Uint8Array(groupBindings.length * bindingSize);
+        for (let i = 0; i < groupBindings.length; i++) {
+          const b = groupBindings[i]!;
+          const layout = instantiate(vkDescriptorSetLayoutBinding);
+          layout.binding = b.binding;
+          layout.descriptorType = this.__mapDescriptorType(b.resource);
+          layout.descriptorCount = Math.max(1, b.arrayLength ?? 1);
+          layout.stageFlags = stageFlags;
+          layout.pImmutableSamplers = 0n;
+
+          bindingsBuffer.set(
+            new Uint8Array(getInstanceBuffer(layout)),
+            i * bindingSize,
+          );
+        }
+      }
+
+      const createInfo = instantiate(vkDescriptorSetLayoutCreateInfo);
+      createInfo.bindingCount = groupBindings.length;
+      createInfo.pBindings =
+        groupBindings.length > 0 && bindingsBuffer
+          ? BigInt(ptr(bindingsBuffer))
+          : 0n;
+
+      const holder = new BigUint64Array(1);
+      const result = VK.vkCreateDescriptorSetLayout(
+        this.__device,
+        ptr(getInstanceBuffer(createInfo)),
+        null,
+        ptr(holder),
+      );
+
+      if (result !== VkResult.SUCCESS) {
+        throw new EngineError(getResultMessage(result), 'VkGraphicsPipeline');
+      }
+
+      layouts[group] = Number(holder[0]) as Pointer;
+    }
+
+    return layouts;
+  }
+
+  private __createPipelineLayout(): Pointer {
+    const layoutInfo = instantiate(vkPipelineLayoutCreateInfo);
+    const descriptorLayouts = this.__descriptorSetLayouts.filter(Boolean);
+    layoutInfo.setLayoutCount = descriptorLayouts.length;
+    layoutInfo.pSetLayouts =
+      descriptorLayouts.length > 0
+        ? BigInt(
+            ptr(
+              new BigUint64Array(
+                descriptorLayouts.map((layout) => BigInt(layout)),
+              ),
+            ),
+          )
+        : 0n;
+    layoutInfo.pushConstantRangeCount = 0;
+    layoutInfo.pPushConstantRanges = 0n;
+
+    const holder = new BigUint64Array(1);
+    const result = VK.vkCreatePipelineLayout(
+      this.__device,
+      ptr(getInstanceBuffer(layoutInfo)),
+      null,
+      ptr(holder),
+    );
+
+    if (result !== VkResult.SUCCESS) {
+      throw new EngineError(getResultMessage(result), 'VkGraphicsPipeline');
+    }
+
+    return Number(holder[0]) as Pointer;
+  }
+
+  private __createPipeline(
+    renderPass: Pointer,
+    material: Material,
+    geometry: Geometry,
+    vertexEntry: string,
+    fragmentEntry?: string,
+  ): Pointer {
+    const specializationInfo = this.__buildSpecializationInfo(material);
+
+    const shaderStages = this.__buildShaderStages(
+      this.__shaderModule.instance,
+      vertexEntry,
+      fragmentEntry,
+      specializationInfo,
+    );
+
+    const { bindingDesc, attributeDescs, attributeCount, bindingCount } =
+      this.__buildVertexInput(this.__reflection.attributes, geometry);
+
+    const vertexInputInfo = instantiate(vkPipelineVertexInputStateCreateInfo);
+    vertexInputInfo.vertexBindingDescriptionCount = bindingCount;
+    vertexInputInfo.pVertexBindingDescriptions =
+      bindingCount > 0 ? BigInt(ptr(bindingDesc)) : 0n;
+    vertexInputInfo.vertexAttributeDescriptionCount = attributeCount;
+    vertexInputInfo.pVertexAttributeDescriptions =
+      attributeCount > 0 ? BigInt(ptr(attributeDescs)) : 0n;
+
+    const inputAssembly = instantiate(vkPipelineInputAssemblyStateCreateInfo);
+    inputAssembly.topology = this.__mapTopology(material.topology);
+    inputAssembly.primitiveRestartEnable = 0;
+
+    const viewportState = instantiate(vkPipelineViewportStateCreateInfo);
+    viewportState.viewportCount = 1;
+    viewportState.pViewports = BigInt(
+      ptr(getInstanceBuffer(this.__defaultViewport())),
+    );
+    viewportState.scissorCount = 1;
+    viewportState.pScissors = BigInt(
+      ptr(getInstanceBuffer(this.__defaultScissor())),
+    );
+
+    const rasterizerState = this.__buildRasterizer(material.rasterizationState);
+    const multisampleState = this.__buildMultisample(
+      material.rasterizationState.multisample,
+    );
+    const depthStencilState = this.__buildDepthStencil(
+      material.rasterizationState.depthStencil,
+    );
+    const colorBlendState = this.__buildColorBlend(
+      material.rasterizationState.blend,
+    );
+
+    const dynamicStates = new Uint32Array([
+      VkDynamicState.VIEWPORT,
+      VkDynamicState.SCISSOR,
+    ]);
+    const dynamicState = instantiate(vkPipelineDynamicStateCreateInfo);
+    dynamicState.dynamicStateCount = dynamicStates.length;
+    dynamicState.pDynamicStates = BigInt(ptr(dynamicStates));
+
+    const pipelineInfo = instantiate(vkGraphicsPipelineCreateInfo);
+    pipelineInfo.stageCount = shaderStages.count;
+    pipelineInfo.pStages = BigInt(ptr(shaderStages.buffer));
+    pipelineInfo.pVertexInputState = BigInt(
+      ptr(new Uint8Array(getInstanceBuffer(vertexInputInfo))),
+    );
+    pipelineInfo.pInputAssemblyState = BigInt(
+      ptr(new Uint8Array(getInstanceBuffer(inputAssembly))),
+    );
+    pipelineInfo.pViewportState = BigInt(
+      ptr(new Uint8Array(getInstanceBuffer(viewportState))),
+    );
+    pipelineInfo.pRasterizationState = BigInt(
+      ptr(new Uint8Array(getInstanceBuffer(rasterizerState))),
+    );
+    pipelineInfo.pMultisampleState = BigInt(
+      ptr(new Uint8Array(getInstanceBuffer(multisampleState))),
+    );
+    pipelineInfo.pDepthStencilState = BigInt(
+      ptr(new Uint8Array(getInstanceBuffer(depthStencilState))),
+    );
+    pipelineInfo.pColorBlendState = BigInt(
+      ptr(new Uint8Array(getInstanceBuffer(colorBlendState))),
+    );
+    pipelineInfo.pDynamicState = BigInt(
+      ptr(new Uint8Array(getInstanceBuffer(dynamicState))),
+    );
+    pipelineInfo.layout = BigInt(this.layout);
+    pipelineInfo.renderPass = BigInt(renderPass);
+    pipelineInfo.subpass = 0;
+    pipelineInfo.basePipelineHandle = 0n;
+    pipelineInfo.basePipelineIndex = -1;
+
+    const holder = new BigUint64Array(1);
+    const result = VK.vkCreateGraphicsPipelines(
+      this.__device,
+      0n,
+      1,
+      ptr(getInstanceBuffer(pipelineInfo)),
+      null,
+      ptr(holder),
+    );
+
+    if (result !== VkResult.SUCCESS) {
+      throw new EngineError(getResultMessage(result), 'VkGraphicsPipeline');
+    }
+
+    return Number(holder[0]) as Pointer;
+  }
+
+  private __buildSpecializationInfo(material: Material): bigint {
+    void material;
+    // TODO: map WGSL overrides to VkSpecializationInfo when bindings are available.
+    return 0n;
+  }
+
+  private __buildShaderStages(
+    module: Pointer,
+    vertexEntry: string,
+    fragmentEntry?: string,
+    specializationInfo: bigint = 0n,
+  ): { buffer: Uint8Array; count: number } {
+    const stageSize = sizeOf(vkPipelineShaderStageCreateInfo);
+    const stages: Uint8Array[] = [];
+
+    const vertexStage = instantiate(vkPipelineShaderStageCreateInfo);
+    vertexStage.stage = VkShaderStageFlagBits.VERTEX_BIT;
+    vertexStage.module = BigInt(module);
+    vertexStage.pName = vertexEntry;
+    vertexStage.pSpecializationInfo = specializationInfo;
+    stages.push(new Uint8Array(getInstanceBuffer(vertexStage)));
+
+    if (fragmentEntry) {
+      const fragStage = instantiate(vkPipelineShaderStageCreateInfo);
+      fragStage.stage = VkShaderStageFlagBits.FRAGMENT_BIT;
+      fragStage.module = BigInt(module);
+      fragStage.pName = fragmentEntry;
+      fragStage.pSpecializationInfo = specializationInfo;
+      stages.push(new Uint8Array(getInstanceBuffer(fragStage)));
+    }
+
+    const buffer = new Uint8Array(stageSize * stages.length);
+    for (let i = 0; i < stages.length; i++) {
+      buffer.set(stages[i]!, i * stageSize);
+    }
+
+    return { buffer, count: stages.length };
+  }
+
+  private __buildVertexInput(
+    attributes: ReflectedAttribute[],
+    geometry: Geometry,
+  ) {
+    const available = attributes.filter(
+      (attr): attr is ReflectedAttribute & { location: number } =>
+        attr.location !== null && attr.location !== undefined,
+    );
+
+    const resolved: PendingVertexBinding[] = available.map((attr) => {
+      const parsedType = this.__parseAttributeType(attr.type);
+      return this.__resolveVertexBinding(attr, parsedType, geometry);
+    });
+
+    const ordered: PendingVertexBinding[] = [];
+    const position = resolved.find(
+      (r): r is Extract<PendingVertexBinding, { kind: 'position' }> =>
+        r.kind === 'position',
+    );
+    if (position) ordered.push(position);
+
+    const normal = resolved.find(
+      (r): r is Extract<PendingVertexBinding, { kind: 'normal' }> =>
+        r.kind === 'normal',
+    );
+    if (normal) ordered.push(normal);
+
+    const uvBindings = resolved
+      .filter(
+        (r): r is Extract<PendingVertexBinding, { kind: 'uv' }> =>
+          r.kind === 'uv',
+      )
+      .sort((a, b) => a.uvIndex - b.uvIndex);
+    ordered.push(...uvBindings);
+
+    const customBindings = resolved
+      .filter(
+        (r): r is Extract<PendingVertexBinding, { kind: 'custom' }> =>
+          r.kind === 'custom',
+      )
+      .sort((a, b) => a.name.localeCompare(b.name));
+    ordered.push(...customBindings);
+
+    const bindingSize = sizeOf(vkVertexInputBindingDescription);
+    const attrSize = sizeOf(vkVertexInputAttributeDescription);
+
+    const bindingDesc = new Uint8Array(ordered.length * bindingSize);
+    const attributeDescs = new Uint8Array(ordered.length * attrSize);
+
+    const finalBindings: VertexBindingLayout[] = [];
+
+    for (let i = 0; i < ordered.length; i++) {
+      const entry = ordered[i]!;
+      const stride = entry.components * entry.bytesPerComponent;
+
+      const binding = instantiate(vkVertexInputBindingDescription);
+      binding.binding = i;
+      binding.inputRate = VkVertexInputRate.VERTEX;
+      binding.stride = stride;
+      bindingDesc.set(
+        new Uint8Array(getInstanceBuffer(binding)),
+        i * bindingSize,
+      );
+
+      const attr = instantiate(vkVertexInputAttributeDescription);
+      attr.location = entry.location;
+      attr.binding = i;
+      attr.format = this.__mapAttributeFormat(
+        entry.scalar,
+        entry.components,
+      );
+      attr.offset = 0;
+      attributeDescs.set(
+        new Uint8Array(getInstanceBuffer(attr)),
+        i * attrSize,
+      );
+
+      finalBindings.push({ ...entry, binding: i } as VertexBindingLayout);
+    }
+
+    this.__vertexBindings = finalBindings;
+
+    return {
+      bindingDesc,
+      bindingCount: ordered.length,
+      attributeDescs,
+      attributeCount: ordered.length,
+    };
+  }
+
+  private __resolveVertexBinding(
+    attr: ReflectedAttribute,
+    parsed: ParsedAttributeType,
+    geometry: Geometry,
+  ): PendingVertexBinding {
+    if (attr.location === null || attr.location === undefined) {
+      throw new EngineError(
+        `Atributo de vertice '${attr.name}' sem location explicita no WGSL.`,
+        'VkGraphicsPipeline',
+      );
+    }
+
+    const name = attr.name.trim();
+    const normalized = name.toLowerCase();
+    const location = attr.location as number;
+
+    if (normalized === 'position') {
+      this.__assertAttributeCompatibility(
+        name,
+        attr.type,
+        parsed,
+        3,
+        'float32',
+        'f32',
+      );
+      return {
+        kind: 'position',
+        location,
+        components: 3,
+        scalar: 'f32',
+        bytesPerComponent: Float32Array.BYTES_PER_ELEMENT,
+      };
+    }
+
+    if (normalized === 'normal') {
+      this.__assertAttributeCompatibility(
+        name,
+        attr.type,
+        parsed,
+        3,
+        'float32',
+        'f32',
+      );
+      return {
+        kind: 'normal',
+        location,
+        components: 3,
+        scalar: 'f32',
+        bytesPerComponent: Float32Array.BYTES_PER_ELEMENT,
+      };
+    }
+
+    const uvMatch = /^uv(\d*)$/.exec(normalized);
+    if (uvMatch) {
+      const uvIndex = uvMatch[1] === '' ? 0 : Number(uvMatch[1]);
+      if (!Number.isFinite(uvIndex) || uvIndex < 0) {
+        throw new EngineError(
+          `UV index invalido no atributo '${name}'.`,
+          'VkGraphicsPipeline',
+        );
+      }
+      if (uvIndex >= geometry.uvLayerCount) {
+        throw new EngineError(
+          `Geometry nao possui camada de UV para '${name}' (index ${uvIndex}).`,
+          'VkGraphicsPipeline',
+        );
+      }
+      this.__assertAttributeCompatibility(
+        name,
+        attr.type,
+        parsed,
+        2,
+        'float32',
+        'f32',
+      );
+      return {
+        kind: 'uv',
+        uvIndex,
+        location,
+        components: 2,
+        scalar: 'f32',
+        bytesPerComponent: Float32Array.BYTES_PER_ELEMENT,
+      };
+    }
+
+    const custom = this.__findCustomAttribute(geometry, name);
+    if (!custom) {
+      throw new EngineError(
+        `Atributo de vertice '${name}' nao existe na Geometry (customAttributes).`,
+        'VkGraphicsPipeline',
+      );
+    }
+
+    const { scalar, bytesPerComponent } = this.__geometryTypeInfo(
+      custom.type,
+      name,
+    );
+
+    this.__assertAttributeCompatibility(
+      name,
+      attr.type,
+      parsed,
+      custom.components,
+      custom.type,
+      scalar,
+    );
+
+    return {
+      kind: 'custom',
+      name: custom.name,
+      location,
+      components: custom.components,
+      scalar,
+      bytesPerComponent,
+    };
+  }
+
+  private __parseAttributeType(typeName: string): ParsedAttributeType {
+    const normalized = typeName.trim().toLowerCase();
+    const vecMatch = /^vec(\d+)<(f32|i32|u32)>$/.exec(normalized);
+    if (vecMatch) {
+      const components = Number(vecMatch[1]);
+      const scalar = vecMatch[2] as AttributeScalar;
+      if (components >= 2 && components <= 4) {
+        return { scalar, components };
+      }
+    }
+
+    const scalarMatch = /^(f32|i32|u32)$/.exec(normalized);
+    if (scalarMatch) {
+      return {
+        scalar: scalarMatch[1] as AttributeScalar,
+        components: 1,
+      };
+    }
+
+    throw new EngineError(
+      `Tipo de atributo nao suportado para VertexInput: ${typeName}`,
+      'VkGraphicsPipeline',
+    );
+  }
+
+  private __findCustomAttribute(
+    geometry: Geometry,
+    name: string,
+  ): GeometryCustomAttribute | null {
+    const key = name.trim();
+    return (
+      geometry.customAttributes.find((attr) => attr.name === key) ?? null
+    );
+  }
+
+  private __geometryTypeInfo(
+    type: VertexAttributeType,
+    attrName: string,
+  ): { scalar: AttributeScalar; bytesPerComponent: number } {
+    switch (type) {
+      case 'float32':
+        return {
+          scalar: 'f32',
+          bytesPerComponent: Float32Array.BYTES_PER_ELEMENT,
+        };
+      case 'int32':
+        return {
+          scalar: 'i32',
+          bytesPerComponent: Int32Array.BYTES_PER_ELEMENT,
+        };
+      case 'uint32':
+        return {
+          scalar: 'u32',
+          bytesPerComponent: Uint32Array.BYTES_PER_ELEMENT,
+        };
+      default:
+        throw new EngineError(
+          `Atributo '${attrName}' usa tipo ${type}, apenas float32/int32/uint32 sao suportados para VertexInput.`,
+          'VkGraphicsPipeline',
+        );
+    }
+  }
+
+  private __assertAttributeCompatibility(
+    name: string,
+    wgslTypeName: string,
+    parsed: ParsedAttributeType,
+    expectedComponents: number,
+    geometryType: string,
+    geometryScalar: AttributeScalar,
+  ): void {
+    if (
+      parsed.components !== expectedComponents ||
+      parsed.scalar !== geometryScalar
+    ) {
+      throw new EngineError(
+        `Atributo '${name}' incompativel: shader declara '${wgslTypeName}', mas Geometry fornece ${expectedComponents} componente(s) do tipo ${geometryType}.`,
+        'VkGraphicsPipeline',
+      );
+    }
+  }
+
+  private __buildRasterizer(rasterizer: Rasterizer) {
+    const state = instantiate(vkPipelineRasterizationStateCreateInfo);
+    state.depthClampEnable = 0;
+    state.rasterizerDiscardEnable = 0;
+    state.polygonMode = this.__mapFillMode(rasterizer.fillMode);
+    state.cullMode = this.__mapCullMode(rasterizer.cull);
+    state.frontFace = this.__mapFrontFace(rasterizer.frontFace);
+    state.depthBiasEnable = rasterizer.depthStencil.depthBias !== 0 ? 1 : 0;
+    state.depthBiasConstantFactor = rasterizer.depthStencil.depthBias;
+    state.depthBiasClamp = rasterizer.depthStencil.depthBiasClamp;
+    state.depthBiasSlopeFactor = rasterizer.depthStencil.depthBiasSlopeScale;
+    state.lineWidth = 1;
+    return state;
+  }
+
+  private __buildMultisample(multisample: MultisampleState) {
+    const state = instantiate(vkPipelineMultisampleStateCreateInfo);
+    state.rasterizationSamples = mapSampleCountToVk(
+      multisample.count,
+    ) as VkSampleCountFlagBits;
+    state.sampleShadingEnable = 0;
+    state.minSampleShading = 1;
+    state.pSampleMask = 0n;
+    state.alphaToCoverageEnable = multisample.alphaToCoverageEnabled ? 1 : 0;
+    state.alphaToOneEnable = 0;
+    return state;
+  }
+
+  private __buildDepthStencil(depth: DepthStencilState) {
+    const depthStencil = instantiate(vkPipelineDepthStencilStateCreateInfo);
+    depthStencil.depthTestEnable = depth.depthCompare !== 'always' ? 1 : 0;
+    depthStencil.depthWriteEnable = depth.depthWriteEnabled ? 1 : 0;
+    depthStencil.depthCompareOp = this.__mapCompare(depth.depthCompare);
+    depthStencil.depthBoundsTestEnable = 0;
+    depthStencil.stencilTestEnable =
+      depth.stencilFront.compare !== 'always' ||
+      depth.stencilBack.compare !== 'always'
+        ? 1
+        : 0;
+    depthStencil.front.failOp = this.__mapStencil(depth.stencilFront.failOp);
+    depthStencil.front.passOp = this.__mapStencil(depth.stencilFront.passOp);
+    depthStencil.front.depthFailOp = this.__mapStencil(
+      depth.stencilFront.depthFailOp,
+    );
+    depthStencil.front.compareOp = this.__mapCompare(
+      depth.stencilFront.compare,
+    );
+    depthStencil.front.compareMask = depth.stencilReadMask.get();
+    depthStencil.front.writeMask = depth.stencilWriteMask.get();
+    depthStencil.front.reference = 0;
+
+    depthStencil.back.failOp = this.__mapStencil(depth.stencilBack.failOp);
+    depthStencil.back.passOp = this.__mapStencil(depth.stencilBack.passOp);
+    depthStencil.back.depthFailOp = this.__mapStencil(
+      depth.stencilBack.depthFailOp,
+    );
+    depthStencil.back.compareOp = this.__mapCompare(depth.stencilBack.compare);
+    depthStencil.back.compareMask = depth.stencilReadMask.get();
+    depthStencil.back.writeMask = depth.stencilWriteMask.get();
+    depthStencil.back.reference = 0;
+
+    depthStencil.minDepthBounds = 0;
+    depthStencil.maxDepthBounds = 1;
+
+    return depthStencil;
+  }
+
+  private __buildColorBlend(blend: BlendState) {
+    const attachment = instantiate(vkPipelineColorBlendAttachmentState);
+    attachment.blendEnable = blend.enabled ? 1 : 0;
+    attachment.srcColorBlendFactor = this.__mapBlendFactor(
+      blend.color.srcFactor,
+    );
+    attachment.dstColorBlendFactor = this.__mapBlendFactor(
+      blend.color.dstFactor,
+    );
+    attachment.colorBlendOp = this.__mapBlendOp(blend.color.operation);
+    attachment.srcAlphaBlendFactor = this.__mapBlendFactor(
+      blend.alpha.srcFactor,
+    );
+    attachment.dstAlphaBlendFactor = this.__mapBlendFactor(
+      blend.alpha.dstFactor,
+    );
+    attachment.alphaBlendOp = this.__mapBlendOp(blend.alpha.operation);
+    attachment.colorWriteMask = this.__maskToColorWrite(blend.writeMask.get());
+
+    const colorBlend = instantiate(vkPipelineColorBlendStateCreateInfo);
+    colorBlend.logicOpEnable = 0;
+    colorBlend.logicOp = VkLogicOp.COPY;
+    colorBlend.attachmentCount = 1;
+    colorBlend.pAttachments = BigInt(ptr(getInstanceBuffer(attachment)));
+    colorBlend.blendConstants = [0, 0, 0, 0];
+
+    return colorBlend;
+  }
+
+  private __defaultViewport() {
+    const vp = instantiate(vkViewport);
+    vp.x = 0;
+    vp.y = 0;
+    vp.width = 1;
+    vp.height = 1;
+    vp.minDepth = 0;
+    vp.maxDepth = 1;
+    return vp;
+  }
+
+  private __defaultScissor() {
+    const sc = instantiate(vkRect2D);
+    sc.offset.x = 0;
+    sc.offset.y = 0;
+    sc.extent.width = 1;
+    sc.extent.height = 1;
+    return sc;
+  }
+
+  private __mapDescriptorType(resource: ReflectedBindingResource): number {
+    switch (resource) {
+      case 'uniform':
+        return VkDescriptorType.UNIFORM_BUFFER;
+      case 'storage':
+        return VkDescriptorType.STORAGE_BUFFER;
+      case 'texture':
+        return VkDescriptorType.SAMPLED_IMAGE;
+      case 'sampler':
+        return VkDescriptorType.SAMPLER;
+      case 'storage-texture':
+        return VkDescriptorType.STORAGE_IMAGE;
+      default:
+        return VkDescriptorType.UNIFORM_BUFFER;
+    }
+  }
+
+  private __mapTopology(topology: PrimitiveTopology): number {
+    switch (topology) {
+      case 'point-list':
         return VkPrimitiveTopology.POINT_LIST;
-      case 'lines':
+      case 'line-list':
         return VkPrimitiveTopology.LINE_LIST;
-      case 'triangles':
+      case 'line-strip':
+        return VkPrimitiveTopology.LINE_STRIP;
+      case 'triangle-strip':
+        return VkPrimitiveTopology.TRIANGLE_STRIP;
+      case 'triangle-list':
       default:
         return VkPrimitiveTopology.TRIANGLE_LIST;
     }
   }
 
-  private static __getVkPolygonMode(fillMode: RasterizerFillMode) {
-    switch (fillMode) {
-      case 'point':
-        return VkPolygonMode.POINT;
+  private __mapFillMode(fill: Rasterizer['fillMode']): number {
+    switch (fill) {
       case 'line':
         return VkPolygonMode.LINE;
+      case 'point':
+        return VkPolygonMode.POINT;
       case 'fill':
       default:
         return VkPolygonMode.FILL;
     }
   }
 
-  private static __getVkCullMode(cull: RasterizerCullMode) {
+  private __mapCullMode(cull: Rasterizer['cull']): number {
     switch (cull) {
       case 'front':
         return VkCullModeFlagBits.FRONT_BIT;
@@ -94,43 +1101,41 @@ export class VkGraphicsPipeline implements Disposable {
         return VkCullModeFlagBits.FRONT_AND_BACK;
       case 'none':
       default:
-        return VkCullModeFlagBits.NONE;
+        return 0;
     }
   }
 
-  private static __getVkFrontFace(frontFace: RasterizerFrontFace) {
-    switch (frontFace) {
-      case 'counter-clockwise':
-        return VkFrontFace.COUNTER_CLOCKWISE;
-      case 'clockwise':
-      default:
-        return VkFrontFace.CLOCKWISE;
-    }
+  private __mapFrontFace(face: Rasterizer['frontFace']): number {
+    return face === 'counter-clockwise'
+      ? VkFrontFace.COUNTER_CLOCKWISE
+      : VkFrontFace.CLOCKWISE;
   }
 
-  private static __getVkCompareOp(compare: CompareFunction) {
+  private __mapCompare(compare: DepthStencilState['depthCompare']): number {
     switch (compare) {
       case 'never':
         return VkCompareOp.NEVER;
       case 'less':
         return VkCompareOp.LESS;
-      case 'equal':
-        return VkCompareOp.EQUAL;
       case 'less-equal':
         return VkCompareOp.LESS_OR_EQUAL;
       case 'greater':
         return VkCompareOp.GREATER;
-      case 'not-equal':
-        return VkCompareOp.NOT_EQUAL;
       case 'greater-equal':
         return VkCompareOp.GREATER_OR_EQUAL;
+      case 'equal':
+        return VkCompareOp.EQUAL;
+      case 'not-equal':
+        return VkCompareOp.NOT_EQUAL;
       case 'always':
       default:
         return VkCompareOp.ALWAYS;
     }
   }
 
-  private static __getVkStencilOp(op: StencilOperation) {
+  private __mapStencil(
+    op: DepthStencilState['stencilFront']['failOp'],
+  ): number {
     switch (op) {
       case 'keep':
         return VkStencilOp.KEEP;
@@ -147,53 +1152,14 @@ export class VkGraphicsPipeline implements Disposable {
       case 'increment-wrap':
         return VkStencilOp.INCREMENT_AND_WRAP;
       case 'decrement-wrap':
-      default:
         return VkStencilOp.DECREMENT_AND_WRAP;
-    }
-  }
-
-  private static __getVkSampleCount(count: SampleCount) {
-    switch (count) {
-      case 1:
-        return VkSampleCountFlagBits.COUNT_1_BIT;
-      case 2:
-        return VkSampleCountFlagBits.COUNT_2_BIT;
-      case 4:
-        return VkSampleCountFlagBits.COUNT_4_BIT;
-      case 8:
-        return VkSampleCountFlagBits.COUNT_8_BIT;
-      case 16:
       default:
-        return VkSampleCountFlagBits.COUNT_16_BIT;
+        return VkStencilOp.KEEP;
     }
   }
 
-  private static __getVkDescriptorType(
-    propertyType: PropertyType,
-  ): VkDescriptorType {
-    switch (propertyType) {
-      case PropertyType.Texture:
-        return VkDescriptorType.SAMPLED_IMAGE;
-      case PropertyType.Sampler:
-        return VkDescriptorType.SAMPLER;
-      case PropertyType.TextureSampler:
-        return VkDescriptorType.COMBINED_IMAGE_SAMPLER;
-      case PropertyType.Scalar:
-      case PropertyType.Vec2:
-      case PropertyType.Vec3:
-      case PropertyType.Vec4:
-      case PropertyType.Mat2:
-      case PropertyType.Mat3:
-      case PropertyType.Mat4:
-      case PropertyType.Color3:
-      case PropertyType.Color4:
-      default:
-        return VkDescriptorType.UNIFORM_BUFFER;
-    }
-  }
-
-  private static __getVkBlendFactor(factor: BlendFactor) {
-    switch (factor) {
+  private __mapBlendFactor(f: BlendState['color']['srcFactor']): number {
+    switch (f) {
       case 'zero':
         return VkBlendFactor.ZERO;
       case 'one':
@@ -219,13 +1185,14 @@ export class VkGraphicsPipeline implements Disposable {
       case 'constant':
         return VkBlendFactor.CONSTANT_COLOR;
       case 'one-minus-constant':
-      default:
         return VkBlendFactor.ONE_MINUS_CONSTANT_COLOR;
+      default:
+        return VkBlendFactor.ONE;
     }
   }
 
-  private static __getVkBlendOp(operation: BlendOperation) {
-    switch (operation) {
+  private __mapBlendOp(op: BlendState['color']['operation']): number {
+    switch (op) {
       case 'add':
         return VkBlendOp.ADD;
       case 'subtract':
@@ -235,520 +1202,75 @@ export class VkGraphicsPipeline implements Disposable {
       case 'min':
         return VkBlendOp.MIN;
       case 'max':
-      default:
         return VkBlendOp.MAX;
+      default:
+        return VkBlendOp.ADD;
     }
   }
 
-  private __device: Pointer;
-  private __material: Material;
-
-  private __stages: BigUint64Array<ArrayBuffer>;
-
-  private __pipelineInstance: Pointer | null = null;
-  private __pipelineLayout: Pointer | null = null;
-  private __descriptorSetLayout: Pointer | null = null;
-
-  private __dynamicStages: Uint32Array;
-  private __dynamicInfo = instantiate(vkPipelineDynamicStateCreateInfo);
-  private __viewportInfo = instantiate(vkPipelineViewportStateCreateInfo);
-  private __inputAssemblyInfo = instantiate(
-    vkPipelineInputAssemblyStateCreateInfo,
-  );
-  private __rasterizationInfo = instantiate(
-    vkPipelineRasterizationStateCreateInfo,
-  );
-  private __multisampleInfo = instantiate(vkPipelineMultisampleStateCreateInfo);
-  private __colorBlendAttachment = instantiate(
-    vkPipelineColorBlendAttachmentState,
-  );
-  private __colorBlendInfo = instantiate(vkPipelineColorBlendStateCreateInfo);
-  private __depthStencilInfo = instantiate(
-    vkPipelineDepthStencilStateCreateInfo,
-  );
-
-  private __vertexInputInfo = instantiate(vkPipelineVertexInputStateCreateInfo);
-  private __pipelineConfigInfo = instantiate(vkGraphicsPipelineCreateInfo);
-
-  private __vertexBindings: InferField<
-    typeof vkVertexInputBindingDescription
-  >[] = [];
-  private __vertexAttributes: InferField<
-    typeof vkVertexInputAttributeDescription
-  >[] = [];
-
-  constructor(
-    device: Pointer,
-    renderPass: Pointer,
-    modules: VkShaderModule[],
-    material: Material,
-  ) {
-    this.__device = device;
-    this.__stages = new BigUint64Array(modules.map((m) => BigInt(m.instance)));
-    this.__material = material;
-
-    VK_DEBUG('Creating graphics pipeline');
-
-    this.__dynamicStages = new Uint32Array([
-      VkDynamicState.VIEWPORT,
-      VkDynamicState.SCISSOR,
-    ]);
-    this.__dynamicInfo.dynamicStateCount = this.__dynamicStages.length;
-    this.__dynamicInfo.pDynamicStates = BigInt(ptr(this.__dynamicStages));
-
-    this.__viewportInfo.viewportCount = 1;
-    this.__viewportInfo.scissorCount = 1;
-
-    // Configure vertex input based on VkGeometry standard layout
-    this.__configureVertexInput();
-
-    // Bind pointers between structs
-    this.__bindPointers();
-
-    // Create pipeline layout
-    this.__createLayout();
-
-    // Create pipeline
-    this.__createPipeline(renderPass);
-
-    VK_DEBUG('Graphics pipeline initialized');
+  private __maskToColorWrite(mask: number): number {
+    let m = 0;
+    if (mask & 0x1) m |= VkColorComponentFlagBits.R_BIT;
+    if (mask & 0x2) m |= VkColorComponentFlagBits.G_BIT;
+    if (mask & 0x4) m |= VkColorComponentFlagBits.B_BIT;
+    if (mask & 0x8) m |= VkColorComponentFlagBits.A_BIT;
+    return m;
   }
 
-  get instance(): Pointer {
-    return this.__pipelineInstance!;
-  }
-
-  /**
-   * Bind pointers between Vulkan structs
-   */
-  private __bindPointers(): void {
-    this.__colorBlendInfo.pAttachments = BigInt(
-      ptr(getInstanceBuffer(this.__colorBlendAttachment)),
-    );
-
-    this.__pipelineConfigInfo.pDynamicState = BigInt(
-      ptr(getInstanceBuffer(this.__dynamicInfo)),
-    );
-    this.__pipelineConfigInfo.pViewportState = BigInt(
-      ptr(getInstanceBuffer(this.__viewportInfo)),
-    );
-    this.__pipelineConfigInfo.pInputAssemblyState = BigInt(
-      ptr(getInstanceBuffer(this.__inputAssemblyInfo)),
-    );
-    this.__pipelineConfigInfo.pRasterizationState = BigInt(
-      ptr(getInstanceBuffer(this.__rasterizationInfo)),
-    );
-    this.__pipelineConfigInfo.pMultisampleState = BigInt(
-      ptr(getInstanceBuffer(this.__multisampleInfo)),
-    );
-    this.__pipelineConfigInfo.pColorBlendState = BigInt(
-      ptr(getInstanceBuffer(this.__colorBlendInfo)),
-    );
-    this.__pipelineConfigInfo.pDepthStencilState = BigInt(
-      ptr(getInstanceBuffer(this.__depthStencilInfo)),
-    );
-    this.__pipelineConfigInfo.pVertexInputState = BigInt(
-      ptr(getInstanceBuffer(this.__vertexInputInfo)),
-    );
-    this.__pipelineConfigInfo.stageCount = 2;
-    this.__pipelineConfigInfo.pStages = BigInt(ptr(this.__stages));
-  }
-
-  /**
-   * Configure vertex input state based on VkGeometry standard layout
-   *
-   * Standard layout from VkGeometry:
-   * - Binding 0: Vertex positions (vec3 - 3 floats)
-   * - Binding 1: Vertex normals (vec3 - 3 floats)
-   * - Binding 2+: UV coordinates (vec2 - 2 floats per layer)
-   */
-  private __configureVertexInput(): void {
-    VK_DEBUG('Configuring vertex input state for standard geometry layout');
-
-    let location = 0;
-    let binding = 0;
-
-    // Binding 0: Vertex positions (location 0)
-    const vertexBinding = instantiate(vkVertexInputBindingDescription);
-    vertexBinding.binding = binding;
-    vertexBinding.stride = 3 * Float32Array.BYTES_PER_ELEMENT; // vec3
-    vertexBinding.inputRate = VkVertexInputRate.VERTEX;
-    this.__vertexBindings.push(vertexBinding);
-
-    const vertexAttr = instantiate(vkVertexInputAttributeDescription);
-    vertexAttr.location = location++;
-    vertexAttr.binding = binding++;
-    vertexAttr.format = VkFormat.R32G32B32_SFLOAT; // vec3
-    vertexAttr.offset = 0;
-    this.__vertexAttributes.push(vertexAttr);
-
-    // Binding 1: Vertex normals (location 1)
-    const normalBinding = instantiate(vkVertexInputBindingDescription);
-    normalBinding.binding = binding;
-    normalBinding.stride = 3 * Float32Array.BYTES_PER_ELEMENT; // vec3
-    normalBinding.inputRate = VkVertexInputRate.VERTEX;
-    this.__vertexBindings.push(normalBinding);
-
-    const normalAttr = instantiate(vkVertexInputAttributeDescription);
-    normalAttr.location = location++;
-    normalAttr.binding = binding++;
-    normalAttr.format = VkFormat.R32G32B32_SFLOAT; // vec3
-    normalAttr.offset = 0;
-    this.__vertexAttributes.push(normalAttr);
-
-    // Binding 2+: UV coordinates (location 2+)
-    // Note: VkGeometry can have multiple UV layers, but we'll configure
-    // a reasonable default (1 UV layer). Add more if needed.
-    const uvBinding = instantiate(vkVertexInputBindingDescription);
-    uvBinding.binding = binding;
-    uvBinding.stride = 2 * Float32Array.BYTES_PER_ELEMENT; // vec2
-    uvBinding.inputRate = VkVertexInputRate.VERTEX;
-    this.__vertexBindings.push(uvBinding);
-
-    const uvAttr = instantiate(vkVertexInputAttributeDescription);
-    uvAttr.location = location++;
-    uvAttr.binding = binding++;
-    uvAttr.format = VkFormat.R32G32_SFLOAT; // vec2
-    uvAttr.offset = 0;
-    this.__vertexAttributes.push(uvAttr);
-
-    VK_DEBUG(
-      `Vertex input configured: ${this.__vertexBindings.length} bindings, ${this.__vertexAttributes.length} attributes`,
-    );
-
-    // Set binding and attribute arrays in vertex input state
-    const bindingsArray = new BigUint64Array(this.__vertexBindings.length);
-    for (let i = 0; i < this.__vertexBindings.length; i++) {
-      bindingsArray[i] = BigInt(
-        ptr(getInstanceBuffer(this.__vertexBindings[i]!)),
-      );
+  private __mapAttributeFormat(
+    scalar: AttributeScalar,
+    components: number,
+  ): number {
+    switch (scalar) {
+      case 'f32':
+        switch (components) {
+          case 1:
+            return VkFormat.R32_SFLOAT;
+          case 2:
+            return VkFormat.R32G32_SFLOAT;
+          case 3:
+            return VkFormat.R32G32B32_SFLOAT;
+          case 4:
+            return VkFormat.R32G32B32A32_SFLOAT;
+          default:
+            break;
+        }
+        break;
+      case 'i32':
+        switch (components) {
+          case 1:
+            return VkFormat.R32_SINT;
+          case 2:
+            return VkFormat.R32G32_SINT;
+          case 3:
+            return VkFormat.R32G32B32_SINT;
+          case 4:
+            return VkFormat.R32G32B32A32_SINT;
+          default:
+            break;
+        }
+        break;
+      case 'u32':
+        switch (components) {
+          case 1:
+            return VkFormat.R32_UINT;
+          case 2:
+            return VkFormat.R32G32_UINT;
+          case 3:
+            return VkFormat.R32G32B32_UINT;
+          case 4:
+            return VkFormat.R32G32B32A32_UINT;
+          default:
+            break;
+        }
+        break;
+      default:
+        break;
     }
 
-    const attributesArray = new BigUint64Array(this.__vertexAttributes.length);
-    for (let i = 0; i < this.__vertexAttributes.length; i++) {
-      attributesArray[i] = BigInt(
-        ptr(getInstanceBuffer(this.__vertexAttributes[i]!)),
-      );
-    }
-
-    this.__vertexInputInfo.vertexBindingDescriptionCount =
-      this.__vertexBindings.length;
-    this.__vertexInputInfo.pVertexBindingDescriptions = BigInt(
-      ptr(bindingsArray),
+    throw new EngineError(
+      `Tipo de atributo nao suportado para VertexInput: ${components} componente(s) ${scalar}`,
+      'VkGraphicsPipeline',
     );
-    this.__vertexInputInfo.vertexAttributeDescriptionCount =
-      this.__vertexAttributes.length;
-    this.__vertexInputInfo.pVertexAttributeDescriptions = BigInt(
-      ptr(attributesArray),
-    );
-  }
-
-  /**
-   * Create descriptor set layout and pipeline layout from material schema
-   */
-  private __createLayout(): void {
-    VK_DEBUG('Creating pipeline layout from material schema');
-
-    // Collect all bindings from material schema
-    const bindings: InferField<typeof vkDescriptorSetLayoutBinding>[] = [];
-    let bindingIndex = 0;
-
-    // Process constants
-    const constants = this.__material.schema.constants;
-    if (constants) {
-      for (const [key, definition] of Object.entries(constants)) {
-        const binding = instantiate(vkDescriptorSetLayoutBinding);
-        binding.binding = bindingIndex++;
-        binding.descriptorType = VkGraphicsPipeline.__getVkDescriptorType(
-          definition.type,
-        );
-        binding.descriptorCount = 1;
-        binding.stageFlags =
-          VkShaderStageFlagBits.VERTEX_BIT | VkShaderStageFlagBits.FRAGMENT_BIT;
-        binding.pImmutableSamplers = 0n;
-        bindings.push(binding);
-        VK_DEBUG(`  Constant binding ${bindingIndex - 1}: ${key}`);
-      }
-    }
-
-    // Process mutables
-    const mutables = this.__material.schema.mutables;
-    if (mutables) {
-      for (const [key, definition] of Object.entries(mutables)) {
-        const binding = instantiate(vkDescriptorSetLayoutBinding);
-        binding.binding = bindingIndex++;
-        binding.descriptorType = VkGraphicsPipeline.__getVkDescriptorType(
-          definition.type,
-        );
-        binding.descriptorCount = 1;
-        binding.stageFlags =
-          VkShaderStageFlagBits.VERTEX_BIT | VkShaderStageFlagBits.FRAGMENT_BIT;
-        binding.pImmutableSamplers = 0n;
-        bindings.push(binding);
-        VK_DEBUG(`  Mutable binding ${bindingIndex - 1}: ${key}`);
-      }
-    }
-
-    if (bindings.length === 0) {
-      VK_DEBUG('No bindings - creating empty pipeline layout');
-      const emptyLayoutInfo = instantiate(vkPipelineLayoutCreateInfo);
-      emptyLayoutInfo.setLayoutCount = 0;
-      emptyLayoutInfo.pSetLayouts = 0n;
-      emptyLayoutInfo.pushConstantRangeCount = 0;
-      emptyLayoutInfo.pPushConstantRanges = 0n;
-
-      const pointerHolder = new BigUint64Array(1);
-      const result = VK.vkCreatePipelineLayout(
-        this.__device,
-        ptr(getInstanceBuffer(emptyLayoutInfo)),
-        null,
-        ptr(pointerHolder),
-      );
-
-      if (result !== VkResult.SUCCESS) {
-        throw new DynamicLibError(getResultMessage(result), 'Vulkan');
-      }
-
-      this.__pipelineLayout = Number(pointerHolder[0]!) as Pointer;
-      this.__pipelineConfigInfo.layout = BigInt(this.__pipelineLayout);
-      VK_DEBUG(
-        `Empty pipeline layout created: 0x${this.__pipelineLayout.toString(16)}`,
-      );
-      return;
-    }
-
-    VK_DEBUG(`Total bindings: ${bindings.length}`);
-
-    // Create bindings array
-    const bindingsArray = new BigUint64Array(bindings.length);
-    for (let i = 0; i < bindings.length; i++) {
-      bindingsArray[i] = BigInt(ptr(getInstanceBuffer(bindings[i]!)));
-    }
-
-    // Create descriptor set layout
-    const layoutInfo = instantiate(vkDescriptorSetLayoutCreateInfo);
-    layoutInfo.bindingCount = bindings.length;
-    layoutInfo.pBindings = BigInt(ptr(bindingsArray));
-
-    let pointerHolder = new BigUint64Array(1);
-    let result = VK.vkCreateDescriptorSetLayout(
-      this.__device,
-      ptr(getInstanceBuffer(layoutInfo)),
-      null,
-      ptr(pointerHolder),
-    );
-
-    if (result !== VkResult.SUCCESS) {
-      throw new DynamicLibError(getResultMessage(result), 'Vulkan');
-    }
-
-    this.__descriptorSetLayout = Number(pointerHolder[0]!) as Pointer;
-    VK_DEBUG(
-      `Descriptor set layout created: 0x${this.__descriptorSetLayout.toString(16)}`,
-    );
-
-    // Create pipeline layout
-    const setLayouts = new BigUint64Array([BigInt(this.__descriptorSetLayout)]);
-    const pipelineLayoutInfo = instantiate(vkPipelineLayoutCreateInfo);
-    pipelineLayoutInfo.setLayoutCount = 1;
-    pipelineLayoutInfo.pSetLayouts = BigInt(ptr(setLayouts));
-    pipelineLayoutInfo.pushConstantRangeCount = 0;
-    pipelineLayoutInfo.pPushConstantRanges = 0n;
-
-    pointerHolder = new BigUint64Array(1);
-    result = VK.vkCreatePipelineLayout(
-      this.__device,
-      ptr(getInstanceBuffer(pipelineLayoutInfo)),
-      null,
-      ptr(pointerHolder),
-    );
-
-    if (result !== VkResult.SUCCESS) {
-      throw new DynamicLibError(getResultMessage(result), 'Vulkan');
-    }
-
-    this.__pipelineLayout = Number(pointerHolder[0]!) as Pointer;
-    VK_DEBUG(
-      `Pipeline layout created: 0x${this.__pipelineLayout.toString(16)}`,
-    );
-
-    // Set pipeline layout in config
-    this.__pipelineConfigInfo.layout = BigInt(this.__pipelineLayout);
-  }
-
-  /**
-   * Create graphics pipeline with current configuration
-   */
-  private __createPipeline(renderPass: Pointer): void {
-    VK_DEBUG(`Creating graphics pipeline`);
-
-    // Configure topology
-    this.__inputAssemblyInfo.topology = VkGraphicsPipeline.__getVkTopology(
-      this.__material.primitive,
-    );
-    this.__inputAssemblyInfo.primitiveRestartEnable = VK_TRUE;
-
-    // Configure rasterizer
-    const rasterizer = this.__material.rasterizer;
-    this.__rasterizationInfo.depthClampEnable = VK_FALSE;
-    this.__rasterizationInfo.rasterizerDiscardEnable = VK_FALSE;
-    this.__rasterizationInfo.polygonMode =
-      VkGraphicsPipeline.__getVkPolygonMode(rasterizer.fillMode);
-    this.__rasterizationInfo.cullMode = VkGraphicsPipeline.__getVkCullMode(
-      rasterizer.cull,
-    );
-    this.__rasterizationInfo.frontFace = VkGraphicsPipeline.__getVkFrontFace(
-      rasterizer.frontFace,
-    );
-    this.__rasterizationInfo.depthBiasEnable =
-      rasterizer.depthStencil.depthBias !== 0 ? VK_TRUE : VK_FALSE;
-    this.__rasterizationInfo.depthBiasConstantFactor =
-      rasterizer.depthStencil.depthBias;
-    this.__rasterizationInfo.depthBiasClamp =
-      rasterizer.depthStencil.depthBiasClamp;
-    this.__rasterizationInfo.depthBiasSlopeFactor =
-      rasterizer.depthStencil.depthBiasSlopeScale;
-    this.__rasterizationInfo.lineWidth = 1.0;
-
-    // Configure multisample
-    const multisample = rasterizer.multisample;
-    this.__multisampleInfo.rasterizationSamples =
-      VkGraphicsPipeline.__getVkSampleCount(multisample.count);
-    this.__multisampleInfo.sampleShadingEnable = VK_FALSE;
-    this.__multisampleInfo.minSampleShading = 1.0;
-    this.__multisampleInfo.pSampleMask = 0n;
-    this.__multisampleInfo.alphaToCoverageEnable =
-      multisample.alphaToCoverageEnabled ? VK_TRUE : VK_FALSE;
-    this.__multisampleInfo.alphaToOneEnable = VK_FALSE;
-
-    // Configure blend
-    const blend = rasterizer.blend;
-    this.__colorBlendAttachment.blendEnable = blend.enabled
-      ? VK_TRUE
-      : VK_FALSE;
-    this.__colorBlendAttachment.srcColorBlendFactor =
-      VkGraphicsPipeline.__getVkBlendFactor(blend.color.srcFactor);
-    this.__colorBlendAttachment.dstColorBlendFactor =
-      VkGraphicsPipeline.__getVkBlendFactor(blend.color.dstFactor);
-    this.__colorBlendAttachment.colorBlendOp =
-      VkGraphicsPipeline.__getVkBlendOp(blend.color.operation);
-    this.__colorBlendAttachment.srcAlphaBlendFactor =
-      VkGraphicsPipeline.__getVkBlendFactor(blend.alpha.srcFactor);
-    this.__colorBlendAttachment.dstAlphaBlendFactor =
-      VkGraphicsPipeline.__getVkBlendFactor(blend.alpha.dstFactor);
-    this.__colorBlendAttachment.alphaBlendOp =
-      VkGraphicsPipeline.__getVkBlendOp(blend.alpha.operation);
-    this.__colorBlendAttachment.colorWriteMask =
-      (blend.writeMask.has(0) ? VkColorComponentFlagBits.R_BIT : 0) |
-      (blend.writeMask.has(1) ? VkColorComponentFlagBits.G_BIT : 0) |
-      (blend.writeMask.has(2) ? VkColorComponentFlagBits.B_BIT : 0) |
-      (blend.writeMask.has(3) ? VkColorComponentFlagBits.A_BIT : 0);
-
-    this.__colorBlendInfo.logicOpEnable = VK_FALSE;
-    this.__colorBlendInfo.logicOp = VkLogicOp.CLEAR;
-    this.__colorBlendInfo.attachmentCount = 1;
-    this.__colorBlendInfo.blendConstants = [0.0, 0.0, 0.0, 0.0];
-
-    // Configure depth/stencil
-    const depthStencil = rasterizer.depthStencil;
-    this.__depthStencilInfo.depthTestEnable =
-      depthStencil.depthCompare !== 'always' ? VK_TRUE : VK_FALSE;
-    this.__depthStencilInfo.depthWriteEnable = depthStencil.depthWriteEnabled
-      ? VK_TRUE
-      : VK_FALSE;
-    this.__depthStencilInfo.depthCompareOp =
-      VkGraphicsPipeline.__getVkCompareOp(depthStencil.depthCompare);
-    this.__depthStencilInfo.depthBoundsTestEnable = VK_FALSE;
-    this.__depthStencilInfo.minDepthBounds = 0.0;
-    this.__depthStencilInfo.maxDepthBounds = 1.0;
-    this.__depthStencilInfo.stencilTestEnable =
-      depthStencil.stencilFront.compare !== 'always' ||
-      depthStencil.stencilBack.compare !== 'always'
-        ? VK_TRUE
-        : VK_FALSE;
-    this.__depthStencilInfo.front.failOp = VkGraphicsPipeline.__getVkStencilOp(
-      depthStencil.stencilFront.failOp,
-    );
-    this.__depthStencilInfo.front.passOp = VkGraphicsPipeline.__getVkStencilOp(
-      depthStencil.stencilFront.passOp,
-    );
-    this.__depthStencilInfo.front.depthFailOp =
-      VkGraphicsPipeline.__getVkStencilOp(
-        depthStencil.stencilFront.depthFailOp,
-      );
-    this.__depthStencilInfo.front.compareOp =
-      VkGraphicsPipeline.__getVkCompareOp(depthStencil.stencilFront.compare);
-    this.__depthStencilInfo.front.compareMask =
-      depthStencil.stencilReadMask.get();
-    this.__depthStencilInfo.front.writeMask =
-      depthStencil.stencilWriteMask.get();
-    this.__depthStencilInfo.front.reference = 0;
-    this.__depthStencilInfo.back.failOp = VkGraphicsPipeline.__getVkStencilOp(
-      depthStencil.stencilBack.failOp,
-    );
-    this.__depthStencilInfo.back.passOp = VkGraphicsPipeline.__getVkStencilOp(
-      depthStencil.stencilBack.passOp,
-    );
-    this.__depthStencilInfo.back.depthFailOp =
-      VkGraphicsPipeline.__getVkStencilOp(depthStencil.stencilBack.depthFailOp);
-    this.__depthStencilInfo.back.compareOp =
-      VkGraphicsPipeline.__getVkCompareOp(depthStencil.stencilBack.compare);
-    this.__depthStencilInfo.back.compareMask =
-      depthStencil.stencilReadMask.get();
-    this.__depthStencilInfo.back.writeMask =
-      depthStencil.stencilWriteMask.get();
-    this.__depthStencilInfo.back.reference = 0;
-
-    // Set render pass
-    this.__pipelineConfigInfo.renderPass = BigInt(renderPass);
-    this.__pipelineConfigInfo.subpass = 0;
-
-    // Create pipeline
-    VK_DEBUG('Creating Vulkan graphics pipeline');
-    const pointerHolder = new BigUint64Array(1);
-    const result = VK.vkCreateGraphicsPipelines(
-      this.__device,
-      0n,
-      1,
-      ptr(getInstanceBuffer(this.__pipelineConfigInfo)),
-      null,
-      ptr(pointerHolder),
-    );
-
-    if (result !== VkResult.SUCCESS) {
-      throw new DynamicLibError(getResultMessage(result), 'Vulkan');
-    }
-    this.__pipelineInstance = Number(pointerHolder[0]!) as Pointer;
-    VK_DEBUG(
-      `Graphics pipeline created: 0x${this.__pipelineInstance.toString(16)}`,
-    );
-  }
-
-  dispose(): void | Promise<void> {
-    VK_DEBUG('Disposing graphics pipeline');
-
-    if (this.__pipelineInstance) {
-      VK.vkDestroyPipeline(this.__device, this.__pipelineInstance, null);
-      this.__pipelineInstance = null;
-      VK_DEBUG('Pipeline destroyed');
-    }
-
-    if (this.__pipelineLayout) {
-      VK.vkDestroyPipelineLayout(this.__device, this.__pipelineLayout, null);
-      this.__pipelineLayout = null;
-      VK_DEBUG('Pipeline layout destroyed');
-    }
-
-    if (this.__descriptorSetLayout) {
-      VK.vkDestroyDescriptorSetLayout(
-        this.__device,
-        this.__descriptorSetLayout,
-        null,
-      );
-      this.__descriptorSetLayout = null;
-      VK_DEBUG('Descriptor set layout destroyed');
-    }
-
-    VK_DEBUG('Graphics pipeline disposed');
   }
 }

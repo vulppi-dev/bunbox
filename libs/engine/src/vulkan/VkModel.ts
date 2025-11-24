@@ -1,7 +1,9 @@
 import type { Disposable } from '@bunbox/utils';
 import { VK_DEBUG } from '../singleton/logger';
 import type { VkCommandBuffer } from './VkCommandBuffer';
+import type { VkBuffer } from './VkBuffer';
 import type { VkGeometry } from './VkGeometry';
+import type { VertexBindingLayout } from './VkGraphicsPipeline';
 
 /**
  * Wrapper for model rendering with Vulkan
@@ -22,41 +24,19 @@ export class VkModel implements Disposable {
   /**
    * Bind vertex and index buffers to command buffer
    */
-  bind(commandBuffer: VkCommandBuffer): void {
+  bind(
+    commandBuffer: VkCommandBuffer,
+    bindingLayout: readonly VertexBindingLayout[],
+  ): void {
     VK_DEBUG('Binding VkModel vertex buffers to command buffer');
 
-    const buffers = [];
-    let binding = 0;
-
-    // Bind vertex buffer (binding 0)
-    if (this.__geometry.vertexBuffer) {
-      buffers.push(this.__geometry.vertexBuffer);
-      VK_DEBUG(`Binding vertex buffer at binding ${binding}`);
-      binding++;
-    }
-
-    // Bind normal buffer (binding 1)
-    if (this.__geometry.normalBuffer) {
-      buffers.push(this.__geometry.normalBuffer);
-      VK_DEBUG(`Binding normal buffer at binding ${binding}`);
-      binding++;
-    }
-
-    // Bind UV buffers (bindings 2+)
-    for (let i = 0; i < this.__geometry.uvBuffers.length; i++) {
-      buffers.push(this.__geometry.uvBuffers[i]!);
-      VK_DEBUG(`Binding UV buffer ${i} at binding ${binding}`);
-      binding++;
-    }
-
-    // Bind custom attribute buffers (bindings after UVs)
-    for (const [name, buffer] of this.__geometry.customAttributeBuffers) {
-      buffers.push(buffer);
-      VK_DEBUG(
-        `Binding custom attribute "${name}" buffer at binding ${binding}`,
+    if (!bindingLayout || bindingLayout.length === 0) {
+      throw new Error(
+        'VkModel.bind requires a vertex binding layout from shader reflection.',
       );
-      binding++;
     }
+
+    const buffers = this.__bindFromLayout(bindingLayout);
 
     // Bind all vertex attribute buffers at once
     if (buffers.length > 0) {
@@ -93,5 +73,53 @@ export class VkModel implements Disposable {
   dispose(): void {
     VK_DEBUG('Disposing VkModel (geometry managed externally)');
     // VkModel doesn't own the geometry, so no cleanup needed
+  }
+
+  private __bindFromLayout(
+    layout: readonly VertexBindingLayout[],
+  ): VkBuffer[] {
+    const buffers: VkBuffer[] = [];
+
+    for (const binding of layout) {
+      const buffer = this.__getBufferForLayout(binding);
+      buffers.push(buffer);
+    }
+
+    return buffers;
+  }
+
+  private __getBufferForLayout(layout: VertexBindingLayout): VkBuffer {
+    switch (layout.kind) {
+      case 'position':
+        if (!this.__geometry.vertexBuffer) {
+          throw new Error('Geometry does not provide position buffer.');
+        }
+        return this.__geometry.vertexBuffer;
+      case 'normal':
+        if (!this.__geometry.normalBuffer) {
+          throw new Error('Geometry does not provide normal buffer.');
+        }
+        return this.__geometry.normalBuffer;
+      case 'uv': {
+        const buffer = this.__geometry.uvBuffers[layout.uvIndex];
+        if (!buffer) {
+          throw new Error(
+            `Geometry does not provide UV buffer for layer ${layout.uvIndex}.`,
+          );
+        }
+        return buffer;
+      }
+      case 'custom': {
+        const buffer = this.__geometry.customAttributeBuffers.get(layout.name);
+        if (!buffer) {
+          throw new Error(
+            `Geometry does not provide custom attribute buffer '${layout.name}'.`,
+          );
+        }
+        return buffer;
+      }
+      default:
+        throw new Error(`Unknown vertex binding kind ${(layout as any).kind}`);
+    }
   }
 }

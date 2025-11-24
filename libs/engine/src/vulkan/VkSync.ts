@@ -11,7 +11,7 @@ import {
   VK_WHOLE_SIZE,
 } from '@bunbox/vk';
 import { ptr, type Pointer } from 'bun:ffi';
-import { DynamicLibError } from '../errors';
+import { RenderError } from '../errors';
 import { VK_DEBUG } from '../singleton/logger';
 
 /**
@@ -123,7 +123,7 @@ export class VkSync implements Disposable {
     );
 
     if (result !== VkResult.SUCCESS && result !== VkResult.TIMEOUT) {
-      throw new DynamicLibError(getResultMessage(result), 'Vulkan');
+      throw new RenderError(getResultMessage(result), 'Vulkan');
     }
   }
 
@@ -137,7 +137,7 @@ export class VkSync implements Disposable {
     const result = VK.vkResetFences(this.__device, 1, ptr(fenceArray));
 
     if (result !== VkResult.SUCCESS) {
-      throw new DynamicLibError(getResultMessage(result), 'Vulkan');
+      throw new RenderError(getResultMessage(result), 'Vulkan');
     }
   }
 
@@ -157,7 +157,7 @@ export class VkSync implements Disposable {
       const arr = new BigUint64Array([BigInt(fenceHandle)]);
       const res = VK.vkWaitForFences(this.__device, 1, ptr(arr), 1, timeout);
       if (res !== VkResult.SUCCESS) {
-        throw new DynamicLibError(getResultMessage(res), 'Vulkan');
+        throw new RenderError(getResultMessage(res), 'Vulkan');
       }
       this.__imageInFlightFences[imageIndex] = 0n;
     }
@@ -173,7 +173,7 @@ export class VkSync implements Disposable {
   waitDeviceIdle(): void {
     const result = VK.vkDeviceWaitIdle(this.__device);
     if (result !== VkResult.SUCCESS) {
-      throw new DynamicLibError(getResultMessage(result), 'Vulkan');
+      throw new RenderError(getResultMessage(result), 'Vulkan');
     }
   }
 
@@ -217,12 +217,12 @@ export class VkSync implements Disposable {
     );
 
     if (result !== VkResult.SUCCESS) {
-      throw new DynamicLibError(getResultMessage(result), 'Vulkan');
+      throw new RenderError(getResultMessage(result), 'Vulkan');
     }
 
     const semaphoreHandle = pointerHolder[0];
     if (semaphoreHandle === undefined) {
-      throw new DynamicLibError('Failed to create semaphore', 'Vulkan');
+      throw new RenderError('Failed to create semaphore', 'Vulkan');
     }
 
     target[index] = semaphoreHandle;
@@ -246,12 +246,12 @@ export class VkSync implements Disposable {
     );
 
     if (result !== VkResult.SUCCESS) {
-      throw new DynamicLibError(getResultMessage(result), 'Vulkan');
+      throw new RenderError(getResultMessage(result), 'Vulkan');
     }
 
     const fenceHandle = pointerHolder[0];
     if (fenceHandle === undefined) {
-      throw new DynamicLibError('Failed to create fence', 'Vulkan');
+      throw new RenderError('Failed to create fence', 'Vulkan');
     }
 
     target[index] = fenceHandle;

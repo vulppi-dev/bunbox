@@ -8,7 +8,7 @@ import {
   vkShaderModuleCreateInfo,
 } from '@bunbox/vk';
 import { ptr, type Pointer } from 'bun:ffi';
-import { DynamicLibError } from '../errors';
+import { RenderError } from '../errors';
 import { VK_DEBUG } from '../singleton/logger';
 
 export class VkShaderModule implements Disposable {
@@ -21,7 +21,7 @@ export class VkShaderModule implements Disposable {
     VK_DEBUG('Creating Shader module');
 
     if (!isWgslValid(shader)) {
-      throw new DynamicLibError('Invalid WGSL shader', 'Vulkan');
+      throw new RenderError('Invalid WGSL shader', 'Vulkan');
     }
     const data = wgslToSpirvBin(shader);
 
@@ -38,7 +38,7 @@ export class VkShaderModule implements Disposable {
     );
 
     if (result !== VkResult.SUCCESS) {
-      throw new DynamicLibError(getResultMessage(result), 'Vulkan');
+      throw new RenderError(getResultMessage(result), 'Vulkan');
     }
     this.__module = Number(pointerHolder[0]!) as Pointer;
     VK_DEBUG(`Shader module created: 0x${this.__module.toString(16)}`);

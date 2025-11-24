@@ -4,7 +4,7 @@ export class EngineError extends Error {
     public readonly component: string,
   ) {
     super(`[${component}] ${message}`);
-    this.name = 'ComponentError';
+    this.name = 'EngineError';
   }
 
   getComponentName() {

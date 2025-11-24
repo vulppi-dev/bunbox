@@ -4,6 +4,7 @@ import { TextureImage } from '../resources';
 import type { CameraRenderGroup, FrameRenderArtifacts } from '../systems/RenderSystem';
 import { FRAME_RENDER_ID, FRAME_RENDER_KEY } from '../systems/RenderSystem';
 import type { VkCommandBuffer, VkDevice, VkSwapchain } from '../vulkan';
+import { VkRenderPass } from '../vulkan';
 import type { AssetsStorage } from './AssetsStorage';
 import type { Entity, World } from './World';
 
@@ -17,10 +18,16 @@ type CameraTarget = {
 type WindowCache = {
   swapchainInstance: Pointer;
   cameraTargets: Map<Entity, CameraTarget>;
+  renderPasses: RenderPassBundle | null;
 };
 
 export type FrameData = {
   cameraTargets: Map<Entity, TextureImage>;
+};
+
+type RenderPassBundle = {
+  camera: VkRenderPass;
+  composite: VkRenderPass;
 };
 
 export class RenderLogic {
@@ -57,6 +64,8 @@ export class RenderLogic {
       this.__resetWindowCache(windowCache);
       windowCache.swapchainInstance = swapchain.instance;
     }
+
+    this.__ensureRenderPasses(device, swapchain, windowCache);
 
     const activeCameras = new Set<Entity>();
 
@@ -105,6 +114,7 @@ export class RenderLogic {
       cache = {
         swapchainInstance,
         cameraTargets: new Map(),
+        renderPasses: null,
       };
       this.__windowCache.set(window, cache);
     }
@@ -160,11 +170,49 @@ export class RenderLogic {
     });
   }
 
+  private __ensureRenderPasses(
+    device: VkDevice,
+    swapchain: VkSwapchain,
+    cache: WindowCache,
+  ): void {
+    if (cache.renderPasses) return;
+
+    const cameraPass = new VkRenderPass(device.logicalDevice, {
+      name: 'Camera Pass',
+      attachments: [
+        {
+          format: 'rgba32float',
+          loadOp: 'clear',
+          storeOp: 'store',
+          finalLayout: 'shader-read-only',
+        },
+      ],
+    });
+
+    const compositePass = new VkRenderPass(device.logicalDevice, {
+      name: 'Composite Pass',
+      attachments: [
+        {
+          format: swapchain.format,
+          loadOp: 'clear',
+          storeOp: 'store',
+          finalLayout: 'present-src',
+        },
+      ],
+    });
+
+    cache.renderPasses = { camera: cameraPass, composite: compositePass };
+  }
+
   private __destroyTexture(texture: TextureImage): void {
     this.__assetsStorage?.textures.destroy(texture);
   }
 
   private __resetWindowCache(cache: WindowCache): void {
+    cache.renderPasses?.camera.dispose();
+    cache.renderPasses?.composite.dispose();
+    cache.renderPasses = null;
+
     for (const target of cache.cameraTargets.values()) {
       this.__destroyTexture(target.texture);
     }

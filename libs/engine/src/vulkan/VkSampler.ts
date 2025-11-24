@@ -12,7 +12,7 @@ import {
   VkResult,
 } from '@bunbox/vk';
 import { ptr, type Pointer } from 'bun:ffi';
-import { DynamicLibError } from '../errors';
+import { RenderError } from '../errors';
 import type {
   AddressMode,
   BorderColor,
@@ -144,7 +144,7 @@ export class VkSampler implements Disposable {
     );
 
     if (result !== VkResult.SUCCESS) {
-      throw new DynamicLibError(getResultMessage(result), 'Vulkan');
+      throw new RenderError(getResultMessage(result), 'Vulkan');
     }
 
     return samplerHolder[0]!;

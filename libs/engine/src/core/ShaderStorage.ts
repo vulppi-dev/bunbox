@@ -11,11 +11,13 @@ type ShaderPack =
       type: 'compute';
       entry: string;
       src: string;
+      reflect: WgslReflect;
       key?: string;
     }
   | {
       type: 'graphics';
       src: string;
+      reflect: WgslReflect;
       vEntry: string;
       fEntry?: string;
       key?: string;
@@ -74,6 +76,7 @@ export class ShaderStorage {
     const pack: ShaderPack = {
       type: 'graphics',
       src: source,
+      reflect: new WgslReflect(source),
       vEntry: vertexEntryPoint,
       fEntry: fragmentEntryPoint,
       key,
@@ -106,6 +109,7 @@ export class ShaderStorage {
       type: 'compute',
       entry: entryPoint,
       src: source,
+      reflect: new WgslReflect(source),
       key,
     };
     return this.__register(pack, key);
@@ -120,12 +124,6 @@ export class ShaderStorage {
 
   getHolderByKey(key: string): ShaderHolder | undefined {
     return this.__keys.get(key);
-  }
-
-  getReflectionData(holder: ShaderHolder): WgslReflect | undefined {
-    const pack = this.getShaderPack(holder);
-    if (!pack) return undefined;
-    return new WgslReflect(pack.src);
   }
 
   unregister(holder: ShaderHolder): boolean {

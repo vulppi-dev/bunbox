@@ -10,7 +10,7 @@ import {
   VkResult,
 } from '@bunbox/vk';
 import { ptr, type Pointer } from 'bun:ffi';
-import { DynamicLibError } from '../errors';
+import { RenderError } from '../errors';
 import { VK_DEBUG } from '../singleton/logger';
 
 type VkImageViewMask = 'color' | 'depth' | 'stencil' | 'metadata';
@@ -81,7 +81,7 @@ export class VkImageView implements Disposable {
       ptr(pointerHolder),
     );
     if (result !== VkResult.SUCCESS) {
-      throw new DynamicLibError(getResultMessage(result), 'Vulkan');
+      throw new RenderError(getResultMessage(result), 'Vulkan');
     }
 
     this.__instance = Number(pointerHolder[0]!) as Pointer;

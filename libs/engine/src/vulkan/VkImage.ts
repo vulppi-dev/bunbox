@@ -15,7 +15,7 @@ import {
   VkResult,
 } from '@bunbox/vk';
 import { ptr, type Pointer } from 'bun:ffi';
-import { DynamicLibError } from '../errors';
+import { RenderError } from '../errors';
 import type {
   SampleCount,
   TextureBase,
@@ -82,7 +82,7 @@ export class VkImage implements Disposable {
       }
     }
 
-    throw new DynamicLibError(
+    throw new RenderError(
       'Failed to find suitable memory type for image',
       'Vulkan',
     );
@@ -188,7 +188,7 @@ export class VkImage implements Disposable {
     );
 
     if (result !== VkResult.SUCCESS) {
-      throw new DynamicLibError(getResultMessage(result), 'Vulkan');
+      throw new RenderError(getResultMessage(result), 'Vulkan');
     }
 
     return pointerHolder[0]!;
@@ -229,7 +229,7 @@ export class VkImage implements Disposable {
 
     if (allocResult !== VkResult.SUCCESS) {
       VK.vkDestroyImage(this.__device, this.__instance, null);
-      throw new DynamicLibError(getResultMessage(allocResult), 'Vulkan');
+      throw new RenderError(getResultMessage(allocResult), 'Vulkan');
     }
 
     const memory = Number(memoryHolder[0]!) as Pointer;
@@ -245,7 +245,7 @@ export class VkImage implements Disposable {
     if (bindResult !== VkResult.SUCCESS) {
       VK.vkFreeMemory(this.__device, memory, null);
       VK.vkDestroyImage(this.__device, this.__instance, null);
-      throw new DynamicLibError(getResultMessage(bindResult), 'Vulkan');
+      throw new RenderError(getResultMessage(bindResult), 'Vulkan');
     }
 
     VK_DEBUG(`Image memory allocated and bound: 0x${memory.toString(16)}`);

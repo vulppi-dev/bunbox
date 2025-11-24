@@ -8,7 +8,7 @@ import {
   VkResult,
 } from '@bunbox/vk';
 import { ptr, type Pointer } from 'bun:ffi';
-import { DynamicLibError } from '../errors';
+import { RenderError } from '../errors';
 import { VK_DEBUG } from '../singleton/logger';
 
 export class VkCommandPool implements Disposable {
@@ -37,7 +37,7 @@ export class VkCommandPool implements Disposable {
     );
 
     if (result !== VkResult.SUCCESS) {
-      throw new DynamicLibError(getResultMessage(result), 'Vulkan');
+      throw new RenderError(getResultMessage(result), 'Vulkan');
     }
 
     this.__commandPool = Number(pointerHolder[0]) as Pointer;
@@ -46,7 +46,7 @@ export class VkCommandPool implements Disposable {
 
   get instance(): Pointer {
     if (!this.__commandPool) {
-      throw new DynamicLibError('Command pool not created', 'Vulkan');
+      throw new RenderError('Command pool not created', 'Vulkan');
     }
     return this.__commandPool;
   }

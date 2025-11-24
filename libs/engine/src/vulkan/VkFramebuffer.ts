@@ -1,7 +1,7 @@
 import { type Disposable } from '@bunbox/utils';
 import { ptr, type Pointer } from 'bun:ffi';
 import { getInstanceBuffer, instantiate } from '@bunbox/struct';
-import { DynamicLibError } from '../errors';
+import { RenderError } from '../errors';
 import { VK_DEBUG } from '../singleton/logger';
 import type { VkImageView } from './VkImageView';
 import {
@@ -30,7 +30,7 @@ export class VkFramebuffer implements Disposable {
     height: number,
   ) {
     if (attachments.length === 0) {
-      throw new DynamicLibError(
+      throw new RenderError(
         'Framebuffer must have at least one attachment',
         'Vulkan',
       );
@@ -48,10 +48,7 @@ export class VkFramebuffer implements Disposable {
 
   get instance(): Pointer {
     if (this.__instance === null) {
-      throw new DynamicLibError(
-        'Framebuffer has not been created yet',
-        'Vulkan',
-      );
+      throw new RenderError('Framebuffer has not been created yet', 'Vulkan');
     }
     return this.__instance;
   }
@@ -117,7 +114,7 @@ export class VkFramebuffer implements Disposable {
     );
 
     if (result !== VkResult.SUCCESS) {
-      throw new DynamicLibError(getResultMessage(result), 'Vulkan');
+      throw new RenderError(getResultMessage(result), 'Vulkan');
     }
 
     this.__instance = Number(this.__pointerHolder[0]) as Pointer;

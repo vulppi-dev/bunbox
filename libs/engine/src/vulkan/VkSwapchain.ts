@@ -16,7 +16,7 @@ import {
 } from '@bunbox/vk';
 import { clamp } from '@vulppi/toolbelt/math';
 import { ptr, type Pointer } from 'bun:ffi';
-import { DynamicLibError } from '../errors';
+import { RenderError } from '../errors';
 import { VK_DEBUG } from '../singleton/logger';
 import type { VkDevice } from './VkDevice';
 import { VkImageView } from './VkImageView';
@@ -41,7 +41,7 @@ export class VkSwapchain implements Disposable {
     VK_DEBUG(`Creating swapchain: ${width}x${height}`);
 
     if (width <= 0 || height <= 0) {
-      throw new DynamicLibError(
+      throw new RenderError(
         'Swap chain dimensions must be greater than zero.',
         'Vulkan',
       );
@@ -177,7 +177,7 @@ export class VkSwapchain implements Disposable {
       ptr(pointerHolder),
     );
     if (result !== VkResult.SUCCESS) {
-      throw new DynamicLibError(getResultMessage(result), 'Vulkan');
+      throw new RenderError(getResultMessage(result), 'Vulkan');
     }
     const swapchain = Number(pointerHolder[0]) as Pointer;
     const swapImages = new BigUint64Array(imageCount);

@@ -28,7 +28,7 @@ import {
   vkXlibSurfaceCreateInfoKHR,
 } from '@bunbox/vk';
 import { ptr, type Pointer } from 'bun:ffi';
-import { DynamicLibError } from '../errors';
+import { RenderError } from '../errors';
 import { VK_DEBUG } from '../singleton/logger';
 import { cstr, undoCstr } from '../utils/buffer';
 
@@ -150,7 +150,7 @@ export class VkDevice implements Disposable {
         ptr(presentSupport),
       );
       if (result !== VkResult.SUCCESS) {
-        throw new DynamicLibError(getResultMessage(result), 'Vulkan');
+        throw new RenderError(getResultMessage(result), 'Vulkan');
       }
 
       if (queueFamily.queueCount > 0 && presentSupport[0]) {
@@ -232,14 +232,14 @@ export class VkDevice implements Disposable {
         ptr(surfacePtr),
       );
     } else {
-      throw new DynamicLibError(
+      throw new RenderError(
         `Unsupported platform: ${process.platform}`,
         'Vulkan',
       );
     }
 
     if (result !== VkResult.SUCCESS) {
-      throw new DynamicLibError(getResultMessage(result), 'Vulkan');
+      throw new RenderError(getResultMessage(result), 'Vulkan');
     }
     this.__surface = surfacePtr[0]!;
   }
@@ -251,7 +251,7 @@ export class VkDevice implements Disposable {
     VK.vkEnumeratePhysicalDevices(this.__vkInstance, ptr(count), null);
 
     if (!count[0]) {
-      throw new DynamicLibError(
+      throw new RenderError(
         'Failed to find GPUs with Vulkan support',
         'Vulkan',
       );
@@ -264,7 +264,7 @@ export class VkDevice implements Disposable {
       ptr(devices),
     );
     if (result !== VkResult.SUCCESS) {
-      throw new DynamicLibError(getResultMessage(result), 'Vulkan');
+      throw new RenderError(getResultMessage(result), 'Vulkan');
     }
 
     const usableDevices: Pointer[] = [];
@@ -278,7 +278,7 @@ export class VkDevice implements Disposable {
     }
 
     if (usableDevices.length === 0) {
-      throw new DynamicLibError('Failed to find a suitable GPU!', 'Vulkan');
+      throw new RenderError('Failed to find a suitable GPU!', 'Vulkan');
     }
 
     if (usableDevices.length === 1) {
@@ -371,7 +371,7 @@ export class VkDevice implements Disposable {
       ptr(pointerHolder),
     );
     if (result !== VkResult.SUCCESS) {
-      throw new DynamicLibError(getResultMessage(result), 'Vulkan');
+      throw new RenderError(getResultMessage(result), 'Vulkan');
     }
     this.__logicalDevice = Number(pointerHolder[0]!) as Pointer;
     VK_DEBUG(`Logical device created: 0x${this.__logicalDevice.toString(16)}`);

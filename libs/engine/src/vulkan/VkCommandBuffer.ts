@@ -17,7 +17,7 @@ import {
   VkCommandBufferUsageFlagBits,
 } from '@bunbox/vk';
 import { ptr, type Pointer } from 'bun:ffi';
-import { DynamicLibError } from '../errors';
+import { RenderError } from '../errors';
 import { Color } from '../math/Color';
 import { Rect } from '../math/Rect';
 import { VK_DEBUG } from '../singleton/logger';
@@ -70,7 +70,7 @@ export class VkCommandBuffer implements Disposable {
    */
   reset(): void {
     if (this.__isRecording) {
-      throw new DynamicLibError(
+      throw new RenderError(
         'Cannot reset command buffer while recording',
         'Vulkan',
       );
@@ -81,7 +81,7 @@ export class VkCommandBuffer implements Disposable {
     const result = VK.vkResetCommandBuffer(this.__instance, 0);
 
     if (result !== VkResult.SUCCESS) {
-      throw new DynamicLibError(getResultMessage(result), 'Vulkan');
+      throw new RenderError(getResultMessage(result), 'Vulkan');
     }
 
     VK_DEBUG('Command buffer reset');
@@ -92,10 +92,7 @@ export class VkCommandBuffer implements Disposable {
    */
   begin(): void {
     if (this.__isRecording) {
-      throw new DynamicLibError(
-        'Command buffer is already recording',
-        'Vulkan',
-      );
+      throw new RenderError('Command buffer is already recording', 'Vulkan');
     }
 
     VK_DEBUG(`Beginning command buffer: 0x${this.__instance.toString(16)}`);
@@ -110,7 +107,7 @@ export class VkCommandBuffer implements Disposable {
     );
 
     if (result !== VkResult.SUCCESS) {
-      throw new DynamicLibError(getResultMessage(result), 'Vulkan');
+      throw new RenderError(getResultMessage(result), 'Vulkan');
     }
 
     this.__isRecording = true;
@@ -122,7 +119,7 @@ export class VkCommandBuffer implements Disposable {
    */
   end(): void {
     if (!this.__isRecording) {
-      throw new DynamicLibError('Command buffer is not recording', 'Vulkan');
+      throw new RenderError('Command buffer is not recording', 'Vulkan');
     }
 
     VK_DEBUG(`Ending command buffer: 0x${this.__instance.toString(16)}`);
@@ -130,7 +127,7 @@ export class VkCommandBuffer implements Disposable {
     const result = VK.vkEndCommandBuffer(this.__instance);
 
     if (result !== VkResult.SUCCESS) {
-      throw new DynamicLibError(getResultMessage(result), 'Vulkan');
+      throw new RenderError(getResultMessage(result), 'Vulkan');
     }
 
     this.__isRecording = false;
@@ -147,7 +144,7 @@ export class VkCommandBuffer implements Disposable {
     clearValues?: Color[],
   ): void {
     if (!this.__isRecording) {
-      throw new DynamicLibError(
+      throw new RenderError(
         'Cannot begin render pass: command buffer is not recording',
         'Vulkan',
       );
@@ -198,7 +195,7 @@ export class VkCommandBuffer implements Disposable {
    */
   endRenderPass(): void {
     if (!this.__isRecording) {
-      throw new DynamicLibError(
+      throw new RenderError(
         'Cannot end render pass: command buffer is not recording',
         'Vulkan',
       );
@@ -214,7 +211,7 @@ export class VkCommandBuffer implements Disposable {
    */
   bindPipeline(pipeline: Pointer): void {
     if (!this.__isRecording) {
-      throw new DynamicLibError(
+      throw new RenderError(
         'Cannot bind pipeline: command buffer is not recording',
         'Vulkan',
       );
@@ -237,7 +234,7 @@ export class VkCommandBuffer implements Disposable {
     offsets?: bigint[],
   ): void {
     if (!this.__isRecording) {
-      throw new DynamicLibError(
+      throw new RenderError(
         'Cannot bind vertex buffers: command buffer is not recording',
         'Vulkan',
       );
@@ -278,7 +275,7 @@ export class VkCommandBuffer implements Disposable {
     indexType: 'uint16' | 'uint32' = 'uint32',
   ): void {
     if (!this.__isRecording) {
-      throw new DynamicLibError(
+      throw new RenderError(
         'Cannot bind index buffer: command buffer is not recording',
         'Vulkan',
       );
@@ -304,7 +301,7 @@ export class VkCommandBuffer implements Disposable {
    */
   setViewport(viewport: Cube): void {
     if (!this.__isRecording) {
-      throw new DynamicLibError(
+      throw new RenderError(
         'Cannot set viewport: command buffer is not recording',
         'Vulkan',
       );
@@ -331,7 +328,7 @@ export class VkCommandBuffer implements Disposable {
    */
   setScissor(rect: Rect): void {
     if (!this.__isRecording) {
-      throw new DynamicLibError(
+      throw new RenderError(
         'Cannot set scissor: command buffer is not recording',
         'Vulkan',
       );
@@ -356,7 +353,7 @@ export class VkCommandBuffer implements Disposable {
     firstInstance: number = 0,
   ): void {
     if (!this.__isRecording) {
-      throw new DynamicLibError(
+      throw new RenderError(
         'Cannot draw: command buffer is not recording',
         'Vulkan',
       );
@@ -383,7 +380,7 @@ export class VkCommandBuffer implements Disposable {
     firstInstance: number = 0,
   ): void {
     if (!this.__isRecording) {
-      throw new DynamicLibError(
+      throw new RenderError(
         'Cannot draw indexed: command buffer is not recording',
         'Vulkan',
       );
@@ -404,7 +401,7 @@ export class VkCommandBuffer implements Disposable {
 
   clearImage(image: bigint, layout: number, color: Color): void {
     if (!this.__isRecording) {
-      throw new DynamicLibError(
+      throw new RenderError(
         'Cannot clear: command buffer is not recording',
         'Vulkan',
       );
@@ -439,7 +436,7 @@ export class VkCommandBuffer implements Disposable {
     );
 
     if (result !== VkResult.SUCCESS) {
-      throw new DynamicLibError(getResultMessage(result), 'Vulkan');
+      throw new RenderError(getResultMessage(result), 'Vulkan');
     }
 
     return Number(commandBuffers[0]!) as Pointer;

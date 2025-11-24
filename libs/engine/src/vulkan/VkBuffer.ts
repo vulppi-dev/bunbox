@@ -13,7 +13,7 @@ import {
   vkPhysicalDeviceMemoryProperties,
 } from '@bunbox/vk';
 import { ptr, type Pointer } from 'bun:ffi';
-import { DynamicLibError } from '../errors';
+import { RenderError } from '../errors';
 import { VK_DEBUG } from '../singleton/logger';
 
 export type BufferUsage = 'vertex' | 'index' | 'uniform' | 'staging';
@@ -87,7 +87,7 @@ export class VkBuffer implements Disposable {
     );
 
     if (result !== VkResult.SUCCESS) {
-      throw new DynamicLibError(getResultMessage(result), 'Vulkan');
+      throw new RenderError(getResultMessage(result), 'Vulkan');
     }
 
     const mappedMemory = Number(dataPointer[0]!) as Pointer;
@@ -147,7 +147,7 @@ export class VkBuffer implements Disposable {
     );
 
     if (result !== VkResult.SUCCESS) {
-      throw new DynamicLibError(getResultMessage(result), 'Vulkan');
+      throw new RenderError(getResultMessage(result), 'Vulkan');
     }
 
     return Number(bufferPointer[0]!) as Pointer;
@@ -178,7 +178,7 @@ export class VkBuffer implements Disposable {
     );
 
     if (result !== VkResult.SUCCESS) {
-      throw new DynamicLibError(getResultMessage(result), 'Vulkan');
+      throw new RenderError(getResultMessage(result), 'Vulkan');
     }
 
     const memory = Number(memoryPointer[0]!) as Pointer;
@@ -193,7 +193,7 @@ export class VkBuffer implements Disposable {
 
     if (bindResult !== VkResult.SUCCESS) {
       VK.vkFreeMemory(this.__device, memory, null);
-      throw new DynamicLibError(getResultMessage(bindResult), 'Vulkan');
+      throw new RenderError(getResultMessage(bindResult), 'Vulkan');
     }
 
     return memory;
@@ -216,7 +216,7 @@ export class VkBuffer implements Disposable {
       }
     }
 
-    throw new DynamicLibError(
+    throw new RenderError(
       'Failed to find suitable memory type for buffer',
       'Vulkan',
     );
