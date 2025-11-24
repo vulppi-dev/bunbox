@@ -4,7 +4,6 @@
  */
 
 import { DirtyState } from '@bunbox/utils';
-import { sha } from 'bun';
 import type { ShaderHolder } from '../core';
 import { Rasterizer } from '../resources/Rasterizer';
 import type {
@@ -17,13 +16,12 @@ import type {
   MaterialSchema,
   OverrideProperties,
   PrimitiveTopology,
-  PushConstantProperties,
   UniformProperties,
 } from './MaterialSchema';
 import { validateSchema } from './MaterialSchema';
 
 /**
- * Type-safe material with overrides, uniforms, and push constants.
+ * Type-safe material with overrides and uniforms.
  */
 export class Material<
   TSchema extends MaterialSchema = MaterialSchema,
@@ -35,8 +33,6 @@ export class Material<
   private __schema: TSchema;
   private __overrides: Record<string, unknown>;
   private __uniforms: Record<string, unknown>;
-  private __pushConstants: Record<string, unknown>;
-  private __hash: string = '';
 
   constructor(descriptor: MaterialDescriptor<TSchema>) {
     super();
@@ -63,13 +59,6 @@ export class Material<
       descriptor.uniforms as Record<string, unknown> | undefined,
     );
 
-    // Initialize push constants with defaults
-    this.__pushConstants = this.__initializeProperties(
-      this.__schema.pushConstants ?? {},
-      descriptor.pushConstants as Record<string, unknown> | undefined,
-    );
-
-    this.__updateHash();
     this.markAsDirty();
   }
 
@@ -103,18 +92,6 @@ export class Material<
     return result;
   }
 
-  private __updateHash(): void {
-    this.__hash = sha(
-      JSON.stringify({
-        shader: this.__shader,
-        topology: this.__topology,
-        rasterizer: this.__rasterizationState.hash,
-        overrides: this.__overrides,
-      }),
-      'hex',
-    );
-  }
-
   // Public getters
   get label(): string {
     return this.__label;
@@ -130,10 +107,6 @@ export class Material<
 
   get rasterizationState(): Rasterizer {
     return this.__rasterizationState;
-  }
-
-  get hash(): string {
-    return this.__hash;
   }
 
   get schema(): TSchema {
@@ -156,15 +129,6 @@ export class Material<
     return Object.freeze({ ...this.__uniforms }) as UniformProperties<TSchema>;
   }
 
-  /**
-   * Get push constant properties (read-only snapshot)
-   */
-  get pushConstants(): Readonly<PushConstantProperties<TSchema>> {
-    return Object.freeze({
-      ...this.__pushConstants,
-    }) as PushConstantProperties<TSchema>;
-  }
-
   // Setters
   set label(value: string) {
     if (this.__label === value) return;
@@ -175,7 +139,6 @@ export class Material<
   set topology(value: PrimitiveTopology) {
     if (this.__topology === value) return;
     this.__topology = value;
-    this.__updateHash();
     this.markAsDirty();
   }
 
@@ -253,44 +216,6 @@ export class Material<
   }
 
   /**
-   * Get a push constant property value (type-safe)
-   */
-  getPushConstant<K extends keyof PushConstantProperties<TSchema>>(
-    key: K,
-  ): PushConstantProperties<TSchema>[K] {
-    return this.__pushConstants[
-      key as string
-    ] as PushConstantProperties<TSchema>[K];
-  }
-
-  /**
-   * Set a push constant property value (type-safe)
-   */
-  setPushConstant<K extends keyof PushConstantProperties<TSchema>>(
-    key: K,
-    value: PushConstantProperties<TSchema>[K],
-  ): this {
-    const definitions = this.__schema.pushConstants;
-    if (!definitions || !(key in definitions)) {
-      throw new Error(
-        `Property '${String(key)}' is not a push constant property`,
-      );
-    }
-
-    const def = definitions[key as string]!;
-    if (!validateProperty(def, value)) {
-      throw new Error(
-        `Invalid value for property '${String(key)}': expected type '${def.type}'`,
-      );
-    }
-
-    if (this.__pushConstants[key as string] === value) return this;
-
-    this.__pushConstants[key as string] = value;
-    return this.markAsDirty();
-  }
-
-  /**
    * Create a deep clone of this material
    */
   clone(): Material<TSchema> {
@@ -302,37 +227,20 @@ export class Material<
       schema: this.__schema,
       overrides: { ...this.__overrides },
       uniforms: { ...this.__uniforms },
-      pushConstants: { ...this.__pushConstants },
     } as unknown as MaterialDescriptor<TSchema>);
     cloned.markAsDirty();
     return cloned;
   }
 
   /**
-   * Check equality with another material (based on hash)
-   */
-  equals(other: Material<TSchema>): boolean {
-    return (
-      this.__hash === other.__hash &&
-      JSON.stringify(this.__uniforms) === JSON.stringify(other.__uniforms) &&
-      JSON.stringify(this.__pushConstants) ===
-        JSON.stringify(other.__pushConstants)
-    );
-  }
-
-  /**
    * Copy values from another material
    */
   copy(other: Material<TSchema>): this {
-    if (this.equals(other)) return this;
-
     this.__label = other.__label;
     this.__topology = other.__topology;
     this.__rasterizationState.copy(other.__rasterizationState);
     this.__uniforms = { ...other.__uniforms };
-    this.__pushConstants = { ...other.__pushConstants };
 
-    this.__updateHash();
     return this.markAsDirty();
   }
 }
@@ -343,7 +251,6 @@ export class Material<
 export class MaterialBuilder<
   TOverrides extends Record<string, PropertyDefinition> = {},
   TUniforms extends Record<string, PropertyDefinition> = {},
-  TPushConstants extends Record<string, PropertyDefinition> = {},
 > {
   private __label?: string;
   private __shader: ShaderHolder;
@@ -352,11 +259,9 @@ export class MaterialBuilder<
 
   private __overrides: Record<string, PropertyDefinition> = {};
   private __uniforms: Record<string, PropertyDefinition> = {};
-  private __pushConstants: Record<string, PropertyDefinition> = {};
 
   private __overrideValues: Record<string, unknown> = {};
   private __uniformValues: Record<string, unknown> = {};
-  private __pushConstantValues: Record<string, unknown> = {};
 
   constructor(shader: ShaderHolder) {
     this.__shader = shader;
@@ -384,7 +289,7 @@ export class MaterialBuilder<
     key: K,
     definition: T,
     value?: PropertyTypeMap[T['type']],
-  ): MaterialBuilder<TOverrides & Record<K, T>, TUniforms, TPushConstants> {
+  ): MaterialBuilder<TOverrides & Record<K, T>, TUniforms> {
     this.__overrides[key] = definition;
     if (value !== undefined) {
       this.__overrideValues[key] = value;
@@ -399,25 +304,10 @@ export class MaterialBuilder<
     key: K,
     definition: T,
     value?: PropertyTypeMap[T['type']],
-  ): MaterialBuilder<TOverrides, TUniforms & Record<K, T>, TPushConstants> {
+  ): MaterialBuilder<TOverrides, TUniforms & Record<K, T>> {
     this.__uniforms[key] = definition;
     if (value !== undefined) {
       this.__uniformValues[key] = value;
-    }
-    return this as any;
-  }
-
-  /**
-   * Add a push constant property.
-   */
-  addPushConstant<K extends string, T extends PropertyDefinition>(
-    key: K,
-    definition: T,
-    value?: PropertyTypeMap[T['type']],
-  ): MaterialBuilder<TOverrides, TUniforms, TPushConstants & Record<K, T>> {
-    this.__pushConstants[key] = definition;
-    if (value !== undefined) {
-      this.__pushConstantValues[key] = value;
     }
     return this as any;
   }
@@ -428,12 +318,10 @@ export class MaterialBuilder<
   build(): Material<{
     overrides: TOverrides;
     uniforms: TUniforms;
-    pushConstants: TPushConstants;
   }> {
     const schema = {
       overrides: this.__overrides,
       uniforms: this.__uniforms,
-      pushConstants: this.__pushConstants,
     } as any;
 
     return new Material({
@@ -444,7 +332,6 @@ export class MaterialBuilder<
       schema,
       overrides: this.__overrideValues,
       uniforms: this.__uniformValues,
-      pushConstants: this.__pushConstantValues,
     });
   }
 }

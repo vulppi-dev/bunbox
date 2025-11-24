@@ -36,12 +36,6 @@ export type MaterialSchema = {
    * These can be updated efficiently during runtime.
    */
   readonly uniforms?: Record<string, PropertyDefinition>;
-
-  /**
-   * Push constants.
-   * Small amount of data (usually 128 bytes max) that can be updated very frequently (per draw call).
-   */
-  readonly pushConstants?: Record<string, PropertyDefinition>;
 };
 
 /**
@@ -83,14 +77,6 @@ export type MaterialDescriptor<
       }
     : {
         uniforms?: never;
-      }) &
-  (TSchema['pushConstants'] extends Record<string, PropertyDefinition>
-    ? {
-        /** Initial push constant values (optional, uses defaults) */
-        pushConstants?: Partial<SchemaPropertyValues<TSchema['pushConstants']>>;
-      }
-    : {
-        pushConstants?: never;
       });
 
 /**
@@ -110,14 +96,6 @@ export type UniformProperties<TSchema extends MaterialSchema> =
     : Record<string, never>;
 
 /**
- * Type-safe property accessor for push constants
- */
-export type PushConstantProperties<TSchema extends MaterialSchema> =
-  TSchema['pushConstants'] extends Record<string, PropertyDefinition>
-    ? SchemaPropertyValues<TSchema['pushConstants']>
-    : Record<string, never>;
-
-/**
  * Helper to define material schema with type inference
  */
 export function defineSchema<
@@ -129,18 +107,12 @@ export function defineSchema<
     string,
     PropertyDefinition
   >,
-  TPushConstants extends Record<string, PropertyDefinition> = Record<
-    string,
-    PropertyDefinition
-  >,
 >(schema: {
   overrides?: TOverrides;
   uniforms?: TUniforms;
-  pushConstants?: TPushConstants;
 }): MaterialSchema & {
   overrides?: TOverrides;
   uniforms?: TUniforms;
-  pushConstants?: TPushConstants;
 } {
   return schema;
 }
@@ -152,7 +124,6 @@ export function validateSchema(schema: MaterialSchema): boolean {
   const allKeys = [
     ...Object.keys(schema.overrides ?? {}),
     ...Object.keys(schema.uniforms ?? {}),
-    ...Object.keys(schema.pushConstants ?? {}),
   ];
   const uniqueKeys = new Set(allKeys);
 
