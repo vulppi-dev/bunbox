@@ -15,8 +15,14 @@ import {
 import { ptr, type Pointer } from 'bun:ffi';
 import { RenderError } from '../errors';
 import { VK_DEBUG } from '../singleton/logger';
+import { pointerToBuffer } from '../utils/buffer';
 
-export type BufferUsage = 'vertex' | 'index' | 'uniform' | 'staging' | 'storage';
+export type BufferUsage =
+  | 'vertex'
+  | 'index'
+  | 'uniform'
+  | 'staging'
+  | 'storage';
 
 /**
  * Wrapper for Vulkan VkBuffer
@@ -111,6 +117,34 @@ export class VkBuffer implements Disposable {
     VK.vkUnmapMemory(this.__device, this.__memory);
 
     VK_DEBUG('Upload complete');
+  }
+
+  /**
+   * Read buffer contents back into a new Uint8Array.
+   * For storage buffers written by the GPU, caller is responsible for ensuring
+   * execution is complete before reading (e.g., via fences).
+   */
+  read(): Uint8Array {
+    const dataPointer = new BigUint64Array(1);
+    const result = VK.vkMapMemory(
+      this.__device,
+      this.__memory,
+      0n,
+      this.__size,
+      0,
+      ptr(dataPointer),
+    );
+
+    if (result !== VkResult.SUCCESS) {
+      throw new RenderError(getResultMessage(result), 'Vulkan');
+    }
+    const copy = pointerToBuffer(
+      Number(dataPointer[0]!) as Pointer,
+      Number(this.__size),
+      Uint8Array,
+    );
+    VK.vkUnmapMemory(this.__device, this.__memory);
+    return copy;
   }
 
   dispose(): void | Promise<void> {

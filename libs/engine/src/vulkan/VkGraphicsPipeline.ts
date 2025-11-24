@@ -473,6 +473,21 @@ export class VkGraphicsPipeline implements Disposable {
     }
   }
 
+  /**
+   * Read back a storage buffer bound by name.
+   * Caller must ensure GPU writes are complete before invoking (fence/sync).
+   */
+  readStorage(name: string): Uint8Array {
+    const buffer = this.__storageBuffers.get(name);
+    if (!buffer) {
+      throw new RenderError(
+        `Storage buffer "${name}" has not been created or bound`,
+        'Vulkan',
+      );
+    }
+    return buffer.read();
+  }
+
   private __ensureDescriptorSets(): void {
     if (this.__descriptorSets) return;
     if (!this.__device) {
