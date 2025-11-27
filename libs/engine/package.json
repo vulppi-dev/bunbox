@@ -39,14 +39,8 @@
     "@bunbox/glfw": "^0.1.3",
     "@bunbox/struct": "^2.2.5",
     "@bunbox/utils": "^0.1.1",
-    "@bunbox/wgpu": "^0.0.1",
-    "@jsquash/avif": "^2.1.1",
-    "@jsquash/jpeg": "^1.6.0",
-    "@jsquash/png": "^3.1.1",
-    "@jsquash/webp": "^1.5.0",
     "@vulppi/toolbelt": "^1.3.2",
     "audio-decode": "^2.2.3",
-    "fontkit": "^2.0.4",
     "glob": "^13.0.0",
     "minimist": "^1.2.8",
     "ulid": "^3.0.1",
@@ -54,14 +48,10 @@
   },
   "devDependencies": {
     "@types/bun": "^1.3.3",
-    "@types/fontkit": "^2.0.8",
     "@types/minimist": "^1.2.5",
-    "@typescript-eslint/eslint-plugin": "^8.47.0",
-    "@typescript-eslint/parser": "^8.47.0",
     "prettier": "^3.6.2",
     "prettier-plugin-multiline-arrays": "^4.0.3",
-    "typescript": "^5.9.3",
-    "typescript-eslint": "^8.47.0"
+    "typescript": "^5.9.3"
   },
   "engines": {
     "node": ">=22.0.0",
