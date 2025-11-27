@@ -5,28 +5,24 @@
       "path": "."
     },
     {
-      "name": "struct",
-      "path": "./libs/struct"
-    },
-    {
       "name": "utils",
       "path": "./libs/utils"
     },
     {
-      "name": "naga",
-      "path": "./libs/naga"
-    },
-    {
-      "name": "glfw",
-      "path": "./libs/glfw"
-    },
-    {
-      "name": "vulkan",
-      "path": "./libs/vk"
+      "name": "core",
+      "path": "./libs/core"
     },
     {
       "name": "engine",
       "path": "./libs/engine"
     },
   ],
+  "settings": {
+    "files.associations": {
+      "*.css": "tailwindcss",
+      ".env": "dotenv",
+      "cstddef": "cpp",
+      "cstdint": "cpp"
+    }
+  },
 }
