@@ -33,3 +33,8 @@ pub extern "C" fn engine_download_buffer(
 ) -> u32 {
     core::engine_download_buffer(bfr_id, bfr_ptr, bfr_length) as u32
 }
+
+#[unsafe(no_mangle)]
+pub extern "C" fn engine_tick(time: u64, delta_time: u32) -> u32 {
+    core::engine_tick(time, delta_time) as u32
+}

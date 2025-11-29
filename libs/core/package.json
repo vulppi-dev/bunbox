@@ -27,6 +27,7 @@
   "scripts": {
     "build": "",
     "preview": "",
+    "generate:types": "cd vulfram-core && cargo test export_typescript_types",
     "pub": "npm publish --access=public --tag=latest",
     "format": "prettier --write .",
     "lint": "eslint . --ext .ts",
