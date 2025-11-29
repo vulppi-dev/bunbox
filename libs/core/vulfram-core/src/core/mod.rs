@@ -183,7 +183,28 @@ pub fn engine_send_pool(ptr: *const u8, length: usize) -> EngineResult {
     EngineResult::Success
 }
 
-pub fn engine_receive_pool(out_ptr: *const u8, out_length: usize) -> EngineResult {
+pub fn engine_receive_pool(out_ptr: *mut u8, out_length: *mut usize) -> EngineResult {
+    // TODO: This is a placeholder - replace with actual event queue logic
+    let required_length: usize = 0;
+
+    if out_length.is_null() {
+        return EngineResult::Success;
+    }
+
+    // If out_ptr is null, just set out_length to the required length and return Success
+    if out_ptr.is_null() {
+        unsafe {
+            *out_length = required_length;
+        }
+        return EngineResult::Success;
+    }
+
+    unsafe {
+        let available_length = *out_length;
+        // TODO: Copy actual event data to out_ptr
+        *out_length = required_length.min(available_length);
+    }
+
     EngineResult::Success
 }
 

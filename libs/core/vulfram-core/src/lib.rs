@@ -16,7 +16,7 @@ pub extern "C" fn engine_send_pool(ptr: *const u8, length: usize) -> u32 {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn engine_receive_pool(out_ptr: *const u8, out_length: usize) -> u32 {
+pub extern "C" fn engine_receive_pool(out_ptr: *mut u8, out_length: *mut usize) -> u32 {
     core::engine_receive_pool(out_ptr, out_length) as u32
 }
 
