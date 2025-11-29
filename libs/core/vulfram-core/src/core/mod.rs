@@ -1,11 +1,12 @@
 use once_cell::sync::OnceCell;
 use std::cell::RefCell;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::sync::Arc;
 use std::thread::{self, ThreadId};
 use winit::application::ApplicationHandler;
 use winit::event::WindowEvent;
-use winit::event_loop::{ActiveEventLoop, EventLoop};
+use winit::event_loop::{ActiveEventLoop, ControlFlow, EventLoop};
+use winit::platform::pump_events::EventLoopExtPumpEvents;
 use winit::window::{Window, WindowId};
 
 pub mod cmd;
@@ -19,8 +20,12 @@ pub enum EngineResult {
     NotInitialized,
     AlreadyInitialized,
     WrongThread,
-    WinitInitEventLoopError = 1000,
+    BufferOverflow,
+    // Reserved error codes for Winit 1000-1999
+    WinitError = 1000,
+    // Reserved error codes for WGPU 2000-2999
     WgpuInstanceError = 2000,
+    // Reserved error codes for Command Processing 3000-3999
     CmdInvalidCborError = 3000,
 }
 
@@ -33,13 +38,21 @@ pub struct WindowState {
 
 pub struct EngineState {
     pub windows: HashMap<u32, WindowState>,
+    pub window_id_map: HashMap<WindowId, u32>,
     pub buffers: HashMap<u64, Vec<u8>>,
-    pub event_pool: HashSet<cmd::EngineBatchEvents>,
+    pub event_queue: cmd::EngineBatchEvents,
 
-    pub event_loop: EventLoop<()>,
     pub wgpu: wgpu::Instance,
     pub device: Option<wgpu::Device>,
     pub queue: Option<wgpu::Queue>,
+
+    pub time: u64,
+    pub delta_time: u32,
+}
+
+pub struct Engine {
+    pub state: EngineState,
+    pub event_loop: EventLoop<()>,
 }
 
 impl EngineState {
@@ -58,12 +71,14 @@ impl EngineState {
 
         Self {
             windows: HashMap::new(),
+            window_id_map: HashMap::new(),
             buffers: HashMap::new(),
-            event_pool: HashSet::new(),
-            event_loop: EventLoop::new().unwrap(),
+            event_queue: Vec::new(),
             wgpu: wgpu_instance,
             device: None,
             queue: None,
+            time: 0,
+            delta_time: 0,
         }
     }
 
@@ -74,9 +89,18 @@ impl EngineState {
     }
 }
 
+impl Engine {
+    pub fn new() -> Self {
+        Self {
+            state: EngineState::new(),
+            event_loop: EventLoop::new().unwrap(),
+        }
+    }
+}
+
 impl ApplicationHandler for EngineState {
     fn resumed(&mut self, _event_loop: &ActiveEventLoop) {
-        // TODO: Insert events to engine event pool
+        // TODO: Insert events to engine event queue
     }
 
     fn window_event(
@@ -85,12 +109,12 @@ impl ApplicationHandler for EngineState {
         _window_id: WindowId,
         _event: WindowEvent,
     ) {
-        // TODO: Insert events to engine event pool
+        // TODO: Insert events to engine event queue
     }
 }
 
 thread_local! {
-    static ENGINE_INSTANCE: RefCell<Option<EngineState>> = RefCell::new(None);
+    static ENGINE_INSTANCE: RefCell<Option<Engine>> = RefCell::new(None);
 }
 static MAIN_THREAD_ID: OnceCell<ThreadId> = OnceCell::new();
 
@@ -109,7 +133,7 @@ pub fn engine_init() -> EngineResult {
         if opt.is_some() {
             EngineResult::AlreadyInitialized
         } else {
-            *opt = Some(EngineState::new());
+            *opt = Some(Engine::new());
             EngineResult::Success
         }
     });
@@ -138,7 +162,7 @@ pub fn engine_dispose() -> EngineResult {
 
 pub fn with_engine<F, R>(f: F) -> Result<R, EngineResult>
 where
-    F: FnOnce(&EngineState) -> R,
+    F: FnOnce(&mut EngineState) -> R,
 {
     let current_id = thread::current().id();
     let main_id = MAIN_THREAD_ID.get().ok_or(EngineResult::NotInitialized)?;
@@ -148,15 +172,15 @@ where
     }
 
     ENGINE_INSTANCE.with(|cell| {
-        let opt = cell.borrow();
-        let engine = opt.as_ref().ok_or(EngineResult::NotInitialized)?;
-        Ok(f(engine))
+        let mut opt = cell.borrow_mut();
+        let engine = opt.as_mut().ok_or(EngineResult::NotInitialized)?;
+        Ok(f(&mut engine.state))
     })
 }
 
-pub fn with_engine_mut<F, R>(f: F) -> Result<R, EngineResult>
+fn with_engine_full<F, R>(f: F) -> Result<R, EngineResult>
 where
-    F: FnOnce(&mut EngineState) -> R,
+    F: FnOnce(&mut Engine) -> R,
 {
     let current_id = thread::current().id();
     let main_id = MAIN_THREAD_ID.get().ok_or(EngineResult::NotInitialized)?;
@@ -182,34 +206,112 @@ pub fn engine_send_pool(ptr: *const u8, length: usize) -> EngineResult {
         Ok(batch) => batch,
     };
 
-    match with_engine_mut(|engine_state| cmd::engine_process_batch(engine_state, batch)) {
+    match with_engine(|engine_state| cmd::engine_process_batch(engine_state, batch)) {
         Err(e) => return e,
         Ok(_) => EngineResult::Success,
     }
 }
 
-pub fn engine_receive_pool(out_ptr: *const u8, out_length: &usize) -> EngineResult {
-    // TODO: If out_ptr is null, just set out_length to the required length and return Success
-    // Otherwise, write the data to out_ptr (up to out_length) and set out_length to the actual length written
+pub fn engine_receive_pool(out_ptr: *mut u8, out_length: *mut usize) -> EngineResult {
+    match with_engine(|engine| {
+        let serialized = match serde_cbor::to_vec(&engine.event_queue) {
+            Ok(data) => data,
+            Err(_) => return EngineResult::UnknownError,
+        };
 
-    EngineResult::Success
+        let required_length = serialized.len();
+
+        unsafe {
+            if out_ptr.is_null() {
+                *out_length = required_length;
+                return EngineResult::Success;
+            }
+
+            let available_length = *out_length;
+
+            if required_length <= available_length {
+                std::ptr::copy_nonoverlapping(serialized.as_ptr(), out_ptr, required_length);
+                *out_length = required_length;
+                engine.event_queue.clear();
+                return EngineResult::Success;
+            } else {
+                *out_length = required_length;
+                return EngineResult::BufferOverflow;
+            }
+        }
+    }) {
+        Err(e) => e,
+        Ok(result) => result,
+    }
 }
 
 pub fn engine_upload_buffer(bfr_id: u64, bfr_ptr: *const u8, bfr_length: usize) -> EngineResult {
-    EngineResult::Success
+    let data = unsafe { std::slice::from_raw_parts(bfr_ptr, bfr_length).to_vec() };
+
+    match with_engine(|engine| {
+        engine.buffers.insert(bfr_id, data);
+    }) {
+        Err(e) => e,
+        Ok(_) => EngineResult::Success,
+    }
 }
 
-pub fn engine_download_buffer(bfr_id: u64, bfr_ptr: *const u8, bfr_length: &usize) -> EngineResult {
-    EngineResult::Success
+pub fn engine_download_buffer(
+    bfr_id: u64,
+    bfr_ptr: *mut u8,
+    bfr_length: *mut usize,
+) -> EngineResult {
+    match with_engine(|engine| {
+        let buffer = match engine.buffers.get(&bfr_id) {
+            Some(buf) => buf,
+            None => return EngineResult::UnknownError,
+        };
+
+        let required_length = buffer.len();
+
+        unsafe {
+            if bfr_ptr.is_null() {
+                *bfr_length = required_length;
+                return EngineResult::Success;
+            }
+
+            let available_length = *bfr_length;
+
+            if required_length <= available_length {
+                std::ptr::copy_nonoverlapping(buffer.as_ptr(), bfr_ptr, required_length);
+                *bfr_length = required_length;
+                return EngineResult::Success;
+            } else {
+                *bfr_length = required_length;
+                return EngineResult::BufferOverflow;
+            }
+        }
+    }) {
+        Err(e) => e,
+        Ok(result) => result,
+    }
+}
+
+pub fn engine_clear_buffer(bfr_id: u64) -> EngineResult {
+    match with_engine(|engine| {
+        engine.buffers.remove(&bfr_id);
+    }) {
+        Err(e) => return e,
+        Ok(_) => EngineResult::Success,
+    }
 }
 
 pub fn engine_tick(time: u64, delta_time: u32) -> EngineResult {
-    match with_engine_mut(|engine| {
-        engine.request_redraw();
+    match with_engine_full(|engine| {
+        engine.state.time = time;
+        engine.state.delta_time = delta_time;
 
-        // ... lógica de atualização do engine ...
+        engine.event_loop.set_control_flow(ControlFlow::Poll);
+        engine.event_loop.pump_app_events(None, &mut engine.state);
+
+        engine.state.request_redraw();
     }) {
-        Err(e) => return e,
+        Err(e) => e,
         Ok(_) => EngineResult::Success,
     }
 }

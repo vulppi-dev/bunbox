@@ -5,7 +5,7 @@ use crate::core::units::{IVector2, Size};
 // MARK: Window
 
 #[repr(u32)]
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize, Serialize, Clone)]
 #[serde(rename_all = "kebab-case")]
 pub enum EngineWindowState {
     Minimized = 0,
@@ -25,7 +25,7 @@ fn window_size_default() -> Size {
     [800, 600]
 }
 
-#[derive(Debug, Default, Deserialize)]
+#[derive(Debug, Default, Deserialize, Clone)]
 #[serde(default, rename_all = "camelCase")]
 pub struct CmdWindowCreateArgs {
     pub title: String,

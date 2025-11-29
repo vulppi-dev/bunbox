@@ -5,19 +5,19 @@ use crate::core::{EngineResult, EngineState};
 
 pub mod args;
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 #[serde(tag = "type", content = "content", rename_all = "kebab-case")]
 pub enum EngineCmd {
     CmdWindowCreate(args::CmdWindowCreateArgs),
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 #[serde(tag = "type", content = "content", rename_all = "kebab-case")]
 pub enum EngineEvent {
     WindowCreated { id: u32 },
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub struct EngineCmdEnvelope {
     pub id: u64,
     #[serde(flatten)]
