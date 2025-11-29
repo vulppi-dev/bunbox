@@ -1,6 +1,6 @@
 use once_cell::sync::OnceCell;
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::thread::{self, ThreadId};
 use winit::application::ApplicationHandler;
@@ -33,6 +33,8 @@ pub struct WindowState {
 
 pub struct EngineState {
     pub windows: HashMap<u32, WindowState>,
+    pub buffers: HashMap<u64, Vec<u8>>,
+    pub event_pool: HashSet<cmd::EngineBatchEvents>,
 
     pub event_loop: EventLoop<()>,
     pub wgpu: wgpu::Instance,
@@ -55,8 +57,10 @@ impl EngineState {
         let wgpu_instance = wgpu::Instance::new(&wgpu_descriptor);
 
         Self {
-            event_loop: EventLoop::new().unwrap(),
             windows: HashMap::new(),
+            buffers: HashMap::new(),
+            event_pool: HashSet::new(),
+            event_loop: EventLoop::new().unwrap(),
             wgpu: wgpu_instance,
             device: None,
             queue: None,
@@ -71,14 +75,17 @@ impl EngineState {
 }
 
 impl ApplicationHandler for EngineState {
-    fn resumed(&mut self, event_loop: &ActiveEventLoop) {}
+    fn resumed(&mut self, _event_loop: &ActiveEventLoop) {
+        // TODO: Insert events to engine event pool
+    }
 
     fn window_event(
         &mut self,
-        event_loop: &ActiveEventLoop,
-        window_id: WindowId,
-        event: WindowEvent,
+        _event_loop: &ActiveEventLoop,
+        _window_id: WindowId,
+        _event: WindowEvent,
     ) {
+        // TODO: Insert events to engine event pool
     }
 }
 
@@ -175,15 +182,16 @@ pub fn engine_send_pool(ptr: *const u8, length: usize) -> EngineResult {
         Ok(batch) => batch,
     };
 
-    // for cmd in batch {
-    //     match cmd {
-    //     }
-    // }
-
-    EngineResult::Success
+    match with_engine_mut(|engine_state| cmd::engine_process_batch(engine_state, batch)) {
+        Err(e) => return e,
+        Ok(_) => EngineResult::Success,
+    }
 }
 
-pub fn engine_receive_pool(out_ptr: *const u8, out_length: usize) -> EngineResult {
+pub fn engine_receive_pool(out_ptr: *const u8, out_length: &usize) -> EngineResult {
+    // TODO: If out_ptr is null, just set out_length to the required length and return Success
+    // Otherwise, write the data to out_ptr (up to out_length) and set out_length to the actual length written
+
     EngineResult::Success
 }
 
@@ -191,7 +199,7 @@ pub fn engine_upload_buffer(bfr_id: u64, bfr_ptr: *const u8, bfr_length: usize) 
     EngineResult::Success
 }
 
-pub fn engine_download_buffer(bfr_id: u64, bfr_ptr: *const u8, bfr_length: usize) -> EngineResult {
+pub fn engine_download_buffer(bfr_id: u64, bfr_ptr: *const u8, bfr_length: &usize) -> EngineResult {
     EngineResult::Success
 }
 

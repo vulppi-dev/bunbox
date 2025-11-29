@@ -1,17 +1,9 @@
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
-pub mod args;
+use crate::core::{EngineResult, EngineState};
 
-#[repr(u32)]
-#[derive(Debug, Deserialize_repr, Serialize_repr)]
-pub enum EngineWindowState {
-    Minimized = 0,
-    Maximized,
-    Windowed,
-    Fullscreen,
-    WindowedFullscreen,
-}
+pub mod args;
 
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type", content = "content", rename_all = "kebab-case")]
@@ -35,3 +27,7 @@ pub struct EngineCmdEnvelope {
 pub type EngineBatchCmds = Vec<EngineCmdEnvelope>;
 
 pub type EngineBatchEvents = Vec<EngineEvent>;
+
+pub fn engine_process_batch(engine: &mut EngineState, batch: EngineBatchCmds) -> EngineResult {
+    EngineResult::Success
+}

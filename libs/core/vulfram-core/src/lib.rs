@@ -16,7 +16,7 @@ pub extern "C" fn engine_send_pool(ptr: *const u8, length: usize) -> u32 {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn engine_receive_pool(out_ptr: *const u8, out_length: usize) -> u32 {
+pub extern "C" fn engine_receive_pool(out_ptr: *const u8, out_length: &usize) -> u32 {
     core::engine_receive_pool(out_ptr, out_length) as u32
 }
 
@@ -29,7 +29,7 @@ pub extern "C" fn engine_upload_buffer(bfr_id: u64, bfr_ptr: *const u8, bfr_leng
 pub extern "C" fn engine_download_buffer(
     bfr_id: u64,
     bfr_ptr: *const u8,
-    bfr_length: usize,
+    bfr_length: &usize,
 ) -> u32 {
     core::engine_download_buffer(bfr_id, bfr_ptr, bfr_length) as u32
 }

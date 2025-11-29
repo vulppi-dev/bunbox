@@ -1,8 +1,25 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::core::units::{IVector2, Size};
 
 // MARK: Window
+
+#[repr(u32)]
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum EngineWindowState {
+    Minimized = 0,
+    Maximized,
+    Windowed,
+    Fullscreen,
+    WindowedFullscreen,
+}
+
+impl Default for EngineWindowState {
+    fn default() -> Self {
+        EngineWindowState::Windowed
+    }
+}
 
 fn window_size_default() -> Size {
     [800, 600]
@@ -14,9 +31,9 @@ pub struct CmdWindowCreateArgs {
     pub title: String,
     #[serde(default = "window_size_default")]
     pub size: Size,
-    pub pos: IVector2,
+    pub position: IVector2,
     pub borderless: bool,
     pub resizable: bool,
     pub always_on_top: bool,
-    pub initial_state: String,
+    pub initial_state: EngineWindowState,
 }
