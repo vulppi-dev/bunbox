@@ -19,6 +19,8 @@ pub enum EngineResult {
     NotInitialized,
     AlreadyInitialized,
     WrongThread,
+    /// Error code for invalid parameters (null pointers where not allowed)
+    InvalidParameter,
     WinitInitEventLoopError = 1000,
     WgpuInstanceError = 2000,
     CmdInvalidCborError = 3000,
@@ -188,7 +190,7 @@ pub fn engine_receive_pool(out_ptr: *mut u8, out_length: *mut usize) -> EngineRe
     let required_length: usize = 0;
 
     if out_length.is_null() {
-        return EngineResult::Success;
+        return EngineResult::InvalidParameter;
     }
 
     // If out_ptr is null, just set out_length to the required length and return Success
@@ -201,7 +203,8 @@ pub fn engine_receive_pool(out_ptr: *mut u8, out_length: *mut usize) -> EngineRe
 
     unsafe {
         let available_length = *out_length;
-        // TODO: Copy actual event data to out_ptr
+        // TODO: Copy actual event data to out_ptr when available_length >= required_length
+        // TODO: Return an error if the buffer is too small (available_length < required_length)
         *out_length = required_length.min(available_length);
     }
 
